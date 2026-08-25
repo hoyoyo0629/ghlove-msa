@@ -10,8 +10,8 @@
 | 항목 | 자동 이전 여부 | 방법 |
 |---|---|---|
 | ghlove-msa 소스코드 전체 | ✅ (GitHub) | `git clone https://github.com/hoyoyo0629/ghlove-msa.git` |
-| DB 스키마(DDL) | ✅ (git에 포함) | 저장소 안 `database/ddl/*.sql` |
-| DB 실데이터(테스트/시드 데이터) | ❌ | 이 문서 3단계로 재생성(재생성 스크립트가 곧 DDL 적용) |
+| DB 스키마(DDL) | ✅ (git에 포함) | 저장소 안 `database/ddl/*.sql` (참고/재구성용) |
+| DB 실데이터(스키마+테스트/시드 데이터 전체) | ✅ (git에 포함) | 저장소 안 `database/dump/*.sql` — 이 문서 3단계로 그대로 복원 |
 | AS-IS 참고 소스코드(`ghlove` 저장소) | ❌ | 아래 "AS-IS 참고소스" 절 참고 - 로컬 전용 GitLab이라 별도 처리 필요 |
 | AS-IS 원본 문서(엑셀/화면정의서 등, 바탕화면) | ❌ | `C:\Users\USER\Desktop\고향사랑e음\3.AS-IS\` 폴더를 직접 복사 |
 | Claude Code 메모리(`.md`)+대화이력 | ❌ (확실치 않음) | 아래 "Claude Code 메모리" 절 참고 |
@@ -70,31 +70,46 @@ cd infra/gitlab && docker compose up -d
 - **권장**: `C:\workspace\ghlove` 폴더를 통째로 복사(USB/외장하드/클라우드/네트워크공유)해서 새 PC의 같은 경로에 두면, 이 GitLab 컨테이너 자체는 굳이 안 띄워도 된다(로컬 워킹카피만으로 충분 - 지금까지의 조사 작업도 전부 워킹카피 파일을 직접 읽는 방식이었다).
 - 이력까지 필요하면 이 PC에서 `docker run --rm -v gitlab_gitlab_data:/from -v /originally-empty:/to alpine tar cf - -C /from . | ...` 식으로 볼륨을 백업/복원해야 하는데, 일반적으로 불필요하다.
 
-## 3. DB 롤/스키마 생성
+## 3. DB 롤 생성 + 덤프 복원
+
+`database/dump/*.sql`은 이 PC의 로컬 DB를 `pg_dump --no-owner --clean --if-exists`로 그대로 떠낸 것이다(스키마+테스트/시드 데이터 전부 포함). 새 PC에서는 role만 만들고 이 덤프를 그대로 적용하면 지금과 동일한 상태로 복원된다.
 
 ```bash
-# 1) 서비스별 role+DB 생성 (전부 비밀번호 ghlove, DB명=role명과 동일하되 order/admin만 예외)
-docker exec ghlove-postgres psql -U postgres -c "
-CREATE ROLE member LOGIN PASSWORD 'ghlove'; CREATE DATABASE member OWNER member;
-CREATE ROLE donation LOGIN PASSWORD 'ghlove'; CREATE DATABASE donation OWNER donation;
-CREATE ROLE point LOGIN PASSWORD 'ghlove'; CREATE DATABASE point OWNER point;
-CREATE ROLE gift LOGIN PASSWORD 'ghlove'; CREATE DATABASE gift OWNER gift;
-CREATE ROLE orderdb LOGIN PASSWORD 'ghlove'; CREATE DATABASE orderdb OWNER orderdb;
-CREATE ROLE admindb LOGIN PASSWORD 'ghlove'; CREATE DATABASE admindb OWNER admindb;
-"
+# 1) 서비스별 role 생성 (전부 비밀번호 ghlove) - CREATE ROLE과 CREATE DATABASE를 한 -c에 같이 넣으면
+#    "CREATE DATABASE cannot run inside a transaction block" 에러가 나므로 반드시 나눠서 실행한다.
+docker exec ghlove-postgres psql -U postgres -c "CREATE ROLE member LOGIN PASSWORD 'ghlove';"
+docker exec ghlove-postgres psql -U postgres -c "CREATE ROLE donation LOGIN PASSWORD 'ghlove';"
+docker exec ghlove-postgres psql -U postgres -c "CREATE ROLE point LOGIN PASSWORD 'ghlove';"
+docker exec ghlove-postgres psql -U postgres -c "CREATE ROLE gift LOGIN PASSWORD 'ghlove';"
+docker exec ghlove-postgres psql -U postgres -c "CREATE ROLE orderdb LOGIN PASSWORD 'ghlove';"
+docker exec ghlove-postgres psql -U postgres -c "CREATE ROLE admindb LOGIN PASSWORD 'ghlove';"
 
-# 2) 각 DB에 해당 DDL 적용 (스키마+공통코드 시드까지 전부 이 파일 안에 있음)
-docker exec -i ghlove-postgres psql -U member   -d member   < database/ddl/service-member.sql
-docker exec -i ghlove-postgres psql -U donation -d donation < database/ddl/service-donation.sql
-docker exec -i ghlove-postgres psql -U point    -d point    < database/ddl/service-point.sql
-docker exec -i ghlove-postgres psql -U gift     -d gift     < database/ddl/service-gift.sql
-docker exec -i ghlove-postgres psql -U orderdb  -d orderdb  < database/ddl/service-order.sql
-docker exec -i ghlove-postgres psql -U admindb  -d admindb  < database/ddl/service-admin.sql
+# 2) 서비스별 DB 생성 (DB명=role명과 동일하되 order/admin만 예외)
+docker exec ghlove-postgres psql -U postgres -c "CREATE DATABASE member OWNER member;"
+docker exec ghlove-postgres psql -U postgres -c "CREATE DATABASE donation OWNER donation;"
+docker exec ghlove-postgres psql -U postgres -c "CREATE DATABASE point OWNER point;"
+docker exec ghlove-postgres psql -U postgres -c "CREATE DATABASE gift OWNER gift;"
+docker exec ghlove-postgres psql -U postgres -c "CREATE DATABASE orderdb OWNER orderdb;"
+docker exec ghlove-postgres psql -U postgres -c "CREATE DATABASE admindb OWNER admindb;"
+
+# 3) 각 DB에 해당 덤프 복원 (반드시 해당 서비스 role로 접속 - postgres로 복원하면
+#    새로 생기는 오브젝트 owner가 postgres가 돼서 나중에 admin CRUD 화면에서
+#    "ERROR: must be owner of table"가 난다)
+docker exec -i ghlove-postgres psql -U member   -d member   < database/dump/member.sql
+docker exec -i ghlove-postgres psql -U donation -d donation < database/dump/donation.sql
+docker exec -i ghlove-postgres psql -U point    -d point    < database/dump/point.sql
+docker exec -i ghlove-postgres psql -U gift     -d gift     < database/dump/gift.sql
+docker exec -i ghlove-postgres psql -U orderdb  -d orderdb  < database/dump/orderdb.sql
+docker exec -i ghlove-postgres psql -U admindb  -d admindb  < database/dump/admindb.sql
 ```
 
-**주의**: DDL을 `postgres` 슈퍼유저로 적용하면 새로 생기는 테이블/시퀀스의 owner가 `postgres`가 돼서, 나중에 그 role로 만든 admin CRUD 화면(쿠폰/셀러/브랜드 등)에서 `ERROR: must be owner of table`류 권한 에러가 난다 - 위처럼 **각 서비스 자신의 role로 접속해서** DDL을 적용할 것. 테스트 계정(로그인용)이나 admin01 관리자 계정 같은 건 DDL 시드에 없을 수 있으니, 서비스를 띄운 뒤 회원가입/관리자 계정 발급 화면으로 직접 만든다.
+복원 로그에 경고성 에러가 몇 줄 나올 수 있는데(실제로 복원 테스트에서 확인됨) 무해하니 무시해도 된다:
+- `--if-exists` 관련 NOTICE (존재하지 않는 오브젝트를 DROP하려는 시도)
+- `ERROR: permission denied to change default privileges` (덤프에 `ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON ... TO <role>;` 구문이 포함돼 있는데, `postgres` 슈퍼유저가 아닌 일반 role로 복원하면 이 문장만 실패한다 - 이미 존재하는 테이블/데이터에는 영향 없고, "앞으로 postgres 계정이 새로 만드는 오브젝트에 자동으로 권한을 안 준다"는 의미일 뿐이다. 이 프로젝트는 애초에 postgres로 새 시퀀스/테이블을 만들 때마다 별도 `GRANT`를 해줘야 했던 관행이 있었으니(위 "알려진 함정" 참고) 새로운 문제가 아니다)
 
-DDL 실행 결과에 경고성 에러(이미 존재하는 시퀀스 재생성 시도 등)가 몇 줄 나올 수 있는데, `CREATE TABLE IF NOT EXISTS`/`ON CONFLICT DO NOTHING` 위주라 대체로 무해하다 - 마지막에 각 서비스를 실제로 띄워보고 정상 응답하는지로 확인한다.
+마지막에 각 서비스를 실제로 띄워보고 정상 응답하는지로 최종 확인한다.
+
+덤프가 아니라 빈 스키마부터 다시 시작하고 싶다면(테스트 데이터 없이 깨끗하게) `database/ddl/service-*.sql`을 대신 적용해도 된다 - 이 경우 절차는 위와 동일하되 3번 단계에서 `database/dump/`가 아니라 `database/ddl/service-{admin,donation,gift,member,order,point}.sql`을 사용한다(파일명 매핑에 주의: order→`service-order.sql`, admin→`service-admin.sql`).
 
 ## 4. 서비스 실행
 
