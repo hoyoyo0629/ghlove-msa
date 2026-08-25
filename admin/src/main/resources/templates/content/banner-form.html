@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${banner != null} ? '배너 수정 - 고향사랑e음 (admin service)' : '배너 등록 - 고향사랑e음 (admin service)'"></title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="wrap narrow">
+    <h1><span th:text="${banner != null} ? '배너 수정' : '배너 등록'"></span><span class="badge">admin</span></h1>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+    <form th:action="${banner != null} ? @{'/banners/' + ${banner.bannerId}} : @{/banners}" method="post">
+        <div class="field">
+            <label for="title">제목</label>
+            <input type="text" id="title" name="title" th:value="${banner != null} ? ${banner.title} : ''" required>
+        </div>
+        <div class="field">
+            <label for="contents">내용 (선택)</label>
+            <textarea id="contents" name="contents" rows="3" th:text="${banner != null} ? ${banner.contents} : ''"></textarea>
+        </div>
+        <div class="field">
+            <label for="linkUrl">링크 URL (선택)</label>
+            <input type="text" id="linkUrl" name="linkUrl" th:value="${banner != null} ? ${banner.linkUrl} : ''">
+        </div>
+        <div class="field">
+            <label for="imageUrl">이미지 경로 (선택, 예: /images/new/banner_main_02_pc.png)</label>
+            <input type="text" id="imageUrl" name="imageUrl" th:value="${banner != null} ? ${banner.imageUrl} : ''">
+            <!-- 이미지 업로드는 이번 범위에 포함되지 않고, 이미 static 리소스로 배포된
+                 경로를 직접 입력받습니다. -->
+            <img th:if="${banner != null and banner.imageUrl != null}" th:src="${banner.imageUrl}" alt="" style="height:60px; margin-top:8px; display:block;">
+        </div>
+        <div class="field">
+            <label for="displayOrder">노출 순서 (선택, 캐러셀은 최대 6개까지만 노출)</label>
+            <input type="number" id="displayOrder" name="displayOrder" step="1"
+                   th:value="${banner != null} ? ${banner.displayOrder} : 0">
+        </div>
+        <button type="submit" class="btn full" th:text="${banner != null} ? '수정' : '등록'"></button>
+    </form>
+
+    <div class="links">
+        <a th:href="@{/banners}">목록으로</a>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>답례품 수정 - 고향사랑e음 (gift service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="wrap narrow">
+    <h1>답례품 수정<span class="badge">gift</span></h1>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+    <form th:action="@{'/gifts/' + ${gift.itemId} + '/edit'}" method="post">
+        <input type="hidden" name="sellerId" th:value="${gift.sellerId}">
+        <div class="field">
+            <label for="itemName">답례품명</label>
+            <input type="text" id="itemName" name="itemName" th:value="${gift.itemName}" required>
+        </div>
+        <div class="field">
+            <label for="itemSummary">한줄 소개</label>
+            <input type="text" id="itemSummary" name="itemSummary" th:value="${gift.itemSummary}">
+        </div>
+        <div class="field">
+            <label for="detailContent">상세 설명</label>
+            <textarea id="detailContent" name="detailContent" rows="4" th:text="${gift.detailContent}"></textarea>
+        </div>
+        <div class="field">
+            <label for="categoryCode">카테고리</label>
+            <select id="categoryCode" name="categoryCode" required>
+                <option th:each="c : ${categories}" th:value="${c.key}" th:text="${c.value}"
+                        th:selected="${c.key == gift.categoryCode}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="salePrice">가격 (원)</label>
+            <input type="number" id="salePrice" name="salePrice" min="1" step="1" th:value="${gift.salePrice}" required>
+        </div>
+        <div class="field">
+            <label for="displayType">노출 유형</label>
+            <select id="displayType" name="displayType">
+                <option th:each="d : ${displayTypes}" th:value="${d.key}" th:text="${d.value}"
+                        th:selected="${d.key == gift.displayType}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="displayStartDate">노출 시작일 (한시노출일 때만)</label>
+            <input type="date" id="displayStartDate" name="displayStartDate" th:value="${gift.displayStartDate}">
+        </div>
+        <div class="field">
+            <label for="displayEndDate">노출 종료일 (한시노출일 때만)</label>
+            <input type="date" id="displayEndDate" name="displayEndDate" th:value="${gift.displayEndDate}">
+        </div>
+        <div class="field">
+            <label for="minDonationAmount">선택 가능 최소 기부금액 (선택)</label>
+            <input type="number" id="minDonationAmount" name="minDonationAmount" min="0" step="1000" th:value="${gift.minDonationAmount}">
+        </div>
+        <button type="submit">수정 저장</button>
+    </form>
+
+    <div class="links">
+        <a th:href="@{/my(sellerId=${gift.sellerId})}">내 답례품 관리로</a>
+    </div>
+</div>
+</body>
+</html>

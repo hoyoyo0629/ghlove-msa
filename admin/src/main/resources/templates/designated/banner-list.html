@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>지정기부 대표배너 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/designated-donation/banner/list.jsp 재현 - PC/모바일 이미지 분리,
+     최대 15슬롯 노출순서 관리. -->
+<div class="wrap">
+    <p><a th:href="@{/designated-projects}">&larr; 지정기부 관리</a></p>
+    <h1>지정기부 대표배너 관리</h1>
+    <p style="margin-bottom:16px;"><a th:href="@{/designated-projects/banners/new}"><button type="button">배너 등록</button></a></p>
+
+    <table>
+        <thead><tr><th>순서</th><th>PC 이미지</th><th>모바일 이미지</th><th>제목</th><th>사용여부</th><th>관리</th></tr></thead>
+        <tbody>
+        <tr th:each="b : ${banners}">
+            <td th:text="${b.displayOrder}"></td>
+            <td><img th:if="${b.fileNamePc}" th:src="@{${b.fileNamePc}}" style="height:40px;"></td>
+            <td><img th:if="${b.fileNameMobile}" th:src="@{${b.fileNameMobile}}" style="height:40px;"></td>
+            <td th:text="${b.title}"></td>
+            <td th:text="${b.useYn == 'Y'} ? '사용' : '미사용'"></td>
+            <td>
+                <a th:href="@{/designated-projects/banners/{id}/edit(id=${b.reprstBannerId})}">수정</a>
+                <form th:action="@{/designated-projects/banners/{id}/toggle(id=${b.reprstBannerId})}" method="post" style="display:inline; margin-left:8px;">
+                    <button type="submit" th:text="${b.useYn == 'Y'} ? '미사용으로' : '사용으로'"></button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(banners)}">등록된 배너가 없습니다.</p>
+</div>
+</body>
+</html>

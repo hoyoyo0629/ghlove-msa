@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>배송조회 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>배송조회 (스마트택배 연계)</h1>
+    <p style="font-size:13px; color:#777; margin-bottom:16px;">
+        SFR-006 "택배사 시스템과의 연계는 운영관리 서비스가 담당" - order 서비스는
+        배송 상태값만 갖고, 실시간 위치 조회는 여기서 스마트택배(sweettracker) API로 확인합니다.
+    </p>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+    <form th:action="@{/delivery-tracking}" method="get">
+        <div class="field">
+            <label for="carrierCode">택배사</label>
+            <select id="carrierCode" name="carrierCode" required>
+                <option th:each="c : ${carriers}" th:value="${c.key}" th:text="${c.value}"
+                        th:selected="${c.key == carrierCode}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="invoiceNo">송장번호</label>
+            <input type="text" id="invoiceNo" name="invoiceNo" th:value="${invoiceNo}" required>
+        </div>
+        <button type="submit">조회</button>
+    </form>
+
+    <div th:if="${result != null}" class="card" style="margin-top:20px;">
+        <div class="type" th:text="${carriers.get(result.carrierCode)} ?: ${result.carrierCode}"></div>
+        <div class="count">송장번호: <span th:text="${result.invoiceNo}"></span></div>
+        <div class="count">상태: <span th:text="${result.status}"></span></div>
+        <div class="count">최근위치: <span th:text="${result.lastLocation}"></span></div>
+        <div class="count">갱신시각: <span th:text="${result.lastUpdated}"></span></div>
+    </div>
+</div>
+</body>
+</html>

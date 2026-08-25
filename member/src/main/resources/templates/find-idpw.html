@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>아이디·비밀번호 찾기 - 고향사랑e음</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/login-total.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<!-- AS-IS users/find-idpw.html 재현(아이디찾기/비밀번호찾기 탭 하나에서 처리). AS-IS는
+     휴대폰CI인증/금융인증서 전자서명 팝업으로 본인확인을 하지만, 이 프로젝트엔 그 유료
+     외부게이트웨이가 없어 휴대폰 인증번호 발송으로 대체한다(NotificationClient, 실제
+     검증 로직 - 이름+휴대폰번호가 진짜 일치해야 코드가 발급되고, 코드도 맞혀야 통과).
+     비밀번호 찾기는 AS-IS와 동일하게 임시비밀번호를 보여주지 않고 본인이 새 비밀번호를
+     바로 정하며, 성공 시 자동 로그인된다. -->
+<div id="contents">
+    <section class="login-total center">
+        <div class="login-box general">
+            <div class="loginType">
+                <ul>
+                    <li class="currentB" id="tab-nav-1">
+                        <button type="button" onclick="setTab(1)">아이디 찾기</button>
+                    </li>
+                    <li id="tab-nav-2">
+                        <button type="button" onclick="setTab(2)">비밀번호 찾기</button>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 탭1: 아이디 찾기 -->
+            <div id="tab-panel-1">
+                <div class="login-title-box">
+                    <img th:src="@{/images/icon/cli-icon-bullet.png}" alt="">
+                    <h2 class="login-title">아이디 <strong>찾기</strong></h2>
+                </div>
+
+                <p class="error" id="idError" style="display:none;"></p>
+
+                <div id="idStep1">
+                    <div class="login-field-group">
+                        <span class="login-field-items">
+                            <input type="text" id="idUserName" placeholder="이름" required autofocus>
+                        </span>
+                        <span class="login-field-items">
+                            <input type="text" id="idPhoneNumber" placeholder="휴대폰번호 (010-0000-0000)" required>
+                        </span>
+                    </div>
+                    <div class="login-field-group">
+                        <button type="button" class="login" onclick="return idSendCode()">인증번호 받기</button>
+                    </div>
+                </div>
+
+                <div id="idStep2" style="display:none;">
+                    <p id="idSentMessage" class="success"></p>
+                    <p id="idDevCodeHint" style="display:none; color:#EB474D; font-size:13px;"></p>
+                    <div class="login-field-group">
+                        <span class="login-field-items">
+                            <input type="text" id="idAuthCode" placeholder="인증번호 6자리" maxlength="6" required>
+                        </span>
+                        <span id="idTimerDisplay" style="align-self:center; color:#666;"></span>
+                    </div>
+                    <div class="login-field-group">
+                        <button type="button" class="login" onclick="return idVerify()">확인</button>
+                    </div>
+                </div>
+
+                <div id="idStep3" style="display:none;">
+                    <div class="result-box">
+                        <p>회원님의 아이디는 다음과 같습니다.</p>
+                        <p><strong id="idResultLoginId" style="font-size:18px;"></strong></p>
+                    </div>
+                    <div class="login-field-group">
+                        <a th:href="@{/login}" class="login" style="display:inline-block; text-align:center;">로그인하기</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 탭2: 비밀번호 찾기 -->
+            <div id="tab-panel-2" style="display:none;">
+                <div class="login-title-box">
+                    <img th:src="@{/images/icon/cli-icon-bullet.png}" alt="">
+                    <h2 class="login-title">비밀번호 <strong>찾기</strong></h2>
+                </div>
+
+                <p class="error" id="pwError" style="display:none;"></p>
+
+                <div id="pwStep1">
+                    <div class="login-field-group">
+                        <span class="login-field-items">
+                            <input type="text" id="pwLoginId" placeholder="아이디" required>
+                        </span>
+                        <span class="login-field-items">
+                            <input type="text" id="pwUserName" placeholder="이름" required>
+                        </span>
+                        <span class="login-field-items">
+                            <input type="text" id="pwPhoneNumber" placeholder="휴대폰번호 (010-0000-0000)" required>
+                        </span>
+                    </div>
+                    <div class="login-field-group">
+                        <button type="button" class="login" onclick="return pwSendCode()">인증번호 받기</button>
+                    </div>
+                </div>
+
+                <div id="pwStep2" style="display:none;">
+                    <p id="pwSentMessage" class="success"></p>
+                    <p id="pwDevCodeHint" style="display:none; color:#EB474D; font-size:13px;"></p>
+                    <div class="login-field-group">
+                        <span class="login-field-items">
+                            <input type="text" id="pwAuthCode" placeholder="인증번호 6자리" maxlength="6" required>
+                        </span>
+                        <span id="pwTimerDisplay" style="align-self:center; color:#666;"></span>
+                    </div>
+                    <div class="login-field-group">
+                        <button type="button" class="login" onclick="return pwVerify()">확인</button>
+                    </div>
+                </div>
+
+                <div id="pwStep3" style="display:none;">
+                    <p style="color:#666; font-size:13px; margin-bottom:8px;">숫자, 영문자, 기호를 모두 포함해 9~20자로 입력해 주세요.</p>
+                    <div class="login-field-group">
+                        <span class="login-field-items">
+                            <input type="password" id="pwNewPassword" placeholder="새 비밀번호" required>
+                        </span>
+                        <span class="login-field-items">
+                            <input type="password" id="pwNewPasswordConfirm" placeholder="새 비밀번호 확인" required>
+                        </span>
+                    </div>
+                    <div class="login-field-group">
+                        <button type="button" class="login" onclick="return pwReset()">비밀번호 변경 및 로그인</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="login-field-group">
+                <div class="login-check-wrap">
+                    <span class="find-wrap"><a th:href="@{/login}">로그인으로 돌아가기</a></span>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+
+<script th:inline="none">
+function setTab(id) {
+    document.getElementById('tab-nav-1').classList.toggle('currentB', id === 1);
+    document.getElementById('tab-nav-2').classList.toggle('currentB', id === 2);
+    document.getElementById('tab-panel-1').style.display = id === 1 ? '' : 'none';
+    document.getElementById('tab-panel-2').style.display = id === 2 ? '' : 'none';
+}
+
+function postForm(url, params) {
+    return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(params).toString()
+    }).then(function (r) { return r.json(); });
+}
+
+function makeTimer(displayId) {
+    var timer = null;
+    return function start() {
+        var display = document.getElementById(displayId);
+        var leftSec = 300;
+        if (timer) { clearInterval(timer); }
+        display.style.color = '';
+        var tick = function () {
+            var m = Math.floor(leftSec / 60), s = leftSec % 60;
+            display.textContent = (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+            if (--leftSec < 0) {
+                clearInterval(timer);
+                display.textContent = '시간초과';
+                display.style.color = '#EB474D';
+            }
+        };
+        tick();
+        timer = setInterval(tick, 1000);
+    };
+}
+var startIdTimer = makeTimer('idTimerDisplay');
+var startPwTimer = makeTimer('pwTimerDisplay');
+
+function showDevCode(hintId, devCode) {
+    var hint = document.getElementById(hintId);
+    if (devCode) {
+        hint.textContent = '🔧 개발모드(휴대폰 인증 미연동): 인증번호는 ' + devCode + ' 입니다.';
+        hint.style.display = 'block';
+    } else {
+        hint.style.display = 'none';
+    }
+}
+
+function idSendCode() {
+    document.getElementById('idError').style.display = 'none';
+    var userName = document.getElementById('idUserName').value;
+    var phoneNumber = document.getElementById('idPhoneNumber').value;
+    postForm('/find-idpw/id/send-code', { userName: userName, phoneNumber: phoneNumber }).then(function (res) {
+        if (res.status === 'CODE_SENT') {
+            document.getElementById('idStep1').style.display = 'none';
+            document.getElementById('idSentMessage').textContent = res.message;
+            showDevCode('idDevCodeHint', res.devCode);
+            document.getElementById('idStep2').style.display = 'block';
+            document.getElementById('idAuthCode').focus();
+            startIdTimer();
+        } else {
+            var el = document.getElementById('idError');
+            el.textContent = res.message || '오류가 발생했습니다.';
+            el.style.display = 'block';
+        }
+    });
+    return false;
+}
+
+function idVerify() {
+    document.getElementById('idError').style.display = 'none';
+    var code = document.getElementById('idAuthCode').value;
+    postForm('/find-idpw/id/verify', { code: code }).then(function (res) {
+        if (res.status === 'OK') {
+            document.getElementById('idStep2').style.display = 'none';
+            document.getElementById('idResultLoginId').textContent = res.loginId;
+            document.getElementById('idStep3').style.display = 'block';
+        } else {
+            var el = document.getElementById('idError');
+            el.textContent = res.message || '오류가 발생했습니다.';
+            el.style.display = 'block';
+        }
+    });
+    return false;
+}
+
+function pwSendCode() {
+    document.getElementById('pwError').style.display = 'none';
+    var loginId = document.getElementById('pwLoginId').value;
+    var userName = document.getElementById('pwUserName').value;
+    var phoneNumber = document.getElementById('pwPhoneNumber').value;
+    postForm('/find-idpw/pw/send-code', { loginId: loginId, userName: userName, phoneNumber: phoneNumber }).then(function (res) {
+        if (res.status === 'CODE_SENT') {
+            document.getElementById('pwStep1').style.display = 'none';
+            document.getElementById('pwSentMessage').textContent = res.message;
+            showDevCode('pwDevCodeHint', res.devCode);
+            document.getElementById('pwStep2').style.display = 'block';
+            document.getElementById('pwAuthCode').focus();
+            startPwTimer();
+        } else {
+            var el = document.getElementById('pwError');
+            el.textContent = res.message || '오류가 발생했습니다.';
+            el.style.display = 'block';
+        }
+    });
+    return false;
+}
+
+function pwVerify() {
+    document.getElementById('pwError').style.display = 'none';
+    var code = document.getElementById('pwAuthCode').value;
+    postForm('/find-idpw/pw/verify', { code: code }).then(function (res) {
+        if (res.status === 'OK') {
+            document.getElementById('pwStep2').style.display = 'none';
+            document.getElementById('pwStep3').style.display = 'block';
+            document.getElementById('pwNewPassword').focus();
+        } else {
+            var el = document.getElementById('pwError');
+            el.textContent = res.message || '오류가 발생했습니다.';
+            el.style.display = 'block';
+        }
+    });
+    return false;
+}
+
+function pwReset() {
+    document.getElementById('pwError').style.display = 'none';
+    var newPassword = document.getElementById('pwNewPassword').value;
+    var newPasswordConfirm = document.getElementById('pwNewPasswordConfirm').value;
+    postForm('/find-idpw/pw/reset', { newPassword: newPassword, newPasswordConfirm: newPasswordConfirm }).then(function (res) {
+        if (res.status === 'OK') {
+            window.location.href = res.redirect || '/mypage';
+        } else {
+            var el = document.getElementById('pwError');
+            el.textContent = res.message || '오류가 발생했습니다.';
+            el.style.display = 'block';
+        }
+    });
+    return false;
+}
+</script>
+</body>
+</html>

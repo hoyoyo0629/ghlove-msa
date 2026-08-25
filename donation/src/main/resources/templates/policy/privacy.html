@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${title} + ' | 고향사랑e음'"></title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/donation_guge.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<!-- AS-IS policy/privacy.html 재현. 본문(content)은 실제 운영사이트 API(/api/policy/protect)가
+     내려주는 CMS 원문을 그대로 가져온 것(PolicyController 참고) - 라벨링 아이콘 6개(base64
+     인라인이 아닌 6개만 /images/policy/로 내려받음) + 조항 14개까지 실제 문서 그대로다. -->
+<section class="center">
+    <div class="page-title-box">
+        <img th:src="@{/images/icon/cli-icon-bullet.png}" alt="">
+        <h2 class="page-title-txt" th:text="${title}"></h2>
+    </div>
+
+    <div class="contents-wrap" id="contents">
+        <div class="s-contents fnb">
+            <h3>고향사랑e음 개인정보처리방침</h3>
+            <article class="fnb-detail" style="overflow: auto" th:utext="${content}"></article>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+</body>
+</html>

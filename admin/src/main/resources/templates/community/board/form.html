@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${boardTitle} + ' - 고향사랑e음 (admin service)'"></title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <p><a th:href="@{'/community/' + ${boardType}}">&larr; <span th:text="${boardTitle}"></span></a></p>
+    <h1 th:text="${post.bbsId} != null ? '글 수정' : '글 등록'"></h1>
+
+    <form th:action="${post.bbsId} != null ? @{'/community/' + ${boardType} + '/' + ${post.bbsId}} : @{'/community/' + ${boardType}}" method="post">
+        <div class="field" th:if="${isFaq}">
+            <label for="faqType">유형</label>
+            <select id="faqType" name="faqType">
+                <option th:each="e : ${faqTypes}" th:value="${e.key}" th:text="${e.value}"
+                        th:selected="${e.key == post.faqType}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="bbsTtl">제목</label>
+            <input type="text" id="bbsTtl" name="bbsTtl" th:value="${post.bbsTtl}" required>
+        </div>
+        <div class="field">
+            <label for="bbsCn">내용</label>
+            <textarea id="bbsCn" name="bbsCn" rows="10" th:text="${post.bbsCn}" required></textarea>
+        </div>
+        <div class="field">
+            <label><input type="checkbox" name="noticeYn" th:checked="${post.noticeYn == 'Y'}"> 공지로 등록</label>
+        </div>
+        <div class="field">
+            <label><input type="checkbox" name="isSecret" th:checked="${post.isSecret == 'Y'}"> 비밀글</label>
+        </div>
+        <button type="submit" class="btn">저장</button>
+    </form>
+</div>
+</body>
+</html>

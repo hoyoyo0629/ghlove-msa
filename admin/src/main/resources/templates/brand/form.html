@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>브랜드 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <p><a th:href="@{/brand}">&larr; 브랜드관리</a></p>
+    <h1 th:text="${brand.brandId()} != null ? '브랜드 수정' : '브랜드 등록'"></h1>
+
+    <form th:action="${brand.brandId()} != null ? @{'/brand/' + ${brand.brandId()}} : @{/brand}" method="post">
+        <div class="field">
+            <label for="brandName">브랜드명</label>
+            <input type="text" id="brandName" name="brandName" th:value="${brand.brandName()}" required>
+        </div>
+        <div class="field">
+            <label for="locgovCode">지자체코드</label>
+            <input type="text" id="locgovCode" name="locgovCode" th:value="${brand.locgovCode()}" placeholder="예: 11230">
+        </div>
+        <div class="field">
+            <label for="brandContent">브랜드 소개</label>
+            <textarea id="brandContent" name="brandContent" rows="6" th:text="${brand.brandContent()}"></textarea>
+        </div>
+        <div class="field">
+            <label><input type="checkbox" name="displayFlag" value="Y" th:checked="${brand.displayFlag() == 'Y'}"> 공개</label>
+        </div>
+        <button type="submit" class="btn">저장</button>
+    </form>
+</div>
+</body>
+</html>

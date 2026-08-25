@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${notice != null} ? '공지사항 수정 - 고향사랑e음 (admin service)' : '공지사항 등록 - 고향사랑e음 (admin service)'"></title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/give/give-notice(기금사업소개 > 지자체공지사항)와 일반 공지사항관리를
+     하나의 폼으로 합쳤다 - 둘 다 같은 OP_NOTICE를 쓰고 차이는 LOCGOV_CODE 유무뿐이다.
+     지자체를 선택하면 그 지자체 전용 공지(list-select.html의 "지자체공지사항" 탭에 노출),
+     선택하지 않으면(전체) 전역 공지사항(/notices)이 된다. -->
+<div class="wrap narrow-in-shell">
+    <h1 th:text="${notice != null} ? '공지사항 수정' : '공지사항 등록'"><span class="badge">admin</span></h1>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+    <form th:action="${notice != null} ? @{'/admin/notices/' + ${notice.noticeId} + '/edit'} : @{/admin/notices}" method="post">
+        <div class="field">
+            <label for="categoryCode">분류</label>
+            <select id="categoryCode" name="categoryCode">
+                <option th:each="c : ${categories}" th:value="${c.key}" th:text="${c.value}"
+                        th:selected="${notice != null and notice.categoryCode == c.key}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="subject">제목</label>
+            <input type="text" id="subject" name="subject" required th:value="${notice != null} ? ${notice.subject} : ''">
+        </div>
+        <div class="field">
+            <label for="content">내용</label>
+            <textarea id="content" name="content" rows="5" th:text="${notice != null} ? ${notice.content} : ''"></textarea>
+        </div>
+        <div class="field">
+            <label>지자체공지사항 (선택 시 해당 지자체 전용, 미선택 시 전체 공지)</label>
+            <div style="display:flex; gap:10px;">
+                <select id="upperLocgovCode" onchange="filterLocgov()" style="flex:1;">
+                    <option value="">시·도 선택 안함</option>
+                    <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"></option>
+                </select>
+                <select id="locgovCode" name="locgovCode" style="flex:1;">
+                    <option value="">시·군·구 선택 안함</option>
+                    <option th:each="l : ${allLocgovs}" th:value="${l.locgovCode}" th:text="${l.locgovNm}"
+                            th:attr="data-upper=${l.upperLocgovCode}"
+                            th:selected="${notice != null and notice.locgovCode == l.locgovCode}"></option>
+                </select>
+            </div>
+        </div>
+        <button type="submit" class="btn full" th:text="${notice != null} ? '수정' : '등록'"></button>
+    </form>
+
+    <div class="links">
+        <a th:href="@{/admin/notices}">목록으로</a>
+    </div>
+</div>
+
+<script th:inline="none">
+function filterLocgov() {
+    var upper = document.getElementById('upperLocgovCode').value;
+    var select = document.getElementById('locgovCode');
+    Array.prototype.forEach.call(select.options, function (opt) {
+        if (!opt.value) { return; }
+        opt.hidden = upper !== '' && opt.dataset.upper !== upper;
+    });
+}
+
+(function initUpperFromSelectedLocgov() {
+    var selected = document.querySelector('#locgovCode option:checked');
+    if (selected && selected.value) {
+        document.getElementById('upperLocgovCode').value = selected.dataset.upper;
+    }
+    filterLocgov();
+})();
+</script>
+</body>
+</html>

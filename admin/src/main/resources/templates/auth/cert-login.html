@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>지자체 담당자 인증서 로그인 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap narrow">
+    <h1>지자체 담당자 인증서 로그인</h1>
+    <p style="font-size:13px; color:#777; margin-bottom:16px;">
+        매직라인4웹(PKI) 연계 - 실제로는 브라우저 플러그인이 로컬 인증서 저장소에서
+        선택한 인증서를 자동으로 전달하지만, 이 환경에서는 .pem/.cer 인증서 파일을
+        직접 업로드해 같은 검증 흐름을 확인할 수 있습니다.
+    </p>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+    <form th:action="@{/auth/cert-login}" method="post" enctype="multipart/form-data">
+        <div class="field">
+            <label for="certFile">인증서 파일 (.pem/.cer)</label>
+            <input type="file" id="certFile" name="certFile" accept=".pem,.cer,.crt" required>
+        </div>
+        <button type="submit" class="full">인증서로 로그인</button>
+    </form>
+</div>
+</body>
+</html>

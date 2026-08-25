@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>매출 제로 상품 내역 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>매출 제로 상품 내역</h1>
+    <p style="color:#666; margin-bottom:16px;">등록 이후 결제완료 주문이 한 건도 없는 상품입니다.</p>
+    <table>
+        <thead>
+        <tr><th>상품ID</th><th>상품명</th><th>판매자</th><th>판매가</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="item : ${items}">
+            <td th:text="${item.itemId()}"></td>
+            <td th:text="${item.itemName()}"></td>
+            <td th:text="${item.sellerName()}"></td>
+            <td th:text="${#numbers.formatInteger(item.salePrice(), 0, 'COMMA')} + 'P'"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(items)}">모든 상품에 판매 이력이 있습니다.</p>
+</div>
+</body>
+</html>

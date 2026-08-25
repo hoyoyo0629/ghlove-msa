@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>접근 권한 없음 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS OpmanagerHandlerInterceptor가 메뉴 권한이 없는 요청에 던지는
+     UserException("관리자 메뉴 접근 권한이 없습니다.") 재현. -->
+<div class="wrap narrow" style="text-align:center;">
+    <h1>접근 권한이 없습니다</h1>
+    <p>이 메뉴에 대한 권한이 없습니다. 시스템관리자에게 문의해 주세요.</p>
+    <p style="margin-top:20px;"><a class="btn" th:href="@{${homeUrl}}">돌아가기</a></p>
+</div>
+</body>
+</html>

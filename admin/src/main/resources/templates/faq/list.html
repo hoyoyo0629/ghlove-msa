@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>고객센터 &gt; FAQ - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/mypage-status.css}">
+    <link rel="stylesheet" th:href="@{/css/data_v.css}">
+    <link rel="stylesheet" th:href="@{/css/ct_nov.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<!-- AS-IS faq/list.html 재현(data_v.css/ct_nov.css 실제 클래스). 아코디언 토글은 이미 이
+     서비스의 1:1문의(qna/list.html)에서 검증된 패턴을 그대로 재사용한다. 아코디언을 펼칠 때
+     AS-IS의 addHits처럼 조회수를 AJAX로 올린다. -->
+<section>
+    <div class="page-title-box">
+        <span class="ali_breadcrumb">
+            <a th:href="@{'http://localhost:8081/'}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            고객센터
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            FAQ
+        </span>
+        <h2 class="page-title-txt">FAQ</h2>
+        <p>분류를 선택하시면 해당 항목의 질문 답변을 확인하실 수 있습니다.</p>
+    </div>
+</section>
+
+<div th:replace="~{fragments/customer-lnb :: customer-lnb('faqs')}"></div>
+
+<div class="contents-wrap" id="contents">
+    <div class="center">
+        <div class="s-contents list-wrapper">
+            <div class="list-select-area">
+                <header class="list-search-header">
+                    <div class="list-count-box" th:text="'전체 글 : ' + ${totalCount} + ' 건'"></div>
+                    <form th:action="@{/faqs}" method="get" class="search-select">
+                        <div class="form-item category">
+                            <label for="faqType" class="sr-only">분류선택</label>
+                            <select id="faqType" name="faqType" onchange="this.form.submit()">
+                                <option value="">분류선택</option>
+                                <option th:each="t : ${faqTypes}" th:value="${t.key}" th:text="${t.value}"
+                                        th:selected="${t.key == faqType}"></option>
+                            </select>
+                        </div>
+                        <div class="form-item">
+                            <label for="category-where" class="sr-only">구분</label>
+                            <select id="category-where" aria-label="구분">
+                                <option value="title" selected>제목</option>
+                            </select>
+                        </div>
+                        <div class="form-item search-field">
+                            <label for="q" class="sr-only">검색 키워드</label>
+                            <input type="search" id="q" name="q" th:value="${q}" placeholder="검색 키워드">
+                            <button type="submit" class="button search" aria-label="조회"></button>
+                        </div>
+                        <div class="m-field">
+                            <div class="form-item">
+                                <label for="sort" class="sr-only">정렬순서</label>
+                                <select id="sort" name="sort" onchange="this.form.submit()">
+                                    <option value="updated,DESC" th:selected="${sort == 'updated,DESC'}">최신순</option>
+                                    <option value="updated,ASC" th:selected="${sort == 'updated,ASC'}">오래된순</option>
+                                </select>
+                            </div>
+                            <div class="form-item">
+                                <label for="size" class="sr-only">목록수</label>
+                                <select id="size" name="size" onchange="this.form.submit()">
+                                    <option value="10" th:selected="${size == 10}">10개</option>
+                                    <option value="20" th:selected="${size == 20}">20개</option>
+                                    <option value="30" th:selected="${size == 30}">30개</option>
+                                    <option value="50" th:selected="${size == 50}">50개</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </header>
+
+                <div class="list-search-body faq">
+                    <ul class="list-search-group" th:if="${not #lists.isEmpty(faqs)}">
+                        <li class="list-items dropdown" th:each="f : ${faqs}">
+                            <div class="notice-header dropdown-toggle" tabindex="0"
+                                 th:attr="data-faq-id=${f.id}" onclick="toggleFaq(this)" onkeydown="toggleFaqKey(event, this)">
+                                <img class="faq-icon" th:src="@{/images/icon/cli-icon_faq-q.png}" alt="질문">
+                                <div class="header-faq">
+                                    <div class="status_c category" th:text="${faqTypes.get(f.faqType)} ?: ${f.faqType}"></div>
+                                    <div class="faq_txt" style="white-space:normal" th:text="${f.subject}"></div>
+                                    <div class="col_group">
+                                        <div class="status_c date"
+                                             th:text="${f.updatedDate != null} ? ${#temporals.format(f.updatedDate, 'yyyy-MM-dd')} : ''"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="notice-body dropdown-menu">
+                                <div class="notice-wrap">
+                                    <img class="faq-icon" th:src="@{/images/icon/cli-icon_faq-a.png}" alt="답변">
+                                    <div class="header-faq">
+                                        <span class="status_c category">&nbsp;</span>
+                                        <div class="faq_txt" th:text="${f.content}"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                    <div class="list-none" th:if="${#lists.isEmpty(faqs)}">
+                        <img th:src="@{/images/icon/non-list.png}" alt="게시물이 없음">
+                        추후 업데이트 예정입니다.
+                    </div>
+                </div>
+
+                <div class="card-pagination" th:if="${totalPages > 1}">
+                    <div class="pagination_ali">
+                        <ul class="pagination-frame">
+                            <li><a class="fist arrow_btn" th:href="@{/faqs(faqType=${faqType},q=${q},sort=${sort},size=${size},page=1)}"><img th:src="@{/images/icon/paging_btn-first.png}" alt="처음"></a></li>
+                            <li><a class="prev arrow_btn" th:href="@{/faqs(faqType=${faqType},q=${q},sort=${sort},size=${size},page=${currentPage > 1 ? currentPage - 1 : 1})}"><img th:src="@{/images/icon/paging_btn-prev.png}" alt="이전"></a></li>
+                            <li th:each="p : ${#numbers.sequence(1, totalPages)}" th:classappend="${p == currentPage} ? 'selected-page'">
+                                <a class="page-text" th:href="@{/faqs(faqType=${faqType},q=${q},sort=${sort},size=${size},page=${p})}" th:text="${p}"></a>
+                            </li>
+                            <li><a class="next arrow_btn" th:href="@{/faqs(faqType=${faqType},q=${q},sort=${sort},size=${size},page=${currentPage < totalPages ? currentPage + 1 : totalPages})}"><img th:src="@{/images/icon/paging_btn-next.png}" alt="다음"></a></li>
+                            <li><a class="last arrow_btn" th:href="@{/faqs(faqType=${faqType},q=${q},sort=${sort},size=${size},page=${totalPages})}"><img th:src="@{/images/icon/paging_btn-last.png}" alt="마지막"></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+
+<script th:inline="none">
+function toggleFaq(header) {
+    var li = header.parentElement;
+    var wasOpen = li.classList.contains('show');
+    li.classList.toggle('show');
+    if (!wasOpen) {
+        fetch('/faqs/' + header.dataset.faqId + '/hit', {method: 'POST'});
+    }
+}
+function toggleFaqKey(e, header) {
+    if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleFaq(header);
+    }
+}
+</script>
+</body>
+</html>

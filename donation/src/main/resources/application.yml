@@ -1,0 +1,67 @@
+server:
+  port: 8082
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  application:
+    name: donation
+  datasource:
+    url: jdbc:postgresql://localhost:15432/donation
+    username: donation
+    password: ghlove
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+# 기부확인증 발급 시 성명/생년월일 조회용 (읽기 전용, 쓰기 경로 아님) - order의
+# gift-service 조회와 동일한 패턴의 의도적인 동기 호출 예외.
+ghlove:
+  # SFR-010: member 서비스가 로그인 시 발급하는 공유 JWT를 이 값으로 검증한다 - member의
+  # application.yml과 반드시 동일해야 한다.
+  jwt:
+    secret: "ghlove-msa-local-dev-shared-jwt-secret-key-32bytes-min!!"
+  member-service:
+    base-url: http://localhost:8081
+  point-service:
+    base-url: http://localhost:8083
+  admin-service:
+    base-url: http://localhost:8086
+
+  # 외부 연계시스템 통합 지점 (AS-IS NgDonationRelayServiceImpl 재현). enabled=false인
+  # 동안은 LocalTaxClient/NtsClient가 실제 호출 없이 모크 응답을 돌려주고, 방화벽이
+  # 열리면 enabled=true + 아래 URL/인증정보만 채우면 된다.
+  integrations:
+    local-tax:
+      enabled: false
+      seoul-base-url: https://etax.seoul.go.kr
+      contry-base-url: https://wetax.go.kr
+    nts:
+      enabled: false
+      login-url: https://api.hometax.go.kr/login
+      action-url: https://api.hometax.go.kr/ereceipt
+      key: ""
+      id: ""
+      password: ""
+
+donation:
+  upload:
+    dir: ./uploads/donation
+
+logging:
+  level:
+    com.ghlove.donation: DEBUG

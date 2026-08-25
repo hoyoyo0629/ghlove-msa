@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>지정기부 대표배너 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <p><a th:href="@{/designated-projects/banners}">&larr; 대표배너 관리</a></p>
+    <h1 th:text="${banner != null} ? '배너 수정' : '배너 등록'"></h1>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+    <form th:action="${banner != null} ? @{/designated-projects/banners/{id}(id=${banner.reprstBannerId})} : @{/designated-projects/banners}"
+          method="post" enctype="multipart/form-data">
+        <div class="field">
+            <label for="title">제목 <span style="color:#c0392b;">*</span></label>
+            <input type="text" id="title" name="title" required maxlength="255"
+                   th:value="${banner != null} ? ${banner.title} : ''">
+        </div>
+        <div class="field">
+            <label for="displayOrder">노출순서 (1~15) <span style="color:#c0392b;">*</span></label>
+            <input type="number" id="displayOrder" name="displayOrder" required min="1" max="15"
+                   th:value="${banner != null} ? ${banner.displayOrder} : ''">
+        </div>
+        <div class="field">
+            <label for="linkUrl">링크 URL</label>
+            <input type="text" id="linkUrl" name="linkUrl" th:value="${banner != null} ? ${banner.linkUrl} : ''">
+        </div>
+        <div class="field">
+            <label for="pcImage">PC 이미지 (1280x400) <span style="color:#c0392b;" th:if="${banner == null}">*</span></label>
+            <input type="file" id="pcImage" name="pcImage" accept="image/*" th:required="${banner == null}">
+            <div th:if="${banner != null and banner.fileNamePc != null}" style="margin-top:8px;">
+                <img th:src="@{${banner.fileNamePc}}" style="max-width:300px;">
+            </div>
+        </div>
+        <div class="field">
+            <label for="mobileImage">모바일 이미지 (768x280) <span style="color:#c0392b;" th:if="${banner == null}">*</span></label>
+            <input type="file" id="mobileImage" name="mobileImage" accept="image/*" th:required="${banner == null}">
+            <div th:if="${banner != null and banner.fileNameMobile != null}" style="margin-top:8px;">
+                <img th:src="@{${banner.fileNameMobile}}" style="max-width:200px;">
+            </div>
+        </div>
+        <div class="field">
+            <label for="bannerContent">배너 내용 (선택, HTML)</label>
+            <textarea id="bannerContent" name="bannerContent" rows="4"
+                      th:text="${banner != null} ? ${banner.bannerContent} : ''"></textarea>
+        </div>
+        <button type="submit">저장</button>
+    </form>
+</div>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>브랜드관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>브랜드관리</h1>
+    <p style="color:#666; margin-bottom:16px;">지자체별 답례품 브랜드를 관리합니다.</p>
+    <p><a class="btn" th:href="@{/brand/new}">+ 브랜드 등록</a></p>
+
+    <table>
+        <thead>
+        <tr><th>ID</th><th>브랜드명</th><th>지자체코드</th><th>공개여부</th><th>처리</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="b : ${brands}">
+            <td th:text="${b.brandId()}"></td>
+            <td><a th:href="@{'/brand/' + ${b.brandId()} + '/edit'}" th:text="${b.brandName()}"></a></td>
+            <td th:text="${b.locgovCode()}"></td>
+            <td th:text="${b.displayFlag() == 'Y' ? '공개' : '비공개'}"></td>
+            <td>
+                <a class="small-btn" th:href="@{'/brand/' + ${b.brandId()} + '/edit'}">수정</a>
+                <form th:action="@{'/brand/' + ${b.brandId()} + '/delete'}" method="post" class="inline-form"
+                      onsubmit="return confirm('삭제하시겠습니까?')">
+                    <button type="submit" class="small-btn danger">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(brands)}">등록된 브랜드가 없습니다.</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>입점업체 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <p><a th:href="@{/seller}">&larr; 입점업체관리</a></p>
+    <h1 th:text="${seller.sellerId()} != null ? '입점업체 수정' : '입점업체 등록'"></h1>
+
+    <form th:action="${seller.sellerId()} != null ? @{'/seller/' + ${seller.sellerId()}} : @{/seller}" method="post">
+        <h2 style="font-size:16px;">업체 정보</h2>
+        <div class="field"><label for="sellerName">업체명</label><input type="text" id="sellerName" name="sellerName" th:value="${seller.sellerName()}" required></div>
+        <div class="field"><label for="companyName">상호</label><input type="text" id="companyName" name="companyName" th:value="${seller.companyName()}"></div>
+        <div class="field"><label for="representativeName">대표자명</label><input type="text" id="representativeName" name="representativeName" th:value="${seller.representativeName()}"></div>
+        <div class="field"><label for="businessNumber">사업자번호</label><input type="text" id="businessNumber" name="businessNumber" th:value="${seller.businessNumber()}"></div>
+        <div class="field"><label for="businessLocation">사업장소재지</label><input type="text" id="businessLocation" name="businessLocation" th:value="${seller.businessLocation()}"></div>
+        <div class="field"><label><input type="checkbox" name="communityBusinessYn" value="Y" th:checked="${seller.communityBusinessYn() == 'Y'}"> 마을기업</label></div>
+
+        <h2 style="font-size:16px; margin-top:24px;">담당자 정보</h2>
+        <div class="field"><label for="userName">담당자명</label><input type="text" id="userName" name="userName" th:value="${seller.userName()}"></div>
+        <div class="field"><label for="telephoneNumber">전화번호</label><input type="text" id="telephoneNumber" name="telephoneNumber" th:value="${seller.telephoneNumber()}"></div>
+        <div class="field"><label for="phoneNumber">휴대폰번호</label><input type="text" id="phoneNumber" name="phoneNumber" th:value="${seller.phoneNumber()}"></div>
+        <div class="field"><label for="email">이메일</label><input type="text" id="email" name="email" th:value="${seller.email()}"></div>
+        <div class="field"><label for="address">주소</label><input type="text" id="address" name="address" th:value="${seller.address()}"></div>
+        <div class="field"><label for="addressDetail">상세주소</label><input type="text" id="addressDetail" name="addressDetail" th:value="${seller.addressDetail()}"></div>
+
+        <h2 style="font-size:16px; margin-top:24px;">계정/정산 정보</h2>
+        <div class="field"><label for="loginId">로그인 아이디</label><input type="text" id="loginId" name="loginId" th:value="${seller.loginId()}"></div>
+        <div class="field"><label for="bankName">입금은행</label><input type="text" id="bankName" name="bankName" th:value="${seller.bankName()}"></div>
+        <div class="field"><label for="bankInName">예금주</label><input type="text" id="bankInName" name="bankInName" th:value="${seller.bankInName()}"></div>
+        <div class="field"><label for="bankAccountNumber">계좌번호</label><input type="text" id="bankAccountNumber" name="bankAccountNumber" th:value="${seller.bankAccountNumber()}"></div>
+        <div class="field">
+            <label for="remittanceType">정산주기</label>
+            <select id="remittanceType" name="remittanceType">
+                <option value="1" th:selected="${seller.remittanceType() == '1'}">일정산</option>
+                <option value="2" th:selected="${seller.remittanceType() == '2'}">주정산</option>
+                <option value="3" th:selected="${seller.remittanceType() == '3'}">15일정산</option>
+                <option value="4" th:selected="${seller.remittanceType() == '4'}">월정산</option>
+            </select>
+        </div>
+        <div class="field"><label for="commissionRate">수수료율(%)</label><input type="number" step="0.1" id="commissionRate" name="commissionRate" th:value="${seller.commissionRate()}"></div>
+
+        <button type="submit" class="btn">저장</button>
+    </form>
+</div>
+</body>
+</html>

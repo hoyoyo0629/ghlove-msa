@@ -1,0 +1,87 @@
+_format_version: "3.0"
+# SFR-010 API 게이트웨이 - 로컬 개발환경에서 실제로 띄워 검증하는 버전.
+# K8s용(infra/k8s/kong.yaml)과 라우팅 구조는 동일하지만, 서비스들이 K8s 클러스터가
+# 아니라 이 Windows 호스트에서 직접(gradlew bootRun) 떠 있으므로 Docker Desktop이
+# 제공하는 host.docker.internal로 접근한다.
+#
+# 실행: docker run -d --name ghlove-kong -p 8000:8000 -p 8001:8001 \
+#         -e KONG_DATABASE=off -e KONG_DECLARATIVE_CONFIG=/kong/declarative/kong.yaml \
+#         -v <이 파일 경로>:/kong/declarative/kong.yaml:ro kong:3.8
+# SFR-010 게이트웨이 단 JWT 검증 - member 서비스가 로그인 시 발급하는 GH_AUTH 쿠키(HS256,
+# 공유 비밀키)를 여기서도 한 번 더 검증한다. 각 서비스 자체에도 이미 JwtVerifier가 있으므로
+# 이건 심층방어(defense-in-depth)용 - 게이트웨이 단에서 위조/만료 토큰을 먼저 걸러낸다.
+# member-route는 로그인 전 상태(쿠키가 아직 없음)에서도 접근해야 하므로 jwt 플러그인을
+# 적용하지 않는다(로그인 자체가 이 라우트를 통해 이뤄짐).
+consumers:
+  - username: ghlove-app
+    jwt_secrets:
+      - key: ghlove-app
+        algorithm: HS256
+        secret: "ghlove-msa-local-dev-shared-jwt-secret-key-32bytes-min!!"
+services:
+  - name: member-service
+    url: http://host.docker.internal:8081
+    routes:
+      - name: member-route
+        paths: ["/member"]
+        strip_path: true
+  - name: donation-service
+    url: http://host.docker.internal:8082
+    routes:
+      - name: donation-route
+        paths: ["/donation"]
+        strip_path: true
+        plugins:
+          - name: jwt
+            config:
+              cookie_names: ["GH_AUTH"]
+              key_claim_name: "iss"
+              claims_to_verify: ["exp"]
+  - name: point-service
+    url: http://host.docker.internal:8083
+    routes:
+      - name: point-route
+        paths: ["/point"]
+        strip_path: true
+        plugins:
+          - name: jwt
+            config:
+              cookie_names: ["GH_AUTH"]
+              key_claim_name: "iss"
+              claims_to_verify: ["exp"]
+  - name: gift-service
+    url: http://host.docker.internal:8084
+    routes:
+      - name: gift-route
+        paths: ["/gift"]
+        strip_path: true
+        plugins:
+          - name: jwt
+            config:
+              cookie_names: ["GH_AUTH"]
+              key_claim_name: "iss"
+              claims_to_verify: ["exp"]
+  - name: order-service
+    url: http://host.docker.internal:8085
+    routes:
+      - name: order-route
+        paths: ["/order"]
+        strip_path: true
+        plugins:
+          - name: jwt
+            config:
+              cookie_names: ["GH_AUTH"]
+              key_claim_name: "iss"
+              claims_to_verify: ["exp"]
+  - name: admin-service
+    url: http://host.docker.internal:8086
+    routes:
+      - name: admin-route
+        paths: ["/admin"]
+        strip_path: true
+        plugins:
+          - name: jwt
+            config:
+              cookie_names: ["GH_AUTH"]
+              key_claim_name: "iss"
+              claims_to_verify: ["exp"]

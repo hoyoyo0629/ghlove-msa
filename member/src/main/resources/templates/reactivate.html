@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>휴면계정 해제 - 고향사랑e음 (member service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="wrap">
+    <h1>휴면계정 해제<span class="badge">member</span></h1>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+    <form th:action="@{/reactivate}" method="post">
+        <div class="field">
+            <label for="loginId">아이디</label>
+            <input type="text" id="loginId" name="loginId" required autofocus>
+        </div>
+        <div class="field">
+            <label for="password">비밀번호</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <button type="submit">휴면 해제</button>
+    </form>
+
+    <div class="links">
+        <a th:href="@{/login}">로그인으로 돌아가기</a>
+    </div>
+</div>
+</body>
+</html>

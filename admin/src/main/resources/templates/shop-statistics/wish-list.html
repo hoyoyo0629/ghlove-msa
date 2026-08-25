@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>답례품 선호도 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>답례품 선호도</h1>
+    <p style="color:#666; margin-bottom:16px;">관심답례품(찜) 등록 건수 기준입니다.</p>
+    <table>
+        <thead>
+        <tr><th>상품ID</th><th>상품명</th><th>지자체</th><th>찜 건수</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="row : ${stats}">
+            <td th:text="${row.itemId()}"></td>
+            <td th:text="${row.itemName()}"></td>
+            <td th:text="${row.locgovName()}"></td>
+            <td th:text="${row.wishCount()} + '건'"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(stats)}">찜 데이터가 없습니다.</p>
+</div>
+</body>
+</html>

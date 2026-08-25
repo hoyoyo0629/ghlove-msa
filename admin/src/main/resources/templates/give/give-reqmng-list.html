@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>기부금 변경신청 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/give/give-state/reqmng-list(list.jsp) 재현 - 기부금 취소(과오납)/
+     포인트생성 변경신청 승인 큐. 요청은 give-state 상세화면(기부번호별 "변경신청"
+     링크)에서 들어온다. 승인 시 실제 도메인효과(기부취소=DonationService.cancelDonation,
+     포인트생성=PointClient.creditForDonation)는 donation 서비스가 그대로 수행한다. -->
+<div class="wrap">
+    <h1>기부금 변경신청 관리</h1>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+    <table>
+        <thead>
+        <tr>
+            <th>요청분류</th>
+            <th>기부지자체</th>
+            <th>기부자명</th>
+            <th>아이디</th>
+            <th>기부일자</th>
+            <th>기부번호</th>
+            <th>기부액</th>
+            <th>사유</th>
+            <th>요청일시</th>
+            <th>승인/취소</th>
+            <th>처리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${list}">
+            <td th:text="${r.cntrReqmngCode == '100'} ? '기부금 취소(과오납)' : '포인트 생성'"></td>
+            <td th:text="${r.locgovCode}"></td>
+            <td th:text="${r.userName}"></td>
+            <td th:text="${r.loginId}"></td>
+            <td th:text="${r.sttemntPayDe != null ? #strings.substring(r.sttemntPayDe, 0, 10) : '-'}"></td>
+            <td th:text="${r.cntrSn}"></td>
+            <td th:text="${#numbers.formatInteger(r.cntrAmt, 0, 'COMMA')} + '원'"></td>
+            <td th:text="${r.discription}"></td>
+            <td th:text="${r.frstRegistPnttm != null ? #strings.substring(r.frstRegistPnttm, 0, 16) : '-'}"></td>
+            <td>
+                <span th:if="${r.reqStatusCode == '999'}">승인 완료 (<span th:text="${#strings.substring(r.apprDt, 0, 16)}"></span>)</span>
+                <span th:if="${r.reqStatusCode == '200'}">요청취소됨</span>
+                <span th:if="${r.reqStatusCode == '100'}">대기중</span>
+            </td>
+            <td th:if="${r.reqStatusCode == '100'}">
+                <form th:action="@{/give-reqmng/{id}/approve(id=${r.reqId})}" method="post" style="display:inline;" onsubmit="return confirm('변경신청을 승인하시겠습니까?');">
+                    <button type="submit">요청승인</button>
+                </form>
+                <form th:action="@{/give-reqmng/{id}/cancel(id=${r.reqId})}" method="post" style="display:inline;" onsubmit="return confirm('변경신청을 취소하시겠습니까?');">
+                    <button type="submit">요청취소</button>
+                </form>
+            </td>
+            <td th:unless="${r.reqStatusCode == '100'}">-</td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(list)}">등록된 변경신청이 없습니다.</p>
+</div>
+</body>
+</html>

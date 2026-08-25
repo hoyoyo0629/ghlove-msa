@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>지역별 통계 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>지역별 통계</h1>
+    <p style="color:#666; margin-bottom:16px;">답례품이 등록된 지자체 기준입니다.</p>
+    <table>
+        <thead>
+        <tr><th>지자체</th><th>결제건수</th><th>결제포인트</th><th>처리</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="row : ${stats}">
+            <td th:text="${row.locgovName()}"></td>
+            <td th:text="${row.payCount()} + '건'"></td>
+            <td th:text="${#numbers.formatInteger(row.payAmount(), 0, 'COMMA')} + 'P'"></td>
+            <td><a class="small-btn" th:href="@{'/shop-statistics/sales/area/detail'(locgovCode=${row.locgovCode()})}">상세</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(stats)}">데이터가 없습니다.</p>
+</div>
+</body>
+</html>

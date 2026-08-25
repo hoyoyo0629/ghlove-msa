@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>기부금 변경신청 등록 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/give/give-reqmng/req_form.jsp 재현 - 요청분류 100(기부금 취소/과오납)은
+     세외수입시스템 결의일자+관련문서 3항목이 증빙으로 필수, 200(포인트생성)은 사유만
+     필요하다(evidence 필드는 JS로 토글). 사유는 10자 이상. -->
+<div class="wrap">
+    <p><a th:href="@{/give-reqmng}">&larr; 기부금 변경신청 관리</a></p>
+    <h1>기부금 변경 등록</h1>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+    <div th:if="${donation != null}">
+        <table style="margin-bottom:20px;">
+            <tbody>
+            <tr><th style="width:180px;">지자체</th><td th:text="${donation.locgovCode}"></td></tr>
+            <tr><th>기부일자</th><td th:text="${donation.cntrDe}"></td></tr>
+            <tr><th>기부번호</th><td th:text="${donation.cntrSn}"></td></tr>
+            <tr><th>기부액</th><td th:text="${#numbers.formatInteger(donation.cntrAmt, 0, 'COMMA')} + '원'"></td></tr>
+            <tr><th>기부상태</th><td th:text="${donation.cntrSttusCode}"></td></tr>
+            <tr><th>포인트 사용이력</th><td th:text="${donation.pointsUsed} ? '있음 (변경신청 불가)' : '없음'"></td></tr>
+            </tbody>
+        </table>
+
+        <form th:action="@{/give-reqmng}" method="post" th:if="${!donation.pointsUsed}">
+            <input type="hidden" name="cntrSn" th:value="${cntrSn}">
+            <div class="field">
+                <label for="cntrReqmngCode">요청분류</label>
+                <select id="cntrReqmngCode" name="cntrReqmngCode" onchange="toggleEvidence(this.value)">
+                    <option value="100">기부금 취소(과오납)</option>
+                    <option value="200">포인트 생성</option>
+                </select>
+            </div>
+            <div id="evidenceFields">
+                <div class="field">
+                    <label for="taxSysCancelDe">세외수입시스템 과오납 결의일자</label>
+                    <input type="date" id="taxSysCancelDe" name="taxSysCancelDe">
+                </div>
+                <div class="field">
+                    <label for="relatedDocDptNm">관련문서 생산부서명</label>
+                    <input type="text" id="relatedDocDptNm" name="relatedDocDptNm">
+                </div>
+                <div class="field">
+                    <label for="relatedDocNum">관련문서 문서번호</label>
+                    <input type="text" id="relatedDocNum" name="relatedDocNum">
+                </div>
+                <div class="field">
+                    <label for="relatedDocDe">관련문서 시행일</label>
+                    <input type="date" id="relatedDocDe" name="relatedDocDe">
+                </div>
+            </div>
+            <div class="field">
+                <label for="discription">사유 (최소 10자 이상)</label>
+                <textarea id="discription" name="discription" required minlength="10" rows="4"></textarea>
+            </div>
+            <p style="font-size:13px; color:#666; margin-bottom:16px;">
+                ※ 포인트 생성은 포인트 체계를 사용하는 민간플랫폼에 한해 적용 가능합니다.<br>
+                ※ 답례품이 신청된 건은 시스템으로 변경이 불가능합니다.<br>
+                ※ 세액공제를 받았을 경우 반드시 홈택스에서 경정청구를 하도록 기부자에게 안내해야 합니다.
+            </p>
+            <button type="submit">변경신청 등록</button>
+        </form>
+    </div>
+
+    <script th:inline="none">
+    function toggleEvidence(code) {
+        document.getElementById('evidenceFields').style.display = code === '100' ? 'block' : 'none';
+    }
+    toggleEvidence(document.getElementById('cntrReqmngCode') ? document.getElementById('cntrReqmngCode').value : '100');
+    </script>
+</div>
+</body>
+</html>

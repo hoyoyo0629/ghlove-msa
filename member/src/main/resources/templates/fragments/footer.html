@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/* AS-IS footer_ali.vue(ghlove-frontend/components/layouts/footer_ali.vue) 마크업/클래스 그대로 재현.
+     스타일은 new.css의 #krds-footer 규칙이 담당. */-->
+<div class="footer_wrap" th:fragment="site-footer">
+    <footer id="krds-footer">
+        <div class="inner">
+            <div class="f-logo"><span class="sr-only">행정안전부</span></div>
+            <div class="f-info">
+                <p class="f-addr">
+                    <span>본관 : 30112 세종특별자치시 도움6로 42(어진동)</span><span class="f-addr-bar">/</span>
+                    <span>별관 : 30116 세종특별자치시 가름로 143(어진동)</span>
+                </p>
+                <p class="f-addr f-addr--mob">
+                    <span>본관 : 30112 세종특별자치시 도움6로 42(어진동)</span>
+                    <span>별관 : 30116 세종특별자치시 가름로 143(어진동)</span>
+                </p>
+                <div class="info-cs--pc">
+                    <div class="f-title">고향사랑e음 고객센터</div>
+                    <ul class="info-cs">
+                        <li>
+                            <strong class="key-info"><strong>1522-2431</strong><span>(월 ~ 금 9:00 ~ 18:00, 공휴일 제외)</span></strong>
+                            <span class="more-info">고향사랑e음 기부 가능 시간 : 1:00 ~ 23:30</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="f-btm">
+                <ul class="f-menu">
+                    <li><a class="krds-btn text point" href="http://localhost:8082/policy/privacy">개인정보처리방침</a></li>
+                    <li><a class="krds-btn text" href="http://localhost:8082/policy/copyright">저작권정책</a></li>
+                    <li><a class="krds-btn text" href="http://localhost:8082/policy/auth">이용약관</a></li>
+                    <li><a class="krds-btn text open-modal" href="#modal_sitemap">사이트맵</a></li>
+                    <li><a class="krds-btn text" th:href="@{'http://localhost:8086/notices'}">공지사항</a></li>
+                </ul>
+                <p class="f-copy">© Ministry of the Interior and Safety. All rights reserved.</p>
+            </div>
+            <a href="http://www.kwacc.or.kr/CertificationSite/WA/2326/Detail?page=1" class="btn-accessibility" target="_blank" rel="noopener">
+                <img th:src="@{/images/accessibility-logo_2026.png}" alt="국가공인 정보통신접근성 품질인증마크" style="width:100%;height:100%;">
+            </a>
+        </div>
+    </footer>
+
+    <!-- AS-IS footer_ali.vue #modal_sitemap 재현. JS 없이 CSS :target 으로 열고 닫는다
+         (site.css의 #modal_sitemap:target 규칙 참고). -->
+    <section id="modal_sitemap" class="krds-modal" role="dialog" data-type="full">
+        <div class="modal-dialog">
+            <div class="modal-content sitemap">
+                <div class="modal-header">
+                    <h2 class="modal-title sitemap__tit">사이트맵</h2>
+                </div>
+                <div class="modal-conts">
+                    <nav class="sitemap__nav" aria-label="사이트맵">
+                        <div class="sitemap__grid">
+                            <div class="sitemap__col sitemap__col--donation">
+                                <h3 class="sitemap__title">기부</h3>
+                                <ul class="sitemap__list">
+                                    <li><a th:href="@{'http://localhost:8082/'}">자치단체에 기부하기</a></li>
+                                    <li><a href="http://localhost:8082/designated-donation">특정사업에 기부하기</a></li>
+                                </ul>
+                            </div>
+                            <div class="sitemap__col sitemap__col--goods">
+                                <h3 class="sitemap__title">답례품</h3>
+                                <ul class="sitemap__list">
+                                    <li><a th:href="@{'http://localhost:8084/'}">답례품몰</a></li>
+                                    <li><a th:href="@{'http://localhost:8084/seasonal'}">제철식품관</a></li>
+                                </ul>
+                            </div>
+                            <div class="sitemap__col sitemap__col--center">
+                                <h3 class="sitemap__title">고객센터</h3>
+                                <ul class="sitemap__list">
+                                    <li><a th:href="@{'http://localhost:8086/notices'}">공지사항</a></li>
+                                    <li><a th:href="@{'http://localhost:8086/data-board'}">자료실</a></li>
+                                    <li><a href="http://localhost:8086/qna/board">Q&amp;A</a></li>
+                                    <li><a th:href="@{'http://localhost:8086/faqs'}">FAQ</a></li>
+                                </ul>
+                            </div>
+                            <div class="sitemap__col sitemap__col--guide">
+                                <h3 class="sitemap__title">안내사항</h3>
+                                <ul class="sitemap__list">
+                                    <li><a th:href="@{'http://localhost:8082/list-select'}">기금사업 소개</a></li>
+                                    <li><a th:href="@{'http://localhost:8082/guide1'}">고향사랑기부제 안내</a></li>
+                                    <li><a th:href="@{'http://localhost:8082/guide2'}">온라인 기부방법</a></li>
+                                    <li><a th:href="@{'http://localhost:8082/guide5'}">오프라인 기부방법</a></li>
+                                    <li><a th:href="@{'http://localhost:8082/honor'}">연말정산 세액공제 안내</a></li>
+                                    <li><a th:href="@{'http://localhost:8082/guide6'}">고향사랑기부 주의사항</a></li>
+                                </ul>
+                            </div>
+                            <div class="sitemap__col sitemap__col--event">
+                                <h3 class="sitemap__title">이벤트</h3>
+                                <ul class="sitemap__list">
+                                    <li><a th:href="@{'http://localhost:8086/events'(ing='Y')}">진행중인 이벤트</a></li>
+                                    <li><a th:href="@{'http://localhost:8086/events'(ing='N')}">종료된 이벤트</a></li>
+                                </ul>
+                            </div>
+                            <div class="sitemap__col sitemap__col--mypage">
+                                <h3 class="sitemap__title">마이페이지</h3>
+                                <ul class="sitemap__list">
+                                    <li><a th:href="@{'http://localhost:8082/my'(userId=${user != null ? user.userId : null})}">기부내역 조회</a></li>
+                                    <li><a th:href="@{'http://localhost:8083/'(userId=${user != null ? user.userId : null})}">기부포인트 조회</a></li>
+                                    <li><a th:href="@{'http://localhost:8085/my'(userId=${user != null ? user.userId : null})}">주문조회</a></li>
+                                    <li><a href="http://localhost:8085/cart">장바구니</a></li>
+                                    <li><a th:href="@{'http://localhost:8085/my'(userId=${user != null ? user.userId : null})}">취소반품교환</a></li>
+                                    <li><a th:href="@{/delivery}">배송지 관리</a></li>
+                                    <li><a th:href="@{/coming-soon}">답례품 Q&amp;A</a></li>
+                                    <li><a th:href="@{/coming-soon}">답례품 후기</a></li>
+                                    <li><a th:href="@{'http://localhost:8082/receipts'(userId=${user != null ? user.userId : null})}">기부확인증 보기</a></li>
+                                    <li><a th:href="@{'http://localhost:8082/honor/certificates'(userId=${user != null ? user.userId : null})}">기부혜택증 보기</a></li>
+                                    <li><a th:href="@{'http://localhost:8086/qna'(userId=${user != null ? user.userId : null})}">1:1 문의</a></li>
+                                    <li><a th:href="@{/profile}">회원정보수정</a></li>
+                                    <li><a th:href="@{'http://localhost:8082/interest-locgovs'(userId=${user != null ? user.userId : null})}">관심지자체</a></li>
+                                    <li><a th:href="@{'http://localhost:8084/wishlist'(userId=${user != null ? user.userId : null})}">관심답례품</a></li>
+                                    <li><a th:href="@{/withdraw}">회원탈퇴</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </nav>
+                </div>
+                <a class="krds-btn icon btn-close close-modal" href="#">
+                    <span class="btn-close-txt">닫기</span>
+                    <i class="svg-icon ico-popup-close"></i>
+                </a>
+            </div>
+        </div>
+        <div class="modal-back"></div>
+    </section>
+</div>
+</body>
+</html>

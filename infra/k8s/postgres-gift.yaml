@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-gift-secret
+  namespace: ghlove
+type: Opaque
+stringData:
+  POSTGRES_USER: gift
+  POSTGRES_PASSWORD: ghlove
+  POSTGRES_DB: gift
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-gift-pvc
+  namespace: ghlove
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-gift
+  namespace: ghlove
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-gift
+  template:
+    metadata:
+      labels:
+        app: postgres-gift
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: postgres-gift-secret
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "gift"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-gift-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-gift
+  namespace: ghlove
+spec:
+  selector:
+    app: postgres-gift
+  ports:
+    - port: 5432
+      targetPort: 5432

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>팝업 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>팝업 관리</h1>
+    <p><a class="btn" th:href="@{/popups/new}">+ 팝업 등록</a></p>
+
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>유형</th>
+            <th>제목</th>
+            <th>노출기간</th>
+            <th>상태</th>
+            <th>처리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="p : ${popups}">
+            <td th:text="${p.popupId}"></td>
+            <td th:text="${typeLabels.get(p.popupType)} ?: ${p.popupType}"></td>
+            <td th:text="${p.subject}"></td>
+            <td th:text="${p.startDate} + ' ~ ' + ${p.endDate}"></td>
+            <td>
+                <span class="pill" th:classappend="${p.useYn == 'Y'} ? 'on' : 'off'"
+                      th:text="${p.useYn == 'Y'} ? '노출중' : '중지'"></span>
+            </td>
+            <td>
+                <form th:action="@{'/popups/' + ${p.popupId} + '/toggle'}" method="post" class="inline-form">
+                    <button type="submit" class="small-btn ghost" th:text="${p.useYn == 'Y'} ? '중지' : '노출'"></button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(popups)}">등록된 팝업이 없습니다.</p>
+</div>
+</body>
+</html>

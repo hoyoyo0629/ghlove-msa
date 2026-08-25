@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>기부금 지출내역 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/give/give-operation/list/{locgovCode}.jsp + popup/form.jsp를 한
+     화면으로 합쳤다(팝업 대신 인라인 폼 - 이 프로젝트의 기존 서버렌더 폼 관행). "수정"을
+     누르면 JS로 폼에 기존값을 채우고 action을 수정 URL로 바꾼다(파일은 보안상 재선택
+     필요 - 기존 첨부는 별도 목록에서 개별 삭제). -->
+<div class="wrap">
+    <p><a th:href="@{/give-operation}">&larr; 기부금 운용정보 목록</a></p>
+    <h1 th:text="${locgovFullNm} + ' 지출내역'"></h1>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+    <table style="margin-bottom:28px;">
+        <thead>
+        <tr>
+            <th>지출일자</th>
+            <th>사업목적</th>
+            <th>사업명</th>
+            <th>사용금액</th>
+            <th>사용내용</th>
+            <th>증빙서류</th>
+            <th>관리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${list}">
+            <td th:text="${r.expndtrDe}"></td>
+            <td th:text="${bsnsPurpsCodeList.get(r.bsnsPurpsCode)}"></td>
+            <td th:text="${r.bsnsNm}"></td>
+            <td th:text="${#numbers.formatInteger(r.expndtrAmt, 0, 'COMMA')} + '원'"></td>
+            <td th:text="${r.bsnsCn}"></td>
+            <td>
+                <span th:each="f : ${r.files}" style="display:block;">
+                    <a th:href="@{http://localhost:8082/ctbny-opratn/file-download/{id}(id=${f.registFileId})}" th:text="${f.orginlFileNm}" target="_blank"></a>
+                    <form th:action="@{/give-operation/{code}/files/{fid}/delete(code=${locgovCode},fid=${f.registFileId})}" method="post" style="display:inline;" onsubmit="return confirm('첨부파일을 삭제하시겠습니까?');">
+                        <button type="submit" style="border:none;background:none;color:#c0392b;cursor:pointer;">삭제</button>
+                    </form>
+                </span>
+            </td>
+            <td>
+                <button type="button" class="edit-row-btn"
+                        th:data-regist-sn="${r.registSn}"
+                        th:data-bsns-purps-code="${r.bsnsPurpsCode}"
+                        th:data-bsns-nm="${r.bsnsNm}"
+                        th:data-bsns-cn="${r.bsnsCn}"
+                        th:data-expndtr-de="${r.expndtrDe}"
+                        th:data-expndtr-amt="${#numbers.formatDecimal(r.expndtrAmt, 1, 'NONE', 0, 'NONE')}"
+                        th:data-rm="${r.rm}"
+                        onclick="editRow(this)">수정</button>
+                <form th:action="@{/give-operation/{code}/{sn}/delete(code=${locgovCode},sn=${r.registSn})}" method="post" style="display:inline;" onsubmit="return confirm('지출내역을 삭제하시겠습니까?');">
+                    <button type="submit">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(list)}">등록된 지출내역이 없습니다.</p>
+
+    <h2 id="formTitle">지출내역 등록</h2>
+    <form id="opratnForm" th:action="@{/give-operation/{code}(code=${locgovCode})}" method="post" enctype="multipart/form-data">
+        <div class="field">
+            <label for="bsnsPurpsCode">사업목적</label>
+            <select id="bsnsPurpsCode" name="bsnsPurpsCode">
+                <option value="">선택안함</option>
+                <option th:each="c : ${bsnsPurpsCodeList}" th:value="${c.key}" th:text="${c.value}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="bsnsNm">사업명 <span style="color:#c0392b;">*</span></label>
+            <input type="text" id="bsnsNm" name="bsnsNm" required maxlength="200">
+        </div>
+        <div class="field">
+            <label for="expndtrDe">지출일자 <span style="color:#c0392b;">*</span></label>
+            <input type="date" id="expndtrDe" name="expndtrDe" required>
+        </div>
+        <div class="field">
+            <label for="expndtrAmt">사용금액(원) <span style="color:#c0392b;">*</span></label>
+            <input type="number" id="expndtrAmt" name="expndtrAmt" required min="0" max="2100000000">
+        </div>
+        <div class="field">
+            <label for="bsnsCn">사용내용 <span style="color:#c0392b;">*</span></label>
+            <textarea id="bsnsCn" name="bsnsCn" required rows="4"></textarea>
+        </div>
+        <div class="field">
+            <label for="rm">비고</label>
+            <textarea id="rm" name="rm" rows="2"></textarea>
+        </div>
+        <div class="field">
+            <label for="files">증빙서류 첨부</label>
+            <input type="file" id="files" name="files" multiple>
+        </div>
+        <button type="submit">저장</button>
+        <button type="button" onclick="resetForm()">취소</button>
+    </form>
+</div>
+
+<script th:inline="none">
+var createAction = document.getElementById('opratnForm').action;
+function editRow(btn) {
+    document.getElementById('formTitle').textContent = '지출내역 수정';
+    document.getElementById('bsnsPurpsCode').value = btn.dataset.bsnsPurpsCode || '';
+    document.getElementById('bsnsNm').value = btn.dataset.bsnsNm;
+    document.getElementById('bsnsCn').value = btn.dataset.bsnsCn;
+    document.getElementById('expndtrDe').value = btn.dataset.expndtrDe;
+    document.getElementById('expndtrAmt').value = btn.dataset.expndtrAmt;
+    document.getElementById('rm').value = btn.dataset.rm || '';
+    document.getElementById('opratnForm').action = createAction + '/' + btn.dataset.registSn + '/edit';
+    document.getElementById('formTitle').scrollIntoView({behavior: 'smooth'});
+}
+function resetForm() {
+    document.getElementById('formTitle').textContent = '지출내역 등록';
+    document.getElementById('opratnForm').reset();
+    document.getElementById('opratnForm').action = createAction;
+}
+</script>
+</body>
+</html>

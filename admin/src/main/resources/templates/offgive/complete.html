@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>오프라인기부 접수 완료 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>오프라인기부 접수 완료</h1>
+
+    <div class="card" style="margin-bottom:20px; max-width:420px;">
+        <div>기부번호: <strong th:text="${result.donation().cntrSn()}"></strong></div>
+        <div>지자체: <span th:text="${result.donation().cntrLocgovCode()}"></span></div>
+        <div>기부금액: <span th:text="${#numbers.formatInteger(result.donation().cntrAmt(), 0, 'COMMA')} + '원'"></span></div>
+        <div>상태: <span th:text="${result.donation().cntrSttusCode()}"></span></div>
+    </div>
+
+    <p th:if="${result.walkIn() != null}" class="dev-code" style="background:#eef4ff;color:#1a73e8;padding:10px;border-radius:4px; max-width:420px;">
+        새 회원계정이 발급되었습니다.<br>
+        아이디: <strong th:text="${result.walkIn().loginId()}"></strong><br>
+        임시 비밀번호: <strong th:text="${result.walkIn().tempPassword()}"></strong><br>
+        (기부자에게 별도로 안내해 주세요 - 다시 확인할 수 없습니다)
+    </p>
+
+    <p style="margin-top:20px;">
+        <a th:href="@{/offgive/{sn}(sn=${result.donation().cntrSn()})}">접수 상세보기</a>
+        &nbsp;|&nbsp;
+        <a th:href="@{/offgive}">목록으로</a>
+        &nbsp;|&nbsp;
+        <a th:href="@{/offgive/new}">추가 접수</a>
+    </p>
+</div>
+</body>
+</html>

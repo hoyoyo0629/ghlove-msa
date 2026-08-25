@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>기부혜택증 - 고향사랑e음 (donation service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="wrap">
+    <h1>기부혜택증(세액공제 안내)<span class="badge">donation</span></h1>
+
+    <form th:action="@{/honor/estimate}" method="get">
+        <div class="field">
+            <label for="year">귀속연도</label>
+            <input type="number" id="year" name="year" th:value="${year}" min="2020" max="2100">
+        </div>
+        <button type="submit">조회</button>
+    </form>
+
+    <div th:if="${userName != null}" style="margin-top:20px;">
+        <div class="balance-card" style="background:#fdf6ef; border:1px solid #f0ddc8; border-radius:8px; padding:20px; text-align:center; margin-bottom:16px;">
+            <div style="font-size:13px; color:#666; margin-bottom:6px;" th:text="${userName} + '님 · ' + ${year} + '년 귀속'"></div>
+            <div style="font-size:14px; color:#555; margin-bottom:8px;">
+                기부 <span th:text="${donationCount}"></span>건, 총
+                <span th:text="${#numbers.formatInteger(totalAmount, 0, 'COMMA')}"></span>원
+            </div>
+            <div style="font-size:26px; font-weight:bold; color:#7a3b12;">
+                예상 세액공제액 <span th:text="${#numbers.formatInteger(taxCredit, 0, 'COMMA')} + '원'"></span>
+            </div>
+            <div style="font-size:11px; color:#999; margin-top:8px;">
+                (연간 누계 10만원까지 100%, 10~20만원 구간 44%, 20만원 초과분 16.5%(특별재난지역은 33%) 세액공제 - 실제 공제액은 종합소득 신고 시 확정됩니다)
+            </div>
+        </div>
+
+        <div class="section-title">지자체 추가 기부혜택</div>
+        <div class="project-card" th:each="entry : ${benefitsByLocgov}">
+            <strong th:text="${entry.key}"></strong>
+            <p th:text="${entry.value}"></p>
+        </div>
+        <p class="empty" th:if="${#maps.isEmpty(benefitsByLocgov)}">등록된 추가 기부혜택 안내가 없습니다.</p>
+    </div>
+
+    <div class="links">
+        <a th:href="@{/my}">내 기부내역으로</a>
+        <a th:href="@{/honor/benefit}">지자체 혜택 관리</a>
+    </div>
+</div>
+</body>
+</html>

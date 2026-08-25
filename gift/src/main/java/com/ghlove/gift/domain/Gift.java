@@ -1,0 +1,90 @@
+package com.ghlove.gift.domain;
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+/**
+ * 답례품. Maps a subset of the AS-IS OP_ITEM columns (a ~150-column generic
+ * legacy shopping-mall product table) - only the columns this service
+ * actually populates/reads. DATA_STATUS_CODE doubles as the 지자체 승인
+ * workflow status (PENDING/APPROVED/REJECTED/STOPPED, see OP_COMMON_CODE
+ * GIFT_STATUS) since the AS-IS schema has no dedicated approval-status
+ * column. CATEGORY_CODE is a new column (added in the MVP DDL migration)
+ * since OP_ITEM's own categorization goes through tables this service
+ * doesn't use.
+ */
+@Entity
+@Table(name = "OP_ITEM")
+@Getter
+@Setter
+@NoArgsConstructor
+public class Gift {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "itemIdSeq")
+    @SequenceGenerator(name = "itemIdSeq", sequenceName = "op_item_item_id_seq", allocationSize = 1)
+    @Column(name = "ITEM_ID")
+    private Long itemId;
+
+    @Column(name = "SELLER_ID")
+    private Long sellerId;
+
+    @Column(name = "ITEM_NAME")
+    private String itemName;
+
+    @Column(name = "ITEM_SUMMARY")
+    private String itemSummary;
+
+    @Column(name = "DETAIL_CONTENT")
+    private String detailContent;
+
+    @Column(name = "CATEGORY_CODE")
+    private String categoryCode;
+
+    @Column(name = "LOCGOV_CODE")
+    private String locgovCode;
+
+    @Column(name = "SALE_PRICE")
+    private Integer salePrice;
+
+    @Column(name = "STOCK_QUANTITY")
+    private Integer stockQuantity;
+
+    @Column(name = "SOLD_OUT")
+    private String soldOut;
+
+    @Column(name = "DISPLAY_FLAG")
+    private String displayFlag;
+
+    @Column(name = "DATA_STATUS_CODE")
+    private String dataStatusCode;
+
+    @Column(name = "CREATED_DATE")
+    private String createdDate;
+
+    /** ALWAYS(상시) / LIMITED(한시) - OP_COMMON_CODE GIFT_DISPLAY_TYPE. */
+    @Column(name = "DISPLAY_TYPE")
+    private String displayType;
+
+    /** yyyyMMdd - DISPLAY_TYPE=LIMITED일 때만 의미 있음. */
+    @Column(name = "DISPLAY_START_DATE")
+    private String displayStartDate;
+
+    @Column(name = "DISPLAY_END_DATE")
+    private String displayEndDate;
+
+    /** 이 답례품을 받으려면 필요한 최소 기부금액. */
+    @Column(name = "MIN_DONATION_AMOUNT")
+    private Integer minDonationAmount;
+
+    /** 대표상품 여부 (AS-IS opmanager/item/representative-item - 실제 운영사이트에 살아있는
+     *  기능, view_search_spcl_item과는 무관). 'Y'면 대표상품 목록에 노출된다. */
+    @Column(name = "REPRESENTATIVE_ITEM_YN")
+    private String representativeItemYn;
+
+    /** 브랜드 ID (NULL: 자사제품, 그외: OP_BRAND 참고) - shop-statistics 브랜드별 통계용. */
+    @Column(name = "BRAND_ID")
+    private Integer brandId;
+}

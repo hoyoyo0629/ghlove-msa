@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>오프라인기부 접수 상세 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/offgive/detail.jsp 재현. 취소/변경신청은 이미 있는 give-reqmng으로
+     그대로 연결한다(offgive 전용 취소 로직을 새로 만들지 않음 - 포인트 사용이력 체크 등
+     기존 워크플로가 이미 완전히 검증되어 있음). -->
+<div class="wrap">
+    <p><a th:href="@{/offgive}">&larr; 오프라인기부 접수 관리</a></p>
+    <h1>오프라인기부 접수 상세</h1>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+    <table th:if="${donation != null}" style="max-width:600px;">
+        <tbody>
+        <tr><th style="width:180px;">기부번호</th><td th:text="${donation.cntrSn()}"></td></tr>
+        <tr><th>기부자명</th><td th:text="${member != null ? member.userName() : '-'}"></td></tr>
+        <tr><th>아이디</th><td th:text="${member != null ? member.loginId() : '-'}"></td></tr>
+        <tr><th>지자체</th><td th:text="${donation.cntrLocgovCode()}"></td></tr>
+        <tr><th>기부금액</th><td th:text="${#numbers.formatInteger(donation.cntrAmt(), 0, 'COMMA')} + '원'"></td></tr>
+        <tr><th>접수은행/지점</th><td th:text="${donation.rceptBankNm()}"></td></tr>
+        <tr><th>기부일</th><td th:text="${donation.cntrDe()}"></td></tr>
+        <tr><th>상태</th><td th:text="${donation.cntrSttusCode()}"></td></tr>
+        <tr><th>접수경로</th><td th:text="${donation.cntrPathCode() == '100' ? '온라인' : (donation.cntrPathCode() == '200' ? '오프라인' : donation.cntrPathCode())}"></td></tr>
+        </tbody>
+    </table>
+
+    <p style="margin-top:20px;" th:if="${donation != null}">
+        <a th:href="@{/give-reqmng/new(cntrSn=${donation.cntrSn()})}">변경신청(취소/포인트생성)</a>
+    </p>
+</div>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>주문금액-포인트사용 대사 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>주문금액-포인트사용 대사</h1>
+    <!-- AS-IS view_rc_order_amt_vs_point_use_check 재구현. 이 프로젝트는 결제수단이 포인트
+         뿐이라, 주문 시점에 기록된 요청 차감액(order.pointAmount)과 point 서비스 원장이 실제로
+         차감한 금액을 대조한다 - 비동기 SAGA(choreography)에서 두 값이 어긋나면 데이터 무결성
+         문제이므로 조사가 필요하다. -->
+    <p th:text="'불일치 ' + ${mismatchCount} + '건 / 전체 ' + ${#lists.size(rows)} + '건'"
+       th:style="${mismatchCount > 0} ? 'color:#c0392b; font-weight:bold;' : ''"></p>
+
+    <table>
+        <thead>
+        <tr>
+            <th>주문ID</th>
+            <th>회원ID</th>
+            <th>상품명</th>
+            <th>주문 차감요청액</th>
+            <th>포인트원장 실차감액</th>
+            <th>대사결과</th>
+            <th>주문상태</th>
+            <th>주문일시</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${rows}" th:classappend="${!r.matched()} ? 'row-error'">
+            <td th:text="${r.orderId()}"></td>
+            <td th:text="${r.userId()}"></td>
+            <td th:text="${r.itemName()}"></td>
+            <td th:text="${#numbers.formatInteger(r.orderPointAmount(), 0, 'COMMA')}"></td>
+            <td th:text="${#numbers.formatInteger(r.ledgerUsedAmount(), 0, 'COMMA')}"></td>
+            <td>
+                <span class="pill" th:classappend="${r.matched()} ? 'on' : 'off'"
+                      th:text="${r.matched()} ? '일치' : '불일치'"></span>
+            </td>
+            <td th:text="${r.orderStatus()}"></td>
+            <td th:text="${#temporals.format(r.createdDate(), 'yyyy-MM-dd HH:mm')}"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(rows)}">대사 대상 주문이 없습니다.</p>
+</div>
+<style>
+.row-error { background: #fdecea; }
+</style>
+</body>
+</html>

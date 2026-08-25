@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>기부혜택증 - 고향사랑e음 (donation service)</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/mypage-status.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<!-- AS-IS mypage/honorList.html 재현 - 별도 발급 신청 없이 완료된 기부가 쌓일 때마다
+     자동으로 등급이 산정되는 화면(DonationService.upsertHonorTier()가 completeDonation()
+     에서 호출됨). /honor(세액공제 예상액 계산기)와는 별개 기능이다. -->
+<section>
+    <div class="page-title-box">
+        <span class="ali_breadcrumb">
+            <a th:href="@{'http://localhost:8081/'}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            <a th:href="@{'http://localhost:8081/mypage'}">마이페이지</a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            기부혜택증
+        </span>
+        <h2 class="page-title-txt">기부혜택증</h2>
+    </div>
+</section>
+
+<section id="contents" class="receipt-contents">
+    <div class="center">
+        </div>
+    </div>
+</section>
+
+<section class="s-con receipt-con">
+    <div class="center">
+        <div class="honor-empty-banner" th:if="${#lists.isEmpty(certificates)}">
+            <div class="honor-empty-card">
+                <p>발급된<br>기부혜택증이<br>없습니다.</p>
+                <img class="honor-empty-icon" th:src="@{/images/honors/honor0.png}" alt="">
+            </div>
+        </div>
+
+        <ul class="honor-cert-list" th:unless="${#lists.isEmpty(certificates)}">
+            <li class="honor-cert-card" th:each="c : ${certificates}">
+                <div class="honor-cert-level" th:text="${levelLabels.get(c.levelCode)} ?: ${c.levelCode}"></div>
+                <div class="honor-cert-locgov" th:text="${c.locgovName}"></div>
+                <div class="honor-cert-year" th:text="${c.stdrYear} + '년도 명예기부자'"></div>
+            </li>
+        </ul>
+    </div>
+</section>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+</body>
+</html>

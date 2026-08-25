@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>메일 상세 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <p><a th:href="@{/email}">&larr; 이메일 발송</a></p>
+    <h1 th:text="${email.subject}"></h1>
+
+    <table>
+        <tbody>
+        <tr><th>대상</th><td th:text="${email.authTarget == 'A' ? '전체 관리자' : (email.authTarget == 'D' ? 'ROLE_ADMIN' : 'ROLE_OPERATOR')}"></td></tr>
+        <tr><th>상태</th><td th:text="${email.status == 'S' ? '발송완료' : (email.status == 'F' ? '일부실패' : '작성중')}"></td></tr>
+        <tr><th>발송일시</th><td th:text="${email.sendDate}"></td></tr>
+        </tbody>
+    </table>
+
+    <div class="notice-detail" style="margin-top:20px;">
+        <div class="notice-detail__content" th:text="${email.content}"></div>
+    </div>
+</div>
+</body>
+</html>

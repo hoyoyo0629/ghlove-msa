@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>팝업 등록 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="wrap narrow">
+    <h1>팝업 등록<span class="badge">admin</span></h1>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+    <form th:action="@{/popups}" method="post">
+        <div class="field">
+            <label for="popupType">유형</label>
+            <select id="popupType" name="popupType">
+                <option th:each="t : ${types}" th:value="${t.key}" th:text="${t.value}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="subject">제목</label>
+            <input type="text" id="subject" name="subject" required>
+        </div>
+        <div class="field">
+            <label for="content">내용</label>
+            <textarea id="content" name="content" rows="3"></textarea>
+        </div>
+        <div class="field">
+            <label for="startDate">시작일 (YYYYMMDD)</label>
+            <input type="text" id="startDate" name="startDate" placeholder="20260101">
+        </div>
+        <div class="field">
+            <label for="endDate">종료일 (YYYYMMDD)</label>
+            <input type="text" id="endDate" name="endDate" placeholder="20261231">
+        </div>
+        <button type="submit" class="btn full">등록</button>
+    </form>
+
+    <div class="links">
+        <a th:href="@{/popups}">목록으로</a>
+    </div>
+</div>
+</body>
+</html>

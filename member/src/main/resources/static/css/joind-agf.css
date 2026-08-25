@@ -1,0 +1,527 @@
+.black-bg {
+    background-color: rgba(0, 0, 0, 0.6);
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    display: none;
+    z-index: 1040;
+}
+
+.black-bg.show {
+    display: block;
+}
+
+.black-bg .overlayer {
+    width: 46.875%;
+    max-width: 600px;
+    min-width: 400px;
+    overflow: hidden;
+    border-radius: 20px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+
+}
+
+.black-bg .overlayer p {
+    line-height: 1.25em;
+}
+
+.black-bg .overlayer .overlayer-header {
+    font-size: 16px;
+    color: #fff;
+    background-color: var(--main-color2);
+    padding: calc(var(--margin-padding-8)*3) 0;
+    position: relative;
+}
+
+.black-bg .overlayer .overlayer-header .closeBtn {
+    position: absolute;
+    top: calc(var(--margin-padding-8)*3);
+    right: calc(var(--margin-padding-8)*4);
+}
+
+.black-bg .overlayer .overlayer-body {
+    padding: calc(var(--margin-padding-8)*5) calc(var(--margin-padding-8)*4);
+    min-height: 300px;
+    max-height: inherit;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    letter-spacing: -1px;
+    max-height: 80vh;
+
+}
+
+
+.black-bg.etax .overlayer {
+    width: 90%;
+    max-width: 840px;
+}
+
+.black-bg .overlayer .overlayer-body .frame-box {
+    width: 100%;
+    height: 100%;
+    min-height: 450px;
+}
+
+.black-bg .overlayer .overlayer-body .frame-box iframe,
+.black-bg .overlayer .overlayer-body .frame-box form {
+    width: 100%;
+    height: 600px;
+}
+
+/* 스마트위택스 모달 공통*/
+.info_wrap {
+    width: 100%;
+}
+
+.info_wrap .btn-box {
+    flex-direction: column;
+    align-items: center;
+}
+
+.black-bg.smartWetax1 .overlayer,
+.black-bg.smartWetax2 .overlayer {
+    width: 80%;
+    min-width: 320px;
+    max-width: 390px;
+}
+
+.black-bg.smartWetax1 .overlayer-header,
+.black-bg.smartWetax2 .overlayer-header {
+    padding: 16px 0;
+}
+
+/* 스마트 위택스2 */
+.black-bg.smartWetax2 .overlayer-header h3 {
+    font-size: 22px;
+}
+
+.black-bg.smartWetax2 .overlayer .overlayer-body {
+    padding: 30px 20px;
+    overflow: hidden;
+}
+
+.black-bg.smartWetax2 .overlayer-body h4 {
+    font-size: 18px;
+    text-align: left;
+    margin-bottom: 16px;
+}
+
+.black-bg.smartWetax2 .overlayer .overlayer-body .btn-box {
+    padding: 16px 0;
+    position: relative;
+}
+
+.black-bg.smartWetax2 .overlayer .overlayer-body .cursor-img {
+    width: 40px;
+    position: absolute;
+    top: 40px;
+    right: 10px;
+}
+
+.black-bg.smartWetax2 .overlayer-body button.weBtn {
+    width: 100%;
+    font-size: 20px;
+    margin: 0;
+}
+
+.black-bg.smartWetax2 .overlayer-body p {
+    width: 100%;
+    line-height: 1.5em;
+}
+
+.black-bg.smartWetax2 .overlayer-body p.deepBlue {
+    margin-top: 16px;
+    font-size: 15px;
+    line-height: 1.3em;
+    margin-bottom: 6px;
+    font-weight: 700;
+    text-align: left;
+    display: flex;
+    justify-content: flex-start;
+}
+
+.black-bg.smartWetax2 .overlayer-body p.deepBlue span:first-child {
+    margin-right: 6px;
+}
+
+.black-bg.smartWetax2 .overlayer-body p span.s-txt {
+    text-align: left;
+    display: block;
+    padding-left: 16px;
+}
+
+.black-bg.smartWetax2 .overlayer-body .icon-img {
+    transform: rotate(90deg) translateX(-1px);
+    width: 14px;
+}
+
+
+/* 기부하기 완료 */
+.black-bg.donation-c .overlayer {
+    width: 89.062%;
+    max-width: 1140px;
+}
+
+.black-bg.donation-c .overlayer .overlayer-body {
+    flex-direction: row;
+}
+
+.black-bg.donation-c .overlayer .overlayer-body {
+    padding: calc(var(--margin-padding-8)*5) calc(var(--margin-padding-8)*4);
+}
+
+.black-bg.donation-c .overlayer .overlayer-body #userName {
+    color: var(--main-color2);
+}
+
+.black-bg.donation-c .overlayer .overlayer-body .do-thanks-img {
+    padding-top: calc(var(--margin-padding-8)*5);
+}
+
+.black-bg.donation-c .overlayer .overlayer-body .btn-box {
+    padding: 0;
+    margin: -40px 0 16px;
+}
+
+.black-bg.donation-c .overlayer .overlayer-body .btn-box button {
+    width: 200px;
+}
+
+.overlayer-body .city-Info {
+    overflow: scroll;
+    padding-bottom: 30px;
+    width: 100%;
+}
+
+.donation-c .city-Info {
+    overflow: visible;
+}
+
+.overlayer-body .city-Info table th,
+.overlayer-body .city-Info table td,
+.overlayer-body .city-notice table th,
+.overlayer-body .city-notice table td {
+    font-family: 'Noto Sans KR', var(--fs-NotoSnasR), sans-serif;
+    text-align: left;
+    border: 1px solid var(--gray4);
+    padding: calc(var(--margin-padding-8)) 10px;
+    font-weight: 400;
+    font-size: 14px;
+}
+
+.overlayer-body .city-Info table th,
+.overlayer-body .city-notice table th {
+    background-color: var(--gray5);
+    width: 25%;
+    font-weight: 500;
+    padding: calc(var(--margin-padding-8)) 0;
+
+}
+
+.overlayer-body .city-Info table th{
+    text-indent: 10px;
+}
+.overlayer-body .city-Info table th,
+.overlayer-body .city-Info table td {
+    color: var(--gray3);
+}
+
+.overlayer-body .city-notice table tr:nth-child(2) {
+    cursor: pointer;
+}
+
+.overlayer-body .city-Info td.moreSplit span {
+    display: block;
+}
+
+.overlayer-body .city-Info td.moreSplit span.tax {
+    display: flex;
+    /* justify-content: flex-start; */
+    justify-content: space-between;
+}
+
+.overlayer-body .city-Info td.moreSplit span.tax span.taxNum {
+    padding: calc(var(--margin-padding-8)*1) calc(var(--margin-padding-8)*5);
+    background-color: var(--gray5);
+    border-radius: 100px;
+    color: var(--main-color2);
+    text-align: center;
+    white-space: nowrap;
+}
+
+.overlayer-body .city-Info td.moreSplit span.tax button {
+    width: 30%;
+}
+
+.overlayer-body .city-Info td.moreSplit span.tax span.s-txt {
+    line-height: 1.5em;
+}
+
+
+.black-bg .overlayer .overlayer-body h2 {
+    font-size: 26px;
+    color: var(--main-color1);
+    /* margin-bottom: calc(var(--margin-padding-8)*3); */
+}
+
+.black-bg .overlayer .overlayer-body p {
+    font-size: 14px;
+    color: var(--gray3);
+    line-height: 1.3em;
+}
+
+.black-bg.donation-c .overlayer .overlayer-body p {
+    padding: 0 40px;
+}
+
+.black-bg .overlayer .overlayer-body .btn-box {
+    width: 100%;
+    padding: calc(var(--margin-padding-8)*3) 0;
+    margin-bottom: 0px;
+}
+
+.black-bg.donation-c .overlayer-body td .formBtn {
+    margin: 0 !important;
+    width: 100%;
+}
+
+/* 회원가입 완료 모달  */
+.black-bg .overlayer.join-complete {
+    border-radius: 0 0 20px 20px;
+    width: initial;
+}
+
+.black-bg .overlayer.join-complete .overlayer-header {
+    padding: calc(var(--margin-padding-4)) 0;
+}
+
+.black-bg .overlayer.join-complete .overlayer-body {
+    padding-top: calc(var(--margin-padding-8)*7);
+}
+
+
+/* 주소 확인 모달 */
+.black-bg.address-c .overlayer {
+    position: absolute;
+    background: #fff;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.black-bg.address-c .line {
+    margin: calc(var(--margin-padding-8)*5) 0;
+}
+
+
+.black-bg.address-c .info-field-group {
+    margin-bottom: calc(var(--margin-padding-8)*2);
+}
+
+.black-bg.address-c .info-field-items {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: calc(var(--margin-padding-8)*2);
+
+}
+
+.black-bg.address-c .info-field-items>label {
+    width: 20%;
+    text-align: left;
+    color: var(--gray3);
+}
+
+.black-bg.address-c .info-field-items .form-field {
+    width: 75%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.black-bg.address-c .info-field-items .form-field input {
+    width: 100%;
+}
+
+.black-bg.address-c .info-field-items.userNum .form-field input {
+    width: 45%;
+}
+
+.black-bg.address-c .overlayer-body .btn-box {
+    margin-bottom: 0;
+}
+
+
+@media screen and (max-width:1030px) {
+    .black-bg .overlayer {
+        width: 90%;
+    }
+}
+
+@media screen and (max-width:768px) {
+    .black-bg .overlayer {
+        width: 100vw;
+        height: 100%;
+        max-width: unset;
+        min-width: 320px;
+        position: unset;
+        transform: unset;
+        border-radius: 0;
+
+    }
+    .black-bg .overlayer .overlayer-body{
+        max-height: unset;
+        height: 100%;
+        justify-content: flex-start;
+    }
+    .black-bg.donation-c .overlayer{
+        width: 100%;
+        padding-bottom: 50px;
+    }
+    /* 기부하기 완료 */
+    .black-bg.donation-c .overlayer .overlayer-body {
+        flex-direction: column;
+        justify-content: flex-start;
+        overflow-x: hidden;
+        overflow-y: scroll;
+        padding: calc(var(--margin-padding-8)*5) 5%;
+    }
+
+    .black-bg.donation-c .overlayer .overlayer-body>div {
+        margin-bottom: 20px;
+        padding: 0;
+    }
+
+    .black-bg.donation-c .overlayer .overlayer-body button.formBtn {
+        height: unset;
+        padding: 8px;
+    }
+
+    /* 기부하기 - 지자체선택 공지사항 모달 */
+
+    .black-bg .overlayer {
+        min-width: 300px;
+    }
+
+    .black-bg .overlayer .overlayer-body {
+        overflow-x: hidden;
+        overflow-y: scroll;
+    }
+
+    .black-bg.donation-c .overlayer .overlayer-body p {
+        padding: 0 10px;
+    }
+
+    .black-bg .overlayer .overlayer-body .city-Info {
+        font-size: 13px;
+        padding-top: 0;
+    }
+
+    .black-bg .overlayer .overlayer-body .city-Info table tr>th,
+    .black-bg .overlayer .overlayer-body .city-Info table tr>td {
+        padding: 10px 2%;
+        text-indent: 0;
+        font-size: 14px;
+    }
+
+    .black-bg .overlayer .overlayer-body .city-Info table tr>th {
+        text-align: center;
+        width: 20%;
+        min-width: 80px;
+    }
+
+    .black-bg .overlayer .overlayer-body .city-Info table tr>td {
+        width: 80%;
+    }
+
+    .black-bg .overlayer .overlayer-body .city-Info table th,
+    .black-bg .overlayer .overlayer-body .city-notice table th {
+        min-width: unset;
+    }
+
+    .overlayer-body .city-Info td.moreSplit span.tax {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .overlayer-body .city-Info td.moreSplit span.tax span.taxNum {
+        margin-bottom: 8px
+    }
+
+    .overlayer-body .city-Info td.moreSplit span.tax button {
+        width: 100%;
+        margin: 0 0 8px 0;
+    }
+}
+
+@media screen and (max-width:460px) {
+    .black-bg .overlayer {
+        min-width: 360px;
+    }
+
+    .black-bg .overlayer .overlayer-body {
+        padding: 30px 20px;
+    }
+
+}
+
+/* 5부제 임시 팝업 관련 CSS */
+
+.temp-popup {
+    background-color: rgba(0, 0, 0, 0.6);
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    display: none;
+    z-index: 1040;
+}
+
+.temp-popup.show {
+    display: block;
+}
+
+.temp-popup .overlayer {
+    width: 46.875%;
+    max-width: 600px;
+    min-width: 400px;
+    overflow: hidden;
+    border-radius: 20px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.temp-popup p {
+    display: block;
+    position: absolute;
+    top: 175px;
+    right: 220px;
+    width: 88px;
+    height: 15px;
+    font-weight: 600;
+}
+.temp-button{
+    display: block;
+    position: absolute;
+    top: 4px;
+    right: 133px;
+    width: 18px;
+    height: 15px;
+    background: url(/static/images/icon/cli-icon_btn-close.png) no-repeat center center;
+    padding: 2px 1px 6px 6px;
+    margin: 12px;
+    border-radius: 3px;
+    box-sizing: content-box;
+    background-size: 18px auto;
+    background-color: rgba(255, 255, 255, 0.7);
+    box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.16);
+}

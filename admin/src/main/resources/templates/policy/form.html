@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>약관 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <p><a th:href="@{/policy}">&larr; 약관관리</a></p>
+    <h1 th:text="${policy.policyId} != null ? '약관 수정' : '약관 등록'"></h1>
+
+    <form th:action="${policy.policyId} != null ? @{'/policy/' + ${policy.policyId}} : @{/policy}" method="post">
+        <div class="field">
+            <label for="policyType">유형</label>
+            <select id="policyType" name="policyType">
+                <option th:each="e : ${typeLabels}" th:value="${e.key}" th:text="${e.value}"
+                        th:selected="${e.key == policy.policyType}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="title">제목</label>
+            <input type="text" id="title" name="title" th:value="${policy.title}" required>
+        </div>
+        <div class="field">
+            <label for="content">내용</label>
+            <textarea id="content" name="content" rows="14" th:text="${policy.content}"></textarea>
+        </div>
+        <div class="field">
+            <label><input type="checkbox" name="exhibitionStatus" value="Y" th:checked="${policy.exhibitionStatus == 'Y'}"> 전시함</label>
+        </div>
+        <div class="field">
+            <label for="exhibitionStartDate">전시 시작 (yyyyMMddHHmmss)</label>
+            <input type="text" id="exhibitionStartDate" name="exhibitionStartDate" th:value="${policy.exhibitionStartDate}">
+        </div>
+        <div class="field">
+            <label for="exhibitionEndDate">전시 종료 (yyyyMMddHHmmss)</label>
+            <input type="text" id="exhibitionEndDate" name="exhibitionEndDate" th:value="${policy.exhibitionEndDate}">
+        </div>
+        <button type="submit" class="btn">저장</button>
+    </form>
+</div>
+</body>
+</html>

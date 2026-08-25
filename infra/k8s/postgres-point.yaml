@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-point-secret
+  namespace: ghlove
+type: Opaque
+stringData:
+  POSTGRES_USER: point
+  POSTGRES_PASSWORD: ghlove
+  POSTGRES_DB: point
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-point-pvc
+  namespace: ghlove
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-point
+  namespace: ghlove
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-point
+  template:
+    metadata:
+      labels:
+        app: postgres-point
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: postgres-point-secret
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "point"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-point-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-point
+  namespace: ghlove
+spec:
+  selector:
+    app: postgres-point
+  ports:
+    - port: 5432
+      targetPort: 5432

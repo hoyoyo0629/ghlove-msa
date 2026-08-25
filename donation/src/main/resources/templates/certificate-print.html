@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>기부확인증 출력 - 고향사랑e음 (donation service)</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/receipt-print.css}">
+</head>
+<body>
+<!-- AS-IS mypage/receiptListPrint.html 재현: 별도 탭에서 window.print()를 호출하는 A4 두 페이지
+     (1페이지 확인증 앞면, 2페이지 기부내역 뒷면) - .page에 page-break-after:always가 있어
+     같은 인쇄작업 안에서 두 쪽으로 나뉜다. -->
+<div class="page">
+    <div class="lineBox card-front">
+        <div class="title-area">
+            <img class="donation-comment" th:src="@{/images/donation_receipt/donation-comment.png}" alt="">
+            <h5>고향사랑기부 확인증</h5>
+        </div>
+        <div class="section-area">
+            <table class="table-area">
+                <caption class="sr-only">고향사랑기부 확인증</caption>
+                <colgroup><col style="width:40%"><col style="width:60%"></colgroup>
+                <tr><th style="letter-spacing:2.55em;">성명</th><td th:text="${certificate.userName}"></td></tr>
+                <tr><th style="letter-spacing:.25em;">생년월일</th><td th:text="${certificate.birthdayDisplay}"></td></tr>
+                <tr><th>기부지자체</th><td th:text="${certificate.topLocGovDisplay}"></td></tr>
+                <tr><th style="letter-spacing:.25em;">기부금액</th><td th:text="'총 ' + ${#numbers.formatInteger(certificate.totalCntrAmt, 0, 'COMMA')} + '원'"></td></tr>
+            </table>
+        </div>
+        <div class="bottom-area">
+            <div class="comment-area">위와 같이 고향사랑기부에 참여하였음을 확인함</div>
+            <div class="date-area" th:text="${certificate.nowDateDisplay}"></div>
+            <div class="icon-area"><img th:src="@{/images/donation_receipt/logo.png}" alt="고향사랑e음" style="width:100%;"></div>
+        </div>
+    </div>
+</div>
+
+<div class="page">
+    <div class="lineBox card-back">
+        <div class="title-area"><h5>고향사랑기부내역</h5></div>
+        <div class="section-area">
+            <div class="receipt-result-body">
+                <hr>
+                <table>
+                    <caption class="sr-only">고향사랑기부내역</caption>
+                    <colgroup><col style="width:15%"><col style="width:70%"><col style="width:15%"></colgroup>
+                    <tr class="result-title"><th>기부일자</th><th>기부지자체</th><th>기부액 (원)</th></tr>
+                    <tr class="result-row" th:each="row : ${certificate.rows}">
+                        <td th:text="${row.cntrDeDisplay}"></td>
+                        <td>
+                            <span th:text="(${row.upperLocgovNm} != null ? ${row.upperLocgovNm} + ' ' : '') + ${row.locgovNm} + (${row.spelDstrYn == 'Y'} ? '(특별재난지역)' : '')"></span><br>
+                            <span th:text="'(사업자번호 : ' + ${row.bizRno} + ')'"></span>
+                        </td>
+                        <td class="amount" th:text="${#numbers.formatInteger(row.cntrAmt, 0, 'COMMA')}"></td>
+                    </tr>
+                </table>
+                <hr>
+            </div>
+        </div>
+        <div class="bottom-area">
+            <div class="comment-area">본 기부확인증은 고향사랑e음 기부내역을 바탕으로 발급되었으며,</div>
+            <div class="comment-area">전체 기부내역은 고향사랑e음을 통해서 확인이 가능합니다.</div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="none">
+    window.onload = function () { window.print(); };
+</script>
+</body>
+</html>

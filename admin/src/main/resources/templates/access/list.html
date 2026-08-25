@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>접속IP허용목록 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>접속IP허용목록</h1>
+    <p><a class="btn" th:href="@{/access/new}">+ IP 등록</a></p>
+
+    <table>
+        <thead>
+        <tr><th>ID</th><th>접근 타입</th><th>IP 주소</th><th>등록자</th><th>등록일</th><th>처리</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="a : ${list}">
+            <td th:text="${a.allowIpId}"></td>
+            <td th:text="${a.accessType == '1'} ? '관리자' : '판매관리자'"></td>
+            <td th:text="${a.remoteAddr}"></td>
+            <td th:text="${a.createdUser}"></td>
+            <td th:text="${a.createdDate}"></td>
+            <td>
+                <form th:action="@{'/access/' + ${a.allowIpId} + '/delete'}" method="post" class="inline-form"
+                      onsubmit="return confirm('삭제하시겠습니까?')">
+                    <button type="submit" class="small-btn danger">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(list)}">등록된 허용 IP가 없습니다.</p>
+</div>
+</body>
+</html>

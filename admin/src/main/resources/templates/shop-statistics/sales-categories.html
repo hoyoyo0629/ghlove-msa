@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>답례품 구매현황 카테고리별 통계 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>카테고리별 통계</h1>
+    <table>
+        <thead>
+        <tr><th>카테고리코드</th><th>결제건수</th><th>결제포인트</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="row : ${stats}">
+            <td th:text="${row.categoryCode()}"></td>
+            <td th:text="${row.payCount()} + '건'"></td>
+            <td th:text="${#numbers.formatInteger(row.payAmount(), 0, 'COMMA')} + 'P'"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(stats)}">데이터가 없습니다.</p>
+</div>
+</body>
+</html>

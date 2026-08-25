@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-member-secret
+  namespace: ghlove
+type: Opaque
+stringData:
+  POSTGRES_USER: member
+  POSTGRES_PASSWORD: ghlove
+  POSTGRES_DB: member
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-member-pvc
+  namespace: ghlove
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-member
+  namespace: ghlove
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-member
+  template:
+    metadata:
+      labels:
+        app: postgres-member
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: postgres-member-secret
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "member"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-member-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-member
+  namespace: ghlove
+spec:
+  selector:
+    app: postgres-member
+  ports:
+    - port: 5432
+      targetPort: 5432

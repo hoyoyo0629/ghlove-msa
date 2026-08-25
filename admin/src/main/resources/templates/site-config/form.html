@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>사이트 설정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>사이트 설정</h1>
+    <p class="success" th:if="${param.message}" th:text="${param.message}"></p>
+
+    <form th:action="@{/site-config}" method="post" th:object="${config}">
+        <h2 style="font-size:16px;">기본 정보</h2>
+        <div class="field"><label for="shopName">상점명</label><input type="text" id="shopName" th:field="*{shopName}"></div>
+        <div class="field"><label for="companyName">회사명</label><input type="text" id="companyName" th:field="*{companyName}"></div>
+        <div class="field"><label for="bossName">대표자명</label><input type="text" id="bossName" th:field="*{bossName}"></div>
+        <div class="field"><label for="companyNumber">사업자등록번호</label><input type="text" id="companyNumber" th:field="*{companyNumber}"></div>
+        <div class="field"><label for="telNumber">전화번호</label><input type="text" id="telNumber" th:field="*{telNumber}"></div>
+        <div class="field"><label for="address">주소</label><input type="text" id="address" th:field="*{address}"></div>
+        <div class="field"><label for="addressDetail">상세주소</label><input type="text" id="addressDetail" th:field="*{addressDetail}"></div>
+
+        <h2 style="font-size:16px; margin-top:24px;">관리자 연락처</h2>
+        <div class="field"><label for="adminName">개인정보관리자명</label><input type="text" id="adminName" th:field="*{adminName}"></div>
+        <div class="field"><label for="adminEmail">관리자 이메일</label><input type="text" id="adminEmail" th:field="*{adminEmail}"></div>
+        <div class="field"><label for="adminTelNumber">관리자 전화</label><input type="text" id="adminTelNumber" th:field="*{adminTelNumber}"></div>
+
+        <h2 style="font-size:16px; margin-top:24px;">SEO</h2>
+        <div class="field"><label for="seoTitle">사이트 타이틀</label><input type="text" id="seoTitle" th:field="*{seoTitle}"></div>
+        <div class="field"><label for="seoKeywords">메타 키워드</label><input type="text" id="seoKeywords" th:field="*{seoKeywords}"></div>
+        <div class="field"><label for="seoDescription">메타 설명</label><input type="text" id="seoDescription" th:field="*{seoDescription}"></div>
+
+        <h2 style="font-size:16px; margin-top:24px;">가입/게시 제한</h2>
+        <div class="field"><label for="deniedId">가입 불가 아이디 (콤마로 구분)</label><textarea id="deniedId" th:field="*{deniedId}" rows="2"></textarea></div>
+        <div class="field"><label for="banWord">금지어 (콤마로 구분)</label><textarea id="banWord" th:field="*{banWord}" rows="2"></textarea></div>
+
+        <button type="submit" class="btn">저장</button>
+    </form>
+</div>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>정기발행쿠폰 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <p><a th:href="@{/coupon-regular}">&larr; 정기발행쿠폰 관리</a></p>
+    <h1 th:text="${coupon.couponId()} != null ? '정기발행쿠폰 수정' : '정기발행쿠폰 등록'"></h1>
+
+    <form th:action="${coupon.couponId()} != null ? @{'/coupon-regular/' + ${coupon.couponId()}} : @{/coupon-regular}" method="post">
+        <div class="field">
+            <label for="couponName">쿠폰명</label>
+            <input type="text" id="couponName" name="couponName" th:value="${coupon.couponName()}" required>
+        </div>
+        <div class="field">
+            <label for="couponComment">쿠폰설명</label>
+            <textarea id="couponComment" name="couponComment" rows="3" th:text="${coupon.couponComment()}"></textarea>
+        </div>
+        <div class="field">
+            <label for="payType">할인 유형</label>
+            <select id="payType" name="payType">
+                <option value="1" th:selected="${coupon.payType() == '1'}">정액(원)</option>
+                <option value="2" th:selected="${coupon.payType() == '2'}">정률(%)</option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="pay">할인 값</label>
+            <input type="number" id="pay" name="pay" th:value="${coupon.pay()}" required>
+        </div>
+        <div class="field">
+            <label for="discountLimitPrice">%할인 최대 할인금액 (-1=무제한)</label>
+            <input type="number" id="discountLimitPrice" name="discountLimitPrice" th:value="${coupon.discountLimitPrice()}">
+        </div>
+        <div class="field">
+            <label for="payRestriction">최소 구매금액 조건 (-1=무제한)</label>
+            <input type="number" id="payRestriction" name="payRestriction" th:value="${coupon.payRestriction()}">
+        </div>
+        <div class="field">
+            <label for="targetUserType">발급대상 회원</label>
+            <select id="targetUserType" name="targetUserType">
+                <option value="1" th:selected="${coupon.targetUserType() == '1'}">전체 회원</option>
+                <option value="2" th:selected="${coupon.targetUserType() == '2'}">선택 회원</option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="targetItemType">적용 상품</label>
+            <select id="targetItemType" name="targetItemType">
+                <option value="1" th:selected="${coupon.targetItemType() == '1'}">전체 상품</option>
+                <option value="2" th:selected="${coupon.targetItemType() == '2'}">특정 상품</option>
+            </select>
+        </div>
+        <h3>발행기간</h3>
+        <div class="field">
+            <label for="issueType">제한 여부</label>
+            <select id="issueType" name="issueType">
+                <option value="0" th:selected="${coupon.issueType() == '0'}">제한 없음(항상 운영)</option>
+                <option value="1" th:selected="${coupon.issueType() == '1'}">기간 지정</option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="issueStartDate">시작일 (yyyyMMdd)</label>
+            <input type="text" id="issueStartDate" name="issueStartDate" th:value="${coupon.issueStartDate()}" placeholder="yyyyMMdd">
+        </div>
+        <div class="field">
+            <label for="issueEndDate">종료일 (yyyyMMdd)</label>
+            <input type="text" id="issueEndDate" name="issueEndDate" th:value="${coupon.issueEndDate()}" placeholder="yyyyMMdd">
+        </div>
+        <div class="field">
+            <label for="downloadLimit">일일 발행 시 총 수량제한 (-1=무제한)</label>
+            <input type="number" id="downloadLimit" name="downloadLimit" th:value="${coupon.downloadLimit()}">
+        </div>
+        <div class="field">
+            <label><input type="checkbox" name="couponFlag" value="Y" th:checked="${coupon.couponFlag() == null or coupon.couponFlag() == 'Y'}"> 운영중 (매일 배치 발행 대상)</label>
+        </div>
+        <input type="hidden" name="concurrently" value="1">
+        <input type="hidden" name="multipleDownloadFlag" value="N">
+        <input type="hidden" name="downloadUserLimit" value="-1">
+        <input type="hidden" name="dataStatusCode" value="1">
+        <button type="submit" class="btn">저장</button>
+    </form>
+</div>
+</body>
+</html>

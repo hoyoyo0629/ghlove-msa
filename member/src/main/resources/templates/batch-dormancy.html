@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>휴면계정 전환 배치 - 고향사랑e음 (member service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="wrap">
+    <h1>휴면계정 전환 배치<span class="badge">member</span></h1>
+    <p style="font-size:12px; color:#888; margin-bottom:16px; text-align:center;">
+        실시간 스케줄러가 없어 운영자가 수동으로 실행하는 화면입니다. 기준일(기본
+        365일) 이상 미접속한 정상(ACTIVE) 회원을 휴면(DORMANT) 상태로 전환합니다.
+    </p>
+
+    <p class="success" th:if="${resultCount != null}" th:text="${resultCount} + '명이 휴면 전환되었습니다.'"></p>
+
+    <form th:action="@{/batch/dormancy}" method="post">
+        <button type="submit">배치 실행</button>
+    </form>
+
+    <div class="links">
+        <a th:href="@{/login}">로그인으로</a>
+    </div>
+</div>
+</body>
+</html>

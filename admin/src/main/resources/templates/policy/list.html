@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>약관관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>약관관리</h1>
+    <p><a class="btn" th:href="@{/policy/new}">+ 약관 등록</a></p>
+
+    <table>
+        <thead>
+        <tr><th>유형</th><th>제목</th><th>전시여부</th><th>전시기간</th><th>수정일</th><th>처리</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="p : ${policies}">
+            <td th:text="${typeLabels.get(p.policyType)} ?: ${p.policyType}"></td>
+            <td><a th:href="@{'/policy/' + ${p.policyId} + '/edit'}" th:text="${p.title}"></a></td>
+            <td th:text="${p.exhibitionStatus == 'Y' ? '전시' : '비전시'}"></td>
+            <td th:text="${p.exhibitionStartDate} + ' ~ ' + ${p.exhibitionEndDate}"></td>
+            <td th:text="${p.updatedDate}"></td>
+            <td>
+                <a class="small-btn" th:href="@{'/policy/' + ${p.policyId} + '/edit'}">수정</a>
+                <form th:action="@{'/policy/' + ${p.policyId} + '/delete'}" method="post" class="inline-form"
+                      onsubmit="return confirm('삭제하시겠습니까?')">
+                    <button type="submit" class="small-btn danger">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(policies)}">등록된 약관이 없습니다.</p>
+</div>
+</body>
+</html>

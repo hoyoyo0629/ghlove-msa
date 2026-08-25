@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>정산 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>정산 관리</h1>
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+    <form th:action="@{/settlements/generate}" method="post" style="margin-bottom:20px;">
+        <button type="submit">정산내역 생성 (미정산 확정 주문 일괄)</button>
+    </form>
+
+    <table>
+        <thead>
+        <tr>
+            <th>정산ID</th>
+            <th>제공자</th>
+            <th>건수</th>
+            <th>포인트 합계</th>
+            <th>상태</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="s : ${settlements}">
+            <td><a th:href="@{'/settlements/' + ${s.settlementId}}" th:text="${s.settlementId}"></a></td>
+            <td th:text="${sellersById.get(s.sellerId) != null ? sellersById.get(s.sellerId).sellerName() : ('ID ' + s.sellerId)}"></td>
+            <td th:text="${s.orderCount} + '건'"></td>
+            <td th:text="${#numbers.formatInteger(s.totalPointAmount, 0, 'COMMA')} + 'P'"></td>
+            <td th:text="${statusLabels.get(s.status)} ?: ${s.status}"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(settlements)}">생성된 정산 내역이 없습니다.</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>배치 작업 스케줄러 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>배치 작업 스케줄러</h1>
+    <p style="color:#666; margin-bottom:16px;">
+        작업 등록/조회 화면입니다. 실제 정기 실행이 필요한 기능은 각 서비스에 이미 개별 스케줄러(@Scheduled)로 구현돼 있고, 이 화면은 AS-IS 구조 재현을 위한 등록 관리용입니다.
+    </p>
+    <p><a class="btn" th:href="@{/batch-job/new}">+ 작업 등록</a></p>
+
+    <table>
+        <thead>
+        <tr><th>작업명</th><th>실행 메서드</th><th>트리거</th><th>상태</th><th>마지막 실행일</th><th>처리</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="j : ${jobs}">
+            <td th:text="${j.jobName}"></td>
+            <td th:text="${j.jobMethod}"></td>
+            <td th:text="${j.triggerType == '2' ? j.triggerCronExpression : (j.triggerRepeatSeconds + '초 반복')}"></td>
+            <td>
+                <span class="pill" th:classappend="${j.batchStatus == '1'} ? 'on' : 'off'"
+                      th:text="${j.batchStatus == '1'} ? '실행중' : '중지'"></span>
+            </td>
+            <td th:text="${j.batchExecuteDate}"></td>
+            <td>
+                <a class="small-btn" th:href="@{'/batch-job/' + ${j.batchJobId} + '/edit'}">수정</a>
+                <form th:action="@{'/batch-job/' + ${j.batchJobId} + '/toggle'}" method="post" class="inline-form">
+                    <button type="submit" class="small-btn ghost" th:text="${j.batchStatus == '1'} ? '중지' : '실행'"></button>
+                </form>
+                <form th:action="@{'/batch-job/' + ${j.batchJobId} + '/delete'}" method="post" class="inline-form"
+                      onsubmit="return confirm('삭제하시겠습니까?')">
+                    <button type="submit" class="small-btn danger">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(jobs)}">등록된 배치 작업이 없습니다.</p>
+</div>
+</body>
+</html>

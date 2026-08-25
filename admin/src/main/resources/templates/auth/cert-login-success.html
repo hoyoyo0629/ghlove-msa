@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>로그인 완료 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="wrap narrow">
+    <h1>인증서 로그인 완료</h1>
+    <p class="success">
+        <span th:text="${officer.officerName}"></span>님, 지자체(<span th:text="${officer.locgovCode}"></span>) 담당자로
+        인증되었습니다.
+    </p>
+    <div class="links">
+        <a th:href="@{/settlements}">정산 관리로 이동</a>
+    </div>
+</div>
+</body>
+</html>

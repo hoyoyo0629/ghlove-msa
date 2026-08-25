@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>역할 신청 승인 - 고향사랑e음 (member service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="wrap wide">
+    <h1>역할 신청 승인 대기함<span class="badge">member</span></h1>
+    <p style="font-size:12px; color:#888; margin-bottom:16px; text-align:center;">
+        승인권자 인증은 게이트웨이/운영 서비스 부재로 아직 없음 - 임시로 이 화면에서 바로 처리합니다.
+    </p>
+
+    <table>
+        <thead>
+        <tr>
+            <th>회원 ID</th>
+            <th>신청 역할</th>
+            <th>사유</th>
+            <th>신청일</th>
+            <th>처리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${requests}">
+            <td th:text="${r.userId}"></td>
+            <td th:text="${roleLabels.get(r.requestedRole)} ?: ${r.requestedRole}"></td>
+            <td th:text="${r.reason}"></td>
+            <td th:text="${#temporals.format(r.createdDate, 'yyyy-MM-dd HH:mm')}"></td>
+            <td>
+                <form th:action="@{'/roles/' + ${r.requestId} + '/approve'}" method="post" class="inline-form">
+                    <button type="submit" class="small-btn">승인</button>
+                </form>
+                <form th:action="@{'/roles/' + ${r.requestId} + '/reject'}" method="post" class="inline-form">
+                    <button type="submit" class="small-btn danger">반려</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p style="text-align:center; font-size:13px; color:#888;" th:if="${#lists.isEmpty(requests)}">대기중인 신청이 없습니다.</p>
+
+    <div class="links">
+        <a th:href="@{/}">홈으로</a>
+    </div>
+</div>
+</body>
+</html>

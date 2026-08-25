@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>고향사랑기부 확인증 - 고향사랑e음 (donation service)</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/receipt-modal.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<!-- AS-IS components/ui/modal-receipt_view.vue 재현. AS-IS는 목록 화면 위에 뜨는 오버레이지만,
+     이 프로젝트는 SSR이라 같은 배경(#receipt_modal의 rgba(0,0,0,.8) 풀스크린)을 독립된
+     페이지에 그대로 적용해 시각적으로 동일한 모달처럼 보이게 한다. -->
+<div id="receipt_modal" style="display:flex; align-items:center; justify-content:center;">
+    <div class="modal_con">
+        <a class="closeBtn" th:href="@{/receipts}">
+            <img th:src="@{/images/icon/cli-icon_btn-close-modal.png}" alt="닫기">
+        </a>
+        <div class="modal-body-receipt">
+            <div class="modal_body_wrap">
+
+                <div class="receipt_card_area">
+                    <div class="card-wrapper">
+                        <div class="card-face" id="cardContainer" onclick="this.classList.toggle('is-flipped')">
+
+                            <div class="lineBox card-front">
+                                <div class="title-area">
+                                    <img class="donation-comment" th:src="@{/images/donation_receipt/donation-comment.png}" alt="">
+                                    <h5>고향사랑기부 확인증</h5>
+                                </div>
+                                <div class="section-area">
+                                    <table class="table-area">
+                                        <caption class="sr-only">고향사랑기부 확인증</caption>
+                                        <colgroup><col style="width:40%"><col style="width:60%"></colgroup>
+                                        <tr><th style="letter-spacing:2.55em;">성명</th><td th:text="${certificate.userName}"></td></tr>
+                                        <tr><th style="letter-spacing:.25em;">생년월일</th><td th:text="${certificate.birthdayDisplay}"></td></tr>
+                                        <tr><th>기부지자체</th><td th:text="${certificate.topLocGovDisplay}"></td></tr>
+                                        <tr><th style="letter-spacing:.25em;">기부금액</th><td th:text="'총 ' + ${#numbers.formatInteger(certificate.totalCntrAmt, 0, 'COMMA')} + '원'"></td></tr>
+                                    </table>
+                                </div>
+                                <div class="bottom-area">
+                                    <div class="comment-area">위와 같이 고향사랑기부에 참여하였음을 확인함</div>
+                                    <div class="date-area" th:text="${certificate.nowDateDisplay}"></div>
+                                    <div class="icon-area"><img th:src="@{/images/donation_receipt/logo.png}" alt="고향사랑e음" style="width:100%;"></div>
+                                </div>
+                            </div>
+
+                            <div class="lineBox card-back">
+                                <div class="title-area"><h5>고향사랑기부내역</h5></div>
+                                <div class="section-area">
+                                    <div class="receipt-result-body">
+                                        <hr>
+                                        <table>
+                                            <caption class="sr-only">고향사랑기부내역</caption>
+                                            <colgroup><col style="width:15%"><col style="width:70%"><col style="width:15%"></colgroup>
+                                            <tr class="result-title"><th>기부일자</th><th>기부지자체</th><th>기부액 (원)</th></tr>
+                                            <tr class="result-row" th:each="row : ${certificate.rows}">
+                                                <td th:text="${row.cntrDeDisplay}"></td>
+                                                <td>
+                                                    <span th:text="(${row.upperLocgovNm} != null ? ${row.upperLocgovNm} + ' ' : '') + ${row.locgovNm} + (${row.spelDstrYn == 'Y'} ? '(특별재난지역)' : '')"></span><br>
+                                                    <span th:text="'(사업자번호 : ' + ${row.bizRno} + ')'"></span>
+                                                </td>
+                                                <td class="amount" th:text="${#numbers.formatInteger(row.cntrAmt, 0, 'COMMA')}"></td>
+                                            </tr>
+                                        </table>
+                                        <hr>
+                                    </div>
+                                </div>
+                                <div class="bottom-area">
+                                    <div class="comment-area">본 기부확인증은 고향사랑e음 기부내역을 바탕으로 발급되었으며,</div>
+                                    <div class="comment-area">전체 기부내역은 고향사랑e음을 통해서 확인이 가능합니다.</div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <form th:action="@{/receipts/certificate}" method="post" target="_blank" id="printForm">
+                    <input type="hidden" name="mode" value="print">
+                    <input type="hidden" th:each="row : ${certificate.rows}" name="cntrSn" th:value="${row.cntrSn}">
+                    <div class="receipt_btn-box">
+                        <button type="submit" class="blueBtn u-confirm">
+                            확인증 출력<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt="확인증 출력"></span>
+                        </button>
+                        <button type="button" class="blueBtn u-confirm"
+                                th:attr="data-url=@{/receipts}" onclick="location.href=this.dataset.url">
+                            닫기<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt="닫기"></span>
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

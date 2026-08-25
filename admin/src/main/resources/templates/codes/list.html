@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${codeType} + ' - 공통코드 관리 (admin service)'"></title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <p><a th:href="@{/codes}">&larr; 전체 코드유형</a></p>
+    <h1 th:text="${codeType}"></h1>
+    <p><a class="btn" th:href="@{/codes/new(codeType=${codeType})}">+ 코드 등록</a></p>
+
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>라벨</th>
+            <th>설명</th>
+            <th>순서</th>
+            <th>사용여부</th>
+            <th>처리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="c : ${codes}">
+            <td th:text="${c.id}"></td>
+            <td th:text="${c.label}"></td>
+            <td th:text="${c.detail}"></td>
+            <td th:text="${c.ordering}"></td>
+            <td>
+                <span class="pill" th:classappend="${c.useYn == 'Y'} ? 'on' : 'off'"
+                      th:text="${c.useYn == 'Y'} ? '사용' : '중지'"></span>
+            </td>
+            <td>
+                <a class="small-btn" th:href="@{'/codes/' + ${codeType} + '/' + ${c.id} + '/edit'}">수정</a>
+                <form th:action="@{'/codes/' + ${codeType} + '/' + ${c.id} + '/toggle'}" method="post" class="inline-form">
+                    <button type="submit" class="small-btn ghost" th:text="${c.useYn == 'Y'} ? '중지' : '재사용'"></button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(codes)}">등록된 코드가 없습니다.</p>
+</div>
+</body>
+</html>

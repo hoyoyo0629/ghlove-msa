@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${label} + ' 메일설정 - 고향사랑e음 (admin service)'"></title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <p><a th:href="@{/mail-config}">&larr; 메일설정 관리</a></p>
+    <h1 th:text="${label} + ' 메일설정'"></h1>
+
+    <p class="success" th:if="${param.message}" th:text="${param.message}"></p>
+
+    <form th:action="@{'/mail-config/' + ${mailConfig.templateId}}" method="post">
+        <div class="field">
+            <label for="title">템플릿 제목(관리용)</label>
+            <input type="text" id="title" name="title" th:value="${mailConfig.title}">
+        </div>
+        <div class="field">
+            <label><input type="checkbox" name="smsConfig" value="Y" th:checked="${mailConfig.smsConfig == 'Y'}"> 문자(SMS)도 함께 발송</label>
+        </div>
+
+        <h2 style="font-size:16px; margin-top:24px;">구매자(기부자) 발송</h2>
+        <div class="field">
+            <label for="buyerSubject">제목</label>
+            <input type="text" id="buyerSubject" name="buyerSubject" th:value="${mailConfig.buyerSubject}">
+        </div>
+        <div class="field">
+            <label for="buyerContent">본문</label>
+            <textarea id="buyerContent" name="buyerContent" rows="6" th:text="${mailConfig.buyerContent}"></textarea>
+        </div>
+
+        <h2 style="font-size:16px; margin-top:24px;">관리자 발송</h2>
+        <div class="field">
+            <label for="adminSubject">제목</label>
+            <input type="text" id="adminSubject" name="adminSubject" th:value="${mailConfig.adminSubject}">
+        </div>
+        <div class="field">
+            <label for="adminContent">본문</label>
+            <textarea id="adminContent" name="adminContent" rows="6" th:text="${mailConfig.adminContent}"></textarea>
+        </div>
+
+        <h2 style="font-size:16px; margin-top:24px;">판매자(제공자) 발송</h2>
+        <div class="field">
+            <label for="sellerSubject">제목</label>
+            <input type="text" id="sellerSubject" name="sellerSubject" th:value="${mailConfig.sellerSubject}">
+        </div>
+        <div class="field">
+            <label for="sellerContent">본문</label>
+            <textarea id="sellerContent" name="sellerContent" rows="6" th:text="${mailConfig.sellerContent}"></textarea>
+        </div>
+
+        <button type="submit" class="btn">저장</button>
+    </form>
+</div>
+</body>
+</html>

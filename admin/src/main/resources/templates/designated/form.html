@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>지정기부사업 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/designated-donation/form.jsp 재현 - 사업 등록/수정을 한 화면에서
+     처리한다(AS-IS도 같은 form.jsp를 재사용). 담당자(ROLE_OPERATOR)가 상태를 "진행중"으로
+     직접 설정하면 서버가 자동으로 "대기"로 되돌린다(자기승인 금지 - DesignatedAdminService
+     참고). -->
+<div class="wrap">
+    <p><a th:href="@{/designated-projects}">&larr; 지정기부 관리</a></p>
+    <h1 th:text="${projectId != null} ? '지정기부사업 수정' : '지정기부사업 등록'"></h1>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+    <form th:action="${projectId != null} ? @{/designated-projects/{id}(id=${projectId})} : @{/designated-projects}"
+          method="post" enctype="multipart/form-data">
+        <div class="field">
+            <label for="dsgnDntnBizTtl">사업명 <span style="color:#c0392b;">*</span></label>
+            <input type="text" id="dsgnDntnBizTtl" name="dsgnDntnBizTtl" required maxlength="255"
+                   th:value="${project != null} ? ${project.dsgnDntnBizTtl} : ''">
+        </div>
+        <div class="field">
+            <label for="upperLocgovCode">시·도 <span style="color:#c0392b;">*</span></label>
+            <select id="upperLocgovCode" onchange="filterLocgov()">
+                <option value="">선택</option>
+                <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"
+                        th:attr="data-code=${p.key}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="lclgvCd">시·군·구 <span style="color:#c0392b;">*</span></label>
+            <select id="lclgvCd" name="lclgvCd" required>
+                <option value="">선택</option>
+                <option th:each="l : ${allLocgovs}" th:value="${l.locgovCode}" th:text="${l.locgovNm}"
+                        th:attr="data-upper=${l.upperLocgovCode}"
+                        th:selected="${project != null and project.lclgvCd == l.locgovCode}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="deptId">담당부서</label>
+            <select id="deptId" name="deptId">
+                <option value="">선택안함</option>
+                <option th:each="d : ${departments}" th:value="${d.deptId}" th:text="${d.deptNm} + ' (' + ${d.locgovCode} + ')'"
+                        th:selected="${project != null and project.deptId == d.deptId}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="dsgnDntnBizSeCd">사업구분 <span style="color:#c0392b;">*</span></label>
+            <select id="dsgnDntnBizSeCd" name="dsgnDntnBizSeCd" required>
+                <option value="">선택</option>
+                <option th:each="c : ${bsnsTypes}" th:value="${c.key}" th:text="${c.value}"
+                        th:selected="${project != null and project.dsgnDntnBizSeCd == c.key}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="bsnsSubType">사업 세부구분</label>
+            <input type="text" id="bsnsSubType" name="bsnsSubType" maxlength="50"
+                   th:value="${project != null} ? ${project.bsnsSubType} : ''">
+        </div>
+        <div class="field">
+            <label for="dsgnDntnBizBgngYmd">모금 시작일 <span style="color:#c0392b;">*</span></label>
+            <input type="date" id="dsgnDntnBizBgngYmd" name="dsgnDntnBizBgngYmd" required
+                   th:value="${project != null and project.dsgnDntnBizBgngYmd != null and #strings.length(project.dsgnDntnBizBgngYmd) == 8}
+                              ? (${#strings.substring(project.dsgnDntnBizBgngYmd,0,4)} + '-' + ${#strings.substring(project.dsgnDntnBizBgngYmd,4,6)} + '-' + ${#strings.substring(project.dsgnDntnBizBgngYmd,6,8)}) : ''">
+        </div>
+        <div class="field">
+            <label for="dsgnDntnBizEndYmd">모금 종료일 <span style="color:#c0392b;">*</span></label>
+            <input type="date" id="dsgnDntnBizEndYmd" name="dsgnDntnBizEndYmd" required
+                   th:value="${project != null and project.dsgnDntnBizEndYmd != null and #strings.length(project.dsgnDntnBizEndYmd) == 8}
+                              ? (${#strings.substring(project.dsgnDntnBizEndYmd,0,4)} + '-' + ${#strings.substring(project.dsgnDntnBizEndYmd,4,6)} + '-' + ${#strings.substring(project.dsgnDntnBizEndYmd,6,8)}) : ''">
+        </div>
+        <p style="font-size:13px; color:#666; margin-top:-10px; margin-bottom:16px;">※ 모금 기간은 최대 3년까지 가능합니다.</p>
+        <div class="field">
+            <label for="goalAmt">목표금액(원) <span style="color:#c0392b;">*</span></label>
+            <input type="number" id="goalAmt" name="goalAmt" required min="1" max="999999999999"
+                   th:value="${project != null} ? ${project.goalAmt} : ''">
+        </div>
+        <div class="field">
+            <label for="dsgnDntnBizSttsCd">진행상태</label>
+            <select id="dsgnDntnBizSttsCd" name="dsgnDntnBizSttsCd">
+                <option th:each="s : ${statusLabels}" th:value="${s.key}" th:text="${s.value}"
+                        th:selected="${project != null and project.dsgnDntnBizSttsCd == s.key}"></option>
+            </select>
+            <p style="font-size:13px; color:#666;">※ 담당자(운영자) 계정은 "진행중"으로 직접 전환할 수 없습니다 - 관리자 승인이 필요합니다.</p>
+        </div>
+        <div class="field">
+            <label for="rlsYn">공개여부</label>
+            <select id="rlsYn" name="rlsYn">
+                <option value="Y" th:selected="${project == null or project.rlsYn == 'Y'}">공개</option>
+                <option value="N" th:selected="${project != null and project.rlsYn == 'N'}">비공개</option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="image">대표이미지</label>
+            <input type="file" id="image" name="image" accept="image/*">
+            <div th:if="${project != null and project.imageUrl != null}" style="margin-top:8px;">
+                <img th:src="@{${project.imageUrl}}" style="max-width:200px; border-radius:8px;">
+            </div>
+        </div>
+        <div class="field">
+            <label for="dsgnDntnBizCn">사업소개 (HTML)</label>
+            <textarea id="dsgnDntnBizCn" name="dsgnDntnBizCn" rows="10"
+                      th:text="${project != null} ? ${project.dsgnDntnBizCn} : ''"></textarea>
+        </div>
+        <div class="field">
+            <label for="contentEtc">기타사항</label>
+            <textarea id="contentEtc" name="contentEtc" rows="4"
+                      th:text="${project != null} ? ${project.contentEtc} : ''"></textarea>
+        </div>
+        <button type="submit">저장</button>
+    </form>
+
+    <div th:if="${projectId != null}">
+        <h2 style="margin-top:36px;">공지사항</h2>
+        <table style="margin-bottom:16px;">
+            <thead><tr><th>제목</th><th>등록일</th><th>관리</th></tr></thead>
+            <tbody>
+            <tr th:each="n : ${notices}">
+                <td th:text="${n.prjNoticeSubject}"></td>
+                <td th:text="${n.frstRegistPnttm != null and #strings.length(n.frstRegistPnttm) >= 8} ? ${#strings.substring(n.frstRegistPnttm,0,8)} : ''"></td>
+                <td>
+                    <button type="button" class="edit-notice-btn"
+                            th:data-notice-id="${n.prjNoticeId}" th:data-subject="${n.prjNoticeSubject}"
+                            th:data-content="${n.prjNoticeCn}" onclick="editNotice(this)">수정</button>
+                    <form th:action="@{/designated-projects/{id}/notices/{nid}/delete(id=${projectId},nid=${n.prjNoticeId})}" method="post" style="display:inline;" onsubmit="return confirm('삭제하시겠습니까?');">
+                        <button type="submit">삭제</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="empty" th:if="${#lists.isEmpty(notices)}">등록된 공지사항이 없습니다.</p>
+
+        <h3 id="noticeFormTitle">공지사항 등록</h3>
+        <form id="noticeForm" th:action="@{/designated-projects/{id}/notices(id=${projectId})}" method="post">
+            <div class="field">
+                <label for="noticeSubject">제목</label>
+                <input type="text" id="noticeSubject" name="subject" required maxlength="255">
+            </div>
+            <div class="field">
+                <label for="noticeContent">내용</label>
+                <textarea id="noticeContent" name="content" rows="4" required></textarea>
+            </div>
+            <button type="submit">저장</button>
+            <button type="button" onclick="resetNoticeForm()">취소</button>
+        </form>
+
+        <h2 style="margin-top:36px;">상태변경 이력</h2>
+        <table>
+            <thead><tr><th>변경일시</th><th>이전상태</th><th>변경상태</th><th>처리자ID</th></tr></thead>
+            <tbody>
+            <tr th:each="l : ${approvalLog}">
+                <td th:text="${l.frstRegistPnttm}"></td>
+                <td th:text="${statusLabels.get(l.beforeStatusCode)} ?: '-'"></td>
+                <td th:text="${statusLabels.get(l.afterStatusCode)} ?: l.afterStatusCode"></td>
+                <td th:text="${l.frstRgtrId}"></td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="empty" th:if="${#lists.isEmpty(approvalLog)}">변경 이력이 없습니다.</p>
+    </div>
+</div>
+
+<script th:inline="none">
+function filterLocgov() {
+    var upper = document.getElementById('upperLocgovCode').value;
+    var select = document.getElementById('lclgvCd');
+    Array.prototype.forEach.call(select.options, function (opt) {
+        if (!opt.value) { return; }
+        opt.hidden = upper !== '' && opt.dataset.upper !== upper;
+    });
+}
+(function preselectProvince() {
+    var citySelect = document.getElementById('lclgvCd');
+    var selected = citySelect.options[citySelect.selectedIndex];
+    if (selected && selected.dataset.upper) {
+        document.getElementById('upperLocgovCode').value = selected.dataset.upper;
+    }
+})();
+filterLocgov();
+
+var noticeCreateAction = document.getElementById('noticeForm') ? document.getElementById('noticeForm').action : null;
+function editNotice(btn) {
+    document.getElementById('noticeFormTitle').textContent = '공지사항 수정';
+    document.getElementById('noticeSubject').value = btn.dataset.subject;
+    document.getElementById('noticeContent').value = btn.dataset.content;
+    document.getElementById('noticeForm').action = noticeCreateAction + '/' + btn.dataset.noticeId + '/update';
+    document.getElementById('noticeFormTitle').scrollIntoView({behavior: 'smooth'});
+}
+function resetNoticeForm() {
+    document.getElementById('noticeFormTitle').textContent = '공지사항 등록';
+    document.getElementById('noticeForm').reset();
+    document.getElementById('noticeForm').action = noticeCreateAction;
+}
+</script>
+</body>
+</html>

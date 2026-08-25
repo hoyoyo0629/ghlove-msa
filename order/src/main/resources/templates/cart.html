@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>장바구니 - 고향사랑e음 (order service)</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/order_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="stylesheet" th:href="@{/css/lclgv-map.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+<div th:replace="~{fragments/mall-header :: mall-header}"></div>
+
+<!-- AS-IS cart/index.html 재현 (page-title-box/steps-box/cart_top/contents_wrap/list_wrap/
+     cart_bot 클래스 그대로). AS-IS는 체크된 항목 합계·(주문불가) 상태를 Vue 반응형으로
+     실시간 재계산하지만, 여기서는 각 체크박스에 data-line-total을 심어두고 change 이벤트마다
+     순수 JS로 같은 계산을 다시 한다. 수량 "변경"은 AS-IS도 스테퍼가 아니라 숫자 입력칸 +
+     별도 버튼이라 그대로 재현했다. -->
+<section class="cart_contents">
+    <div class="page-title-box">
+        <span class="ali_breadcrumb">
+            <a th:href="@{'http://localhost:8081/'}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            <a th:href="@{'http://localhost:8081/mypage'}">마이페이지</a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            장바구니
+        </span>
+        <h2 class="page-title-txt">장바구니</h2>
+        <div class="steps-box">
+            <div class="step_status cart on"><div class="icon-bg"><span class="sr-only">현재단계 장바구니</span></div></div>
+            <div class="step_status payment"><div class="icon-bg"><span class="sr-only">주문결제</span></div></div>
+            <div class="step_status complete"><div class="icon-bg"><span class="sr-only">주문완료</span></div></div>
+        </div>
+    </div>
+</section>
+
+<section id="contents" class="cart_contents">
+    <div class="center">
+
+        <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+        <div>
+
+            <div class="common_none" th:if="${#lists.isEmpty(groups)}">
+                <div class="list-none">
+                    <img th:src="@{/images/icon/empty-cart.png}" alt="상품 없음">
+                    장바구니에 담겨있는 답례품이 없습니다.
+                </div>
+            </div>
+
+            <form id="cartForm" th:action="@{/checkout}" method="post" onsubmit="return validateCheckout()" th:if="${!#lists.isEmpty(groups)}">
+                <div class="cart_top">
+                    <div class="chk_box check-level1">
+                        <input type="checkbox" id="selectAll" checked onchange="toggleAll(this)">
+                        <label for="selectAll">전체선택</label>
+                    </div>
+                    <div class="btn_area">
+                        <button type="button" class="formBtn del" onclick="deleteSelected()">선택삭제</button>
+                    </div>
+                </div>
+
+                <div th:each="g : ${groups}">
+                    <div class="mobile_section_bar"></div>
+                    <div class="contents_wrap">
+                        <div class="s-contents cart-group" th:attr="data-locgov-code=${g.locgovCode},data-give-point=${g.givePoint}">
+                            <div class="cart_top">
+                                <div class="chk_box check-level1">
+                                    <input type="checkbox" class="group-check" checked
+                                           th:id="${'grp-' + g.locgovCode}" onchange="toggleGroup(this)">
+                                    <label th:for="${'grp-' + g.locgovCode}" th:text="${g.locgovNm}"></label>
+                                </div>
+                                <div class="grade-bg">
+                                    잔여 포인트 : <span class="blue-txt" th:text="${#numbers.formatInteger(g.givePoint, 0, 'COMMA')} + ' P'"></span>
+                                </div>
+                            </div>
+
+                            <div class="list_body">
+                                <div class="list_wrap">
+                                    <div class="list-title">
+                                        <div class="date-col chk_date">답례품정보</div>
+                                        <div class="date-col g_amtprc">
+                                            <div class="g_info_wrap">
+                                                <div class="date-col g_info__amount">수량</div>
+                                                <div class="date-col g_info__price">답례품 포인트</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <ul class="item_list-group">
+                                        <li class="list-items" th:each="line : ${g.lines}">
+                                            <div class="date-col g_info">
+                                                <div class="g_info_wrap">
+                                                    <div class="date-col chk_date">
+                                                        <div class="check_input">
+                                                            <label class="sr-only" th:text="${line.itemName} + ' 선택'" th:for="${'chk-' + line.cartItemId}"></label>
+                                                            <input type="checkbox" class="line-check" checked
+                                                                   name="cartItemId" th:id="${'chk-' + line.cartItemId}"
+                                                                   th:value="${line.cartItemId}" th:attr="data-line-total=${line.lineTotal}"
+                                                                   onchange="onLineCheck(this)">
+                                                        </div>
+                                                    </div>
+                                                    <div class="link_wrap">
+                                                        <div class="g_info__img">
+                                                            <img th:src="${line.thumbnailUrl} != null ? ${line.thumbnailUrl} : @{/images/thumb.png}"
+                                                                 th:alt="${line.itemName} + ' 이미지'">
+                                                        </div>
+                                                        <div class="g_info__txt">
+                                                            <div class="info_title"><span th:text="${line.itemName}"></span></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="date-col g_amtprc">
+                                                <div class="g_info_wrap">
+                                                    <div class="g_info__amount">
+                                                        <label class="sr-only" th:for="${'qty-' + line.cartItemId}">주문 수량</label>
+                                                        <input type="number" min="1" th:id="${'qty-' + line.cartItemId}" th:value="${line.quantity}">
+                                                        <button type="button" class="formBtn modify" th:onclick="'changeQuantity(' + ${line.cartItemId} + ')'">변경</button>
+                                                    </div>
+                                                    <div class="g_info__price" th:id="${'price-' + line.cartItemId}"
+                                                         th:text="${#numbers.formatInteger(line.lineTotal, 0, 'COMMA')} + ' P'"></div>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="cart_bot">
+                                    <div class="smallTxt"> 답례품 포인트
+                                        <span class="bot_P" th:id="${'sum-' + g.locgovCode}" th:text="${#numbers.formatInteger(g.groupTotal, 0, 'COMMA')} + ' P'"></span>
+                                        + 무료배송 =
+                                    </div>
+                                    <div class="bigTxt">
+                                        <span class="bot_txt"> 결제 예정 포인트</span>
+                                        <span class="bot_price" th:id="${'sumPrice-' + g.locgovCode}"
+                                              th:classappend="${g.groupTotal > g.givePoint} ? 'pointRed' : 'pointblue'"
+                                              th:text="${#numbers.formatInteger(g.groupTotal, 0, 'COMMA')} + 'P'"></span>
+                                    </div>
+                                    <span class="pointRed" th:id="${'insufficient-' + g.locgovCode}"
+                                          th:style="${g.groupTotal > g.givePoint} ? '' : 'display:none;'"> ( 주문불가 )</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="btn-box order">
+                    <button type="button" class="blueBtn cancellation" onclick="history.back()">
+                        취소<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt="이전화면으로 이동"></span>
+                    </button>
+                    <button type="submit" class="blueBtn u-confirm" id="checkoutBtn">
+                        선택 답례품 주문<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt="선택한 답례품 주문페이지로 이동"></span>
+                    </button>
+                </div>
+            </form>
+
+            <div class="cart_info_txt center" th:if="${!#lists.isEmpty(groups)}">
+                <ul>
+                    <li class="txt__list"><span class="spch">※</span> <span class="list__txt">장바구니답례품은 30일간 보관됩니다. 더 오래 보관하시려면 [관심답례품]으로 등록하세요.</span></li>
+                    <li class="txt__list"><span class="spch">※</span> <span class="list__txt">장바구니답례품이 품절되면 자동으로 목록에서 삭제됩니다.</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+
+<script th:inline="none">
+function groupOf(el) { return el.closest('.cart-group'); }
+
+function recalcGroup(group) {
+    var locgovCode = group.dataset.locgovCode;
+    var givePoint = Number(group.dataset.givePoint);
+    var checks = group.querySelectorAll('.line-check');
+    var sum = 0;
+    var anyChecked = false, allChecked = true;
+    checks.forEach(function (c) {
+        if (c.checked) { sum += Number(c.dataset.lineTotal); anyChecked = true; }
+        else { allChecked = false; }
+    });
+    document.getElementById('sum-' + locgovCode).textContent = sum.toLocaleString() + ' P';
+    var priceEl = document.getElementById('sumPrice-' + locgovCode);
+    priceEl.textContent = sum.toLocaleString() + 'P';
+    var insufficient = sum > givePoint;
+    priceEl.classList.toggle('pointRed', insufficient);
+    priceEl.classList.toggle('pointblue', !insufficient);
+    document.getElementById('insufficient-' + locgovCode).style.display = insufficient ? '' : 'none';
+
+    var groupCheck = group.querySelector('.group-check');
+    groupCheck.checked = allChecked;
+    groupCheck.indeterminate = anyChecked && !allChecked;
+}
+
+function recalcAll() {
+    document.querySelectorAll('.cart-group').forEach(recalcGroup);
+    var all = document.querySelectorAll('.line-check');
+    var allChecked = Array.prototype.every.call(all, function (c) { return c.checked; });
+    var selectAll = document.getElementById('selectAll');
+    if (selectAll) { selectAll.checked = allChecked; }
+}
+
+function toggleAll(checkbox) {
+    document.querySelectorAll('.line-check').forEach(function (c) { c.checked = checkbox.checked; });
+    document.querySelectorAll('.group-check').forEach(function (c) { c.checked = checkbox.checked; c.indeterminate = false; });
+    recalcAll();
+}
+
+function toggleGroup(checkbox) {
+    groupOf(checkbox).querySelectorAll('.line-check').forEach(function (c) { c.checked = checkbox.checked; });
+    recalcAll();
+}
+
+function onLineCheck() {
+    recalcAll();
+}
+
+function changeQuantity(cartItemId) {
+    var qty = document.getElementById('qty-' + cartItemId).value;
+    if (!qty || qty < 1) {
+        alert('수량을 확인해 주세요.');
+        return;
+    }
+    var form = document.getElementById('cartForm');
+    form.action = '/cart/items/' + cartItemId + '/quantity';
+    var hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    hidden.name = 'quantity';
+    hidden.value = qty;
+    form.appendChild(hidden);
+    form.submit();
+}
+
+function deleteSelected() {
+    var checked = document.querySelectorAll('.line-check:checked');
+    if (checked.length === 0) {
+        alert('삭제할 답례품을 선택해 주세요.');
+        return;
+    }
+    var form = document.getElementById('cartForm');
+    form.action = '/cart/items/delete';
+    form.submit();
+}
+
+function validateCheckout() {
+    var checked = document.querySelectorAll('.line-check:checked');
+    if (checked.length === 0) {
+        alert('답례품을 선택해 주세요.');
+        return false;
+    }
+    var ok = true;
+    document.querySelectorAll('.cart-group').forEach(function (group) {
+        var givePoint = Number(group.dataset.givePoint);
+        var sum = 0;
+        group.querySelectorAll('.line-check:checked').forEach(function (c) { sum += Number(c.dataset.lineTotal); });
+        if (sum > givePoint && ok) {
+            var name = group.querySelector('.group-check + label').textContent;
+            alert(name + '의 포인트가 부족합니다.');
+            ok = false;
+        }
+    });
+    return ok;
+}
+
+recalcAll();
+</script>
+</body>
+</html>

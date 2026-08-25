@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-admin-secret
+  namespace: ghlove
+type: Opaque
+stringData:
+  POSTGRES_USER: admin
+  POSTGRES_PASSWORD: ghlove
+  POSTGRES_DB: admin
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-admin-pvc
+  namespace: ghlove
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-admin
+  namespace: ghlove
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-admin
+  template:
+    metadata:
+      labels:
+        app: postgres-admin
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: postgres-admin-secret
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "admin"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-admin-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-admin
+  namespace: ghlove
+spec:
+  selector:
+    app: postgres-admin
+  ports:
+    - port: 5432
+      targetPort: 5432

@@ -1,0 +1,982 @@
+/* ======= 지역 이벤트관 ====== */
+.special,
+.season,
+.communitybusiness,
+.loc_evt {
+    background-color: var(--gray5);
+    padding: 0
+}
+
+.special .center,
+.season .center,
+.communitybusiness .center,
+.loc_evt .center {
+    padding: 50px 0 60px;
+}
+
+.special .page-title-txt,
+.season .page-title-txt,
+.loc_evt .page-title-txt {
+    font-family: var(--fs-kangwonGyoT), sans-serif;
+    line-height: 20px;
+    font-weight: 400;
+}
+.special .page-title-txt,
+.loc_evt .page-title-txt {
+    margin-bottom: 10px;
+}
+
+.season .page-title-txt {
+    margin-bottom: 20px;
+}
+
+.loc_select_group,
+.loc_select_area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+}
+
+.loc_select_area select {
+    width: 190px;
+}
+
+.loc_select_area button {
+    margin: 0;
+}
+
+.loc_select_area .submit_btns {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+}
+
+.loc_select_area .reset_img {
+    min-width: 40px;
+    padding: 11px;
+    line-height: 13px;
+}
+
+.list-none {
+    text-align: center;
+    padding: 90px 0 150px;
+}
+
+.list-none img {
+    width: 168px;
+}
+
+
+.result_con {
+    padding-top: 40px;
+    white-space: pre-wrap;
+}
+
+/* ============ 제철 식품관 ========== */
+.special,
+.season, .communitybusiness {
+    text-align: left;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+/*              */
+.season .center {
+    background-image: url('/static/images/goods/season_bg.png');
+    background-size: 500px auto;
+    background-position: right bottom;
+    background-repeat: no-repeat;
+    height: 100%;
+}
+
+.season .pointblue {
+    display: inline-block;
+    margin-top: 10px;
+}
+
+.special .loc_select_area,
+.season .loc_select_area {
+    justify-content: flex-start;
+}
+
+
+.contents.seasonCard {
+    background-color: var(--main-color1);
+    margin-top: 0;
+    padding: 60px 0 150px;
+}
+
+.contents .season_group {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    gap: 13px;
+    flex-wrap: wrap;
+}
+
+.contents .season_group .season_list {
+    width: 23%;
+    min-width: 310px;
+    padding: 53px 30px 26px;
+    margin-bottom: 10px;
+    background-color: #fff;
+    border-radius: 30px 10px;
+    min-height: 250px;
+    border: 8px solid transparent;
+    background-repeat: no-repeat;
+    background-size: 80px auto;
+    background-position: 40% 18px;
+    transition: border 0.3s;
+}
+
+.contents .season_group .season_list:nth-child(1) {
+    background-image: url('/static/images/goods/month01.png');
+}
+
+.contents .season_group .season_list:nth-child(2) {
+    background-image: url('/static/images/goods/month02.png');
+}
+
+.contents .season_group .season_list:nth-child(3) {
+    background-image: url('/static/images/goods/month03.png');
+}
+
+.contents .season_group .season_list:nth-child(4) {
+    background-image: url('/static/images/goods/month04.png');
+}
+
+.contents .season_group .season_list:nth-child(5) {
+    background-image: url('/static/images/goods/month05.png');
+}
+
+.contents .season_group .season_list:nth-child(6) {
+    background-image: url('/static/images/goods/month06.png');
+}
+
+.contents .season_group .season_list:nth-child(7) {
+    background-image: url('/static/images/goods/month07.png');
+}
+
+.contents .season_group .season_list:nth-child(8) {
+    background-image: url('/static/images/goods/month08.png');
+}
+
+.contents .season_group .season_list:nth-child(9) {
+    background-image: url('/static/images/goods/month09.png');
+}
+
+.contents .season_group .season_list:nth-child(10) {
+    background-image: url('/static/images/goods/month10.png');
+}
+
+.contents .season_group .season_list:nth-child(11) {
+    background-image: url('/static/images/goods/month11.png');
+}
+
+.contents .season_group .season_list:nth-child(12) {
+    background-image: url('/static/images/goods/month12.png');
+}
+
+.contents .season_group .season_list .card_tit {
+    font-size: 38px;
+    color: var(--main-color1);
+    text-align: center;
+    font-family: var(--fs-kangwonGyoT), 'Noto Sans KR', sans-serif;
+    margin-bottom: 10px;
+}
+
+.contents .season_group .season_list .card_list_items {
+    color: var(--sub-color1);
+    line-height: 1.5em;
+    letter-spacing: 0px;
+}
+
+
+.contents .season_group .season_list:hover {
+    border-color: #0BD7DC;
+}
+
+/* ============ 마을 기업관 ========== */
+.communitybusiness .center {
+    background-image: url('/static/images/goods/community_bg.png');
+    background-size: 500px auto;
+    background-position: right bottom;
+    background-repeat: no-repeat;
+    height: 100%;
+}
+
+
+.communitybusiness .pointblue {
+    display: inline-block;
+    margin-top: 10px;
+}
+
+.communitybusiness .loc_select_area {
+    justify-content: flex-start;
+}
+
+
+/* ============ 특산물관 ============ */
+.special .center {
+    background-image: url('/static/images/goods/special_bg.png');
+    background-size: 500px auto;
+    background-position: right bottom;
+    background-repeat: no-repeat;
+    height: 100%;
+}
+
+.contents .spe_group {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;;
+}
+
+.contents .spe_group .spe_list {
+    width: 18%;
+    min-width: 244px;
+    padding: 30px 26px 40px;
+    margin-bottom: 30px;
+    background-color: #fff;
+    border-radius: 30px 10px;
+    /* height: 265px; */
+    border: 8px solid transparent;
+    transition: border 0.3s;
+    cursor: pointer;
+    position: relative;
+}
+
+.contents .spe_group .spe_list img {
+    position: absolute;
+    top: 30px;
+    right: 26px;
+}
+
+.contents .spe_group .spe_list .card_tit {
+    font-size: 16px;
+    color: var(--main-color2);
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.contents .spe_group .spe_list .card_list_items {
+    width: 100%;
+    font-size: 14px;
+    line-height: 1.5em;
+    letter-spacing: -0.5px;
+    color: var(--gray3);
+    /* 여러줄 말줄임 */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    -webkit-box-orient: vertical;
+}
+
+.contents .spe_group .spe_list:hover {
+    border-color: #0BD7DC;
+}
+.spe_details{
+    background-color: var(--main-color1);
+    margin-top: 0;
+    padding-bottom: 0;
+    margin-bottom: 60px;
+}
+.spe_details .center{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding:40px 0;
+}
+.contents .spe_list_details{
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    background-color: #fff;
+    border-radius: 30px 10px;
+    padding:60px 60px 50px;
+    gap:60px;
+    max-width: 900px;
+    background-image: url('/static/images/icon/spe_details_quo.png');
+    background-repeat: no-repeat;
+    background-position: 60px 30px;
+    background-size: auto 50px;
+}
+
+.contents .spe_list_details .card_tit{
+    font-size: 26px;
+    color: var(--main-color2);
+    font-weight: 700;
+    flex-grow: 5;
+    white-space: nowrap;
+    line-height: 1.25em;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+.contents .spe_list_details .card_list_items{
+    flex-grow: 7;
+    color: var(--gray2);
+    line-height: 1.5em;
+    letter-spacing: -0.5px;
+}
+
+
+
+
+
+/* ============ 이벤트기획전 ============ */
+.feautred_list_contents .banner {
+    position: relative;
+    height: 358px;
+    text-align: center;
+}
+
+.feautred_list_contents .banner img {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: auto;
+    height: 100%;
+    max-width: inherit;
+    transform: translateX(-50%);
+}
+
+.featured_top .tit_wrap,
+.new_contents .tit_wrap,
+.time_sale_contents .tit_wrap {
+    margin-bottom: 3.6rem;
+}
+
+.featured_top .item_banner {
+    margin-bottom: 30px;
+}
+
+/*
+.feautred_list_contents .feautred_contents{
+    margin-top:3rem;
+}
+*/
+
+
+/* ============ 이벤트 기획전 상세 ============ */
+.featured_detail_contents .item_banner .container {
+    overflow: hidden;
+    position: relative;
+    padding: 0;
+}
+
+/*.featured_detail_contents .item_banner img {
+    width:100%;
+    height:100%;
+}*/
+.featured_top .feautred_select {
+    margin-top: 20px;
+}
+
+.featured_detail_contents .list_wrap .list_in {
+    padding: 30px 0;
+}
+
+.featured_detail_contents .total_top .inquiry_write {
+    padding: 30px 20px;
+}
+
+.featured_detail_contents .item_list.thumb {
+    margin-top: 20px;
+}
+
+.featured_detail_contents .item_qna .total_top .inquiry_write {
+    margin-top: 10px;
+}
+
+
+
+
+/* ============ 베스트 ============ */
+.best_contents .best_top .price_area {
+    display: flex;
+}
+
+.best_contents .event_category li {
+    width: auto !important;
+    margin-right: 20px;
+}
+
+.best_contents .event_category li a {
+    color: #959595;
+    font-size: 1.6rem;
+    line-height: 2.4rem;
+}
+
+.best_contents .item_list.thumb {
+    margin-bottom: 40px;
+}
+
+.best_contents .item_list .best_sale_area {
+    margin-top: 5px;
+}
+
+
+
+/* ============ 신답례품 ============ */
+.new_contents .event_category ul li {
+    width: auto !important;
+    margin-right: 20px;
+}
+
+.new_contents .event_category li a.on,
+.new_contents .event_category li a:focus,
+.new_contents .event_category li a:active {
+    color: #333;
+    font-weight: 700;
+}
+
+
+
+/* ============ 타임세일 ============ */
+.item_time_sale .sort_area {
+    margin-bottom: 30px;
+}
+
+.time_sale_contents .item_time_sale .img_area {
+    position: relative;
+    width: 100%;
+    height: 0;
+    padding-bottom: 100%;
+    overflow: hidden;
+    background-color: #e2e2e2;
+}
+
+.time_sale_contents .item_time_sale a {
+    display: block;
+}
+
+.time_sale_contents .item_time_sale img {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.time_sale_contents .time_term {
+    flex: 1;
+}
+
+.time_sale_contents .time_sale {
+    margin-bottom: 10px;
+}
+
+.time_sale_contents .icon_d_day {
+    position: absolute;
+    top: -32px;
+    right: 13px;
+    width: 4.4rem;
+    height: 4.4rem;
+    border-radius: 50%;
+    background: #333;
+}
+
+.time_sale_contents .icon_d_day p {
+    color: #fff;
+    font-size: 1.4rem;
+    line-height: 4.6rem;
+    text-align: center;
+}
+
+.time_sale_contents .img_shadow {
+    margin-bottom: 40px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.time_sale_contents .txt_area {
+    position: relative;
+    padding: 16px 12px 16px;
+}
+
+.time_sale_contents .brand {
+    margin-bottom: 3px;
+    color: #222;
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 2rem;
+}
+
+.time_sale_contents .title {
+    margin-bottom: 6px;
+    font-size: 1.4rem;
+    line-height: 1.7rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.time_sale_contents .title a {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.time_sale_contents .sale_area {
+    display: flex;
+    margin-top: 16px;
+    justify-content: space-between;
+}
+
+.time_sale_contents .price {
+    display: flex;
+    float: left;
+    width: 50%;
+    text-align: left;
+}
+
+.time_sale_contents .price span {
+    display: inline-block;
+    margin-right: 7px;
+    color: #d5d5d5;
+    font-size: 1.2rem;
+    line-height: 2.4rem;
+    text-decoration: line-through;
+}
+
+.time_sale_contents .price p {
+    color: #333;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.time_sale_contents .percent {
+    float: right;
+    width: 50%;
+    text-align: right;
+}
+
+.time_sale_contents .percent p {
+    font-size: 1.8rem;
+    font-weight: 800;
+}
+
+.time_sale_contents .percent span {
+    font-size: 1.6rem;
+}
+
+.time_sale_contents .badge-wrap {
+    margin-top: 3px;
+}
+
+/* ============ 스타일북 ============ */
+.look_wrap {
+    margin-top: 40px;
+}
+
+
+/* --- look_top ---*/
+
+.look_contents .item_head_list {
+    display: flex;
+    margin-bottom: 20px;
+    padding: 0;
+}
+
+.look_contents .item_head_list li a {
+    color: #999;
+    font-size: 1.4rem;
+}
+
+.look_contents .item_head_list li:first-child a:after {
+    content: '';
+    display: inline-block;
+    width: 1px;
+    height: 8px;
+    margin: 0 16px;
+    background: #999;
+}
+
+.look_contents .item_head_list .dropdown-menu {
+    left: 50% !important;
+    margin: 0;
+    padding: 0;
+    min-width: 16rem;
+    transform: translate3d(-50%, 25px, 0px) !important;
+}
+
+.look_contents .item_head_list .dropdown-menu a {
+    padding: 10px 24px;
+}
+
+.look_contents .item_head_list .dropdown-menu a:hover {
+    color: #333;
+    font-weight: 500;
+}
+
+.look_contents .filter_select .dropdown-toggle {
+    position: relative;
+    z-index: 10;
+    padding: 0 1.5rem 0 0;
+    width: auto;
+    color: #d9246f;
+    font-size: 1.4rem;
+    font-weight: 500;
+    font-family: 'Noto Sans KR';
+    line-height: 1.4rem;
+    border: 0;
+    border-radius: 0;
+    background: url(/static/images/icon/icon_item_point_link.png) no-repeat center right;
+    background-size: 20px auto;
+    box-shadow: none;
+    vertical-align: middle;
+}
+
+.look_contents .filter_select .dropdown-toggle::after {
+    display: none;
+}
+
+.look_contents .item_head_list .dropdown-item.on {
+    color: #333;
+    font-weight: 500;
+}
+
+.look_wrap .look_top {
+    margin-top: 195px;
+}
+
+.look_wrap .look_top .look_tit {
+    /*font-family: 'Montserrat';*/
+    font-weight: 600;
+    font-size: 34px;
+    line-height: 42px;
+    color: #333;
+    text-align: center;
+}
+
+.look_wrap .look_top .conts {
+    margin-top: 3px;
+    font-weight: 700;
+    font-size: 2rem;
+    line-height: 2.8rem;
+    font-family: 'Noto Sans KR';
+    color: #333;
+}
+
+.look_wrap .look_top .conts em {
+    color: #333;
+}
+
+
+/* --- look_img ---*/
+.look_wrap .look_img {
+    margin-top: 25px;
+}
+
+.look_wrap .look_img .img_inner {
+    margin: 0 -5px;
+}
+
+.look_wrap .look_img .img_area {
+    position: relative;
+    width: 50%;
+    padding: 5px;
+    cursor: pointer;
+}
+
+.look_wrap .look_img .hover_area {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.look_wrap .look_img .hover_area a {
+    display: flex;
+    height: 100%;
+    justify-content: center;
+    align-items: center;
+}
+
+.look_wrap .look_img .hover_area span {
+    display: flex;
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.7);
+    font-size: 1.3rem;
+    line-height: 1.6rem;
+    color: #fff;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+}
+
+/* event */
+.look_wrap .look_img .img_area:hover .hover_area {
+    display: block;
+}
+
+
+/* mobile */
+@media (max-width: 767px) {
+
+
+
+
+    /* ============ 이벤트 기획전 ============ */
+    .new_contents .sort_area {
+        flex-wrap: wrap;
+    }
+
+    .new_contents .sort_area .sort_type {
+        width: 100%;
+    }
+
+    .new_contents .sort_area .btn_sort {
+        flex: 1;
+    }
+
+
+
+
+    /* ============ 베스트 ============ */
+    .best_contents .best_top .item_list.thumb .list_area:nth-child(even),
+    .best_contents .best_top .item_list.thumb .list_area:nth-child(odd) {
+        padding: 0 15px;
+    }
+
+    .best_contents .best_top .item_list.thumb .list_area {
+        margin: 8px 0;
+    }
+
+    .best_contents .best_top .item_list.thumb {
+        margin-bottom: 0;
+    }
+
+    .best_contents .item_list.thumb {
+        margin-top: 0;
+    }
+}
+
+
+
+
+@media (min-width: 768px) {
+    .special .page-title-txt, .season .page-title-txt, .loc_evt .page-title-txt{
+        font-size: 40px;
+    }
+    /* ============ 이벤트 기획전 상세 ============ */
+    .featured_detail_contents .item_banner .container {
+        padding: 0 20px;
+    }
+
+    .featured_detail_contents .total_top .inquiry_write {
+        padding: 30px 0;
+    }
+    
+}
+
+
+
+
+@media (min-width: 992px) {
+
+    /* ============ 스타일북 ============ */
+    .look_contents .container {
+        max-width: 1300px;
+    }
+
+    .look_wrap {
+        margin-top: 120px;
+    }
+
+
+    /* --- look_top ---*/
+    .look_wrap .look_top .look_tit {
+        line-height: 42px;
+    }
+
+    .look_wrap .look_top .conts {
+        display: inline-block;
+        position: relative;
+        font-size: 42px;
+        line-height: 62px;
+    }
+
+    .look_wrap .look_top .conts span {
+        position: relative;
+        z-index: 10;
+    }
+
+    .look_wrap .look_top .txt {
+        margin-top: 8px;
+        font-size: 16px;
+        text-align: center;
+        line-height: 25px;
+        color: #333;
+    }
+
+
+    /* --- look_img ---*/
+    .look_wrap .look_img {
+        position: relative;
+        margin-top: 30px;
+    }
+
+    .look_wrap .look_img .img_inner {
+        margin: 0 -15px;
+    }
+
+    .look_wrap .look_img .img_area {
+        width: 25%;
+        padding: 15px;
+    }
+
+    .look_wrap .look_txt {
+        position: absolute;
+        right: -137px;
+        top: 15px;
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 19px;
+        color: #333;
+        transform: rotate(90deg);
+        transform-origin: 0 0;
+    }
+}
+
+
+
+
+@media screen and (max-width:768px) {
+    /* .season, */
+    .spe_details{
+        margin-bottom: 40px;
+    }
+    .special .center,
+    .season .center,
+    .loc_evt .center
+    .communitybusiness .center {
+        padding: 30px 0 40px;
+    }
+
+    .loc_select_area {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .loc_evt .loc_select_area {
+        /* padding: 0 20px; */
+    }
+
+    .loc_select_area .submit_btns,
+    .loc_select_area select {
+        width: 100%;
+    }
+
+    .loc_select_area .submit_btns {
+        /* padding-top: 8px; */
+    }
+
+    .loc_select_area .submit_btns button:first-child {
+        flex-grow: 5;
+    }
+
+
+    /* ============ 제철 식품관 ========== */
+    .season .page-title-txt{
+        margin-bottom: 10px;
+    }
+    
+    .contents.seasonCard {
+        padding: 30px 0 100px;
+    }
+
+    .special .center,
+    .season .center {
+       height: 590px;
+       background-size: 300px auto;
+    }
+    
+    .season .center{
+        background-size: 260px auto;
+    }
+    .special .center{
+        height: 370px;
+    }
+    .loc_select_group {
+
+        width: 100%;
+    }
+
+    .season .loc_select_area .shirink_s {
+        width: 49%;
+    }
+    .contents .season_group .season_list{
+        margin-bottom: 0;
+    }
+
+    .contents .season_group .season_list .card_tit {
+        font-size: 32px;
+    }
+
+    /* ============ 마을 기업관 ========== */
+    .communitybusiness .page-title-txt{
+        margin-bottom: 10px;
+    }    
+  
+    .communitybusiness .center {
+       height: 590px;
+       background-size: 300px auto;
+    }
+    
+    .communitybusiness .center{
+        background-size: 260px auto;
+    }
+    
+    .communitybusiness .loc_select_area .shirink_s {
+        width: 49%;
+    }  
+
+
+    /* 특산물관 */
+    .contents .spe_group{
+        margin-bottom: 24px;
+    }
+    .contents .spe_list_details{
+        flex-direction: column;
+        gap:20px;
+        background-position: 30px 30px;
+        /* background-position: 60px 30px; */
+        padding:60px 30px 40px;
+    }
+    .contents .spe_list_details .card_tit{
+        flex-direction: row;
+    }
+    .contents .spe_list_details .card_list_items{
+        font-size: 14px;
+    }
+    .contents .spe_group .spe_list img{
+        right: 10px;
+    }
+}
+
+@media screen and (max-width:560px) {
+
+    .contents .spe_group .spe_list,
+    .contents .season_group .season_list {
+        width: 47.5%;
+        min-width: 150px;
+        padding: 36px 7px 16px;
+        background-position: 43% 7px;
+        min-height: 236px;
+        font-size: 14px;
+    }
+    .contents .spe_group .spe_list{
+        /* background-position: 30% 7px;  */
+        margin-bottom: 16px;
+    }
+}

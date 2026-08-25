@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>주문결제 - 고향사랑e음 (order service)</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/order_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/change-info.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="stylesheet" th:href="@{/css/lclgv-map.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+<div th:replace="~{fragments/mall-header :: mall-header}"></div>
+
+<!-- AS-IS order/step1.html 재현 (읽기전용 주문요약 + 배송지 입력 + 결제하기). AS-IS는
+     배송지 주소록(여러 배송지 저장/선택)과 PG 결제 연동까지 갖추고 있지만, 이 MSA에는
+     실제 결제 게이트웨이가 없어(포인트 차감이 곧 "결제") 이번 결제 1건에 쓸 배송지만
+     입력받는다. 주소찾기는 profile.html과 동일하게 Daum 우편번호 위젯을 실제로 붙였다. -->
+<section class="cart_contents">
+    <div class="page-title-box">
+        <span class="ali_breadcrumb">
+            <a th:href="@{'http://localhost:8081/'}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            <a th:href="@{/cart}">장바구니</a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            주문결제
+        </span>
+        <h2 class="page-title-txt">주문/결제</h2>
+        <div class="steps-box">
+            <div class="step_status cart"><div class="icon-bg"><span class="sr-only">장바구니</span></div></div>
+            <div class="step_status payment on"><div class="icon-bg"><span class="sr-only">현재단계 주문결제</span></div></div>
+            <div class="step_status complete"><div class="icon-bg"><span class="sr-only">주문완료</span></div></div>
+        </div>
+    </div>
+</section>
+
+<section id="contents">
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="text-align:center;"></p>
+
+    <form th:action="@{/checkout/complete}" method="post" id="checkoutForm">
+        <input type="hidden" th:each="id : ${cartItemId}" name="cartItemId" th:value="${id}">
+
+        <div class="contents_wrap" th:each="g : ${groups}">
+            <div class="center">
+                <div class="s-contents">
+                    <div class="cart_top">
+                        <div class="chk_box check-level1">
+                            <label th:text="${g.locgovNm}"></label>
+                        </div>
+                        <div class="grade-bg">
+                            잔여 포인트 : <span class="blue-txt" th:text="${#numbers.formatInteger(g.givePoint, 0, 'COMMA')} + ' P'"></span>
+                        </div>
+                    </div>
+                    <div class="list_body">
+                        <div class="list_wrap">
+                            <div class="list-title">
+                                <div class="date-col chk_date">답례품정보</div>
+                                <div class="date-col g_amtprc">
+                                    <div class="g_info_wrap">
+                                        <div class="date-col g_info__amount">수량</div>
+                                        <div class="date-col g_info__price">답례품 포인트</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <ul class="item_list-group">
+                                <li class="list-items" th:each="line : ${g.lines}">
+                                    <div class="date-col g_info">
+                                        <div class="g_info_wrap">
+                                            <div class="link_wrap">
+                                                <div class="g_info__img">
+                                                    <img th:src="${line.thumbnailUrl} != null ? ${line.thumbnailUrl} : @{/images/thumb.png}"
+                                                         th:alt="${line.itemName} + ' 이미지'">
+                                                </div>
+                                                <div class="g_info__txt">
+                                                    <div class="info_title"><span th:text="${line.itemName}"></span></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="date-col g_amtprc">
+                                        <div class="g_info_wrap">
+                                            <div class="g_info__amount" th:text="${line.quantity} + '개'"></div>
+                                            <div class="g_info__price" th:text="${#numbers.formatInteger(line.lineTotal, 0, 'COMMA')} + ' P'"></div>
+                                        </div>
+                                    </div>
+                                    <div class="date-col coupon-select" th:if="${!#lists.isEmpty(couponsByCartItem.get(line.cartItemId))}">
+                                        <label th:for="'coupon_' + ${line.cartItemId}">쿠폰 사용</label>
+                                        <select th:id="'coupon_' + ${line.cartItemId}" th:name="'couponIssueId_' + ${line.cartItemId}">
+                                            <option value="">쿠폰 미사용</option>
+                                            <option th:each="c : ${couponsByCartItem.get(line.cartItemId)}"
+                                                    th:value="${c.couponUserId}"
+                                                    th:text="${c.couponName + (c.payType == '1' ? (' (' + #numbers.formatInteger(c.pay, 0, 'COMMA') + 'P 할인)') : (' (' + c.pay + '% 할인)'))}">
+                                            </option>
+                                        </select>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="cart_bot">
+                            <div class="smallTxt">답례품 포인트 <span class="bot_P" th:text="${#numbers.formatInteger(g.groupTotal, 0, 'COMMA')} + ' P'"></span> + 무료배송 =</div>
+                            <div class="bigTxt">
+                                <span class="bot_txt">결제 예정 포인트</span>
+                                <span class="bot_price" th:classappend="${g.groupTotal > g.givePoint} ? 'pointRed' : 'pointblue'"
+                                      th:text="${#numbers.formatInteger(g.groupTotal, 0, 'COMMA')} + 'P'"></span>
+                                <span th:if="${g.groupTotal > g.givePoint}"> ( 구매불가 )</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mobile_section_bar"></div>
+        <div class="contents_wrap">
+            <div class="center user_form">
+                <div class="s-contents deliver">
+                    <fieldset>
+                        <div class="add-info-area">
+                            <div class="lable-field">
+                                <h3><span>배송지</span></h3>
+                                <p class="essential"><span>*</span><span>필수 입력 정보</span></p>
+                            </div>
+                            <div class="info-field">
+                                <div class="info-field-group">
+                                    <div class="info-field-items">
+                                        <label for="receiverName" class="flied-title">받으시는분<span class="essential"> *</span></label>
+                                        <span class="form-field"><input type="text" name="receiverName" id="receiverName" required></span>
+                                    </div>
+                                    <div class="info-field-items userAddress">
+                                        <label for="post" class="flied-title">배송지주소<span class="essential"> *</span></label>
+                                        <div class="form-field">
+                                            <div class="search-address m-field">
+                                                <input type="text" id="post" placeholder="우편번호" readonly required>
+                                                <button type="button" class="formBtn" onclick="searchAddress()">주소찾기</button>
+                                            </div>
+                                            <div class="input-address">
+                                                <input type="text" id="address" name="deliveryAddress" placeholder="주소" readonly required>
+                                                <input type="text" id="addressDetail" name="deliveryAddressDetail" placeholder="상세주소" aria-label="상세주소">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="info-field-items userNum">
+                                        <label for="receiverPhone" class="flied-title">휴대폰번호<span class="essential"> *</span></label>
+                                        <span class="form-field"><input type="text" name="receiverPhone" id="receiverPhone" placeholder="010-0000-0000" required></span>
+                                    </div>
+                                    <div class="info-field-items">
+                                        <label for="requestNote" class="flied-title">배송시 요구사항</label>
+                                        <span class="form-field"><input type="text" name="requestNote" id="requestNote" maxlength="150"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+
+                <div class="mobile_section_bar"></div>
+                <div class="s-contents payment">
+                    <h3>결제하기</h3>
+                    <ul class="each_loc_list">
+                        <li class="loc_list" th:each="g : ${groups}">
+                            <div class="loc_name" th:text="${g.locgovNm}"></div>
+                            <div class="last_point_info">
+                                <span class="lebel_title">최종 결제 포인트</span>
+                                <span class="pointblue" th:text="${#numbers.formatInteger(g.groupTotal, 0, 'COMMA')} + 'P'"></span>
+                            </div>
+                            <div class="last_point_info">
+                                <span class="lebel_title">포인트 예상 잔액</span>
+                                <span th:text="${#numbers.formatInteger(g.givePoint - g.groupTotal, 0, 'COMMA')} + 'P'"></span>
+                            </div>
+                        </li>
+                    </ul>
+                    <div class="total_point">
+                        <div class="last_point_info">
+                            <span class="lebel_title">배송비</span>
+                            <span>무료배송</span>
+                        </div>
+                        <div class="last_point_info">
+                            <span class="lebel_title">답례품 포인트</span>
+                            <span class="pointblue bigTxt" th:text="${#numbers.formatInteger(totalPoint, 0, 'COMMA')} + 'P'"></span>
+                        </div>
+                    </div>
+                    <div class="cart_info_txt">
+                        <ul>
+                            <li class="txt__list">주문할 답례품의 답례품명, 답례품가격, 배송정보를 확인하였으며 구매에 동의 하시겠습니까?</li>
+                            <li class="txt__list"><input type="checkbox" name="agree" id="agree" required><label for="agree">동의</label></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-box order">
+            <button type="button" class="blueBtn cancellation"
+                    th:attr="data-url=@{/cart}" onclick="location.href=this.dataset.url">
+                취소<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt="이전화면으로 이동"></span>
+            </button>
+            <button type="submit" class="blueBtn u-confirm">
+                <span th:text="${#numbers.formatInteger(totalPoint, 0, 'COMMA')} + ' P'"></span>&nbsp;결제하기<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt="답례품 주문하기"></span>
+            </button>
+        </div>
+    </form>
+</section>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script th:inline="none">
+function searchAddress() {
+    new daum.Postcode({
+        oncomplete: function (data) {
+            document.getElementById('post').value = data.zonecode;
+            document.getElementById('address').value = data.roadAddress || data.jibunAddress;
+            document.getElementById('addressDetail').focus();
+        }
+    }).open();
+}
+</script>
+</body>
+</html>

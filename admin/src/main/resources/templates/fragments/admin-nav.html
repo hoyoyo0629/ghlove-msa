@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/* 운영관리 콘솔 공통 상단바+좌측 사이드바 - AS-IS 실제 레이아웃(ghlove-web의
+     WEB-INF/views/layouts/opmanager/{inc_head,inc_header,inc_footer}.jsp, layouts.xml
+     Tiles 설정)을 다시 읽고 재구성했다: 이전엔 모든 메뉴를 한 줄짜리 flat 상단 네비에
+     욱여넣었는데(메뉴가 늘면서 두 줄로 밀림), 실제 AS-IS는 "상단바(로그인유저+로그아웃)
+     → 로고+1차메뉴 GNB(가로탭) → 좌측 2차메뉴 사이드바(.lnb) + 우측 컨텐츠" 2단 구조였다.
+     처음엔 opmanager.css/bootstrap.css 실물이 로컬에 없어서 색상/여백은 임의로 정했지만,
+     이후 ghlove-web/static/content/opmanager/에 실제 파일이 있는 걸 발견해 style.css의
+     색상·폰트·로고 이미지를 그 값 그대로 교체했다(클래스명/마크업 구조는 이미 실제
+     inc_header.jsp와 일치해서 그대로 유지, 값만 진짜 AS-IS로 바뀜).
+
+     사이드바는 position:fixed로 띄운다 - 그래야 각 화면이 원래 갖고 있던
+     <div class="wrap">...</div> 구조를 하나도 안 건드리고(32개 템플릿 전부), style.css의
+     .wrap에 사이드바 폭만큼 margin-left만 주면 되기 때문이다(fragment 안에서 div를
+     일부러 안 닫고 여러 파일에 걸쳐 닫는 방식은 Thymeleaf의 HTML 파서가 fragment 경계에서
+     태그를 임의로 balance해버릴 위험이 있어 피했다).
+
+     메뉴 트리(navTree)/현재위치(activeMenu, activeTopMenuId)는 ManagerAuthAdvice가 매
+     요청마다 자동으로 채워준다 - 화면마다 currentPath 문자열을 넘겨줄 필요가 없어졌다
+     (이전엔 admin-nav('give-state')처럼 매번 다른 문자열을 직접 넘겼는데, 신규 화면
+     추가 시 깜빡하기 쉬운 실수 포인트였다). */-->
+<div th:fragment="admin-nav()">
+    <div class="topMenu">
+        <div class="topMenu-inner">
+            <span class="info" th:if="${loginManager != null}">
+                <strong th:text="${loginManager.userName}"></strong>님으로 접속중입니다.
+            </span>
+            <form th:if="${loginManager != null}" th:action="@{/admin/logout}" method="post" class="inline-form">
+                <button type="submit" class="btn-logout">로그아웃</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="op-header">
+        <div class="op-header-inner">
+            <div class="logo">운영관리<span class="badge">admin</span></div>
+            <ul class="gnb">
+                <li th:each="top : ${navTree.topMenus()}"
+                    th:classappend="${activeTopMenuId != null and activeTopMenuId == top.menuId} ? 'on'">
+                    <a th:href="@{${navTree.childrenByParent().get(top.menuId)[0].menuUrl}}" th:text="${top.menuName}"></a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <aside class="lnb" th:if="${activeTopMenuId != null}">
+        <ul class="lnbs">
+            <li th:each="child : ${navTree.childrenByParent().get(activeTopMenuId)}"
+                class="sub_menu" th:classappend="${activeMenu != null and activeMenu.menuId == child.menuId} ? 'on'">
+                <a th:href="@{${child.menuUrl}}" th:text="${child.menuName}"></a>
+            </li>
+        </ul>
+    </aside>
+</div>
+</body>
+</html>

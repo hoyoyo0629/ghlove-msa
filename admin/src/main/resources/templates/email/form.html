@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>메일 작성 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <p><a th:href="@{/email}">&larr; 이메일 발송</a></p>
+    <h1>메일 작성</h1>
+
+    <form th:action="@{/email}" method="post" onsubmit="return confirm('선택한 대상에게 즉시 발송합니다. 계속하시겠습니까?')">
+        <div class="field">
+            <label>발송대상</label>
+            <label><input type="radio" name="authTarget" value="A" checked> 전체 관리자</label>
+            <label><input type="radio" name="authTarget" value="D"> ROLE_ADMIN만</label>
+            <label><input type="radio" name="authTarget" value="O"> ROLE_OPERATOR만</label>
+        </div>
+        <div class="field">
+            <label for="subject">제목</label>
+            <input type="text" id="subject" name="subject" required>
+        </div>
+        <div class="field">
+            <label for="content">내용</label>
+            <textarea id="content" name="content" rows="8" required></textarea>
+        </div>
+        <button type="submit" class="btn">발송</button>
+    </form>
+</div>
+</body>
+</html>

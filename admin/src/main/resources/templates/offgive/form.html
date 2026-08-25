@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>오프라인기부 현장접수 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/offgive/form.jsp 재현 - 은행창구/행정복지센터 접수 담당자가 현장에서
+     기부를 등록한다. 기존회원 아이디를 입력하면 그 계정으로, 비워두면 방문 시민을
+     즉석가입시킨다(OffgiveService.register 참고, AS-IS의 "계좌 없으면 즉석생성" 로직).
+     실명인증은 담당자가 신분증을 직접 확인하는 것으로 대체(원격 SMS 인증이 필요없는
+     대면 접수라 의도적으로 단순화 - 온라인 실명인증 모듈은 이번 스코프 밖). -->
+<div class="wrap">
+    <p><a th:href="@{/offgive}">&larr; 오프라인기부 접수 관리</a></p>
+    <h1>오프라인기부 현장접수</h1>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+    <form th:action="@{/offgive}" method="post">
+        <h2 style="font-size:16px;">기부자 정보</h2>
+        <div class="field">
+            <label for="userId">기존 회원번호 (있으면 입력, 없으면 비워두고 아래 방문자 정보 입력)</label>
+            <input type="number" id="userId" name="userId">
+        </div>
+        <div class="field">
+            <label for="walkInName">이름</label>
+            <input type="text" id="walkInName" name="walkInName" maxlength="50">
+        </div>
+        <div class="field">
+            <label for="walkInPhone">휴대전화</label>
+            <input type="text" id="walkInPhone" name="walkInPhone" maxlength="20" placeholder="01012345678">
+        </div>
+        <div class="field">
+            <label for="walkInBirthday">생년월일</label>
+            <input type="date" id="walkInBirthday" name="walkInBirthday">
+        </div>
+        <div class="field">
+            <label for="walkInAddress">주소</label>
+            <input type="text" id="walkInAddress" name="walkInAddress" maxlength="255">
+        </div>
+        <p style="font-size:13px; color:#666; margin-top:-10px; margin-bottom:16px;">
+            ※ 신분증을 확인해 본인 여부를 직접 확인해 주세요. 회원번호가 없으면 위 정보로 계정이 즉시 발급됩니다.
+        </p>
+
+        <h2 style="font-size:16px;">기부 정보</h2>
+        <div class="field">
+            <label for="upperLocgovCode">시·도 <span style="color:#c0392b;">*</span></label>
+            <select id="upperLocgovCode" onchange="filterLocgov()">
+                <option value="">선택</option>
+                <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="locgovCode">시·군·구 <span style="color:#c0392b;">*</span></label>
+            <select id="locgovCode" name="locgovCode" required>
+                <option value="">선택</option>
+                <option th:each="l : ${allLocgovs}" th:value="${l.locgovCode}" th:text="${l.locgovNm}"
+                        th:attr="data-upper=${l.upperLocgovCode}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="amount">기부금액(원) <span style="color:#c0392b;">*</span></label>
+            <input type="number" id="amount" name="amount" required min="1">
+        </div>
+        <div class="field">
+            <label for="rceptBankNm">접수은행/지점</label>
+            <input type="text" id="rceptBankNm" name="rceptBankNm" maxlength="100" placeholder="예: 농협은행 순천지점">
+        </div>
+        <button type="submit">현장접수 등록</button>
+    </form>
+</div>
+
+<script th:inline="none">
+function filterLocgov() {
+    var upper = document.getElementById('upperLocgovCode').value;
+    var select = document.getElementById('locgovCode');
+    Array.prototype.forEach.call(select.options, function (opt) {
+        if (!opt.value) { return; }
+        opt.hidden = upper !== '' && opt.dataset.upper !== upper;
+    });
+}
+filterLocgov();
+</script>
+</body>
+</html>

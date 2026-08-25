@@ -1,0 +1,162 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kong-declarative-config
+  namespace: ghlove
+data:
+  kong.yaml: |
+    _format_version: "3.0"
+    # SFR-010 API 게이트웨이 - 6개 서비스를 경로 접두사로 라우팅한다 (member/donation/
+    # point/gift/order/admin). K8s Service 이름(예: member-service)을 그대로 upstream
+    # 호스트로 쓴다 - 같은 네임스페이스 안이라 K8s DNS로 바로 resolve된다. 로컬 개발
+    # 환경에서 이 라우팅을 실제로 검증해 볼 수 있는 Docker 버전은
+    # infra/kong/kong-local.yaml (host.docker.internal 사용) 참고.
+    #
+    # SFR-010: member-route를 제외한 5개 라우트에 jwt 플러그인을 적용해 GH_AUTH 쿠키를
+    # 게이트웨이 단에서도 검증한다(심층방어 - 각 서비스도 자체 JwtVerifier를 갖고 있음).
+    # 비밀키는 실서비스에서는 여기 평문 대신 K8s Secret(ghlove-jwt-secret 등)으로 옮겨야 한다.
+    consumers:
+      - username: ghlove-app
+        jwt_secrets:
+          - key: ghlove-app
+            algorithm: HS256
+            secret: "ghlove-msa-local-dev-shared-jwt-secret-key-32bytes-min!!"
+    services:
+      - name: member-service
+        url: http://member-service:8081
+        routes:
+          - name: member-route
+            paths: ["/member"]
+            strip_path: true
+      - name: donation-service
+        url: http://donation-service:8082
+        routes:
+          - name: donation-route
+            paths: ["/donation"]
+            strip_path: true
+            plugins:
+              - name: jwt
+                config:
+                  cookie_names: ["GH_AUTH"]
+                  key_claim_name: "iss"
+                  claims_to_verify: ["exp"]
+      - name: point-service
+        url: http://point-service:8083
+        routes:
+          - name: point-route
+            paths: ["/point"]
+            strip_path: true
+            plugins:
+              - name: jwt
+                config:
+                  cookie_names: ["GH_AUTH"]
+                  key_claim_name: "iss"
+                  claims_to_verify: ["exp"]
+      - name: gift-service
+        url: http://gift-service:8084
+        routes:
+          - name: gift-route
+            paths: ["/gift"]
+            strip_path: true
+            plugins:
+              - name: jwt
+                config:
+                  cookie_names: ["GH_AUTH"]
+                  key_claim_name: "iss"
+                  claims_to_verify: ["exp"]
+      - name: order-service
+        url: http://order-service:8085
+        routes:
+          - name: order-route
+            paths: ["/order"]
+            strip_path: true
+            plugins:
+              - name: jwt
+                config:
+                  cookie_names: ["GH_AUTH"]
+                  key_claim_name: "iss"
+                  claims_to_verify: ["exp"]
+      - name: admin-service
+        url: http://admin-service:8086
+        routes:
+          - name: admin-route
+            paths: ["/admin"]
+            strip_path: true
+            plugins:
+              - name: jwt
+                config:
+                  cookie_names: ["GH_AUTH"]
+                  key_claim_name: "iss"
+                  claims_to_verify: ["exp"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong
+  namespace: ghlove
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kong
+  template:
+    metadata:
+      labels:
+        app: kong
+    spec:
+      containers:
+        - name: kong
+          image: kong:3.8
+          env:
+            - name: KONG_DATABASE
+              value: "off"
+            - name: KONG_DECLARATIVE_CONFIG
+              value: "/kong/declarative/kong.yaml"
+            - name: KONG_PROXY_ACCESS_LOG
+              value: "/dev/stdout"
+            - name: KONG_ADMIN_ACCESS_LOG
+              value: "/dev/stdout"
+            - name: KONG_PROXY_ERROR_LOG
+              value: "/dev/stderr"
+            - name: KONG_ADMIN_ERROR_LOG
+              value: "/dev/stderr"
+            - name: KONG_ADMIN_LISTEN
+              value: "0.0.0.0:8001"
+          ports:
+            - containerPort: 8000
+            - containerPort: 8001
+          volumeMounts:
+            - name: kong-config
+              mountPath: /kong/declarative
+      volumes:
+        - name: kong-config
+          configMap:
+            name: kong-declarative-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-proxy
+  namespace: ghlove
+spec:
+  type: NodePort
+  selector:
+    app: kong
+  ports:
+    - name: proxy
+      port: 8000
+      targetPort: 8000
+      nodePort: 30800
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-admin
+  namespace: ghlove
+spec:
+  selector:
+    app: kong
+  ports:
+    - name: admin
+      port: 8001
+      targetPort: 8001

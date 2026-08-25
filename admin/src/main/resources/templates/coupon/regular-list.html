@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>정기발행쿠폰 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <p><a th:href="@{/coupon}">&larr; 쿠폰관리</a></p>
+    <h1>정기발행쿠폰 관리</h1>
+    <p style="color:#666; margin-bottom:16px;">발행기간 동안 매일 배치가 대상회원에게 자동으로 새 쿠폰을 발행합니다.</p>
+    <p><a class="btn" th:href="@{/coupon-regular/new}">+ 정기발행쿠폰 등록</a></p>
+
+    <table>
+        <thead>
+        <tr><th>ID</th><th>쿠폰명</th><th>혜택</th><th>발행기간</th><th>상태</th><th>처리</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="c : ${coupons}">
+            <td th:text="${c.couponId()}"></td>
+            <td><a th:href="@{'/coupon-regular/' + ${c.couponId()} + '/edit'}" th:text="${c.couponName()}"></a></td>
+            <td th:text="${c.payType() == '1' ? (#numbers.formatInteger(c.pay(), 0, 'COMMA') + 'P') : (c.pay() + '%')}"></td>
+            <td th:text="${c.issueType() == '1' ? (c.issueStartDate() + ' ~ ' + c.issueEndDate()) : '제한없음'}"></td>
+            <td th:text="${c.couponFlag() == 'Y' ? '운영중' : '중지'}"></td>
+            <td>
+                <a class="small-btn" th:href="@{'/coupon-regular/' + ${c.couponId()} + '/edit'}">수정</a>
+                <form th:action="@{'/coupon-regular/' + ${c.couponId()} + '/delete'}" method="post" class="inline-form"
+                      onsubmit="return confirm('삭제하시겠습니까?')">
+                    <button type="submit" class="small-btn danger">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(coupons)}">등록된 정기발행쿠폰이 없습니다.</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>접속IP 등록 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <p><a th:href="@{/access}">&larr; 접속IP허용목록</a></p>
+    <h1>접속IP 등록</h1>
+
+    <p class="error" th:if="${param.errorMessage}" th:text="${param.errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+    <form th:action="@{/access}" method="post">
+        <div class="field">
+            <label>접근 타입</label>
+            <label><input type="radio" name="accessType" value="1" checked> 관리자</label>
+            <label><input type="radio" name="accessType" value="2"> 판매관리자</label>
+        </div>
+        <div class="field">
+            <label for="remoteAddr">IP 주소</label>
+            <input type="text" id="remoteAddr" name="remoteAddr" required placeholder="예: 192.168.0.1">
+        </div>
+        <button type="submit">등록</button>
+    </form>
+</div>
+</body>
+</html>

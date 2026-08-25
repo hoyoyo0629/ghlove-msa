@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>메일설정 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>메일설정 관리</h1>
+    <p style="color:#666; margin-bottom:16px;">주문상태(ORDER_STATUS)가 바뀔 때 발송되는 이메일 템플릿입니다. 구매자/관리자/판매자 3자 각각 내용을 관리합니다.</p>
+
+    <table>
+        <thead>
+        <tr><th>주문상태</th><th>등록여부</th><th>처리</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="t : ${templates}">
+            <td th:text="${t.label()}"></td>
+            <td>
+                <span class="pill" th:classappend="${t.configured()} ? 'on' : 'off'"
+                      th:text="${t.configured()} ? '등록됨' : '미등록'"></span>
+            </td>
+            <td><a class="small-btn" th:href="@{'/mail-config/' + ${t.templateId()}}">편집</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(templates)}">등록된 주문상태 코드가 없습니다.</p>
+</div>
+</body>
+</html>

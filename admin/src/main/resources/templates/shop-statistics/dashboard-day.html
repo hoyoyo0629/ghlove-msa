@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>일일 현황 보고 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>일일 현황 보고</h1>
+
+    <form method="get" th:action="@{/shop-statistics/dashboard/day}" class="field" style="display:flex; gap:8px; align-items:center;">
+        <input type="text" name="date" th:value="${dashboard.date()}" placeholder="yyyyMMdd">
+        <button type="submit" class="btn">조회</button>
+    </form>
+
+    <table>
+        <tbody>
+        <tr><th style="width:200px;">일자</th><td th:text="${dashboard.date()}"></td></tr>
+        <tr><th>결제건수</th><td th:text="${dashboard.payCount()} + '건'"></td></tr>
+        <tr><th>결제포인트</th><td th:text="${#numbers.formatInteger(dashboard.payAmount(), 0, 'COMMA')} + 'P'"></td></tr>
+        <tr><th>취소건수</th><td th:text="${dashboard.cancelCount()} + '건'"></td></tr>
+        <tr><th>신규가입자수</th><td th:text="${dashboard.newUserCount()} + '명'"></td></tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

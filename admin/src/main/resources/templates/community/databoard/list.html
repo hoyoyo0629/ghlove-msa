@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>지자체 자료실 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>지자체 자료실</h1>
+    <p style="color:#666; margin-bottom:16px;">지자체 담당자용 자료 공유 게시판입니다.</p>
+    <p><a class="btn" th:href="@{/community/databoard/new}">+ 자료 등록</a></p>
+
+    <table>
+        <thead>
+        <tr><th>제목</th><th>공지</th><th>조회수</th><th>등록일</th><th>처리</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="i : ${items}">
+            <td><a th:href="@{'/community/databoard/' + ${i.rpstrId} + '/edit'}" th:text="${i.rpstrTtl}"></a></td>
+            <td th:text="${i.noticeYn == 'Y' ? '공지' : ''}"></td>
+            <td th:text="${i.inqCnt}"></td>
+            <td th:text="${i.frstCrtDt}"></td>
+            <td>
+                <a class="small-btn" th:href="@{'/community/databoard/' + ${i.rpstrId} + '/edit'}">수정</a>
+                <form th:action="@{'/community/databoard/' + ${i.rpstrId} + '/delete'}" method="post" class="inline-form"
+                      onsubmit="return confirm('삭제하시겠습니까?')">
+                    <button type="submit" class="small-btn danger">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(items)}">등록된 자료가 없습니다.</p>
+</div>
+</body>
+</html>

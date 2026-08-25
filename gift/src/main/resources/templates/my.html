@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>내 답례품 관리 - 고향사랑e음 (gift service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<nav class="navbar">
+    <div class="logo">답례품<span class="badge">gift</span></div>
+    <div class="nav-links">
+        <a th:href="@{/}">목록으로</a>
+        <a th:href="@{/register}">답례품 등록</a>
+        <a th:href="@{/my/inquiries(sellerId=${sellerId})}">상품문의 관리</a>
+    </div>
+</nav>
+
+<div class="wrap">
+    <h1 style="text-align:left">내 답례품 관리</h1>
+
+    <p class="success" th:if="${param.registered != null}">답례품이 등록 신청되었습니다. (승인 대기중)</p>
+    <p class="success" th:if="${param.edited != null}">답례품 정보가 수정되었습니다.</p>
+    <p class="error" th:if="${param.errorMessage != null}" th:text="${param.errorMessage}"></p>
+
+    <form th:action="@{/my}" method="get" class="inline-form" style="max-width:320px; margin-bottom:20px;">
+        <input type="number" name="sellerId" placeholder="제공자 ID" th:value="${sellerId}" required>
+        <button type="submit" style="width:auto;">조회</button>
+    </form>
+
+    <table th:if="${gifts != null}">
+        <thead>
+        <tr>
+            <th>답례품명</th>
+            <th>카테고리</th>
+            <th>가격</th>
+            <th>재고</th>
+            <th>상태</th>
+            <th>처리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="g : ${gifts}">
+            <td><a th:href="@{'/gifts/' + ${g.itemId}}" th:text="${g.itemName}"></a></td>
+            <td th:text="${categories.get(g.categoryCode)} ?: ${g.categoryCode}"></td>
+            <td th:text="${#numbers.formatInteger(g.salePrice, 0, 'COMMA')} + '원'"></td>
+            <td th:text="${g.stockQuantity}"></td>
+            <td th:text="${statusLabels.get(g.dataStatusCode)} ?: ${g.dataStatusCode}"></td>
+            <td>
+                <a th:if="${g.dataStatusCode != 'DISCONTINUED'}" th:href="@{'/gifts/' + ${g.itemId} + '/edit'(sellerId=${sellerId})}" class="small-btn ghost">수정</a>
+                <form th:action="@{'/gifts/' + ${g.itemId} + '/stock'}" method="post" class="inline-form">
+                    <input type="hidden" name="sellerId" th:value="${sellerId}">
+                    <input type="number" name="quantity" min="0" placeholder="재고" required>
+                    <button type="submit" class="small-btn">재고 조정</button>
+                </form>
+                <form th:if="${g.dataStatusCode == 'APPROVED'}" th:action="@{'/gifts/' + ${g.itemId} + '/stop'}" method="post" class="inline-form" style="margin-top:4px;">
+                    <input type="hidden" name="sellerId" th:value="${sellerId}">
+                    <button type="submit" class="small-btn danger">판매중지</button>
+                </form>
+                <form th:if="${g.dataStatusCode != 'DISCONTINUED'}" th:action="@{'/gifts/' + ${g.itemId} + '/discontinue'}" method="post" class="inline-form" style="margin-top:4px;" onsubmit="return confirm('영구적으로 폐지합니다. 계속할까요?')">
+                    <input type="hidden" name="sellerId" th:value="${sellerId}">
+                    <button type="submit" class="small-btn danger">폐지</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${gifts != null and #lists.isEmpty(gifts)}">등록한 답례품이 없습니다.</p>
+</div>
+</body>
+</html>

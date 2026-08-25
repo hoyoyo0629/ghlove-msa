@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>FAQ 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <p><a th:href="@{/community/locv-faq}">&larr; 지자체FAQ 관리</a></p>
+    <h1 th:text="${faq.id} != null ? 'FAQ 수정' : 'FAQ 등록'"></h1>
+
+    <form th:action="${faq.id} != null ? @{'/community/locv-faq/' + ${faq.id}} : @{/community/locv-faq}" method="post">
+        <div class="field">
+            <label for="faqType">유형</label>
+            <select id="faqType" name="faqType">
+                <option th:each="e : ${faqTypes}" th:value="${e.key}" th:text="${e.value}"
+                        th:selected="${e.key == faq.faqType}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="subject">제목</label>
+            <input type="text" id="subject" name="subject" th:value="${faq.subject}" required>
+        </div>
+        <div class="field">
+            <label for="content">내용</label>
+            <textarea id="content" name="content" rows="10" th:text="${faq.content}" required></textarea>
+        </div>
+        <button type="submit" class="btn">저장</button>
+    </form>
+</div>
+</body>
+</html>

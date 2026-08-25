@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>내 쿠폰함 - 고향사랑e음 (order service)</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/mypage-status.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<section>
+    <div class="page-title-box">
+        <span class="ali_breadcrumb">
+            <a th:href="@{'http://localhost:8081/'}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            <a th:href="@{'http://localhost:8081/mypage'}">마이페이지</a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            내 쿠폰함
+        </span>
+        <h2 class="page-title-txt">내 쿠폰함</h2>
+    </div>
+</section>
+
+<section id="contents" class="receipt-contents">
+    <div class="center">
+        <p style="margin-bottom:12px;"><a th:href="@{/coupons}">받을 수 있는 쿠폰 보러가기 &rarr;</a></p>
+
+        <h3 class="deepSubBlue">사용가능 쿠폰</h3>
+        <div class="contents-wrap">
+            <div class="s-contents">
+                <div class="list_body table-container w3c_v_2410" th:if="${!#lists.isEmpty(myCoupons.usable())}">
+                    <div class="list_wrap">
+                        <table>
+                            <caption class="sr-only">사용가능 쿠폰 목록</caption>
+                            <thead class="list-title">
+                            <tr class="items_wrap">
+                                <th class="date-col" scope="col">쿠폰명</th>
+                                <th class="date-col" scope="col">혜택</th>
+                                <th class="date-col" scope="col">사용가능기간</th>
+                                <th class="date-col" scope="col">다운로드일</th>
+                            </tr>
+                            </thead>
+                            <tbody class="item_list-group">
+                            <tr class="list-items" th:each="c : ${myCoupons.usable()}">
+                                <td class="date-col" th:text="${c.couponName}"></td>
+                                <td class="date-col"
+                                    th:text="${c.payType == '1' ? (#numbers.formatInteger(c.pay, 0, 'COMMA') + 'P 할인') : (c.pay + '% 할인')}"></td>
+                                <td class="date-col"
+                                    th:text="${(c.applyStartDate != null and !c.applyStartDate.isEmpty()) ? (c.applyStartDate + ' ~ ' + c.applyEndDate) : '기간제한 없음'}"></td>
+                                <td class="date-col" th:text="${#strings.substring(c.downloadDate, 0, 8)}"></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="common_none" th:if="${#lists.isEmpty(myCoupons.usable())}">
+                    <p>사용 가능한 쿠폰이 없습니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <h3 class="deepSubBlue" style="margin-top:32px;">사용/만료 쿠폰</h3>
+        <div class="contents-wrap">
+            <div class="s-contents">
+                <div class="list_body table-container w3c_v_2410" th:if="${!#lists.isEmpty(myCoupons.used())}">
+                    <div class="list_wrap">
+                        <table>
+                            <caption class="sr-only">사용 또는 만료된 쿠폰 목록</caption>
+                            <thead class="list-title">
+                            <tr class="items_wrap">
+                                <th class="date-col" scope="col">쿠폰명</th>
+                                <th class="date-col" scope="col">상태</th>
+                                <th class="date-col" scope="col">주문번호</th>
+                                <th class="date-col" scope="col">할인금액</th>
+                            </tr>
+                            </thead>
+                            <tbody class="item_list-group">
+                            <tr class="list-items" th:each="c : ${myCoupons.used()}">
+                                <td class="date-col" th:text="${c.couponName}"></td>
+                                <td class="date-col" th:text="${c.dataStatusCode == '1' ? '사용완료' : '기간만료'}"></td>
+                                <td class="date-col" th:text="${c.orderCode != null ? c.orderCode : '-'}"></td>
+                                <td class="date-col"
+                                    th:text="${c.discountAmount != null ? (#numbers.formatInteger(c.discountAmount, 0, 'COMMA') + 'P') : '-'}"></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="common_none" th:if="${#lists.isEmpty(myCoupons.used())}">
+                    <p>사용/만료된 쿠폰이 없습니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+</body>
+</html>

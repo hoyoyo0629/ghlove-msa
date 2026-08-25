@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>배송지 관리 - 고향사랑e음</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/change-info.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<!-- 마이페이지 "배송지 관리" 등록/수정 - AS-IS mypage/deliveryInfo.html의 배송지 추가/수정
+     팝업을 별도 화면으로 재현. 우편번호는 Daum 우편번호 서비스(공개 무료 위젯)로 실제
+     연동한다(member/profile.html의 "주소찾기"와 동일한 패턴). -->
+<section class="changeInfo center">
+    <div class="page-title-box" id="contents">
+        <span class="ali_breadcrumb">
+            <a th:href="@{/}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            <a th:href="@{/mypage}">마이페이지</a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            <a th:href="@{/delivery}">배송지 관리</a>
+        </span>
+        <h2 class="page-title-txt" th:text="${delivery.userDeliveryId} == null ? '배송지 추가' : '배송지 수정'"></h2>
+    </div>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+    <form th:action="${delivery.userDeliveryId} == null ? @{/delivery/write} : @{'/delivery/edit/' + ${delivery.userDeliveryId}}"
+          method="post" id="deliveryForm">
+        <fieldset>
+            <div class="add-info-area center">
+                <div class="lable-field"><h3><span>배송지&nbsp;</span><span>정보</span></h3></div>
+                <div class="info-field">
+                    <div class="field-row">
+                        <label for="title">배송지명</label>
+                        <input type="text" id="title" name="title" th:value="${delivery.title}" maxlength="50" required placeholder="예: 우리집, 회사">
+                    </div>
+                    <div class="field-row">
+                        <label for="userName">받는사람</label>
+                        <input type="text" id="userName" name="userName" th:value="${delivery.userName}" maxlength="50" required>
+                    </div>
+                    <div class="field-row">
+                        <label for="mobile">휴대전화번호</label>
+                        <input type="text" id="mobile" name="mobile" th:value="${delivery.mobile}" maxlength="20" required placeholder="010-0000-0000">
+                    </div>
+                    <div class="field-row">
+                        <label for="phone">전화번호</label>
+                        <input type="text" id="phone" name="phone" th:value="${delivery.phone}" maxlength="20" placeholder="선택 입력">
+                    </div>
+                    <div class="field-row">
+                        <label for="post">우편번호</label>
+                        <input type="text" id="post" name="post" th:value="${delivery.zipcode}" readonly>
+                        <button type="button" class="formBtn" onclick="searchAddress()">주소찾기</button>
+                    </div>
+                    <div class="field-row">
+                        <label for="address">주소</label>
+                        <input type="text" id="address" name="address" th:value="${delivery.address}" readonly required>
+                    </div>
+                    <div class="field-row">
+                        <label for="addressDetail">상세주소</label>
+                        <input type="text" id="addressDetail" name="addressDetail" th:value="${delivery.addressDetail}" maxlength="100">
+                    </div>
+                    <div class="field-row">
+                        <label for="makeDefault">
+                            <input type="checkbox" id="makeDefault" name="makeDefault"
+                                   th:checked="${delivery.defaultFlag == 'Y'}">
+                            기본배송지로 설정
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+        <div class="btn-box order">
+            <button type="button" class="blueBtn cancellation" onclick="history.back()">취소</button>
+            <button type="submit" class="blueBtn u-confirm">저장</button>
+        </div>
+    </form>
+</section>
+
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script th:inline="none">
+function searchAddress() {
+    new daum.Postcode({
+        oncomplete: function (data) {
+            document.getElementById('post').value = data.zonecode;
+            document.getElementById('address').value = data.roadAddress || data.jibunAddress;
+            document.getElementById('addressDetail').focus();
+        }
+    }).open();
+}
+</script>
+</body>
+</html>

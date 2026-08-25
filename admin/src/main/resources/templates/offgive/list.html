@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>오프라인기부 접수 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/offgive/list.jsp 재현 - 은행창구/행정복지센터 등에서 현장 접수한
+     기부 목록(CNTR_PATH_CODE=OFFLINE). -->
+<div class="wrap">
+    <h1>오프라인기부 접수 관리</h1>
+    <p style="margin-bottom:16px;"><a th:href="@{/offgive/new}"><button type="button">현장접수 등록</button></a></p>
+
+    <table>
+        <thead>
+        <tr>
+            <th>기부번호</th>
+            <th>기부자명</th>
+            <th>아이디</th>
+            <th>지자체</th>
+            <th>기부금액</th>
+            <th>접수은행/지점</th>
+            <th>기부일</th>
+            <th>상태</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="d : ${list}">
+            <td><a th:href="@{/offgive/{sn}(sn=${d.cntrSn})}" th:text="${d.cntrSn}"></a></td>
+            <td th:text="${membersById.get(d.userId) != null ? membersById.get(d.userId).userName() : '-'}"></td>
+            <td th:text="${membersById.get(d.userId) != null ? membersById.get(d.userId).loginId() : '-'}"></td>
+            <td th:text="${d.cntrLocgovCode}"></td>
+            <td th:text="${#numbers.formatInteger(d.cntrAmt, 0, 'COMMA')} + '원'"></td>
+            <td th:text="${d.rceptBankNm}"></td>
+            <td th:text="${d.cntrDe}"></td>
+            <td th:text="${d.cntrSttusCode}"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(list)}">접수된 오프라인기부가 없습니다.</p>
+</div>
+</body>
+</html>

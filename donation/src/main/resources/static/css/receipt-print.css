@@ -1,0 +1,171 @@
+/**************** 기부확인증 공통 ****************/
+@page {
+	size : A4;
+	margin : 0;
+}
+
+@media print{
+	html, body{
+	    width: 210mm;
+	    height: 297mm;
+	}
+	.page {
+		margin : 0;
+		border : initial;
+		border-radius : initial;
+		width : initial;
+		min-height : initial;
+		box-shadow : initial;
+		background : initial;
+		page-break-after : always;
+	}
+}
+
+body{
+	width : 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+}
+* {
+	box-sizing : border-box;
+	-moz-box-sizing : border-box;
+}
+.page {
+    width : 210mm;
+    height : 297mm;
+    padding : 20mm;
+    margin : 0 auto;
+    border : 1px #D3D3D3 solid;
+    border-radius : 5px;
+    background : white;
+    box-shadow : 0 0 5px rgba(0,0,0,0.1);
+    background-image: url(/images/donation_receipt/background.png);
+    background-size: cover;
+    -webkit-print-color-adjust: exact;
+}
+.lineBox {
+/* 	padding : 1cm; */
+	height : 257mm;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+}
+
+.lineBox .title-area{
+	/* 타이틀 */
+	width: 100%;
+	height: 220px;
+    margin: 0 auto 20px auto;
+    align-content: end;
+}
+.lineBox .title-area h5 {
+	/* 타이틀 > 텍스트 */
+    font-size: 52px;
+    height: 120px;
+    word-break: break-all;
+    display: inline-block;
+    align-content: end;
+    border-bottom: 5px double #00215A;
+}
+
+.lineBox .section-area{
+	/* 내용 */
+    width: 80%;
+    margin: 0 auto;
+    flex : 1;
+}
+
+.lineBox .bottom-area {
+	/* 하단 */
+	width: 100%;
+    margin: 0 auto;
+    height: 350px;
+}
+
+/**************** 기부확인증 앞면 ****************/
+.card-front .donation-comment{
+    width: 80%;
+    margin: 0 auto;
+}
+
+.card-front .table-area th,
+.card-front .table-area td {
+	/* 내용 > 테이블 */
+	font-size: 24px;
+    padding: 26px 0;
+    text-align : left;
+    white-space: nowrap;
+}
+.card-front .section-area{
+	/* 내용 */
+    width: 70%;
+}
+.card-front .bottom-area .comment-area {
+	/* 하단 > 문구 출력 */
+    font-size: 26px;
+}
+.card-front .bottom-area .date-area {
+	/* 하단 > 날짜 출력 */
+	font-size: 26px;
+    width: 50%;
+    margin: 50px auto 50px auto;
+}
+.card-front .bottom-area .icon-area {
+	/* 하단 > 아이콘 */
+    width: 50%;
+    margin: 0 auto;
+}
+
+
+/**************** 기부확인증 뒷면 ****************/
+
+.card-back .section-area{
+	/* 내용 */
+    width: 100%;
+}
+.card-back .section-area .receipt-result-body {
+    padding: 0;
+    margin-bottom: 20px;
+}
+.card-back .section-area .receipt-result-body table{
+    text-align: center;
+    border: 1px solid var(--gray5);
+    font-size: 16px;
+}
+.card-back .section-area .receipt-result-body hr{
+/*     border-top: 1px solid #003669; */
+	border-top: 1px solid #a9bccd;
+	margin: 0;
+}
+.card-back .section-area .result-title{
+    background-color: var(--gray4b);
+}
+
+.card-back .section-area .result-title th,
+.card-back .section-area .result-row td {
+/*     color: var(--gray2); */
+	border		: 1px solid var(--gray4);
+    padding		: 8px 10px;
+    white-space	: nowrap;
+    text-align	: center;
+    min-width	: 100px;
+    max-width	: 200px;
+}
+.card-back .section-area .result-title th:first-child,
+.card-back .section-area .result-row td:first-child {
+	border-left		:	none;
+}
+.card-back .section-area .result-title th:last-child,
+.card-back .section-area .result-row td:last-child {
+	border-right	:	none;
+}
+
+.card-back .bottom-area .comment-area {
+	/* 하단 > 문구 출력 */
+    font-size: 20px;
+}
+.card-back .bottom-area {
+	/* 하단 */
+    height: 200px;
+}

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>지정기부 담당부서 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/designated-donation/part/list.jsp 재현 - 지자체 소속 부서 등록,
+     사업 등록 시 담당부서로 지정할 수 있다(G_DSGN_DNTN_BIZ_DEPT_MNG). -->
+<div class="wrap">
+    <p><a th:href="@{/designated-projects}">&larr; 지정기부 관리</a></p>
+    <h1>지정기부 담당부서 관리</h1>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+    <table style="margin-bottom:28px;">
+        <thead><tr><th>부서명</th><th>지자체</th><th>사용여부</th><th>관리</th></tr></thead>
+        <tbody>
+        <tr th:each="d : ${departments}">
+            <td th:text="${d.deptNm}"></td>
+            <td th:text="${d.locgovCode}"></td>
+            <td th:text="${d.useYn == 'Y'} ? '사용' : '미사용'"></td>
+            <td>
+                <form th:action="@{/designated-projects/departments/{id}/toggle(id=${d.deptId})}" method="post" style="display:inline;">
+                    <button type="submit" th:text="${d.useYn == 'Y'} ? '미사용으로 전환' : '사용으로 전환'"></button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(departments)}">등록된 부서가 없습니다.</p>
+
+    <h2>부서 등록</h2>
+    <form th:action="@{/designated-projects/departments}" method="post">
+        <div class="field">
+            <label for="deptNm">부서명</label>
+            <input type="text" id="deptNm" name="deptNm" required maxlength="255">
+        </div>
+        <div class="field">
+            <label for="upperLocgovCode">시·도</label>
+            <select id="upperLocgovCode" onchange="filterLocgov()">
+                <option value="">선택</option>
+                <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="locgovCode">시·군·구</label>
+            <select id="locgovCode" name="locgovCode" required>
+                <option value="">선택</option>
+                <option th:each="l : ${allLocgovs}" th:value="${l.locgovCode}" th:text="${l.locgovNm}"
+                        th:attr="data-upper=${l.upperLocgovCode}"></option>
+            </select>
+        </div>
+        <button type="submit">등록</button>
+    </form>
+</div>
+
+<script th:inline="none">
+function filterLocgov() {
+    var upper = document.getElementById('upperLocgovCode').value;
+    var select = document.getElementById('locgovCode');
+    Array.prototype.forEach.call(select.options, function (opt) {
+        if (!opt.value) { return; }
+        opt.hidden = upper !== '' && opt.dataset.upper !== upper;
+    });
+}
+filterLocgov();
+</script>
+</body>
+</html>

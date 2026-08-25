@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>고객센터 &gt; 공지사항 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/mypage-status.css}">
+    <link rel="stylesheet" th:href="@{/css/data_v.css}">
+    <link rel="stylesheet" th:href="@{/css/ct_nov.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<!-- AS-IS notice/list.html 재현. GNB의 "이벤트 > 진행중인 이벤트" 링크가 category=EVENT로
+     필터링해 재사용하므로 서버 파라미터 자체는 유지한다. 검색구분(id=category)은 AS-IS도
+     "제목" 옵션 하나뿐이지만(where=SUBJECT), 마크업 자체는 그대로 있어 동일하게 둔다. -->
+<section>
+    <div class="page-title-box">
+        <span class="ali_breadcrumb">
+            <a th:href="@{'http://localhost:8081/'}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            고객센터
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            공지사항
+        </span>
+        <h2 class="page-title-txt">공지사항</h2>
+    </div>
+</section>
+
+<div th:replace="~{fragments/customer-lnb :: customer-lnb('notices')}"></div>
+
+<div class="contents-wrap" id="contents">
+    <div class="center">
+        <div class="s-contents list-wrapper">
+            <div class="list-select-area">
+                <header class="list-search-header">
+                    <div class="list-count-box" th:text="'전체 글 : ' + ${totalCount} + ' 건'"></div>
+                    <form th:action="@{/notices}" method="get" class="search-select">
+                        <input type="hidden" name="category" th:value="${category}">
+                        <div class="form-item">
+                            <label for="category-where" class="sr-only">검색구분</label>
+                            <select id="category-where" aria-label="구분">
+                                <option value="SUBJECT" selected>제목</option>
+                            </select>
+                        </div>
+                        <div class="form-item search-field">
+                            <label for="q" class="sr-only">검색 키워드</label>
+                            <input type="search" id="q" name="q" th:value="${q}" placeholder="검색 키워드">
+                            <button type="submit" class="button search" aria-label="조회"></button>
+                        </div>
+                        <div class="m-field">
+                            <div class="form-item">
+                                <label for="sort" class="sr-only">정렬순서</label>
+                                <select id="sort" name="sort" onchange="this.form.submit()">
+                                    <option value="CREATED_DATE__DESC" th:selected="${sort == 'CREATED_DATE__DESC'}">최신순</option>
+                                    <option value="CREATED_DATE__ASC" th:selected="${sort == 'CREATED_DATE__ASC'}">오래된순</option>
+                                </select>
+                            </div>
+                            <div class="form-item">
+                                <label for="size" class="sr-only">목록수</label>
+                                <select id="size" name="size" onchange="this.form.submit()">
+                                    <option value="10" th:selected="${size == 10}">10개</option>
+                                    <option value="20" th:selected="${size == 20}">20개</option>
+                                    <option value="30" th:selected="${size == 30}">30개</option>
+                                    <option value="50" th:selected="${size == 50}">50개</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </header>
+
+                <div class="table-container">
+                    <div class="list-notice-body w3c_v_2410">
+                        <table>
+                            <caption>공지사항 - 제목, 등록일, 조회수로 구성</caption>
+                            <thead class="list-notice-title">
+                                <tr class="items_wrap">
+                                    <th class="date-col title" scope="col">제목</th>
+                                    <th class="date-col date" scope="col">등록일</th>
+                                    <th class="date-col view" scope="col">조회수</th>
+                                </tr>
+                            </thead>
+                            <tbody class="list-notice-group" th:if="${not #lists.isEmpty(notices)}">
+                                <tr th:each="n : ${notices}">
+                                    <td>
+                                        <a th:href="@{/notices/{id}(id=${n.noticeId})}" class="list-items">
+                                            <div class="notice_tit">
+                                                <span class="notice-icon" th:if="${n.noticeFlag == 'Y'}">공지</span>
+                                                <div class="notice_txt" th:text="${n.subject}"></div>
+                                            </div>
+                                        </a>
+                                    </td>
+                                    <td><div class="date-col date" th:text="${displayDates.get(n.noticeId)}"></div></td>
+                                    <td>
+                                        <div class="date-col view_c">
+                                            <img th:src="@{/images/icon/cli-icon_pw-show.png}" alt="조회수" class="board_icon">
+                                            <span th:text="${n.hits} ?: 0"></span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="list-none" th:if="${#lists.isEmpty(notices)}">
+                            <img th:src="@{/images/icon/non-list.png}" alt="게시물이 없음">
+                            공지사항이 존재하지 않습니다.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-pagination" th:if="${totalPages > 1}">
+                    <div class="pagination_ali">
+                        <ul class="pagination-frame">
+                            <li><a class="fist arrow_btn" th:href="@{/notices(category=${category},q=${q},sort=${sort},size=${size},page=1)}"><img th:src="@{/images/icon/paging_btn-first.png}" alt="처음"></a></li>
+                            <li><a class="prev arrow_btn" th:href="@{/notices(category=${category},q=${q},sort=${sort},size=${size},page=${currentPage > 1 ? currentPage - 1 : 1})}"><img th:src="@{/images/icon/paging_btn-prev.png}" alt="이전"></a></li>
+                            <li th:each="p : ${#numbers.sequence(1, totalPages)}" th:classappend="${p == currentPage} ? 'selected-page'">
+                                <a class="page-text" th:href="@{/notices(category=${category},q=${q},sort=${sort},size=${size},page=${p})}" th:text="${p}"></a>
+                            </li>
+                            <li><a class="next arrow_btn" th:href="@{/notices(category=${category},q=${q},sort=${sort},size=${size},page=${currentPage < totalPages ? currentPage + 1 : totalPages})}"><img th:src="@{/images/icon/paging_btn-next.png}" alt="다음"></a></li>
+                            <li><a class="last arrow_btn" th:href="@{/notices(category=${category},q=${q},sort=${sort},size=${size},page=${totalPages})}"><img th:src="@{/images/icon/paging_btn-last.png}" alt="마지막"></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+</body>
+</html>

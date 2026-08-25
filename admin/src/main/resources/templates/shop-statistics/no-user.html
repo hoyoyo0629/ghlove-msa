@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>미이용자 목록 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>미이용자 목록</h1>
+    <p style="color:#666; margin-bottom:16px;">답례품 구매 이력이 없는 회원입니다 (최근 가입순 최대 200명).</p>
+    <table>
+        <thead>
+        <tr><th>회원ID</th><th>회원명</th><th>가입일</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="u : ${users}">
+            <td th:text="${u.userId()}"></td>
+            <td th:text="${u.userName()}"></td>
+            <td th:text="${u.joinedDate()}"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(users)}">모든 회원이 구매 이력을 보유하고 있습니다.</p>
+</div>
+</body>
+</html>

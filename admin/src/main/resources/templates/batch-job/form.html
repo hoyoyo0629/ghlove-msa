@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>배치 작업 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <p><a th:href="@{/batch-job}">&larr; 배치 작업 스케줄러</a></p>
+    <h1 th:text="${job.batchJobId} != null ? '배치 작업 수정' : '배치 작업 등록'"></h1>
+
+    <form th:action="${job.batchJobId} != null ? @{'/batch-job/' + ${job.batchJobId}} : @{/batch-job}" method="post">
+        <div class="field">
+            <label for="jobName">작업명</label>
+            <input type="text" id="jobName" name="jobName" th:value="${job.jobName}" required>
+        </div>
+        <div class="field">
+            <label for="jobMethod">실행 메서드명</label>
+            <input type="text" id="jobMethod" name="jobMethod" th:value="${job.jobMethod}" required>
+        </div>
+        <div class="field">
+            <label>트리거 종류</label>
+            <label><input type="radio" name="triggerType" value="1" th:checked="${job.triggerType == null or job.triggerType == '1'}"> 심플(초 반복)</label>
+            <label><input type="radio" name="triggerType" value="2" th:checked="${job.triggerType == '2'}"> 크론</label>
+        </div>
+        <div class="field">
+            <label for="triggerRepeatSeconds">반복 초 (심플인 경우)</label>
+            <input type="text" id="triggerRepeatSeconds" name="triggerRepeatSeconds" th:value="${job.triggerRepeatSeconds}">
+        </div>
+        <div class="field">
+            <label for="triggerCronExpression">크론 표현식 (크론인 경우)</label>
+            <input type="text" id="triggerCronExpression" name="triggerCronExpression" th:value="${job.triggerCronExpression}" placeholder="0 0 1 * * *">
+        </div>
+        <div class="field">
+            <label for="ordering">정렬순서</label>
+            <input type="number" id="ordering" name="ordering" th:value="${job.ordering}">
+        </div>
+        <button type="submit" class="btn">저장</button>
+    </form>
+</div>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>관리자 권한 요청 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<nav class="navbar">
+    <div class="logo">운영관리<span class="badge">admin</span></div>
+</nav>
+
+<!-- AS-IS opmanager/manager-request/form.jsp 재현. AS-IS는 로그인 화면에서 아이디/비번을
+     다시 입력해 신원을 확인하지만, 여기서는 SFR-010 공유 JWT로 이미 로그인된 회원임을
+     확인하고(ManagerRequestController) 이름/휴대폰/이메일/생년월일을 그대로 채워 보여준다
+     (수정 불가 - member 서비스가 진실 소스). -->
+<div class="wrap narrow" style="max-width:560px;">
+    <h1>관리자 권한 요청</h1>
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+    <form th:action="@{/admin/manager-requests/new}" method="post">
+        <div class="field">
+            <label>아이디</label>
+            <input type="text" th:value="${member.loginId}" readonly>
+        </div>
+        <div class="field">
+            <label>이름</label>
+            <input type="text" th:value="${member.userName}" readonly>
+        </div>
+        <div class="field">
+            <label>휴대폰</label>
+            <input type="text" th:value="${member.phoneNumber}" readonly>
+        </div>
+        <div class="field">
+            <label>이메일</label>
+            <input type="text" th:value="${member.email}" readonly>
+        </div>
+
+        <div class="field">
+            <label for="reqstSeCode">소속구분</label>
+            <select id="reqstSeCode" name="reqstSeCode" required>
+                <option value="">선택해 주세요</option>
+                <option th:each="c : ${reqstSeCodeList}" th:value="${c.key}" th:text="${c.value}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="locgovCode">담당 광역지자체</label>
+            <select id="locgovCode" name="locgovCode" required>
+                <option value="">선택해 주세요</option>
+                <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="psitnDeptNm">소속 부서</label>
+            <input type="text" id="psitnDeptNm" name="psitnDeptNm" placeholder="예: 재정담당관">
+        </div>
+        <div class="field">
+            <label for="ofcpsNm">직급</label>
+            <input type="text" id="ofcpsNm" name="ofcpsNm" placeholder="예: 주무관">
+        </div>
+        <div class="field">
+            <label for="psitnNm">직위</label>
+            <input type="text" id="psitnNm" name="psitnNm" placeholder="예: 팀장">
+        </div>
+        <div class="field">
+            <label for="cttpc">연락처</label>
+            <input type="text" id="cttpc" name="cttpc" placeholder="02-0000-0000">
+        </div>
+
+        <button type="submit" class="full">신청하기</button>
+    </form>
+</div>
+</body>
+</html>

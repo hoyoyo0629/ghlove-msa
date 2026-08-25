@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>쿠폰관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>쿠폰관리</h1>
+    <p style="color:#666; margin-bottom:16px;">
+        <a th:href="@{/coupon-regular}">정기발행쿠폰 관리 &rarr;</a>
+    </p>
+    <p><a class="btn" th:href="@{/coupon/new}">+ 쿠폰 등록</a></p>
+
+    <table>
+        <thead>
+        <tr><th>ID</th><th>쿠폰명</th><th>혜택</th><th>발행시점</th><th>발행상태</th><th>처리</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="c : ${coupons}">
+            <td th:text="${c.couponId()}"></td>
+            <td><a th:href="@{'/coupon/' + ${c.couponId()} + '/edit'}" th:text="${c.couponName()}"></a></td>
+            <td th:text="${c.payType() == '1' ? (#numbers.formatInteger(c.pay(), 0, 'COMMA') + 'P') : (c.pay() + '%')}"></td>
+            <td th:text="${c.targetTimeType() == '1' ? '일반' : (c.targetTimeType() == '2' ? '회원가입' : (c.targetTimeType() == '3' ? '생일' : (c.targetTimeType() == '4' ? '구매후발행' : '첫구매')))}"></td>
+            <td th:text="${c.couponFlag() == 'Y' ? '발행중' : '미발행'}"></td>
+            <td>
+                <a class="small-btn" th:href="@{'/coupon/' + ${c.couponId()} + '/edit'}">수정</a>
+                <a class="small-btn" th:href="@{'/coupon/' + ${c.couponId()} + '/copy'}">복사</a>
+                <a class="small-btn" th:href="@{'/coupon/' + ${c.couponId()} + '/target-items'}" th:if="${c.targetItemType() == '2'}">특정상품</a>
+                <a class="small-btn" th:href="@{'/coupon/' + ${c.couponId()} + '/target-users'}" th:if="${c.targetUserType() == '2'}">선택회원</a>
+                <a class="small-btn" th:href="@{'/coupon/' + ${c.couponId()} + '/offline-codes'}" th:if="${c.offlineFlag() == 'Y'}">오프라인코드</a>
+                <a class="small-btn" th:href="@{'/coupon/' + ${c.couponId()} + '/usage'}">사용내역</a>
+                <form th:action="@{'/coupon/' + ${c.couponId()} + '/publish'}" method="post" class="inline-form">
+                    <button type="submit" class="small-btn" th:text="${c.couponFlag() == 'Y' ? '발행중지' : '발행'}"></button>
+                </form>
+                <form th:action="@{'/coupon/' + ${c.couponId()} + '/delete'}" method="post" class="inline-form"
+                      onsubmit="return confirm('삭제하시겠습니까?')">
+                    <button type="submit" class="small-btn danger">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(coupons)}">등록된 쿠폰이 없습니다.</p>
+</div>
+</body>
+</html>

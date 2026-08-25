@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>기부하기 > 특정사업에 기부하기 목록 - 고향사랑e음 (donation service)</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/lclgv-map.css}">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+    <link rel="stylesheet" th:href="@{/css/designation.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+    <!-- default_ali.css의 라디오 체크 아이콘이 '/static/images/...' 절대경로로 박혀있는데,
+         이 프로젝트는 static 리소스를 루트 경로('/images/...')로 서빙한다(donate.html에서도
+         동일하게 보정한 default_ali.css의 기존 버그 - 공용 CSS는 건드리지 않는다). -->
+    <style>input[type='radio']:checked{background-image:url('/images/icon/cli-icon_radio-c.png') !important;}</style>
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+<!-- 운영중인 홈페이지엔 이 페이지 전용 page-title-box(빵부스러기)가 없다 - 대신 이
+     검색바(AS-IS header_dsg_g.vue)가 KRDS 메인헤더 바로 아래에 붙는다(확인 완료, 2026-08-19). -->
+<div th:replace="~{fragments/dsg-search-header :: dsg-search-header}"></div>
+
+<section class="main_contents">
+    <div class="center">
+        <div class="prj-filters">
+            <div class="filter_radio">
+                <div class="radio-items">
+                    <input type="radio" name="prjStatus" id="prjStat0" value="OPEN" onchange="setStatus(this.value)"
+                           th:checked="${status == 'OPEN'}">
+                    <label for="prjStat0">진행중</label>
+                </div>
+                <div class="radio-items">
+                    <input type="radio" name="prjStatus" id="prjStat1" value="CLOSED" onchange="setStatus(this.value)"
+                           th:checked="${status == 'CLOSED'}">
+                    <label for="prjStat1">종료</label>
+                </div>
+            </div>
+            <div class="filter_area">
+                <div class="filter_price" onclick="toggleDrop('sortDropdown')">
+                    <span class="s-txt" th:text="${sort == 'AMOUNT' ? '참여금액순' : (sort == 'RATE' ? '모금율순' : (sort == 'ENDING' ? '종료임박순' : '최근등록순'))}"></span>
+                    <img th:src="@{/images/icon/filter_drop.png}" class="icon-img" alt="정렬순서 필터 띄우기">
+                    <div class="drop_select" id="sortDropdown">
+                        <ul>
+                            <li><button type="button" onclick="applySort('LATEST')">최근등록순</button></li>
+                            <li><button type="button" onclick="applySort('AMOUNT')">참여금액순</button></li>
+                            <li><button type="button" onclick="applySort('RATE')">모금율순</button></li>
+                            <li><button type="button" onclick="applySort('ENDING')">종료임박순</button></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="v-line"></div>
+                <div class="filter_price" onclick="toggleDrop('bsnsDropdown')">
+                    <span class="s-txt" th:text="${bsnsType != null and !bsnsType.isEmpty()} ? ${bsnsTypes.get(bsnsType)} : '사업구분 전체'"></span>
+                    <img th:src="@{/images/icon/filter_drop.png}" class="icon-img" alt="사업구분 필터 띄우기">
+                    <!-- 운영중인 홈페이지는 가장 긴 항목 기준으로 폭을 300px 고정하고 줄바꿈을
+                         허용한다(li style="width:300px", button style="white-space:break-spaces") -
+                         element 그대로 확인, 2026-08-19. -->
+                    <div class="drop_select" id="bsnsDropdown">
+                        <ul>
+                            <li style="width:300px;"><button type="button" style="white-space:break-spaces;text-align:left" onclick="applyBsnsType('')">사업구분 전체</button></li>
+                            <li th:each="e : ${bsnsTypes}" style="width:300px;">
+                                <button type="button" class="bsns-option" th:data-value="${e.key}" th:text="${e.value}"
+                                        onclick="applyBsnsType(this.dataset.value)" style="white-space:break-spaces;text-align:left"></button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section all_prj" id="itemArea" th:if="${not #lists.isEmpty(projects)}">
+            <ul class="prj-list-group">
+                <li class="prj-list-items" th:each="p : ${projects}">
+                    <a th:href="@{'/designated-donation/' + ${p.dsgnDntnBizId}}" style="display:block;color:inherit;text-decoration:none;">
+                        <div class="list_inner">
+                            <span class="img_frame">
+                                <div class="img_cover_link">
+                                    <img class="item_img" th:src="${p.imageUrl != null} ? @{${p.imageUrl}} : @{/images/thumb.png}"
+                                         th:alt="${p.dsgnDntnBizTtl}">
+                                </div>
+                            </span>
+                            <div class="inner-group">
+                                <span class="prj_period deepGray" style="max-width:100%;"
+                                      th:text="${p.dsgnDntnBizBgngYmd} + ' ~ ' + ${p.dsgnDntnBizEndYmd}"></span>
+                                <span class="prj_title deepGray" th:text="${p.dsgnDntnBizTtl}"></span>
+                                <span class="prj_loc pointGray"
+                                      th:text="${locgovsByCode.get(p.lclgvCd) != null} ? ((${locgovsByCode.get(p.lclgvCd).upperLocgovNm} != null ? ${locgovsByCode.get(p.lclgvCd).upperLocgovNm} + ' ' : '') + ${locgovsByCode.get(p.lclgvCd).locgovNm}) : ''"></span>
+                            </div>
+                            <div class="inner-group">
+                                <span class="prj_amount deepGray" th:text="${#numbers.formatInteger(p.goalAmt, 0, 'COMMA')} + '원'"></span>
+                                <div class="prj_gauge">
+                                    <div class="gauge_back">
+                                        <div class="gauge_result"
+                                             th:style="'width:' + ${rates.get(p.dsgnDntnBizId)} + '%'"
+                                             th:classappend="${gaugeClasses.get(p.dsgnDntnBizId)}"></div>
+                                    </div>
+                                </div>
+                                <div class="inner_wrap">
+                                    <div class="prj_gaugePer">
+                                        <img th:src="@{/images/icon/cli-icon_btn-donation2.png}" alt="초과달성"
+                                             th:if="${overGoal.get(p.dsgnDntnBizId)}">
+                                        <span class="perNum" th:text="${rates.get(p.dsgnDntnBizId)}"></span>%
+                                    </div>
+                                    <div class="prj_status" th:classappend="${status == 'OPEN'} ? 'on'"
+                                         th:text="${status == 'OPEN'} ? '진행' : '종료'"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </li>
+            </ul>
+            <div class="card-pagination" th:if="${totalPages > 1}">
+                <div class="pagination_ali">
+                    <ul class="pagination-frame">
+                        <li><a class="fist arrow_btn" th:href="@{/designated-donation(status=${status},bsnsType=${bsnsType},sort=${sort},q=${q},locgovCode=${locgovCode},page=1)}"><img th:src="@{/images/icon/paging_btn-first.png}" alt="처음"></a></li>
+                        <li><a class="prev arrow_btn" th:href="@{/designated-donation(status=${status},bsnsType=${bsnsType},sort=${sort},q=${q},locgovCode=${locgovCode},page=${currentPage > 1 ? currentPage - 1 : 1})}"><img th:src="@{/images/icon/paging_btn-prev.png}" alt="이전"></a></li>
+                        <li th:each="p : ${#numbers.sequence(1, totalPages)}" th:classappend="${p == currentPage} ? 'selected-page'">
+                            <a class="page-text" th:href="@{/designated-donation(status=${status},bsnsType=${bsnsType},sort=${sort},q=${q},locgovCode=${locgovCode},page=${p})}" th:text="${p}"></a>
+                        </li>
+                        <li><a class="next arrow_btn" th:href="@{/designated-donation(status=${status},bsnsType=${bsnsType},sort=${sort},q=${q},locgovCode=${locgovCode},page=${currentPage < totalPages ? currentPage + 1 : totalPages})}"><img th:src="@{/images/icon/paging_btn-next.png}" alt="다음"></a></li>
+                        <li><a class="last arrow_btn" th:href="@{/designated-donation(status=${status},bsnsType=${bsnsType},sort=${sort},q=${q},locgovCode=${locgovCode},page=${totalPages})}"><img th:src="@{/images/icon/paging_btn-last.png}" alt="마지막"></a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="list-none" th:if="${#lists.isEmpty(projects)}">
+            <img th:src="@{/images/icon/empty-prj.png}" alt="결과 없음">
+            검색된 특정사업기부 사업이 없습니다.
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+
+<script th:inline="none">
+function toggleDrop(id) {
+    var target = document.getElementById(id);
+    var isOpen = target.classList.contains('view');
+    document.querySelectorAll('.drop_select.view').forEach(function (el) { el.classList.remove('view'); });
+    if (!isOpen) { target.classList.add('view'); }
+}
+function reload(overrides) {
+    var url = new URL(location.href);
+    Object.keys(overrides).forEach(function (k) {
+        if (overrides[k]) { url.searchParams.set(k, overrides[k]); } else { url.searchParams.delete(k); }
+    });
+    url.searchParams.set('page', '1');
+    location.href = url.toString();
+}
+function setStatus(value) { reload({status: value}); }
+function applySort(value) { reload({sort: value}); }
+function applyBsnsType(value) { reload({bsnsType: value}); }
+</script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>지자체별 현황 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>지자체별 현황</h1>
+    <!-- AS-IS report/mctpv(광역)·report/lclgv(기초) 재구현 - 컨트롤러가 어느 단위로 묶을지
+         결정해 넘겨준다. 월별 표는 AS-IS의 12개월×3열 JSTL 반복 대신 루프로 렌더링한다. -->
+    <form method="get" style="margin-bottom:16px;">
+        <label>연도 <input type="number" name="year" th:value="${year}" style="width:90px;"></label>
+        <button type="submit" class="small-btn">조회</button>
+    </form>
+
+    <h2 style="font-size:16px;">지자체별 기부금 현황(누계)</h2>
+    <div style="overflow-x:auto; margin-bottom:24px;">
+        <table style="width:max-content;">
+            <thead>
+            <tr>
+                <th>지자체</th>
+                <th th:each="m : ${#numbers.sequence(1, throughMonth)}" th:text="${m} + '월'" colspan="2"></th>
+            </tr>
+            <tr>
+                <th></th>
+                <th:block th:each="m : ${#numbers.sequence(1, throughMonth)}">
+                    <th th:text="${year}"></th><th>전년</th>
+                </th:block>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${donationStats}">
+                <td th:text="${row.name()}"></td>
+                <th:block th:each="m : ${#numbers.sequence(1, throughMonth)}">
+                    <td th:text="${row.currentAmount().get(m)} ?: 0"></td>
+                    <td th:text="${row.priorAmount().get(m)} ?: 0"></td>
+                </th:block>
+            </tr>
+            </tbody>
+        </table>
+        <p class="empty" th:if="${#lists.isEmpty(donationStats)}">데이터가 없습니다.</p>
+    </div>
+
+    <h2 style="font-size:16px;">지자체별 기부금 현황(2,000만원 한도내, 누계)</h2>
+    <div style="overflow-x:auto; margin-bottom:24px;">
+        <table style="width:max-content;">
+            <thead>
+            <tr>
+                <th>지자체</th>
+                <th th:each="m : ${#numbers.sequence(1, throughMonth)}" th:text="${m} + '월'" colspan="2"></th>
+            </tr>
+            <tr>
+                <th></th>
+                <th:block th:each="m : ${#numbers.sequence(1, throughMonth)}">
+                    <th th:text="${year}"></th><th>전년</th>
+                </th:block>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${donationStatsCapped}">
+                <td th:text="${row.name()}"></td>
+                <th:block th:each="m : ${#numbers.sequence(1, throughMonth)}">
+                    <td th:text="${row.currentAmount().get(m)} ?: 0"></td>
+                    <td th:text="${row.priorAmount().get(m)} ?: 0"></td>
+                </th:block>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 style="font-size:16px;">지자체별 답례품 제공현황</h2>
+    <div style="overflow-x:auto;">
+        <table style="width:max-content;">
+            <thead>
+            <tr>
+                <th>지자체</th>
+                <th th:each="m : ${#numbers.sequence(1, throughMonth)}" th:text="${m} + '월'" colspan="2"></th>
+            </tr>
+            <tr>
+                <th></th>
+                <th:block th:each="m : ${#numbers.sequence(1, throughMonth)}">
+                    <th th:text="${year} + '(건)'"></th><th>전년(건)</th>
+                </th:block>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${giftStats}">
+                <td th:text="${row.name()}"></td>
+                <th:block th:each="m : ${#numbers.sequence(1, throughMonth)}">
+                    <td th:text="${row.currentCount().get(m)} ?: 0"></td>
+                    <td th:text="${row.priorCount().get(m)} ?: 0"></td>
+                </th:block>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

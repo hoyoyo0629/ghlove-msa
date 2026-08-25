@@ -1,0 +1,52 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.4'
+    id 'io.spring.dependency-management' version '1.1.6'
+}
+
+group = 'com.ghlove'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+// Spring's Gradle plugin adds -parameters automatically for `gradlew` builds, but IDEs
+// that compile via their own toolchain (e.g. VSCode's JDT-based Run/Debug) don't pick
+// that convention up - without it, unnamed @RequestParam/@PathVariable args throw
+// "Name for argument of type ... not specified" at runtime. Setting it explicitly here
+// makes it visible to any tool that reads the Gradle project model.
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs << '-parameters'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.security:spring-security-crypto'
+
+    // SFR-010: 로그인 시 발급하는 공유 JWT(other 5개 서비스가 이 토큰으로 신원을 신뢰) - 이 프로젝트는
+    // 서비스 간 코드 공유가 없어 각 서비스가 동일한 라이브러리를 독립적으로 갖는다.
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    runtimeOnly 'org.postgresql:postgresql'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

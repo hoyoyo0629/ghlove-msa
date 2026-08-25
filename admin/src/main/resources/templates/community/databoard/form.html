@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>자료 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <p><a th:href="@{/community/databoard}">&larr; 지자체 자료실</a></p>
+    <h1 th:text="${item.rpstrId} != null ? '자료 수정' : '자료 등록'"></h1>
+
+    <form th:action="${item.rpstrId} != null ? @{'/community/databoard/' + ${item.rpstrId}} : @{/community/databoard}" method="post">
+        <div class="field">
+            <label for="rpstrTtl">제목</label>
+            <input type="text" id="rpstrTtl" name="rpstrTtl" th:value="${item.rpstrTtl}" required>
+        </div>
+        <div class="field">
+            <label for="rpstrCn">내용</label>
+            <textarea id="rpstrCn" name="rpstrCn" rows="10" th:text="${item.rpstrCn}" required></textarea>
+        </div>
+        <div class="field">
+            <label><input type="checkbox" name="noticeYn" th:checked="${item.noticeYn == 'Y'}"> 공지로 등록</label>
+        </div>
+        <button type="submit" class="btn">저장</button>
+    </form>
+</div>
+</body>
+</html>

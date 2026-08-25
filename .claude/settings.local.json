@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(taskkill //F //PID 17464)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Eclipse Adoptium/jdk-17.0.20.8-hotspot\" ./gradlew.bat bootRun --console=plain)",
+      "Bash(echo \"started pid $!\")",
+      "Bash(break)",
+      "Bash(netstat -ano)"
+    ]
+  }
+}

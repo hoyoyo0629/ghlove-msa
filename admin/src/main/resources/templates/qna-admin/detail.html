@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${qna.subject} + ' - 1:1 문의 관리 - 고향사랑e음 (admin service)'">1:1 문의 관리</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <p><a th:href="@{/qna-admin}">&larr; 1:1 문의 관리</a></p>
+    <h1 th:text="${qna.subject}"></h1>
+
+    <p class="error" th:if="${param.errorMessage}" th:text="${param.errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+    <table style="margin-bottom:20px;">
+        <tbody>
+        <tr><th style="width:180px;">분류</th><td th:text="${qna.qnaGroup}"></td></tr>
+        <tr><th>작성자</th><td th:text="${qna.userName} + ' (' + ${qna.email} + ')'"></td></tr>
+        <tr><th>작성일</th><td th:text="${qna.createdDate}"></td></tr>
+        <tr><th>비밀글</th><td th:text="${qna.secretFlag == 'Y'} ? '예' : '아니오'"></td></tr>
+        <tr><th>문의내용</th><td th:text="${qna.question}" style="white-space:pre-wrap;"></td></tr>
+        <tr th:if="${!#lists.isEmpty(files)}">
+            <th>첨부파일</th>
+            <td>
+                <div th:each="f : ${files}">
+                    <a th:href="@{'/uploads/' + ${f.fileName}}" th:text="${f.orgFileName}"></a>
+                </div>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div th:if="${answer != null}">
+        <h2>답변</h2>
+        <table style="margin-bottom:20px;">
+            <tbody>
+            <tr><th style="width:180px;">답변제목</th><td th:text="${answer.title}"></td></tr>
+            <tr><th>답변일</th><td th:text="${answer.answerDate}"></td></tr>
+            <tr><th>답변내용</th><td th:text="${answer.answer}" style="white-space:pre-wrap;"></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div th:unless="${answer != null}">
+        <h2>답변 작성</h2>
+        <form th:action="@{'/qna-admin/' + ${qna.qnaId} + '/answer'}" method="post">
+            <div class="field">
+                <label for="title">답변제목</label>
+                <input type="text" id="title" name="title" th:value="'RE: ' + ${qna.subject}" required>
+            </div>
+            <div class="field">
+                <label for="content">답변내용</label>
+                <textarea id="content" name="content" required minlength="1" rows="6"></textarea>
+            </div>
+            <button type="submit">답변 등록</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>

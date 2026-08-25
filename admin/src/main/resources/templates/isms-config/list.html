@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>ISMS 설정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>ISMS 설정</h1>
+    <p style="color:#666; margin-bottom:16px;">정보보호관리체계(ISMS-P) 관련 발송 시간대 등 설정입니다.</p>
+
+    <p class="success" th:if="${param.message}" th:text="${param.message}"></p>
+
+    <table>
+        <thead>
+        <tr><th>키</th><th>설명</th><th>값</th><th>처리</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="c : ${configs}">
+            <td th:text="${c.key}"></td>
+            <td th:text="${c.description}"></td>
+            <td>
+                <form th:action="@{'/isms-config/' + ${c.key}}" method="post" class="inline-form">
+                    <input type="text" name="value" th:value="${c.value}" style="width:120px; display:inline-block;">
+                    <label><input type="checkbox" name="useYn" th:checked="${c.useYn == 'Y'}"> 사용</label>
+                    <button type="submit" class="small-btn">저장</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(configs)}">등록된 설정이 없습니다.</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>대표상품관리 - 고향사랑e음 (gift service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<nav class="navbar">
+    <div class="logo">답례품<span class="badge">gift</span></div>
+    <div class="nav-links">
+        <a th:href="@{/}">목록으로</a>
+    </div>
+</nav>
+
+<div class="wrap">
+    <h1 style="text-align:left">대표상품관리</h1>
+    <!-- 실제로는 지자체 담당자 권한으로 접근이 제한돼야 하지만(AS-IS: SYS 롤은 등록/삭제
+         불가), 게이트웨이/RBAC 연동 전이라 임시로 누구나 접근 가능한 화면입니다(/admin과 동일). -->
+
+    <h2>현재 대표상품</h2>
+    <table th:if="${!#lists.isEmpty(gifts)}">
+        <thead>
+        <tr>
+            <th>답례품명</th>
+            <th>지자체</th>
+            <th>가격</th>
+            <th>상태</th>
+            <th>처리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="g : ${gifts}">
+            <td><a th:href="@{'/gifts/' + ${g.itemId}}" th:text="${g.itemName}"></a></td>
+            <td th:text="${g.locgovCode}"></td>
+            <td th:text="${#numbers.formatInteger(g.salePrice, 0, 'COMMA')} + '원'"></td>
+            <td th:text="${g.dataStatusCode}"></td>
+            <td>
+                <form th:action="@{'/gifts/' + ${g.itemId} + '/representative/delete'}" method="post" class="inline-form"
+                      onsubmit="return confirm('대표상품에서 해제하시겠습니까?')">
+                    <button type="submit" class="small-btn danger">해제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(gifts)}">등록된 대표상품이 없습니다.</p>
+
+    <h2 style="margin-top:32px;">대표상품 등록</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>답례품명</th>
+            <th>지자체</th>
+            <th>가격</th>
+            <th>처리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="g : ${candidates}" th:if="${g.representativeItemYn != 'Y'}">
+            <td th:text="${g.itemName}"></td>
+            <td th:text="${g.locgovCode}"></td>
+            <td th:text="${#numbers.formatInteger(g.salePrice, 0, 'COMMA')} + '원'"></td>
+            <td>
+                <form th:action="@{'/gifts/' + ${g.itemId} + '/representative/register'}" method="post" class="inline-form">
+                    <button type="submit" class="small-btn">등록</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

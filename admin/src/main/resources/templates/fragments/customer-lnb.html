@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/* AS-IS components/layouts/customer-lnb_ali.vue 재현 - 고객센터 하위 4개 화면
+     (공지사항/자료실/Q&A/FAQ) 공통 2뎁스 내비게이션. currentPath로 현재 화면을 강조한다. */-->
+<nav class="lnb" th:fragment="customer-lnb(currentPath)">
+    <div class="lnb-bar_2dep">
+        <ul>
+            <li><a th:href="@{/notices}" th:classappend="${currentPath == 'notices'} ? 'currentT'">공지사항</a></li>
+            <li><a th:href="@{/data-board}" th:classappend="${currentPath == 'data-board'} ? 'currentT'">자료실</a></li>
+            <li><a th:href="@{/qna/board}" th:classappend="${currentPath == 'qna'} ? 'currentT'">Q&amp;A</a></li>
+            <li><a th:href="@{/faqs}" th:classappend="${currentPath == 'faqs'} ? 'currentT'">FAQ</a></li>
+        </ul>
+    </div>
+</nav>
+</body>
+</html>

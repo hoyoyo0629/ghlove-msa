@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>쿠폰 다운로드 - 고향사랑e음 (order service)</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/mypage-status.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<section>
+    <div class="page-title-box">
+        <span class="ali_breadcrumb">
+            <a th:href="@{'http://localhost:8081/'}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            <a th:href="@{/my/coupons}">내 쿠폰함</a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            쿠폰 다운로드
+        </span>
+        <h2 class="page-title-txt">쿠폰 다운로드</h2>
+    </div>
+</section>
+
+<section id="contents" class="receipt-contents">
+    <div class="center">
+        <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="text-align:center;"></p>
+        <p style="margin-bottom:12px;"><a th:href="@{/coupons/offline}">코드 직접입력으로 쿠폰받기 &rarr;</a></p>
+
+        <div class="contents-wrap">
+            <div class="s-contents">
+                <div class="list_body table-container w3c_v_2410" th:if="${!#lists.isEmpty(coupons)}">
+                    <div class="list_wrap">
+                        <table>
+                            <caption class="sr-only">다운로드 가능한 쿠폰 목록</caption>
+                            <thead class="list-title">
+                            <tr class="items_wrap">
+                                <th class="date-col" scope="col">쿠폰명</th>
+                                <th class="date-col" scope="col">혜택</th>
+                                <th class="date-col" scope="col">사용조건</th>
+                                <th class="date-col" scope="col">처리</th>
+                            </tr>
+                            </thead>
+                            <tbody class="item_list-group">
+                            <tr class="list-items" th:each="c : ${coupons}">
+                                <td class="date-col" th:text="${c.couponName}"></td>
+                                <td class="date-col"
+                                    th:text="${c.payType == '1' ? (#numbers.formatInteger(c.pay, 0, 'COMMA') + 'P 할인') : (c.pay + '% 할인')}"></td>
+                                <td class="date-col"
+                                    th:text="${c.payRestriction != null and c.payRestriction > 0 ? (#numbers.formatInteger(c.payRestriction, 0, 'COMMA') + 'P 이상 구매시') : '조건없음'}"></td>
+                                <td class="date-col">
+                                    <form th:action="@{'/coupons/' + ${c.couponId} + '/claim'}" method="post">
+                                        <button type="submit" class="formBtn">다운로드</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="common_none" th:if="${#lists.isEmpty(coupons)}">
+                    <p>지금 다운로드할 수 있는 쿠폰이 없습니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+</body>
+</html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>기부내역 조회 - 고향사랑e음 (donation service)</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/mypage-status.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<!-- AS-IS mypage/cntrList.html 재현 (page-title-box/mypage-top/table-wrapper 클래스는
+     receipts.html과 동일 관행). 결제완료 처리/취소 버튼은 AS-IS에는 없지만(실 PG 연동이라
+     결제창에서 바로 완료됨) 이 MSA는 completeDonation()을 수동으로 트리거해야 해서
+     "처리" 컬럼에 남겨둔다 - 순수 조회 화면인 AS-IS와의 유일한 구조적 차이. -->
+<section>
+    <div class="page-title-box">
+        <span class="ali_breadcrumb">
+            <a th:href="@{'http://localhost:8081/'}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            <a th:href="@{'http://localhost:8081/mypage'}">마이페이지</a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            기부내역 조회
+        </span>
+        <h2 class="page-title-txt">기부내역 조회</h2>
+        <p class="point-txt">해당 내역은 고향사랑 기부에만 한정된 내역입니다.</p>
+    </div>
+</section>
+
+<section id="contents" class="receipt-contents">
+    <div class="center">
+        <div class="contents-wrap myDonation">
+
+            <p class="success" th:if="${param.donated != null}">기부가 신청되었습니다. 결제완료 처리 후 반영됩니다.</p>
+            <p class="success" th:if="${param.offlineRegistered != null}">기탁서 기부가 등록되었습니다. (건번호: <span th:text="${param.offlineRegistered}"></span>)</p>
+            <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+            <div>
+                <!-- SEARCH -->
+                <div class="s-contents mypageS">
+                    <div class="mypage-top">
+                        <div class="mypage-top-list">
+                            <label class="search-title" for="totalAmt">
+                                <img class="icon-img" th:src="@{/images/icon/cli-icon_my-amount-all.png}" alt="총 기부금액">
+                                <span class="label-title"> 총 기부금액</span>
+                            </label>
+                            <span class="m-field">
+                                <input type="text" id="totalAmt" readonly
+                                       th:value="${#numbers.formatInteger(totalCntrAmt, 0, 'COMMA')}"><span class="s_txt">원</span>
+                            </span>
+                            <span class="s_txt">(실 납부액 기준)</span>
+                        </div>
+                    </div>
+
+                    <div class="line"></div>
+
+                    <form th:action="@{/my}" method="get" class="mypage-top" id="searchForm">
+                        <label class="search-title">검색</label>
+                        <div class="selected-field">
+                            <div class="selected-field-line">
+                                <div class="selected-item">
+                                    <label for="year" class="sr-only">년도 선택</label>
+                                    <select title="년도 선택" id="year" name="year">
+                                        <option value="">년도</option>
+                                        <option th:each="y : ${years}" th:value="${y}" th:text="${y} + '년'"
+                                                th:selected="${y == year}"></option>
+                                    </select>
+                                </div>
+                                <div class="formbtn-box period-radio">
+                                    <label><input type="radio" name="period" value="ALL" th:checked="${period == 'ALL' or period == null}"> 전체</label>
+                                    <label><input type="radio" name="period" value="TODAY" th:checked="${period == 'TODAY'}"> 오늘</label>
+                                    <label><input type="radio" name="period" value="7D" th:checked="${period == '7D'}"> 7일</label>
+                                    <label><input type="radio" name="period" value="1M" th:checked="${period == '1M'}"> 1개월</label>
+                                    <label><input type="radio" name="period" value="3M" th:checked="${period == '3M'}"> 3개월</label>
+                                    <label><input type="radio" name="period" value="6M" th:checked="${period == '6M'}"> 6개월</label>
+                                    <label><input type="radio" name="period" value="1Y" th:checked="${period == '1Y'}"> 1년</label>
+                                    <span class="s_txt">(기부일자 기준으로 검색)</span>
+                                </div>
+                            </div>
+                            <div class="selected-field-line city">
+                                <div class="selected-item">
+                                    <label for="upperLocgovCode" class="sr-only">시·도 선택</label>
+                                    <select title="시·도 선택" id="upperLocgovCode" name="upperLocgovCode" onchange="filterLocgov()">
+                                        <option value="">시·도 선택</option>
+                                        <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"
+                                                th:selected="${p.key == upperLocgovCode}"></option>
+                                    </select>
+                                </div>
+                                <div class="selected-item">
+                                    <label for="locgovCode" class="sr-only">시·군·구 선택</label>
+                                    <select title="시·군·구 선택" id="locgovCode" name="locgovCode">
+                                        <option value="">시·군·구 선택</option>
+                                        <option th:each="l : ${locgovs}" th:value="${l.locgovCode}"
+                                                th:text="${l.upperLocgovNm} + ' ' + ${l.locgovNm}"
+                                                th:attr="data-upper=${l.upperLocgovCode}"
+                                                th:selected="${l.locgovCode == locgovCode}"></option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <!-- SEARCH END -->
+
+                <div class="btn-box many">
+                    <button type="button" class="blueBtn cancellation"
+                            th:attr="data-url=@{/my}" onclick="location.href=this.dataset.url">
+                        초기화<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt="초기화"></span>
+                    </button>
+                    <button type="button" class="blueBtn u-confirm" onclick="document.getElementById('searchForm').submit()">
+                        검색<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt="검색"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="s-con receipt-con">
+    <div class="center">
+        <div class="s-contents table-wrapper myDonation">
+            <div class="table-container">
+                <div class="table-result-body">
+                    <table>
+                        <caption class="sr-only">기부내역 목록</caption>
+                        <colgroup>
+                            <col style="width:4%"><col style="width:12%"><col style="width:8%"><col style="width:8%">
+                            <col style="width:8%"><col style="width:14%"><col style="width:8%"><col style="width:14%">
+                            <col style="width:8%"><col style="width:8%"><col style="width:8%">
+                        </colgroup>
+                        <tr class="result-title">
+                            <th>No.</th>
+                            <th>기부지자체</th>
+                            <th>기부액</th>
+                            <th>기부일자</th>
+                            <th>기부포인트</th>
+                            <th>전자납부번호</th>
+                            <th>납부일자</th>
+                            <th>특정사업기부 사업명</th>
+                            <th>기부처</th>
+                            <th>비고</th>
+                            <th>처리</th>
+                        </tr>
+                        <tr class="result-row" th:each="d, iter : ${donations}" th:with="levy=${levies.get(d.cntrSn)}">
+                            <td th:text="${iter.count}"></td>
+                            <td th:with="rowLocgov=${locgovsByCode.get(d.cntrLocgovCode)}"
+                                th:text="${rowLocgov != null ? ((rowLocgov.upperLocgovNm != null ? rowLocgov.upperLocgovNm + ' ' : '') + rowLocgov.locgovNm) : d.cntrLocgovCode}"></td>
+                            <td th:text="${#numbers.formatInteger(d.cntrAmt, 0, 'COMMA')}"></td>
+                            <td th:text="${d.cntrDe}"></td>
+                            <td th:text="${#numbers.formatInteger(earnedPoints.get(d.cntrSn) ?: 0, 0, 'COMMA')}"></td>
+                            <td style="white-space:normal; word-break:break-all; max-width:120px;" th:text="${levy != null ? levy.bugaNo : '-'}"></td>
+                            <td th:text="${levy != null and levy.sunapDate != null ? #temporals.format(levy.sunapDate, 'yyyy-MM-dd') : '-'}"></td>
+                            <td th:text="${d.dsgnDntnBizId != null} ? (${projectTitles.get(d.dsgnDntnBizId)} ?: '자치단체기부') : '자치단체기부'"></td>
+                            <td>고향사랑e음</td>
+                            <td>
+                                <a th:if="${d.cntrSttusCode == 'COMPLETED'}" th:href="@{/receipts}">영수증출력</a>
+                                <span th:if="${d.cntrSttusCode != 'COMPLETED'}" th:text="${statusLabels.get(d.cntrSttusCode)} ?: ${d.cntrSttusCode}"></span>
+                            </td>
+                            <td>
+                                <form th:if="${d.cntrSttusCode == 'REQUESTED'}" th:action="@{'/donations/' + ${d.cntrSn} + '/complete'}" method="post" class="inline-form">
+                                    <button type="submit" class="small-btn">결제완료 처리</button>
+                                </form>
+                                <form th:if="${d.cntrSttusCode == 'REQUESTED' or d.cntrSttusCode == 'COMPLETED'}" th:action="@{'/donations/' + ${d.cntrSn} + '/cancel'}" method="post" class="inline-form">
+                                    <button type="submit" class="small-btn danger">취소</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(donations)}">
+                            <td colspan="11" class="empty">기부 내역이 없습니다.</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <p class="s_txt" style="margin-top:16px;">
+                전자기부금영수증 발급이 필요하시면 <a th:href="@{/coming-soon}">홈택스 &gt; 조회/발급 &gt; 전자기부금영수증 &gt; 메인화면</a> 메뉴에서 신청이 가능합니다.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- AS-IS "고향사랑 기부금은 4가지 사업목적으로만 사용됩니다" 정적 안내 -->
+<section class="s-con" style="background:var(--bg-basic); padding:32px 0;">
+    <div class="center">
+        <p style="font-weight:700; font-size:1.8rem; margin-bottom:16px;">고향사랑 기부금은 지방자치단체의<br>4가지 사업 목적으로만 사용됩니다.</p>
+        <ol style="padding-left:20px;">
+            <li>사회적 취약계층의 지원 및 청소년의 육성·보호</li>
+            <li>지역 주민의 문화·예술·보건 등의 증진</li>
+            <li>시민참여, 자원봉사 등 지역공동체 활성화 지원</li>
+            <li>그 밖에 주민의 복리 증진에 필요한 사업의 추진</li>
+        </ol>
+    </div>
+</section>
+
+<div class="center" style="padding:20px 0;">
+    <a th:href="@{/}">기부하러 가기</a> ·
+    <a th:href="@{/donations/offline}">기탁서(오프라인) 등록</a>
+</div>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+
+<script th:inline="none">
+function filterLocgov() {
+    var upper = document.getElementById('upperLocgovCode').value;
+    var select = document.getElementById('locgovCode');
+    Array.prototype.forEach.call(select.options, function (opt) {
+        if (!opt.value) { return; }
+        opt.hidden = upper !== '' && opt.dataset.upper !== upper;
+    });
+    select.value = '';
+}
+</script>
+</body>
+</html>

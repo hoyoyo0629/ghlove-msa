@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>지정기부 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/designated-donation/list.jsp 재현 - 지정기부사업 CRUD. 갤러리
+     이미지/미리보기/엑셀은 스코프 밖(designated-detail.html 주석, 공개 상세화면 자체가
+     대표이미지 1장 구조). 승인 워크플로우는 AS-IS의 "담당자는 자기승인 불가" 규칙만
+     ROLE_ADMIN/ROLE_OPERATOR 2단계로 재현(DesignatedProjectAdminController 참고). -->
+<div class="wrap">
+    <h1>지정기부 관리</h1>
+    <p style="margin-bottom:16px;">
+        <a th:href="@{/designated-projects/new}"><button type="button">사업 등록</button></a>
+        <a th:href="@{/designated-projects/departments}" style="margin-left:8px;">담당부서 관리</a>
+        <a th:href="@{/designated-projects/banners}" style="margin-left:8px;">대표배너 관리</a>
+        <a th:href="@{/designated-projects/analysis}" style="margin-left:8px;">모금분석</a>
+    </p>
+
+    <table>
+        <thead>
+        <tr>
+            <th>사업명</th>
+            <th>지자체</th>
+            <th>사업구분</th>
+            <th>모금기간</th>
+            <th>목표금액</th>
+            <th>상태</th>
+            <th>공개여부</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="p : ${projects}">
+            <td><a th:href="@{/designated-projects/{id}(id=${p.dsgnDntnBizId})}" th:text="${p.dsgnDntnBizTtl}"></a></td>
+            <td th:text="${p.lclgvCd}"></td>
+            <td th:text="${bsnsTypes.get(p.dsgnDntnBizSeCd)} ?: ${p.dsgnDntnBizSeCd}"></td>
+            <td th:text="${p.dsgnDntnBizBgngYmd} + ' ~ ' + ${p.dsgnDntnBizEndYmd}"></td>
+            <td th:text="${#numbers.formatInteger(p.goalAmt, 0, 'COMMA')} + '원'"></td>
+            <td th:text="${statusLabels.get(p.dsgnDntnBizSttsCd)} ?: ${p.dsgnDntnBizSttsCd}"></td>
+            <td th:text="${p.rlsYn == 'Y'} ? '공개' : '비공개'"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(projects)}">등록된 지정기부사업이 없습니다.</p>
+</div>
+</body>
+</html>

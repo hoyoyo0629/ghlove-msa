@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>기부금 모금현황 상세 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <p><a th:href="@{/give-state}">&larr; 기부금 모금현황</a></p>
+    <h1 th:text="${cntrYear} + '년 ' + ${locgovFullNm}"></h1>
+
+    <table>
+        <thead>
+        <tr>
+            <th>기부번호</th>
+            <th>기부자명</th>
+            <th>아이디</th>
+            <th>기부일</th>
+            <th>기부금액</th>
+            <th>관리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="d : ${list}">
+            <td th:text="${d.cntrSn}"></td>
+            <td th:text="${memberByUserId.get(d.userId) != null ? memberByUserId.get(d.userId).userName() : '-'}"></td>
+            <td th:text="${memberByUserId.get(d.userId) != null ? memberByUserId.get(d.userId).loginId() : '-'}"></td>
+            <td th:text="${#strings.substring(d.eventDate, 0, 8)}"></td>
+            <td th:text="${#numbers.formatInteger(d.amount, 0, 'COMMA')} + '원'"></td>
+            <td><a th:href="@{/give-reqmng/new(cntrSn=${d.cntrSn})}">변경신청</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(list)}">조회된 기부내역이 없습니다.</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${gift.itemName} + ' - 답례품 (gift service)'"></title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<nav class="navbar">
+    <div class="logo">답례품<span class="badge">gift</span></div>
+    <div class="nav-links">
+        <a th:href="@{/}">목록으로</a>
+    </div>
+</nav>
+
+<div class="wrap">
+    <div class="detail-box">
+        <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+        <div class="gallery" th:if="${!#lists.isEmpty(images)}">
+            <img th:each="img : ${images}" th:src="@{'/uploads/' + ${img.imageName}}">
+        </div>
+
+        <h1 style="text-align:left" th:text="${gift.itemName}"></h1>
+        <div class="meta">
+            <span th:text="${categories.get(gift.categoryCode)} ?: ${gift.categoryCode}"></span> ·
+            <span th:text="'지자체: ' + (${locgovName} ?: ${gift.locgovCode})"></span> ·
+            <span th:if="${seller != null}" th:text="'판매자: ' + ${seller.sellerName}"></span> ·
+            <span th:text="${statusLabels.get(gift.dataStatusCode)} ?: ${gift.dataStatusCode}"></span>
+            <span th:if="${!#lists.isEmpty(reviews)}">· <span class="score" th:text="'★ ' + ${#numbers.formatDecimal(averageScore, 1, 1)}"></span> (<span th:text="${#lists.size(reviews)}"></span>건)</span>
+        </div>
+        <div class="price">
+            <span th:text="${#numbers.formatInteger(gift.salePrice, 0, 'COMMA')} + '원'"></span>
+            <span class="soldout" th:if="${gift.soldOut == '1'}">품절</span>
+        </div>
+        <p th:text="${gift.itemSummary}"></p>
+        <div class="content" th:text="${gift.detailContent}"></div>
+
+        <div class="inline-form" style="margin-top:20px;" th:if="${gift.dataStatusCode == 'APPROVED' and gift.soldOut != '1'}">
+            <a class="btn" th:href="@{'http://localhost:8085/'(itemId=${gift.itemId})}">포인트로 주문하기</a>
+            <form th:action="@{'http://localhost:8085/cart/items'}" method="post">
+                <input type="hidden" name="itemId" th:value="${gift.itemId}">
+                <input type="number" name="quantity" value="1" min="1" style="width:70px;">
+                <button type="submit" class="small-btn">장바구니에 담기</button>
+            </form>
+            <!-- 마이페이지 "관심답례품"에 담는 찜하기 - SFR-010: 로그인 JWT 쿠키로 회원을 식별한다. -->
+            <form th:action="@{/wishlist}" method="post">
+                <input type="hidden" name="itemId" th:value="${gift.itemId}">
+                <button type="submit" class="small-btn">찜하기</button>
+            </form>
+        </div>
+
+        <div class="section-title">리뷰 <span th:text="'(' + ${#lists.size(reviews)} + ')'"></span></div>
+        <div class="review-card" th:each="r : ${reviews}">
+            <div class="head">
+                <span th:text="(${r.userName} ?: ('회원#' + ${r.userId})) + ' · ' + '★' + ${r.score}"></span>
+                <span th:text="${#temporals.format(r.createdDate, 'yyyy-MM-dd')}"></span>
+            </div>
+            <div class="subject" th:text="${r.subject}"></div>
+            <div th:text="${r.content}"></div>
+            <div class="review-images" th:if="${!#lists.isEmpty(reviewImages.get(r.itemReviewId))}">
+                <img th:each="ri : ${reviewImages.get(r.itemReviewId)}" th:src="@{'/uploads/' + ${ri.reviewImage}}">
+            </div>
+        </div>
+        <p class="empty" th:if="${#lists.isEmpty(reviews)}">등록된 리뷰가 없습니다.</p>
+
+        <form th:action="@{'/gifts/' + ${gift.itemId} + '/reviews'}" method="post" enctype="multipart/form-data" style="margin-top:16px;">
+            <div class="field">
+                <label>닉네임 / 주문코드(선택)</label>
+                <div class="inline-form">
+                    <input type="text" name="userName" placeholder="닉네임(선택)">
+                    <input type="text" name="orderCode" placeholder="주문코드(선택)">
+                </div>
+            </div>
+            <div class="field">
+                <label for="subject">제목</label>
+                <input type="text" id="subject" name="subject" required>
+            </div>
+            <div class="field">
+                <label for="content">내용</label>
+                <textarea id="content" name="content" rows="3" required></textarea>
+            </div>
+            <div class="field">
+                <label for="score">평점 (1~5)</label>
+                <input type="number" id="score" name="score" min="1" max="5" required>
+            </div>
+            <div class="checkbox-field">
+                <input type="checkbox" id="recommend" name="recommend" value="true">
+                <label for="recommend" style="margin:0;">추천합니다</label>
+            </div>
+            <div class="field">
+                <label for="reviewImages">사진 첨부(선택)</label>
+                <input type="file" id="reviewImages" name="images" accept="image/*" multiple>
+            </div>
+            <button type="submit">리뷰 등록</button>
+        </form>
+
+        <div class="section-title">상품 문의 <span th:text="'(' + ${#lists.size(inquiries)} + ')'"></span></div>
+        <div class="inquiry-card" th:each="q : ${inquiries}">
+            <div class="head">
+                <span>회원#<span th:text="${q.userId}"></span></span>
+                <span class="status-tag" th:classappend="${q.status == 'ANSWERED'} ? 'answered'"
+                      th:text="${inquiryStatusLabels.get(q.status)} ?: ${q.status}"></span>
+            </div>
+            <div th:if="${q.secretYn == 'Y'}" style="color:#999;">비밀글입니다.</div>
+            <div th:if="${q.secretYn != 'Y'}" th:text="${q.question}"></div>
+            <div class="answer" th:if="${q.answer}" th:text="${q.answer}"></div>
+        </div>
+        <p class="empty" th:if="${#lists.isEmpty(inquiries)}">등록된 문의가 없습니다.</p>
+
+        <form th:action="@{'/gifts/' + ${gift.itemId} + '/inquiries'}" method="post" style="margin-top:16px;">
+            <div class="field">
+                <label for="question">문의 내용</label>
+                <textarea id="question" name="question" rows="3" required></textarea>
+            </div>
+            <div class="checkbox-field">
+                <input type="checkbox" id="secret" name="secret" value="true">
+                <label for="secret" style="margin:0;">비밀글로 문의</label>
+            </div>
+            <button type="submit">문의 등록</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>인증서 등록/삭제 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>인증서 등록/삭제</h1>
+    <p style="color:#666; margin-bottom:16px;">
+        금융인증서/공동인증서로 로그인하려면 먼저 인증서 파일(.der/.crt/.pem)을 등록해야 합니다.
+        등록된 인증서와 일치하는 파일을 로그인 화면에서 다시 업로드하면 이메일 인증 없이 바로 로그인됩니다.
+    </p>
+
+    <p class="success" th:if="${param.message}" th:text="${param.message}"></p>
+    <p class="error" th:if="${param.errorMessage}" th:text="${param.errorMessage}"></p>
+
+    <p><strong>현재 등록 상태:</strong>
+        <span th:text="${manager.certSubjectDn} != null ? '등록됨 (' + ${manager.certSubjectDn} + ')' : '등록된 인증서 없음'"></span>
+    </p>
+
+    <form th:action="@{/admin/my-cert/register}" method="post" enctype="multipart/form-data" style="margin-top:16px;">
+        <div class="field">
+            <label for="certFile">인증서 파일</label>
+            <input type="file" id="certFile" name="certFile" accept=".der,.crt,.pem,.cer" required>
+        </div>
+        <button type="submit" class="btn">인증서 등록</button>
+    </form>
+
+    <form th:action="@{/admin/my-cert/unregister}" method="post" class="inline-form" style="margin-top:12px;"
+          th:if="${manager.certSubjectDn} != null" onsubmit="return confirm('등록된 인증서를 해제하시겠습니까?')">
+        <button type="submit" class="small-btn danger">등록 해제</button>
+    </form>
+</div>
+</body>
+</html>

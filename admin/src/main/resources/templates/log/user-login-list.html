@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>회원 로그인 로그 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="wrap">
+    <h1>회원 로그인 로그 관리</h1>
+    <p style="color:#666; margin-bottom:12px;">일반 회원(고향사랑e음 이용자)의 로그인 시도 이력입니다. 최근 200건까지 표시합니다.</p>
+
+    <table>
+        <thead>
+        <tr><th>ID</th><th>아이디</th><th>결과</th><th>IP</th><th>비고</th><th>일시</th><th></th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="l : ${logs}">
+            <td th:text="${l.loginLogId()}"></td>
+            <td th:text="${l.loginId()}"></td>
+            <td th:text="${l.successFlag() == 'Y' ? '성공' : '실패'}"
+                th:style="${l.successFlag() == 'Y' ? 'color:#1a6b3c;' : 'color:#c0392b;'}"></td>
+            <td th:text="${l.remoteAddr()}"></td>
+            <td th:text="${l.memo()}"></td>
+            <td th:text="${l.loginDate()}"></td>
+            <td><a th:href="@{/log/user-action(loginId=${l.loginId()})}">액션이력</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(logs)}">회원 로그인 로그가 존재하지 않습니다.</p>
+</div>
+</body>
+</html>
