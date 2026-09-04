@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /** 마이페이지 "배송지 관리" - AS-IS mypage/deliveryInfo.html 재현. 배송지는 여러 개
@@ -17,6 +18,7 @@ public class DeliveryService {
 
     private static final String FLAG_YES = "Y";
     private static final String FLAG_NO = "N";
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final UserDeliveryRepository userDeliveryRepository;
 
@@ -50,7 +52,7 @@ public class DeliveryService {
         delivery.setNewZipcode(zipcode);
         delivery.setAddress(address);
         delivery.setAddressDetail(addressDetail);
-        delivery.setCreatedDate(LocalDateTime.now());
+        delivery.setCreatedDate(LocalDateTime.now().format(DATE_FORMAT));
         return userDeliveryRepository.save(delivery);
     }
 

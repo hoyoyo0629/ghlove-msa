@@ -31,6 +31,7 @@ public class ManagerRequestController {
     private final MemberClient memberClient;
     private final LocgovClient locgovClient;
     private final JwtVerifier jwtVerifier;
+    private final com.ghlove.admin.repository.RoleRepository roleRepository;
 
     @GetMapping("/admin/manager-requests/new")
     public String newForm(HttpServletRequest request, Model model) {
@@ -99,11 +100,15 @@ public class ManagerRequestController {
         model.addAttribute("errorMessage", errorMessage);
         model.addAttribute("approvedLoginId", approvedLoginId);
         model.addAttribute("tempPassword", tempPassword);
+        model.addAttribute("roles", roleRepository.findAllByOrderByRoleSeq());
+        model.addAttribute("allLocgovs", locgovClient.allLocgovs());
+        model.addAttribute("provinces", provinces());
         return "admin/manager-request-list";
     }
 
     @PostMapping("/admin/manager-requests/{userId}/{reqstSn}/approve")
     public String approve(@PathVariable Long userId, @PathVariable Integer reqstSn,
+                           @RequestParam String authority, @RequestParam(required = false) String assignedLocgovCode,
                            HttpSession session, Model model) {
         Manager approver = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
         MemberClient.MemberInfo member = memberClient.fetchOrNull(userId);
@@ -111,7 +116,8 @@ public class ManagerRequestController {
             String tempPassword = managerRequestService.approve(userId, reqstSn, approver.getUserId(),
                     member != null ? member.userName() : null,
                     member != null ? member.email() : null,
-                    member != null ? member.phoneNumber() : null);
+                    member != null ? member.phoneNumber() : null,
+                    authority, assignedLocgovCode);
             return "redirect:/admin/manager-requests?approvedLoginId=" + encode(member != null ? member.loginId() : "")
                     + "&tempPassword=" + encode(tempPassword);
         } catch (ManagerException e) {

@@ -12,6 +12,12 @@ _format_version: "3.0"
 # 이건 심층방어(defense-in-depth)용 - 게이트웨이 단에서 위조/만료 토큰을 먼저 걸러낸다.
 # member-route는 로그인 전 상태(쿠키가 아직 없음)에서도 접근해야 하므로 jwt 플러그인을
 # 적용하지 않는다(로그인 자체가 이 라우트를 통해 이뤄짐).
+#
+# SFR-010 트래픽 제어 - 모든 내부 라우트에 공통 rate-limiting(분당 300회, 초과 시 429)을
+# 건다. policy=local은 단일 Kong 노드 기준 인메모리 카운터 - 다중 노드 운영시엔
+# policy=redis로 바꿔야 노드 간 카운터가 공유된다(SFR-011 오토스케일링과 함께 다룰 항목이라
+# 지금은 local로 충분). 민간개방 API(gift-open-api-route)는 별도로 더 낮은 한도(분당 60회)를
+# 쓴다 - 내부 화면 트래픽과 외부 업체 트래픽의 신뢰 수준이 다르므로 구분.
 consumers:
   - username: ghlove-app
     jwt_secrets:
@@ -25,6 +31,12 @@ services:
       - name: member-route
         paths: ["/member"]
         strip_path: true
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 300
+              policy: local
+              fault_tolerant: true
   - name: donation-service
     url: http://host.docker.internal:8082
     routes:
@@ -37,6 +49,11 @@ services:
               cookie_names: ["GH_AUTH"]
               key_claim_name: "iss"
               claims_to_verify: ["exp"]
+          - name: rate-limiting
+            config:
+              minute: 300
+              policy: local
+              fault_tolerant: true
   - name: point-service
     url: http://host.docker.internal:8083
     routes:
@@ -49,6 +66,11 @@ services:
               cookie_names: ["GH_AUTH"]
               key_claim_name: "iss"
               claims_to_verify: ["exp"]
+          - name: rate-limiting
+            config:
+              minute: 300
+              policy: local
+              fault_tolerant: true
   - name: gift-service
     url: http://host.docker.internal:8084
     routes:
@@ -61,6 +83,11 @@ services:
               cookie_names: ["GH_AUTH"]
               key_claim_name: "iss"
               claims_to_verify: ["exp"]
+          - name: rate-limiting
+            config:
+              minute: 300
+              policy: local
+              fault_tolerant: true
   - name: order-service
     url: http://host.docker.internal:8085
     routes:
@@ -73,6 +100,11 @@ services:
               cookie_names: ["GH_AUTH"]
               key_claim_name: "iss"
               claims_to_verify: ["exp"]
+          - name: rate-limiting
+            config:
+              minute: 300
+              policy: local
+              fault_tolerant: true
   - name: admin-service
     url: http://host.docker.internal:8086
     routes:
@@ -85,3 +117,30 @@ services:
               cookie_names: ["GH_AUTH"]
               key_claim_name: "iss"
               claims_to_verify: ["exp"]
+          - name: rate-limiting
+            config:
+              minute: 300
+              policy: local
+              fault_tolerant: true
+  # SFR-010 민간개방 API - 외부 이용업체가 회원인증(GH_AUTH) 없이 API 키만으로 호출하는
+  # 공개 데이터 전용 라우트. 응답 스키마는 gift 서비스가 이미 갖고 있던 답례품 조회 로직을
+  # 재사용하되(GiftService.publicGifts) 새 read-only 엔드포인트(GET /api/open/gifts)로
+  # 노출한다 - 내부용 화면 API(/api/gifts/{id})와 인증방식이 다르므로 별도 경로로 분리.
+  # 컨슈머(API 키 발급 업체)는 admin의 "오픈API 관리" 화면이 Kong Admin API(POST
+  # /consumers, /consumers/{id}/key-auth)로 런타임에 등록한다 - 이 파일에는 미리 정의된
+  # 컨슈머가 없다(발급 즉시 반영, 재발급/회수도 마찬가지).
+  - name: gift-open-api
+    url: http://host.docker.internal:8084/api/open/gifts
+    routes:
+      - name: gift-open-api-route
+        paths: ["/open-api/gifts"]
+        strip_path: true
+        plugins:
+          - name: key-auth
+            config:
+              key_names: ["apikey"]
+          - name: rate-limiting
+            config:
+              minute: 60
+              policy: local
+              fault_tolerant: true

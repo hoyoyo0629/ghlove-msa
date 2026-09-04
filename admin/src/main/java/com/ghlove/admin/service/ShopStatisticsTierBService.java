@@ -580,4 +580,39 @@ public class ShopStatisticsTierBService {
     public int currentMonth() {
         return LocalDate.now().getMonthValue();
     }
+
+    // ---- R. 대시보드 텍스트 리포트 (AS-IS opmanager/report - ReportController, part1 3b/B10).
+    // 행안부 일일/주간보고용 - 이미 계산된 대시보드 데이터를 클립보드복사에 알맞은 정형 텍스트로
+    // 포맷팅만 한다(별도 신규 데이터소스 없음). ----
+
+    public String dashboardDayReportText(DashboardDay d) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[고향사랑e음 일일 현황 보고]\n");
+        sb.append("일자 : ").append(d.date()).append('\n');
+        sb.append("결제건수 : ").append(d.payCount()).append("건\n");
+        sb.append("결제포인트 : ").append(formatComma(d.payAmount())).append("P\n");
+        sb.append("취소건수 : ").append(d.cancelCount()).append("건\n");
+        sb.append("신규가입자수 : ").append(d.newUserCount()).append("명\n");
+        return sb.toString();
+    }
+
+    public String dashboardMonthReportText(DashboardMonth d) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[고향사랑e음 월별 현황 보고]\n");
+        sb.append("대상월 : ").append(d.yearMonth()).append('\n');
+        sb.append("합계 결제건수 : ").append(d.totalPayCount()).append("건\n");
+        sb.append("합계 결제포인트 : ").append(formatComma(d.totalPayAmount())).append("P\n");
+        sb.append("-- 일자별 내역 --\n");
+        for (PeriodStat p : d.dailyBreakdown()) {
+            sb.append(p.period()).append('\t')
+                    .append(p.payCount()).append("건\t")
+                    .append(formatComma(p.payAmount())).append("P\t취소 ")
+                    .append(p.cancelCount()).append("건\n");
+        }
+        return sb.toString();
+    }
+
+    private static String formatComma(long n) {
+        return String.format("%,d", n);
+    }
 }

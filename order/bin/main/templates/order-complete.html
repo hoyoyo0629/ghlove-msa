@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>주문완료 - 고향사랑e음 (order service)</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/order_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="stylesheet" th:href="@{/css/lclgv-map.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+<div th:replace="~{fragments/mall-header :: mall-header}"></div>
+
+<!-- AS-IS order/step2.html 재현. AS-IS는 장바구니 여러 지자체를 "주문번호" 하나로
+     묶지만, 이 MSA의 장바구니 체크아웃은 줄(item)마다 기존 단일품목 주문 SAGA를 그대로
+     재사용해서(order.saga 계약을 다중품목으로 바꾸지 않기 위한 기존 설계 - [[cart-locgov-point-architecture]])
+     "주문번호"가 여러 개 생긴다 - 그래서 주문번호를 목록으로 보여준다. -->
+<section class="cart_contents">
+    <div class="page-title-box">
+        <span class="ali_breadcrumb">
+            <a th:href="@{'http://localhost:8081/'}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            장바구니
+        </span>
+        <h2 class="page-title-txt">주문완료</h2>
+        <div class="steps-box">
+            <div class="step_status cart"><div class="icon-bg"><span class="sr-only">장바구니</span></div></div>
+            <div class="step_status payment"><div class="icon-bg"><span class="sr-only">주문결제</span></div></div>
+            <div class="step_status complete on"><div class="icon-bg"><span class="sr-only">현재단계 주문완료</span></div></div>
+        </div>
+    </div>
+</section>
+
+<section id="contents">
+    <div class="center s-contents">
+        <div class="row_con flex order_case">
+            <div class="o__num">
+                <span>주문번호 : </span>
+                <span th:each="g, iter : ${groups}">
+                    <span th:each="o, oIter : ${g.orders}"><span th:text="${o.orderId}"></span><span th:if="${!oIter.last or !iter.last}">, </span></span>
+                </span>
+            </div>
+            <div class="o__date">
+                <span>주문일자 : </span>
+                <span th:if="${!#lists.isEmpty(groups)}" th:text="${#temporals.format(groups[0].orders[0].createdDate, 'yyyy-MM-dd HH:mm')}"></span>
+            </div>
+        </div>
+
+        <div class="contents_wrap" th:each="g : ${groups}">
+            <div class="margin_b80">
+                <div class="cart_top">
+                    <div class="chk_box check-level1">
+                        <label th:text="${g.locgovNm}"></label>
+                    </div>
+                </div>
+                <div class="list_body">
+                    <div class="list_wrap">
+                        <div class="list-title">
+                            <div class="date-col chk_date">답례품정보</div>
+                            <div class="date-col g_amtprc">
+                                <div class="g_info_wrap">
+                                    <div class="date-col g_info__amount">수량</div>
+                                    <div class="date-col g_info__price">답례품 포인트</div>
+                                </div>
+                            </div>
+                        </div>
+                        <ul class="item_list-group">
+                            <li class="list-items" th:each="o : ${g.orders}">
+                                <div class="date-col g_info">
+                                    <div class="g_info_wrap">
+                                        <div class="link_wrap">
+                                            <div class="g_info__txt">
+                                                <div class="info_title"><span th:text="${o.itemName}"></span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="date-col g_amtprc">
+                                    <div class="g_info_wrap">
+                                        <div class="g_info__amount" th:text="${o.quantity} + '개'"></div>
+                                        <div class="g_info__price" th:text="${#numbers.formatInteger(o.pointAmount, 0, 'COMMA')} + ' P'"></div>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row_con flex" th:if="${!#lists.isEmpty(groups)}">
+            <div class="mobile_section_bar"></div>
+            <div class="contents_wrap">
+                <div class="row_con_wrapper orderC">
+                    <div class="list_title_area">배송지 정보</div>
+                    <ul class="list_wrapper" th:with="first=${groups[0].orders[0]}">
+                        <li class="list_items">
+                            <span class="label">받으시는분</span>
+                            <span class="data_val" th:text="${first.receiverName}"></span>
+                        </li>
+                        <li class="list_items">
+                            <span class="label">배송지 주소</span>
+                            <span class="data_val" th:text="${first.deliveryAddress} + ' ' + ${first.deliveryAddressDetail}"></span>
+                        </li>
+                        <li class="list_items">
+                            <span class="label">휴대폰번호(수취인)</span>
+                            <span class="data_val" th:text="${first.receiverPhone}"></span>
+                        </li>
+                        <li class="list_items">
+                            <span class="label">기타 요구사항</span>
+                            <span class="data_val" th:text="${first.requestNote}"></span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mobile_section_bar"></div>
+            <div class="contents_wrap">
+                <div class="row_con_wrapper orderC">
+                    <div class="list_title_area">결제정보</div>
+                    <div class="list_wrapper" th:each="g : ${groups}">
+                        <div class="list_loc" th:text="${g.locgovNm}"></div>
+                        <ul class="paymentC">
+                            <li class="payment_list">
+                                <span class="payment__label">답례품 포인트</span>
+                                <span class="payment__val" th:text="${#numbers.formatInteger(g.groupTotal, 0, 'COMMA')} + 'P'"></span>
+                            </li>
+                            <li class="payment_list">
+                                <span class="payment__label">배송비</span>
+                                <span class="payment__val">무료배송</span>
+                            </li>
+                        </ul>
+                        <div class="payment_list total_pay">
+                            <strong class="label">결제 포인트</strong>
+                            <div class="payment_wrap">
+                                <div class="payment_val pointblue" th:text="${#numbers.formatInteger(g.groupTotal, 0, 'COMMA')} + 'P'"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="btn-box order">
+        <button type="button" class="blueBtn cancellation"
+                th:attr="data-url=@{'http://localhost:8084/'}" onclick="location.href=this.dataset.url">
+            답례품 더 보기<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt=""></span>
+        </button>
+        <button type="button" class="blueBtn u-confirm"
+                th:attr="data-url=@{/my}" onclick="location.href=this.dataset.url">
+            주문 조회<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt=""></span>
+        </button>
+    </div>
+</section>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+</body>
+</html>

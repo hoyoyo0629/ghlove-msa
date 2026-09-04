@@ -25,9 +25,6 @@ import java.util.List;
 public class ManagerRequestService {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-    /** 승인되면 일단 모두 ROLE_OPERATOR로 생성한다 - 지자체/제공자별로 보이는 데이터를
-     *  나누는 것은 메뉴 단위 RBAC보다 더 큰 별도 작업(데이터 스코프 RBAC)이라 이번 범위 밖. */
-    private static final String DEFAULT_APPROVED_AUTHORITY = "ROLE_OPERATOR";
 
     private final ManagerRequestRepository managerRequestRepository;
     private final ManagerRepository managerRepository;
@@ -70,14 +67,23 @@ public class ManagerRequestService {
     }
 
     /** 승인 - OP_MANAGER 행을 새로 만들고 임시 비밀번호를 발급한다(반환값 - 승인 화면에서
-     *  1회 노출, 이 프로젝트의 이메일 모크 정책과 동일하게 실제 메일 전송 대신 화면 표시). */
+     *  1회 노출, 이 프로젝트의 이메일 모크 정책과 동일하게 실제 메일 전송 대신 화면 표시).
+     *  authority는 승인자가 화면에서 직접 고른 AS-IS 실제 6단계 역할 중 하나 - 신청서 자체의
+     *  locgovCode(광역단위, 참고용)와 달리 지자체 정/부담당자(ROLE_ADMIN_5/6)의 실제 조회범위
+     *  locgovCode는 승인 시점에 승인자가 기초단체 단위로 명시적으로 배정한다. */
     @Transactional
     public String approve(Long userId, Integer reqstSn, Long approverManagerId, String requesterUserName,
-                           String requesterEmail, String requesterPhone) {
+                           String requesterEmail, String requesterPhone, String authority, String assignedLocgovCode) {
         ManagerRequest request = managerRequestRepository.findById(new com.ghlove.admin.domain.ManagerRequestId(userId, reqstSn))
                 .orElseThrow(() -> new ManagerException("신청 내역을 찾을 수 없습니다."));
         if (!ManagerRequest.STATUS_PENDING.equals(request.getConfmSttusCode())) {
             throw new ManagerException("이미 처리된 신청입니다.");
+        }
+        if (authority == null || authority.isBlank()) {
+            throw new ManagerException("부여할 권한을 선택해 주세요.");
+        }
+        if (MenuService.LOCGOV_SCOPED_ROLES.contains(authority) && (assignedLocgovCode == null || assignedLocgovCode.isBlank())) {
+            throw new ManagerException("지자체 담당자는 소속 지자체를 선택해 주세요.");
         }
         request.setConfmSttusCode(ManagerRequest.STATUS_APPROVED);
         request.setLastUpdusrId(approverManagerId);
@@ -93,7 +99,8 @@ public class ManagerRequestService {
         manager.setStatusCode("ACTIVE");
         manager.setLoginCount(0);
         manager.setLoginFailCount(0);
-        manager.setAuthority(DEFAULT_APPROVED_AUTHORITY);
+        manager.setAuthority(authority);
+        manager.setLocgovCode(MenuService.LOCGOV_SCOPED_ROLES.contains(authority) ? assignedLocgovCode : null);
         manager.setCreatedDate(now());
         manager.setUpdatedDate(now());
         managerRepository.save(manager);

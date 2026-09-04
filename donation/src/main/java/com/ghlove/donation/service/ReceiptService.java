@@ -34,6 +34,7 @@ public class ReceiptService {
     private final LocgovRepository locgovRepository;
     private final SpecialDisasterZoneRepository specialDisasterZoneRepository;
     private final MemberClient memberClient;
+    private final LocgovSealService locgovSealService;
 
     /** AS-IS getReceiptListInfo + getReceiptCntrAmtAndTotalCnt. */
     public ReceiptListResult receiptList(Long userId, String locgovCode, String upperLocgovCode,
@@ -99,28 +100,33 @@ public class ReceiptService {
                 .toList();
 
         BigDecimal totalCntrAmt = donations.stream().map(Donation::getCntrAmt).reduce(BigDecimal.ZERO, BigDecimal::add);
-        String topLocGov = topLocGovDisplay(donations, locgovs);
-
-        MemberInfo member = memberClient.fetch(userId);
-
-        return new Certificate(member.userName(), formatDisplayDate(member.birthday()), topLocGov,
-                totalCntrAmt, donations.size(), formatNowDate(LocalDate.now()), rows);
-    }
-
-    /** AS-IS: 선택 건 중 LOCGOV_CODE 오름차순으로 첫 지자체명 + (지자체가 2곳 이상이면) "등 N건". */
-    private String topLocGovDisplay(List<Donation> donations, Map<String, Locgov> locgovs) {
-        List<String> distinctCodes = donations.stream()
+        List<String> distinctLocgovCodes = donations.stream()
                 .map(Donation::getCntrLocgovCode)
                 .distinct()
                 .sorted()
                 .toList();
-        if (distinctCodes.isEmpty()) {
+        String topLocgovCode = distinctLocgovCodes.isEmpty() ? null : distinctLocgovCodes.get(0);
+        String topLocGov = topLocGovDisplay(locgovs, topLocgovCode, distinctLocgovCodes.size());
+        // 여러 지자체에 기부한 건을 한 확인증에 모아 출력하는 경우, 대표(topLocGov)
+        // 지자체의 직인만 얹는다 - AS-IS receiptPrint.html(단건 영수증)의
+        // seal_url=.../sealView/{locgovCode} 패턴을 다건 확인증에 맞게 적용한 것.
+        String sealImageDataUri = locgovSealService.sealDataUri(topLocgovCode).orElse(null);
+
+        MemberInfo member = memberClient.fetch(userId);
+
+        return new Certificate(member.userName(), formatDisplayDate(member.birthday()), topLocGov,
+                totalCntrAmt, donations.size(), formatNowDate(LocalDate.now()), rows, sealImageDataUri);
+    }
+
+    /** AS-IS: 선택 건 중 LOCGOV_CODE 오름차순으로 첫 지자체명 + (지자체가 2곳 이상이면) "등 N건". */
+    private String topLocGovDisplay(Map<String, Locgov> locgovs, String topLocgovCode, int distinctCount) {
+        if (topLocgovCode == null) {
             return "";
         }
-        Locgov top = locgovs.get(distinctCodes.get(0));
+        Locgov top = locgovs.get(topLocgovCode);
         String name = top != null ? (nullToEmpty(top.getUpperLocgovNm()) + " " + nullToEmpty(top.getLocgovNm())).trim() : "";
-        if (distinctCodes.size() > 1) {
-            return name + " 등 " + (distinctCodes.size() - 1) + "건";
+        if (distinctCount > 1) {
+            return name + " 등 " + (distinctCount - 1) + "건";
         }
         return name;
     }

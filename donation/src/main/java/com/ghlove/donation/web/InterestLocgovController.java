@@ -16,8 +16,9 @@ import java.util.Map;
 
 /**
  * 마이페이지 "관심지자체" (AS-IS mypage/intrstLocGov.html). 이 목록 화면 자체의 조회+선택삭제
- * 외에, member의 "회원 정보 수정" 화면(:8081)이 관심지자체 칩을 추가/삭제하는 크로스오리진
- * AJAX 호출도 여기서 받는다(add/remove) - 그래서 이 둘만 CORS를 열고 JSON으로 응답한다.
+ * 외에, member의 Thymeleaf "회원 정보 수정" 화면(:8081)과 storefront(Vue3 SPA, dev 서버 :5173 -
+ * ProfileView.vue/ListSelectView.vue)이 관심지자체 칩을 추가/삭제하는 크로스오리진 AJAX 호출도
+ * 여기서 받는다(add/remove) - 그래서 이 둘만 두 오리진 모두에 CORS를 열고 JSON으로 응답한다.
  * SFR-010: userId는 로그인 JWT 쿠키에서만 가져온다 - 이 쿠키는 어느 서비스 페이지에서
  * 요청을 보냈든(member의 프로필 화면 포함) 브라우저가 동일하게 자동으로 실어 보낸다
  * (쿠키 스코프는 host 기준이지 origin 기준이 아님).
@@ -46,7 +47,7 @@ public class InterestLocgovController {
     /** member 프로필 화면의 "추가" 버튼이 fetch()로 호출 (AJAX 전용). */
     @PostMapping("/interest-locgovs")
     @ResponseBody
-    @CrossOrigin(origins = "http://localhost:8081", allowCredentials = "true")
+    @CrossOrigin(origins = {"http://localhost:8081", "http://localhost:5173"}, allowCredentials = "true")
     public ResponseEntity<?> add(@RequestParam String locgovCode, HttpServletRequest request) {
         var authUserId = jwtVerifier.currentUserId(request);
         if (authUserId.isEmpty()) {
@@ -63,7 +64,7 @@ public class InterestLocgovController {
     /** member 프로필 화면의 칩 "×" 버튼이 fetch()로 호출 (AJAX 전용). */
     @PostMapping("/interest-locgovs/{locgovCode}/delete")
     @ResponseBody
-    @CrossOrigin(origins = "http://localhost:8081", allowCredentials = "true")
+    @CrossOrigin(origins = {"http://localhost:8081", "http://localhost:5173"}, allowCredentials = "true")
     public ResponseEntity<?> remove(@PathVariable String locgovCode, HttpServletRequest request) {
         var authUserId = jwtVerifier.currentUserId(request);
         if (authUserId.isEmpty()) {

@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface GiftSubcategoryRepository extends JpaRepository<GiftSubcategory, Long> {
     List<GiftSubcategory> findAllByOrderByCategoryCodeAscOrderingAsc();
+
+    List<GiftSubcategory> findByCategoryCodeOrderByOrderingAsc(String categoryCode);
 }

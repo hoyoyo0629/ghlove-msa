@@ -1,0 +1,449 @@
+.user-grade.point .grade-bg {
+    display: inline-block;
+}
+
+.user-grade.point .grade-bg img {
+    transform: translate(-4px, -3px);
+}
+
+.s-contents.mypageS {
+    padding: calc(var(--margin-padding-8)*3) 0;
+    font-size: 16px;
+    color: var(--gray2);
+    border: 1px solid var(--main-color2);
+    margin-bottom: calc(var(--margin-padding-8)*5);
+}
+
+.s-contents.mypageS input[type='text'],
+.s-contents.mypageP input[type='text'] {
+    text-align: right;
+}
+
+.s-contents.mypageS .mypage-top,
+.s-contents.mypageP .mypage-point {
+    display: flex;
+    align-items: flex-start;
+}
+
+.s-contents.mypageS .mypage-top {
+    padding: 0 calc(var(--margin-padding-8)*9);
+}
+
+.s-contents.mypageS .mypage-top-list {
+    margin-right: calc(var(--margin-padding-8)*5);
+}
+
+.s-contents .icon-img {
+    transform: translateY(-3px);
+}
+
+.s-contents.mypageS label.search-title {
+    min-width: 130px;
+
+}
+
+.s-contents .s_txt {
+    margin-left: calc(var(--margin-padding-4)*1);
+    text-align: right;
+}
+
+
+.search-title {
+    width: 11.5%;
+}
+
+.selected-field-line {
+    display: flex;
+    margin-bottom: 10px;
+}
+
+.selected-field-line .selected-item {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0 20px;
+}
+
+.selected-field-line .selected-item select {
+    min-width: 190px;
+    width: 18%;
+}
+
+.selected-field-line.city .selected-item select {
+    margin-right: 8px;
+}
+
+.radio-group {
+    display: flex;
+    font-size: 14px;
+    color: var(--gray3);
+    width: 100%;
+    gap: 0 20px;
+}
+
+.radio-group .radio-list {
+    position: relative;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    white-space: nowrap;
+    height: 30px;
+    gap: 8px;
+}
+
+.radio-group .radio-list label {
+    padding-left: 0;
+    color: var(--gray3);
+    font-weight: 400;
+}
+
+.radio-group .radio-list input[type='radio'] {
+    transform: translate(0, 0);
+}
+
+.myDonation .btn-box {
+    margin-bottom: calc(var(--margin-padding-8)*8);
+}
+
+.s-contents.myDonation .table_top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.s-contents.myDonation .table_top .ttop {
+    flex: 1 1 1;
+    color: var(--gray3);
+    line-height: 1.3em;
+}
+
+.s-contents.myDonation .table_top .ttop a {
+    white-space: normal;
+}
+
+.s-contents.myDonation .grade-bg {
+    background-color: var(--gray5);
+    padding: 9px 24px;
+    border-radius: 30px;
+    color: var(--gray2);
+    max-width: 390px;
+}
+
+.s-contents.myDonation .btn-box .hometax {
+    min-width: 168px;
+}
+
+
+/* data Table result */
+.s-contents.table-wrapper {
+    margin-bottom: 150px;
+    padding: 60px 80px 80px;
+}
+
+.s-contents.cntrList-table-wrapper{
+	padding: 60px 60px 80px !important;
+}
+
+.table-result-body {
+    padding: 16px 0 0px;
+    margin-bottom: 30px;
+}
+
+.s-contents.table-wrapper table {
+    text-align: center;
+    border: 1px solid var(--gray5);
+    font-size: 14px;
+    margin-top: px;
+}
+
+.s-contents.table-wrapper table th,
+.s-contents.table-wrapper table td {
+    border: 1px solid var(--gray4);
+    padding: calc(var(--margin-padding-8)*2) 10px;
+    white-space: nowrap;
+    text-align: center;
+    min-width: 100px;
+    max-width: 200px;
+}
+
+
+.s-contents.cntrList-table-wrapper table th,
+.s-contents.cntrList-table-wrapper table td {
+    min-width: 0px !important;
+}
+
+.s-contents.table-wrapper table th {
+    color: var(--gray2);
+    font-weight: 500;
+}
+
+.s-contents.table-wrapper table td {
+    color: var(--gray3);
+
+}
+
+.s-contents.table-wrapper table td.amount {
+    text-align: right;
+}
+
+.s-contents.table-wrapper table td.amount .short_icon {
+    display: inline-block;
+    transform: translate(3px, -1px);
+}
+
+.s-contents.table-wrapper table td.loc_mall img {
+    display: inline-block;
+    transform: translate(2px, -1px);
+
+}
+
+.s-contents.table-wrapper table td.idx {
+    width: 40px;
+}
+
+.s-contents.table-wrapper .result-title {
+    background-color: var(--gray5);
+}
+
+.s-contents.table-wrapper .icon-img {
+    transform: translate(2px, -1.5px);
+}
+
+.s-contents.table-wrapper tr td:last-child .moreView{
+    white-space: nowrap;
+}
+
+
+/* ************* 포인트현황 ************* */
+.s-contents.mypageP {
+    padding: 0;
+    font-size: 16px;
+    color: var(--gray2);
+    border: 1px solid var(--main-color2);
+    margin-bottom: 60px;
+}
+
+.mypage-point-list {
+    margin: 0;
+    width: 33.333%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: calc(var(--margin-padding-8)*3) 0;
+    gap: 6px;
+}
+
+.mypage-point-list:nth-child(2) {
+    border: solid var(--gray4);
+    border-width: 0 1px;
+}
+
+.mypage-point-list .col3_label {
+    margin-right: 30px;
+}
+
+.mypage-point-list img.icon-img {
+    transform: translateY(-1px);
+}
+
+/* ************포인트현황 상세보기*********** */
+.page-title-box .user-grade .grade-bg {
+    background-color: var(--gray5);
+    padding: calc(var(--margin-padding-8)*1) calc(var(--margin-padding-8)*9);
+    font-size: 16px;
+    border-radius: 40px;
+    display: inline-block;
+    font-weight: 400;
+}
+
+.s-contents.table-wrapper.pointD {
+    margin-bottom: calc(var(--margin-padding-8)*5);
+}
+
+.s-contents.table-wrapper.pointD+.btn-box {
+    margin-bottom: 150px;
+}
+
+.mypage-point-list .m-field {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+}
+
+@media screen and (max-width:1280px) {
+    .s-contents.mypageS .mypage-top {
+        padding: 0 5%;
+    }
+
+    .selected-field-line .selected-item.date ul {
+        padding-left: 0;
+    }
+
+    .radio-group {
+        font-size: 13px;
+        flex-wrap: wrap;
+    }
+
+    .s-contents.myDonation .table_top {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .myDonation .table-result-body {
+        overflow-y: hidden;
+        overflow-x: scroll;
+    }
+
+
+    /* ********* 포인트 현황 ******** */
+    .mypage-point-list {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: calc(var(--margin-padding-8)*3) 3%;
+    }
+
+    .mypage-point-list label {
+        margin-bottom: 8px;
+    }
+
+    .mypage-point-list .m-field {
+        width: 100%;
+    }
+
+    .mypage-point-list .m-field input {
+        width: 94%;
+    }
+}
+
+@media screen and (max-width:1030px) {
+    .s-contents.table-wrapper {
+        padding: 60px 30px 80px;
+    }
+
+    .list-search-body.data,
+    .table-result-body {
+        overflow-y: hidden;
+        overflow-x: scroll;
+    }
+
+    .list-search-body.data::-webkit-scrollbar,
+    .table-result-body::-webkit-scrollbar {
+        height: 10px;
+    }
+
+    .s-contents.table-wrapper table td.loc_mall {
+        padding-right: 16px;
+    }
+
+}
+
+@media screen and (max-width:930px) {
+    .s-contents.table-wrapper tr td:last-child .moreView{
+        margin-right: 10px;
+    }
+}
+
+@media screen and (max-width:768px) {
+    .s-contents.mypageS .mypage-top {
+        padding: 0 5%;
+        flex-direction: column;
+    }
+
+    .s-contents.mypageS .mypage-top-list {
+        display: flex;
+        flex-direction: column;
+        margin-right: 0;
+        width: 100%;
+    }
+
+    .s-contents .label-title,
+    .s-contents .search-title,
+    .s-contents .m-field {
+        margin-bottom: 8px;
+    }
+
+    .s-contents .m-field {
+        display: inline-block;
+        width: 100%;
+    }
+
+    .s-contents .m-field input {
+        width: 94%;
+    }
+
+    .selected-field-line,
+    .selected-field-line .selected-item {
+        flex-direction: column;
+        gap:8px
+    }
+
+
+    .selected-field-line .selected-item select {
+        min-width: 100%;
+    }
+
+    .radio-group {
+        font-size: 13px;
+        flex-wrap: wrap;
+    }
+
+    .selected-field-line.city .selected-item select {
+        margin-right: 0px;
+    }
+
+    .s-contents.table-wrapper {
+        padding: 30px 5%;
+    }
+
+
+    .s-contents.myDonation {
+        border: none;
+        box-shadow: none;
+        padding: 60px 0;
+    }
+
+    .s-contents.myDonation .btn-box {
+        flex-direction: column;
+        margin-bottom: 20px;
+    }
+
+    .s-contents.myDonation .grade-bg {
+        width: 100%;
+        text-align: center;
+    }
+
+    .myDonation .btn-box .hometax {
+        width: 100%;
+    }
+
+    .s-contents.table-wrapper {
+        margin-bottom: 0px;
+    }
+    .s-contents.myDonation .table_top .ttop{
+        font-size: 14px;
+    }
+
+
+    /* ******** 포인트 현황 ******* */
+    .mypage-point {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .mypage-point-list {
+        width: 100%;
+        padding: calc(var(--margin-padding-8)*3) 8%;
+    }
+
+    .mypage-point-list:nth-child(2) {
+        border-width: 1px 0;
+    }
+
+    .s-contents.cntrList-table-wrapper{
+        padding: 60px 0 !important;
+    }
+
+}

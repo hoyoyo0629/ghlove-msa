@@ -47,6 +47,19 @@ public class ProfileController {
         return "profile";
     }
 
+    /** SFR-002 "다중 인증체계(MFA) 선택 적용" - 회원이 마이페이지에서 스스로 켜고 끈다. */
+    @PostMapping("/profile/mfa")
+    public String setMfa(HttpSession session, @RequestParam boolean enabled) {
+        User loginUser = (User) session.getAttribute(AuthController.SESSION_USER_KEY);
+        if (loginUser == null) {
+            return "redirect:/login";
+        }
+        memberService.setMfaEnabled(loginUser.getUserId(), enabled);
+        loginUser.setMfaEnabled(enabled ? "Y" : "N");
+        session.setAttribute(AuthController.SESSION_USER_KEY, loginUser);
+        return "redirect:/profile";
+    }
+
     /**
      * AS-IS users/modify.html의 "개인정보 수정"(이름/생년월일 변경) - Siren24 PCC 본인인증
      * 팝업을 통과해야만 열리는 화면이다. 이 MSA는 그 유료 실명인증 외부연동이 없고, 검증

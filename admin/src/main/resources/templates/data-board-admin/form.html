@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>자료 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/data-board}">고객센터 자료실 관리</a></div>
+    <h3><span th:text="${board.dataId} != null ? '자료 수정' : '자료 등록'"></span></h3>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="자료 등록/수정">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>제목</td>
+                <td><input type="text" id="subject" name="subject" th:value="${board.subject}" required form="boardForm"></td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>내용</td>
+                <td><textarea id="content" name="content" rows="12" th:text="${board.content}" required form="boardForm"></textarea></td>
+            </tr>
+            <tr>
+                <td class="label">공지로 등록</td>
+                <td><input type="checkbox" name="noticeFlag" th:checked="${board.noticeFlag == 'Y'}" form="boardForm"></td>
+            </tr>
+            <tr>
+                <td class="label">첨부파일 추가</td>
+                <td><input type="file" name="file" form="boardForm"></td>
+            </tr>
+            <tr th:if="${board.dataId} != null">
+                <td class="label">기존 첨부파일</td>
+                <td>
+                    <ul>
+                        <li th:each="f : ${files}">
+                            <a th:href="@{'/data-board/file-download/' + ${f.dataFileId}}" th:text="${f.orgFileName}"></a>
+                            <form th:action="@{'/admin/data-board/' + ${board.dataId} + '/files/' + ${f.dataFileId} + '/delete'}"
+                                  method="post" class="inline-form" onsubmit="return confirm('첨부파일을 삭제하시겠습니까?')">
+                                <button type="submit" class="small-btn danger">삭제</button>
+                            </form>
+                        </li>
+                    </ul>
+                    <p th:if="${#lists.isEmpty(files)}">첨부파일 없음</p>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <form id="boardForm" enctype="multipart/form-data"
+          th:action="${board.dataId} != null ? @{'/admin/data-board/' + ${board.dataId}} : @{/admin/data-board}" method="post"></form>
+    <div class="btn_all btn_center">
+        <button type="submit" form="boardForm" class="btn btn-dark-gray btn-small">저장</button>
+        <form th:if="${board.dataId} != null" th:action="@{'/admin/data-board/' + ${board.dataId} + '/delete'}"
+              method="post" class="inline-form" onsubmit="return confirm('삭제하시겠습니까?')" style="display:inline;">
+            <button type="submit" class="btn btn-small">삭제</button>
+        </form>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

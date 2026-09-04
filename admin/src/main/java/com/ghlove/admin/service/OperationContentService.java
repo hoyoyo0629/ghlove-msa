@@ -98,7 +98,7 @@ public class OperationContentService {
         banner.setImageUrl(imageUrl);
         banner.setDisplayOrder(displayOrder != null ? displayOrder : 0);
         banner.setDisplayFlag(USE_Y);
-        banner.setCreatedDate(LocalDateTime.now());
+        banner.setCreatedDate(NOTICE_DATE_FORMAT.format(LocalDateTime.now()));
         return bannerRepository.save(banner);
     }
 
@@ -183,6 +183,12 @@ public class OperationContentService {
 
     @Transactional
     public Popup createPopup(String subject, String content, String popupType, String startDate, String endDate) {
+        return createPopup(subject, content, popupType, startDate, endDate, null, null, null);
+    }
+
+    @Transactional
+    public Popup createPopup(String subject, String content, String popupType, String startDate, String endDate,
+                              String popupStyle, String popupClose, String popupImage) {
         if (subject == null || subject.isBlank()) {
             throw new ContentException("제목을 입력해 주세요.");
         }
@@ -192,9 +198,41 @@ public class OperationContentService {
         popup.setPopupType(popupType);
         popup.setStartDate(startDate);
         popup.setEndDate(endDate);
+        popup.setPopupStyle(popupStyle != null ? popupStyle : "1");
+        popup.setPopupClose(popupClose != null ? popupClose : USE_Y);
+        popup.setPopupImage(popupImage);
         popup.setUseYn(USE_Y);
         popup.setCreatedDate(LocalDateTime.now());
         return popupRepository.save(popup);
+    }
+
+    public Popup popup(Integer id) {
+        return popupRepository.findById(id).orElseThrow(() -> new ContentException("팝업을 찾을 수 없습니다."));
+    }
+
+    @Transactional
+    public Popup updatePopup(Integer id, String subject, String content, String popupType, String startDate, String endDate,
+                              String popupStyle, String popupClose, String popupImage) {
+        if (subject == null || subject.isBlank()) {
+            throw new ContentException("제목을 입력해 주세요.");
+        }
+        Popup popup = popup(id);
+        popup.setSubject(subject);
+        popup.setContent(content);
+        popup.setPopupType(popupType);
+        popup.setStartDate(startDate);
+        popup.setEndDate(endDate);
+        popup.setPopupStyle(popupStyle);
+        popup.setPopupClose(popupClose != null ? USE_Y : USE_N);
+        if (popupImage != null) {
+            popup.setPopupImage(popupImage);
+        }
+        return popupRepository.save(popup);
+    }
+
+    @Transactional
+    public void deletePopup(Integer id) {
+        popupRepository.deleteById(id);
     }
 
     @Transactional

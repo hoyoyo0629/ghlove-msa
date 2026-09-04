@@ -75,4 +75,10 @@ public class User {
 
     @Column(name = "MBER_DN")
     private String mberDn;
+
+    /** SFR-002 "다중 인증체계(MFA) 선택 적용" - 회원이 마이페이지에서 스스로 켜고 끄는
+     *  opt-in 옵션('Y'/'N', 기본 'N'). 관리자 콘솔의 이메일 2차인증(ManagerAuthService,
+     *  모든 운영자에게 강제)과 달리 일반회원은 선택사항이라 이름을 구분했다. */
+    @Column(name = "MFA_ENABLED")
+    private String mfaEnabled = "N";
 }

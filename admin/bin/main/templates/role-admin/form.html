@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>역할 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/roles}">역할·메뉴권한 관리</a></div>
+    <h3><span th:text="${role} != null ? '역할 수정' : '역할 등록'"></span></h3>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="역할 등록/수정">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>권한코드</td>
+                <td>
+                    <input type="text" name="authority" th:value="${role != null ? role.authority : ''}" required form="roleForm"
+                           th:readonly="${role} != null" placeholder="예: ROLE_ADMIN_9" autocomplete="off">
+                </td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>역할명</td>
+                <td><input type="text" name="roleName" th:value="${role != null ? role.roleName : ''}" required form="roleForm"></td>
+            </tr>
+            <tr>
+                <td class="label">설명</td>
+                <td><textarea name="roleDesc" rows="3" style="width:100%;" form="roleForm" th:text="${role != null ? role.roleDesc : ''}"></textarea></td>
+            </tr>
+            <tr>
+                <td class="label">순서</td>
+                <td><input type="number" name="roleSeq" th:value="${role != null ? role.roleSeq : ''}" form="roleForm"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <form id="roleForm"
+          th:action="${role} != null ? @{'/admin/roles/' + ${role.authority}} : @{/admin/roles}"
+          method="post"></form>
+    <div class="btn_all btn_center">
+        <button type="submit" form="roleForm" class="btn btn-dark-gray btn-small">저장</button>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

@@ -17,8 +17,11 @@ import java.util.stream.Collectors;
 
 /**
  * 요청 URI를 OP_MENU의 menuUrl과 매칭해 권한을 확인한다 (AS-IS OpmanagerHandlerInterceptor의
- * getMenuCode 재현). ROLE_ADMIN(시스템관리자)은 AS-IS의 ROLE_SUPERVISOR와 동일하게 이 표를
- * 거치지 않고 항상 통과한다.
+ * getMenuCode 재현). AS-IS 실제 권한은 6단계다 - {@link #UNRESTRICTED_ROLES}(시스템/행안부
+ * 정·부담당자, ROLE_ADMIN_1~4)는 AS-IS의 ROLE_SUPERVISOR와 동일하게 이 표를 거치지 않고
+ * 항상 통과하고, {@link #LOCGOV_SCOPED_ROLES}(지자체 정·부담당자, ROLE_ADMIN_5~6)는 실제
+ * OP_MENU_RIGHT 매핑을 확인한다 - 예전엔 이걸 ROLE_ADMIN/ROLE_OPERATOR 2단계로 단순화해뒀다가
+ * 사용자가 실제 AS-IS와 다르다고 지적해 이번에 정식으로 6단계로 맞췄다.
  *
  * AS-IS는 "매칭되는 메뉴가 없으면" 예외를 던지지만, 이 프로젝트는 화면을 계속 늘려가는
  * 중이라 메뉴 등록을 깜빡한 새 라우트가 관리자 자신을 막아버리는 사고를 피하기 위해
@@ -29,7 +32,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MenuService {
 
-    private static final String ROLE_ADMIN = "ROLE_ADMIN";
+    /** 시스템주/부담당자, 행안부주/부담당자 - AS-IS 컨트롤러 전반에서 반복되는
+     *  "1,2,3,4면 전체보기" 분기와 동일(예: GiveStateManagerController, OrderManagerController). */
+    public static final Set<String> UNRESTRICTED_ROLES = Set.of("ROLE_ADMIN_1", "ROLE_ADMIN_2", "ROLE_ADMIN_3", "ROLE_ADMIN_4");
+    /** 지자체주/부담당자 - AS-IS의 "5,6이면 소속 지자체로 스코프" 분기. */
+    public static final Set<String> LOCGOV_SCOPED_ROLES = Set.of("ROLE_ADMIN_5", "ROLE_ADMIN_6");
+
     private static final String DISPLAY_Y = "Y";
 
     private final MenuRepository menuRepository;
@@ -48,10 +56,22 @@ public class MenuService {
     }
 
     public boolean hasAccess(Manager manager, Menu menu) {
-        if (ROLE_ADMIN.equals(manager.getAuthority())) {
+        if (UNRESTRICTED_ROLES.contains(manager.getAuthority())) {
             return true;
         }
         return menuRightRepository.existsByMenuIdAndAuthority(menu.getMenuId(), manager.getAuthority());
+    }
+
+    /** 지자체 정·부담당자(ROLE_ADMIN_5/6)인지 - 조회 범위를 자기 지자체로 강제해야 하는 화면에서 쓴다. */
+    public static boolean isLocgovScoped(Manager manager) {
+        return LOCGOV_SCOPED_ROLES.contains(manager.getAuthority());
+    }
+
+    /** 지자체 담당자는 화면에서 어떤 locgovCode를 골랐든 무시하고 자기 소속으로 강제 적용한다
+     *  (AS-IS의 "5,6이면 소속 지자체로 스코프" 분기 재현) - 시스템/행안부는 사용자가 고른
+     *  값을 그대로 쓴다(null이면 전체보기). */
+    public static String effectiveLocgovCode(Manager manager, String requestedLocgovCode) {
+        return isLocgovScoped(manager) ? manager.getLocgovCode() : requestedLocgovCode;
     }
 
     /**

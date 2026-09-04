@@ -17,4 +17,6 @@ public class Certificate {
     private final int totalCnt;
     private final String nowDateDisplay;
     private final List<ReceiptDetailRow> rows;
+    /** topLocGov의 직인 이미지 data URI - 등록된 직인이 없으면 null. */
+    private final String sealImageDataUri;
 }

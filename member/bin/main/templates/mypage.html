@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>마이페이지 - 고향사랑e음</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/m_main.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<!-- AS-IS mypage/index.html 재현(.row_con/.half_con/.con_wrap/.wrap_items 클래스 그대로).
+     AS-IS는 각 카드가 div @click 네비게이션이지만 여기서는 그냥 <a>로 링크한다. -->
+<section class="find-idpw center">
+    <div class="page-title-box">
+        <span class="ali_breadcrumb">
+            <a th:href="@{/}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            마이페이지
+        </span>
+        <h2 class="page-title-txt">마이페이지</h2>
+    </div>
+</section>
+
+<section id="contents">
+    <div class="center">
+        <!-- 기부 + 확인(혜택)증 -->
+        <div class="row_con flex">
+            <div class="half_con dona">
+                <h3 class="deepSubBlue">기부</h3>
+                <div class="con_wrap">
+                    <a class="wrap_items left_list" th:href="@{'http://localhost:8082/receipts'}">
+                        <div class="top_area">
+                            <span class="link_tit"><span>기부내역</span><span>조회</span></span>
+                            <span class="round-illustBtn_s"><span class="hidden_txt">기부내역 조회 바로가기</span></span>
+                        </div>
+                        <div class="data_area">
+                            <span class="data_val" th:text="${#numbers.formatInteger(donationTotal, 0, 'COMMA')}"></span>
+                            <span class="unit">원</span>
+                        </div>
+                    </a>
+                    <a class="wrap_items right_list" th:href="@{'http://localhost:8083/'}">
+                        <div class="top_area">
+                            <span class="link_tit"><span>기부포인트</span><span>조회</span></span>
+                            <span class="round-illustBtn_s"><span class="hidden_txt">기부포인트 조회 바로가기</span></span>
+                        </div>
+                        <div class="data_area">
+                            <span class="data_val" th:text="${#numbers.formatInteger(pointBalance, 0, 'COMMA')}"></span>
+                            <span class="unit">P</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <div class="half_con intrst">
+                <h3 class="deepSubBlue">확인(혜택)증</h3>
+                <div class="con_wrap">
+                    <a class="wrap_items left_list" th:href="@{'http://localhost:8082/receipts'}">
+                        <div class="top_area">
+                            <span class="link_tit"><span>기부확인증</span></span>
+                            <span class="round-illustBtn_s"><span class="hidden_txt">기부확인증 바로가기</span></span>
+                        </div>
+                    </a>
+                    <a class="wrap_items right_list" th:href="@{'http://localhost:8082/honor/certificates'}">
+                        <div class="top_area">
+                            <span class="link_tit"><span>기부혜택증</span><span>(지자체별)</span></span>
+                            <span class="round-illustBtn_s"><span class="hidden_txt">기부혜택증 (지자체별) 바로가기</span></span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 관심정보 - AS-IS 원본도 이 줄에는 half_con이 하나뿐이라(짝이 없음) 절반 너비만 차지한다 -->
+        <div class="row_con flex">
+            <div class="half_con intrst">
+                <h3 class="deepSubBlue">관심정보</h3>
+                <div class="con_wrap">
+                    <a class="wrap_items left_list" th:href="@{'http://localhost:8082/interest-locgovs'}">
+                        <div class="top_area">
+                            <span class="link_tit"><span>관심지자체</span></span>
+                            <span class="round-illustBtn_s"><span class="hidden_txt">관심지자체 바로가기</span></span>
+                        </div>
+                        <div class="data_area">
+                            <span class="data_val count" th:text="${#lists.size(interestLocgovs)}"></span>
+                            <span class="unit">건</span>
+                        </div>
+                    </a>
+                    <a class="wrap_items right_list" th:href="@{'http://localhost:8084/wishlist'}">
+                        <div class="top_area">
+                            <span class="link_tit"><span>관심답례품</span></span>
+                            <span class="round-illustBtn_s"><span class="hidden_txt">관심답례품 바로가기</span></span>
+                        </div>
+                        <div class="data_area">
+                            <span class="data_val count" th:text="${giftSummary.wishlistCount}"></span>
+                            <span class="unit">건</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 답례품 -->
+        <div class="row_con">
+            <h3 class="deepSubBlue">답례품</h3>
+            <div class="con_wrap goods">
+                <a class="wrap_items" th:href="@{'http://localhost:8085/my'}">
+                    <div class="top_area"><span class="items_label">주문조회</span></div>
+                    <div class="data_area">
+                        <span class="data_val count" th:text="${orderSummary.orderCount}"></span>
+                        <span class="unit">건</span>
+                    </div>
+                </a>
+                <a class="wrap_items" th:href="@{'http://localhost:8085/claims/my'}">
+                    <div class="top_area"><span class="items_label">취소반품교환</span></div>
+                    <div class="data_area">
+                        <span class="data_val count" th:text="${orderSummary.claimCount}"></span>
+                        <span class="unit">건</span>
+                    </div>
+                </a>
+                <a class="wrap_items" th:href="@{'http://localhost:8084/my/reviews'}">
+                    <div class="top_area"><span class="items_label">답례품 후기</span></div>
+                    <div class="data_area"><span class="data_val count" th:text="${giftSummary.reviewCount}"></span><span class="unit">건</span></div>
+                </a>
+                <a class="wrap_items" th:href="@{'http://localhost:8084/my/qna'}">
+                    <div class="top_area"><span class="items_label">답례품Q&amp;A</span></div>
+                    <div class="data_area"><span class="data_val count" th:text="${giftSummary.inquiryCount}"></span><span class="unit">건</span></div>
+                </a>
+                <a class="wrap_items" th:href="@{/delivery}">
+                    <div class="top_area"><span class="items_label">배송지 관리</span></div>
+                    <div class="data_area"><span class="data_val count" th:text="${deliveryCount}"></span><span class="unit">건</span></div>
+                </a>
+                <a class="wrap_items" th:href="@{'http://localhost:8085/my/coupons'}">
+                    <div class="top_area"><span class="items_label">쿠폰함</span></div>
+                    <div class="data_area"><span class="data_val count" th:text="${orderSummary.usableCouponCount}"></span><span class="unit">건</span></div>
+                </a>
+            </div>
+        </div>
+
+        <!-- 회원정보수정 & 1:1 문의 -->
+        <div class="row_con flex cols3">
+            <a class="wrap_items cursor" th:href="@{/profile}">
+                <span class="link_tit"><span class="deepSubBlue">회원정보수정</span></span>
+                <span class="round-illustBtn_s"><span class="hidden_txt">회원정보수정 바로가기</span></span>
+            </a>
+            <a class="wrap_items cursor" th:href="@{'http://localhost:8086/qna'}">
+                <span class="link_tit"><span class="deepSubBlue">1:1 문의</span></span>
+                <span class="round-illustBtn_s"><span class="hidden_txt">일대일 문의 바로가기</span></span>
+            </a>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+</body>
+</html>

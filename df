@@ -1,0 +1,141 @@
+warning: in the working copy of 'admin/src/main/java/com/ghlove/admin/service/RepresentativeBannerService.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/access/list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/admin/access-denied.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/admin/my-cert.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/auth/cert-login.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/batch-job/list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/batch/nh-export.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/brand/list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/codes/list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/codes/overview.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/content/banner-list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/content/popup-form.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/coupon/list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/coupon/offline-codes.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/coupon/regular-list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/coupon/target-items.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/coupon/target-users.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/coupon/usage.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/delivery-tracking.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/designated/analysis.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/email/detail.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/email/list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/fragments/footer.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/give/give-operation-list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/give/give-point-detail.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/give/give-point-list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/give/give-reqmng-list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/give/give-state-detail.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/give/give-statistics.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/isms-config/list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/log/levy-list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/log/login-list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/log/manager-action-list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/log/user-action-list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/log/user-login-list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/mail-config/list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/offgive/list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/policy/list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/qna-admin/list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/reconciliation/order-point.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/seller/list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/settlements/list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/no-user.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/report-general-total.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/report-general.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/report-year.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/sales-area-detail.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/sales-area.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/sales-brand-detail.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/sales-brand.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/sales-categories.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/sales-item-day.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/sales-item-detail.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/sales-item.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/sales-locgov-detail.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/sales-locgov.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/sales-month-locgov.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/sales-nh-item-sales.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/sales-no-sales.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/sales-period.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/sales-seller.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/sales-user-detail.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/sales-user.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'admin/src/main/resources/templates/shop-statistics/wish-list.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'donation/src/main/java/com/ghlove/donation/domain/Locgov.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'gift/src/main/java/com/ghlove/gift/repository/CommonCodeRepository.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'gift/src/main/java/com/ghlove/gift/repository/GiftSubcategoryItemRepository.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'gift/src/main/java/com/ghlove/gift/repository/GiftSubcategoryRepository.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'gift/src/main/resources/static/css/default_ali.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'gift/src/main/resources/templates/detail.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'infra/kong/kong-local.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'member/src/main/java/com/ghlove/member/web/AuthController.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'member/src/main/resources/templates/find-idpw.html', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/.claude/scheduled_tasks.lock b/.claude/scheduled_tasks.lock[m
+[1mindex 28cc196..aed0828 100644[m
+[1m--- a/.claude/scheduled_tasks.lock[m
+[1m+++ b/.claude/scheduled_tasks.lock[m
+[36m@@ -1 +1 @@[m
+[31m-{"sessionId":"4d398d89-1a49-4891-a123-9e091ac6c584","pid":49004,"procStart":"134311575439659208","acquiredAt":1787032671415}[m
+\ No newline at end of file[m
+[32m+[m[32m{"sessionId":"71b16a2f-d99d-43ca-9918-e54b2afab668","pid":24796,"procStart":"134328661054732767","acquiredAt":1788392915366}[m
+\ No newline at end of file[m
+[1mdiff --git a/admin/src/main/java/com/ghlove/admin/config/WebConfig.java b/admin/src/main/java/com/ghlove/admin/config/WebConfig.java[m
+[1mindex 32885bb..19e71ce 100644[m
+[1m--- a/admin/src/main/java/com/ghlove/admin/config/WebConfig.java[m
+[1m+++ b/admin/src/main/java/com/ghlove/admin/config/WebConfig.java[m
+[36m@@ -43,9 +43,23 @@[m [mpublic class WebConfig implements WebMvcConfigurer {[m
+                         "/log/**", "/privacy-log/**", "/admin/my-cert", "/admin/my-cert/**",[m
+                         "/mail-config", "/mail-config/**", "/isms-config", "/isms-config/**",[m
+                         "/email", "/email/**", "/batch-job", "/batch-job/**",[m
+[31m-                        "/site-config", "/policy", "/policy/**", "/community/**",[m
+[32m+[m[32m                        "/site-config", "/site-config/**", "/policy", "/policy/**", "/community/**",[m
+                         "/seller", "/seller/**", "/brand", "/brand/**",[m
+[31m-                        "/coupon", "/coupon/**", "/coupon-regular", "/coupon-regular/**")[m
+[32m+[m[32m                        "/coupon", "/coupon/**", "/coupon-regular", "/coupon-regular/**",[m
+[32m+[m[32m                        "/admin/orders", "/admin/orders/**", "/admin/claims", "/admin/claims/**",[m
+[32m+[m[32m                        "/admin/locgovs", "/admin/locgovs/**",[m
+[32m+[m[32m                        "/admin/data-board", "/admin/data-board/**", "/admin/menus", "/admin/menus/**",[m
+[32m+[m[32m                        "/admin/search-keywords", "/admin/search-keywords/**", "/admin/seo", "/admin/seo/**",[m
+[32m+[m[32m                        "/admin/managers", "/admin/managers/**", "/admin/members", "/admin/members/**",[m
+[32m+[m[32m                        "/admin/secede-users", "/admin/secede-users/**", "/admin/sleep-users", "/admin/sleep-users/**",[m
+[32m+[m[32m                        "/admin/gift-categories", "/admin/gift-categories/**", "/admin/gift-items", "/admin/gift-items/**",[m
+[32m+[m[32m                        "/admin/main-banners", "/admin/main-banners/**", "/admin",[m
+[32m+[m[32m                        "/admin/style-books", "/admin/style-books/**",[m
+[32m+[m[32m                        "/admin/main-display",[m
+[32m+[m[32m                        "/admin/person-in-charge", "/admin/person-in-charge/**",[m
+[32m+[m[32m                        "/admin/off-person-in-charge", "/admin/off-person-in-charge/**",[m
+[32m+[m[32m                        "/admin/roles", "/admin/roles/**",[m
+[32m+[m[32m                        "/admin/user-levels", "/admin/user-levels/**")[m
+                 .excludePathPatterns("/admin/login", "/admin/logout",[m
+                         "/admin/manager-requests/new", "/admin/manager-requests/complete");[m
+     }[m
+[1mdiff --git a/admin/src/main/java/com/ghlove/admin/domain/Banner.java b/admin/src/main/java/com/ghlove/admin/domain/Banner.java[m
+[1mindex d4c304c..5385d0d 100644[m
+[1m--- a/admin/src/main/java/com/ghlove/admin/domain/Banner.java[m
+[1m+++ b/admin/src/main/java/com/ghlove/admin/domain/Banner.java[m
+[36m@@ -5,8 +5,6 @@[m [mimport lombok.Getter;[m
+ import lombok.NoArgsConstructor;[m
+ import lombok.Setter;[m
+ [m
+[31m-import java.time.LocalDateTime;[m
+[31m-[m
+ /** 메인 배너. Maps a subset of the AS-IS OP_MAIN_BANNER columns (이미지는 업로드가 아니라[m
+  *  이미 static 리소스로 배포된 AS-IS 배너 이미지 경로를 그대로 참조한다). */[m
+ @Entity[m
+[36m@@ -40,6 +38,10 @@[m [mpublic class Banner {[m
+     @Column(name = "DISPLAY_FLAG")[m
+     private String displayFlag;[m
+ [m
+[32m+[m[32m    /** yyyyMMddHHmmss - DB 컬럼이 VARCHAR(14)인 AS-IS 관례(다른 콘텐츠 엔티티들과 동일).[m
+[32m+[m[32m     *  실제로 발견한 버그: 이 필드가 예전엔 LocalDateTime으로 잘못 매핑돼 있어서 배너[m
+[32m+[m[32m     *  등록(createBanner) 자체가 매번 타입 불일치로 실패하고 있었다 - 메인화면에[m
+[32m+[m[32m     *  배너가 하나도 안 쌓여있던(=슬라이드가 안 보이던) 진짜 원인. */[m
+     @Column(name = "CREATED_DATE")[m
+[31m-    private LocalDateTime createdDate;[m
+[32m+[m[32m    private String createdDate;[m
+ }[m
+[1mdiff --git a/admin/src/main/java/com/ghlove/admin/domain/DataBoard.java b/admin/src/main/java/com/ghlove/admin/domain/DataBoard.java[m
+[1mindex e32afed..5e912ef 100644[m
+[1m--- a/admin/src/main/java/com/ghlove/admin/domain/DataBoard.java[m
+[1m+++ b/admin/src/main/java/com/ghlove/adm

@@ -71,7 +71,9 @@ public class ReviewService {
         review.setSellerId(sellerId);
         review.setUserId(userId);
         review.setUserName(userName);
-        review.setOrderCode(orderCode);
+        // ORDER_CODE는 DB에 NOT NULL DEFAULT '0'이지만, Hibernate가 null을 명시적으로 바인딩하면
+        // DEFAULT가 적용되지 않고 그대로 제약조건 위반이 난다 - 리뷰를 실제로 등록해보다가 발견함.
+        review.setOrderCode(orderCode == null || orderCode.isBlank() ? "0" : orderCode);
         review.setSubject(subject);
         review.setContent(content);
         review.setScore(score);

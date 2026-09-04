@@ -1,0 +1,1861 @@
+.contents-wrap {
+    /* margin-bottom: 70px; */
+}
+
+.contents-wrap .map-wrapper {
+    padding: 60px 80px;
+}
+
+.contents-wrap .map-selected-txt {
+    font-size: 22px;
+    margin-bottom: calc(var(--margin-padding-8)*2);
+    color: var(--gray3);
+}
+
+.contents-wrap .map-selected-txt img {
+    transform: translateY(-3px);
+}
+
+.map-select-area {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.m-use-info {
+    display: none;
+    line-height: 1.5em;
+}
+
+.map-select-area .map-box {
+    text-align: center;
+}
+
+/* 왼쪽 지도 박스 - 시·도*/
+.map-select-area .map-country {
+    position: relative;
+    background-image: url('/static/images/map/cli-map_all.png');
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: 530px;
+    min-width: 530px;
+    height: 500px;
+}
+
+/************** 지도 핀 ****************/
+.map-select-area .point-mark {
+    position: absolute;
+    width: 19px;
+    height: 25px;
+    background-image: url('/static/images/icon/cli-map_pin.png');
+    background-repeat: no-repeat;
+    background-position: center right;
+}
+
+.map-select-area .point-mark:hover,
+.map-select-area .point-mark.currentPin {
+    background-image: url('/static/images/icon/cli-map_pin-on.png');
+}
+
+/* ****************시,도 핀 위치 ********************* */
+.map-select-area .map-country #mark_1100 {
+    top: 88px;
+    left: 215px;
+}
+
+.map-select-area .map-country #mark_2600 {
+    top: 340px;
+    left: 360px;
+}
+
+.map-select-area .map-country #mark_2700 {
+    top: 271px;
+    left: 324px;
+}
+
+.map-select-area .map-country #mark_2800 {
+    top: 115px;
+    left: 170px;
+    /* width: 110px;
+    color: var(--gray3);
+    line-height: 25px;
+    text-shadow: 0 0 3px #fff;
+    font-size: 14px;
+    letter-spacing: 0; */
+}
+
+.map-select-area .map-country #mark_2900 {
+    top: 345px;
+    left: 185px;
+}
+
+.map-select-area .map-country #mark_3000 {
+    top: 230px;
+    left: 226px;
+}
+
+.map-select-area .map-country #mark_3100 {
+    top: 310px;
+    left: 375px;
+}
+
+.map-select-area .map-country #mark_4100 {
+    top: 140px;
+    left: 240px;
+}
+
+.map-select-area .map-country #mark_4200 {
+    top: 73px;
+    left: 300px;
+}
+
+.map-select-area .map-country #mark_4300 {
+    top: 157px;
+    left: 268px;
+}
+
+.map-select-area .map-country #mark_4400 {
+    top: 210px;
+    left: 185px;
+}
+
+.map-select-area .map-country #mark_4500 {
+    top: 277px;
+    left: 215px;
+}
+
+.map-select-area .map-country #mark_4600 {
+    top: 374px;
+    left: 160px;
+}
+
+.map-select-area .map-country #mark_4700 {
+    top: 215px;
+    left: 335px;
+}
+
+.map-select-area .map-country #mark_4800 {
+    top: 320px;
+    left: 295px;
+}
+
+.map-select-area .map-country #mark_5000 {
+    top: 255px;
+    left: 65px;
+}
+
+.map-select-area .map-country #mark_3600 {
+    top: 199px;
+    left: 213px;
+}
+
+.map-select-area .map-country .target-name {
+    display: none;
+}
+
+/* 오른쪽 지도 박스 - 시·군·구 */
+.map-select-area .map-region.none {
+    background-image: none;
+}
+
+.map-select-area .map-region {
+    position: relative;
+    background-repeat: no-repeat;
+    background-position: center center;
+    min-width: 530px;
+    height: 500px;
+    background-color: var(--gray5);
+    display: none;
+}
+
+.map-select-area .map-region.none {
+    background-color: #fff;
+    background-image: url('/static/images/map/cli-map_region-none.png');
+    display: block;
+}
+
+/* 서울 */
+.map-select-area .map-region.region11000 {
+    background-image: url('/static/images/map/cli-map_region11.png');
+}
+
+/* 부산 */
+.map-select-area .map-region.region26000 {
+    background-image: url('/static/images/map/cli-map_region26.png');
+}
+
+/* 대구광역시 */
+.map-select-area .map-region.region27000 {
+    background-image: url('/static/images/map/cli-map_region27.png');
+}
+
+/* 인천 */
+.map-select-area .map-region.region28000 {
+    background-image: url('/static/images/map/cli-map_region28.png');
+}
+
+/* 광주광역시 */
+.map-select-area .map-region.region29000 {
+    background-image: url('/static/images/map/cli-map_region29.png');
+}
+
+/* 대전광역시 */
+.map-select-area .map-region.region30000 {
+    background-image: url('/static/images/map/cli-map_region30.png');
+}
+
+/* 울산광역시 */
+.map-select-area .map-region.region31000 {
+    background-image: url('/static/images/map/cli-map_region31.png');
+}
+
+/* 경기 */
+.map-select-area .map-region.region41000 {
+    background-image: url('/static/images/map/cli-map_region41.png');
+}
+
+/* 강원 */
+.map-select-area .map-region.region42000 {
+    background-image: url('/static/images/map/cli-map_region42.png');
+}
+
+/* 충청븍도 */
+.map-select-area .map-region.region43000 {
+    background-image: url('/static/images/map/cli-map_region43.png');
+}
+
+/* 충청남도 */
+.map-select-area .map-region.region44000 {
+    background-image: url('/static/images/map/cli-map_region44.png');
+}
+
+/* 전라북도 */
+.map-select-area .map-region.region45000 {
+    background-image: url('/static/images/map/cli-map_region45.png');
+}
+
+/* 전라남도 */
+.map-select-area .map-region.region46000 {
+    background-image: url('/static/images/map/cli-map_region46.png');
+}
+
+/* 경상북도 */
+.map-select-area .map-region.region47000 {
+    background-image: url('/static/images/map/cli-map_region47.png');
+}
+
+/* 경상남도 */
+.map-select-area .map-region.region48000 {
+    background-image: url('/static/images/map/cli-map_region48.png');
+}
+
+/* 제주특별자치도 */
+.map-select-area .map-region.region50000 {
+    background-image: url('/static/images/map/cli-map_region50.png');
+}
+
+/* 세종특별자치도 */
+.map-select-area .map-region.region36000 {
+    background-image: url('/static/images/map/cli-map_region60.png');
+}
+
+/* ****************시·군·구 핀 위치 ********************* */
+
+.map-select-area .map-region .r_head {
+    left: 20px;
+    top: 20px;
+    width: 85px;
+    height: 56px;
+    color: var(--gray2);
+    text-shadow: 0 0 3px #fff;
+    font-size: 16px;
+    background-position: 16px center;
+    font-weight: 500;
+    background-color: #fff;
+    padding: 10px 20px;
+    border: 1px solid var(--gray4);
+}
+
+.map-select-area .map-region .r_head span {
+    display: block;
+    transform: translate(10px, 6px);
+}
+
+/* 서울 11000 ~ */
+.map-select-area .map-region #mark_11110 {
+    top: 178px;
+    left: 252px;
+}
+
+.map-select-area .map-region #mark_11140 {
+    top: 225px;
+    left: 280px;
+}
+
+.map-select-area .map-region #mark_11170 {
+    top: 265px;
+    left: 262px;
+}
+
+.map-select-area .map-region #mark_11200 {
+    top: 238px;
+    left: 333px;
+}
+
+.map-select-area .map-region #mark_11215 {
+    top: 245px;
+    left: 383px;
+}
+
+.map-select-area .map-region #mark_11230 {
+    top: 193px;
+    left: 349px;
+}
+
+.map-select-area .map-region #mark_11260 {
+    top: 170px;
+    left: 390px;
+}
+
+.map-select-area .map-region #mark_11290 {
+    top: 165px;
+    left: 305px;
+}
+
+.map-select-area .map-region #mark_11305 {
+    top: 112px;
+    left: 297px;
+}
+
+.map-select-area .map-region #mark_11320 {
+    top: 63px;
+    left: 324px;
+}
+
+.map-select-area .map-region #mark_11350 {
+    top: 115px;
+    left: 374px;
+}
+
+.map-select-area .map-region #mark_11380 {
+    top: 142px;
+    left: 206px;
+}
+
+.map-select-area .map-region #mark_11410 {
+    top: 200px;
+    left: 210px;
+}
+
+.map-select-area .map-region #mark_11440 {
+    top: 218px;
+    left: 170px;
+}
+
+.map-select-area .map-region #mark_11470 {
+    top: 292px;
+    left: 106px;
+}
+
+.map-select-area .map-region #mark_11500 {
+    top: 219px;
+    left: 90px;
+}
+
+.map-select-area .map-region #mark_11530 {
+    top: 318px;
+    left: 118px;
+}
+
+.map-select-area .map-region #mark_11545 {
+    top: 363px;
+    left: 167px;
+}
+
+.map-select-area .map-region #mark_11560 {
+    top: 275px;
+    left: 189px;
+}
+
+.map-select-area .map-region #mark_11590 {
+    top: 304px;
+    left: 230px;
+}
+
+.map-select-area .map-region #mark_11620 {
+    top: 360px;
+    left: 224px;
+}
+
+.map-select-area .map-region #mark_11650 {
+    top: 334px;
+    left: 299px;
+}
+
+.map-select-area .map-region #mark_11680 {
+    top: 310px;
+    left: 341px;
+}
+
+.map-select-area .map-region #mark_11710 {
+    top: 300px;
+    left: 406px;
+}
+
+.map-select-area .map-region #mark_11740 {
+    top: 236px;
+    left: 450px;
+}
+
+/* 부산 26000 ~ */
+.map-select-area .map-region #mark_26110 {
+    top: 305px;
+    left: 265px;
+}
+
+.map-select-area .map-region #mark_26140 {
+    top: 290px;
+    left: 238px;
+}
+
+.map-select-area .map-region #mark_26170 {
+    top: 278px;
+    left: 277px;
+}
+
+.map-select-area .map-region #mark_26200 {
+    top: 325px;
+    left: 295px;
+}
+
+.map-select-area .map-region #mark_26230 {
+    top: 238px;
+    left: 268px;
+}
+
+.map-select-area .map-region #mark_26260 {
+    top: 198px;
+    left: 284px;
+}
+
+.map-select-area .map-region #mark_26290 {
+    top: 281px;
+    left: 311px;
+}
+
+.map-select-area .map-region #mark_26320 {
+    top: 178px;
+    left: 250px;
+}
+
+.map-select-area .map-region #mark_26350 {
+    top: 214px;
+    left: 357px;
+}
+
+.map-select-area .map-region #mark_26380 {
+    top: 314px;
+    left: 215px;
+}
+
+.map-select-area .map-region #mark_26410 {
+    top: 148px;
+    left: 303px;
+}
+
+.map-select-area .map-region #mark_26440 {
+    top: 254px;
+    left: 167px;
+}
+
+.map-select-area .map-region #mark_26470 {
+    top: 226px;
+    left: 314px;
+}
+
+.map-select-area .map-region #mark_26500 {
+    top: 255px;
+    left: 332px;
+}
+
+.map-select-area .map-region #mark_26530 {
+    top: 248px;
+    left: 223px;
+}
+
+.map-select-area .map-region #mark_26710 {
+    top: 114px;
+    left: 390px;
+}
+
+/* 대구 27000 ~ */
+.map-select-area .map-region #mark_27110 {
+    top: 164px;
+    left: 283px;
+}
+
+.map-select-area .map-region #mark_27140 {
+    top: 82px;
+    left: 364px;
+}
+
+.map-select-area .map-region #mark_27170 {
+    top: 146px;
+    left: 243px;
+}
+
+.map-select-area .map-region #mark_27200 {
+    top: 190px;
+    left: 276px;
+}
+
+.map-select-area .map-region #mark_27230 {
+    top: 90px;
+    left: 270px;
+}
+
+.map-select-area .map-region #mark_27260 {
+    top: 198px;
+    left: 340px;
+}
+
+.map-select-area .map-region #mark_27290 {
+    top: 198px;
+    left: 224px;
+}
+
+.map-select-area .map-region #mark_27710 {
+    top: 298px;
+    left: 195px;
+}
+
+
+
+/* 인천 28000 ~ */
+.map-select-area .map-region #mark_28110 {
+    top: 220px;
+    left: 317px;
+}
+
+.map-select-area .map-region #mark_28140 {
+    top: 198px;
+    left: 360px;
+}
+
+.map-select-area .map-region #mark_28177 {
+    top: 230px;
+    left: 390px;
+}
+
+.map-select-area .map-region #mark_28185 {
+    top: 262px;
+    left: 384px;
+}
+
+.map-select-area .map-region #mark_28200 {
+    top: 252px;
+    left: 410px;
+}
+
+.map-select-area .map-region #mark_28237 {
+    top: 215px;
+    left: 410px;
+}
+
+.map-select-area .map-region #mark_28245 {
+    top: 184px;
+    left: 418px;
+}
+
+.map-select-area .map-region #mark_28260 {
+    top: 165px;
+    left: 390px;
+}
+
+.map-select-area .map-region #mark_28710 {
+    top: 118px;
+    left: 320px;
+}
+
+.map-select-area .map-region #mark_28720 {
+    top: 310px;
+    left: 322px;
+}
+
+/* 광주 29000 ~ */
+.map-select-area .map-region #mark_29110 {
+    top: 282px;
+    left: 405px;
+}
+
+.map-select-area .map-region #mark_29140 {
+    top: 245px;
+    left: 280px;
+}
+
+.map-select-area .map-region #mark_29155 {
+    top: 315px;
+    left: 285px;
+}
+
+.map-select-area .map-region #mark_29170 {
+    top: 151px;
+    left: 358px;
+}
+
+.map-select-area .map-region #mark_29200 {
+    top: 197px;
+    left: 149px;
+}
+
+/* 대전 30000 ~ */
+.map-select-area .map-region #mark_30110 {
+    top: 242px;
+    left: 334px;
+}
+
+.map-select-area .map-region #mark_30140 {
+    top: 295px;
+    left: 260px;
+}
+
+.map-select-area .map-region #mark_30170 {
+    top: 313px;
+    left: 181px;
+}
+
+.map-select-area .map-region #mark_30200 {
+    top: 168px;
+    left: 172px;
+}
+
+.map-select-area .map-region #mark_30230 {
+    top: 117px;
+    left: 300px;
+}
+
+/* 울산 31000 ~ */
+.map-select-area .map-region #mark_31110 {
+    top: 168px;
+    left: 339px;
+}
+
+.map-select-area .map-region #mark_31140 {
+    top: 230px;
+    left: 362px;
+}
+
+.map-select-area .map-region #mark_31170 {
+    top: 211px;
+    left: 445px;
+}
+
+.map-select-area .map-region #mark_31200 {
+    top: 124px;
+    left: 406px;
+}
+
+.map-select-area .map-region #mark_31710 {
+    top: 177px;
+    left: 214px;
+}
+
+
+/* 경기 41000 ~ */
+.map-select-area .map-region #mark_41110 {
+    top: 333px;
+    left: 235px;
+}
+
+.map-select-area .map-region #mark_41130 {
+    top: 282px;
+    left: 260px;
+}
+
+.map-select-area .map-region #mark_41150 {
+    top: 185px;
+    left: 245px;
+}
+
+.map-select-area .map-region #mark_41210 {
+    top: 263px;
+    left: 187px;
+}
+
+.map-select-area .map-region #mark_41190 {
+    top: 242px;
+    left: 168px;
+}
+
+.map-select-area .map-region #mark_41170 {
+    top: 286px;
+    left: 213px;
+}
+
+.map-select-area .map-region #mark_41220 {
+    top: 410px;
+    left: 224px;
+}
+
+.map-select-area .map-region #mark_41250 {
+    top: 104px;
+    left: 247px;
+}
+
+.map-select-area .map-region #mark_41270 {
+    top: 316px;
+    left: 172px;
+}
+
+.map-select-area .map-region #mark_41280 {
+    top: 191px;
+    left: 181px;
+}
+
+.map-select-area .map-region #mark_41290 {
+    top: 275px;
+    left: 231px;
+}
+
+.map-select-area .map-region #mark_41310 {
+    top: 226px;
+    left: 264px;
+}
+
+.map-select-area .map-region #mark_41360 {
+    top: 210px;
+    left: 288px;
+}
+
+.map-select-area .map-region #mark_41370 {
+    top: 370px;
+    left: 241px;
+}
+
+.map-select-area .map-region #mark_41390 {
+    top: 296px;
+    left: 156px;
+}
+
+.map-select-area .map-region #mark_41410 {
+    top: 311px;
+    left: 200px;
+}
+
+.map-select-area .map-region #mark_41430 {
+    top: 305px;
+    left: 227px;
+}
+
+.map-select-area .map-region #mark_41450 {
+    top: 246px;
+    left: 287px;
+}
+
+.map-select-area .map-region #mark_41460 {
+    top: 338px;
+    left: 292px;
+}
+
+.map-select-area .map-region #mark_41480 {
+    top: 137px;
+    left: 177px;
+}
+
+.map-select-area .map-region #mark_41500 {
+    top: 330px;
+    left: 343px;
+}
+
+.map-select-area .map-region #mark_41550 {
+    top: 405px;
+    left: 303px;
+}
+
+.map-select-area .map-region #mark_41570 {
+    top: 181px;
+    left: 123px;
+}
+
+.map-select-area .map-region #mark_41590 {
+    top: 365px;
+    left: 200px;
+}
+
+.map-select-area .map-region #mark_41610 {
+    top: 289px;
+    left: 325px;
+}
+
+.map-select-area .map-region #mark_41630 {
+    top: 145px;
+    left: 230px;
+}
+
+.map-select-area .map-region #mark_41650 {
+    top: 90px;
+    left: 296px;
+}
+
+.map-select-area .map-region #mark_41670 {
+    top: 315px;
+    left: 395px;
+}
+
+.map-select-area .map-region #mark_41800 {
+    top: 55px;
+    left: 236px;
+}
+
+.map-select-area .map-region #mark_41820 {
+    top: 144px;
+    left: 340px;
+}
+
+.map-select-area .map-region #mark_41830 {
+    top: 244px;
+    left: 377px;
+}
+
+/* 강원 42000 ~ */
+.map-select-area .map-region #mark_42110 {
+    top: 200px;
+    left: 151px;
+}
+
+.map-select-area .map-region #mark_42130 {
+    top: 354px;
+    left: 187px;
+}
+
+.map-select-area .map-region #mark_42150 {
+    top: 238px;
+    left: 405px;
+}
+
+.map-select-area .map-region #mark_42170 {
+    top: 300px;
+    left: 438px;
+}
+
+.map-select-area .map-region #mark_42190 {
+    top: 397px;
+    left: 418px;
+}
+
+.map-select-area .map-region #mark_42210 {
+    top: 134px;
+    left: 310px;
+}
+
+.map-select-area .map-region #mark_42230 {
+    top: 360px;
+    left: 453px;
+}
+
+.map-select-area .map-region #mark_42720 {
+    top: 235px;
+    left: 220px;
+}
+
+.map-select-area .map-region #mark_42730 {
+    top: 293px;
+    left: 231px;
+}
+
+.map-select-area .map-region #mark_42750 {
+    top: 378px;
+    left: 303px;
+}
+
+.map-select-area .map-region #mark_42760 {
+    top: 290px;
+    left: 304px;
+}
+
+.map-select-area .map-region #mark_42770 {
+    top: 336px;
+    left: 360px;
+}
+
+.map-select-area .map-region #mark_42780 {
+    top: 105px;
+    left: 76px;
+}
+
+.map-select-area .map-region #mark_42790 {
+    top: 134px;
+    left: 139px;
+}
+
+.map-select-area .map-region #mark_42800 {
+    top: 125px;
+    left: 204px;
+}
+
+.map-select-area .map-region #mark_42810 {
+    top: 150px;
+    left: 263px;
+}
+
+.map-select-area .map-region #mark_42820 {
+    top: 68px;
+    left: 290px;
+}
+
+.map-select-area .map-region #mark_42830 {
+    top: 174px;
+    left: 338px;
+}
+
+/* 충청북도 43000 */
+.map-select-area .map-region #mark_43110 {
+    top: 215px;
+    left: 143px;
+}
+
+.map-select-area .map-region #mark_43130 {
+    top: 78px;
+    left: 254px;
+}
+
+.map-select-area .map-region #mark_43150 {
+    top: 80px;
+    left: 332px;
+}
+
+.map-select-area .map-region #mark_43720 {
+    top: 260px;
+    left: 210px;
+}
+
+.map-select-area .map-region #mark_43730 {
+    top: 325px;
+    left: 189px;
+}
+
+.map-select-area .map-region #mark_43740 {
+    top: 384px;
+    left: 232px;
+}
+
+.map-select-area .map-region #mark_43745 {
+    top: 170px;
+    left: 175px;
+}
+
+.map-select-area .map-region #mark_43750 {
+    top: 124px;
+    left: 128px;
+}
+
+.map-select-area .map-region #mark_43760 {
+    top: 165px;
+    left: 246px;
+}
+
+.map-select-area .map-region #mark_43770 {
+    top: 96px;
+    left: 175px;
+}
+
+.map-select-area .map-region #mark_43800 {
+    top: 85px;
+    left: 392px;
+}
+
+
+/* 충청남도 44000~ */
+.map-select-area .map-region #mark_44130 {
+    top: 115px;
+    left: 370px;
+}
+
+.map-select-area .map-region #mark_44150 {
+    top: 231px;
+    left: 327px;
+}
+
+.map-select-area .map-region #mark_44180 {
+    top: 293px;
+    left: 190px;
+}
+
+.map-select-area .map-region #mark_44200 {
+    top: 118px;
+    left: 299px;
+}
+
+.map-select-area .map-region #mark_44210 {
+    top: 132px;
+    left: 151px;
+}
+
+.map-select-area .map-region #mark_44230 {
+    top: 340px;
+    left: 350px;
+}
+
+.map-select-area .map-region #mark_44250 {
+    top: 303px;
+    left: 371px;
+}
+
+.map-select-area .map-region #mark_44710 {
+    top: 368px;
+    left: 445px;
+}
+
+.map-select-area .map-region #mark_44760 {
+    top: 320px;
+    left: 265px;
+}
+
+.map-select-area .map-region #mark_44770 {
+    top: 364px;
+    left: 224px;
+}
+
+.map-select-area .map-region #mark_44790 {
+    top: 248px;
+    left: 258px;
+}
+
+.map-select-area .map-region #mark_44800 {
+    top: 204px;
+    left: 196px;
+}
+
+.map-select-area .map-region #mark_44810 {
+    top: 165px;
+    left: 255px;
+}
+
+.map-select-area .map-region #mark_44825 {
+    top: 123px;
+    left: 85px;
+}
+
+.map-select-area .map-region #mark_44270 {
+    top: 81px;
+    left: 206px;
+}
+
+/* 전라북도 45000 ~ */
+.map-select-area .map-region #mark_45110 {
+    top: 177px;
+    left: 263px;
+}
+
+.map-select-area .map-region #mark_45130 {
+    top: 130px;
+    left: 139px;
+}
+
+.map-select-area .map-region #mark_45140 {
+    top: 102px;
+    left: 221px;
+}
+
+.map-select-area .map-region #mark_45180 {
+    top: 264px;
+    left: 189px;
+}
+
+.map-select-area .map-region #mark_45190 {
+    top: 337px;
+    left: 360px;
+}
+
+.map-select-area .map-region #mark_45210 {
+    top: 184px;
+    left: 186px;
+}
+
+.map-select-area .map-region #mark_45710 {
+    top: 130px;
+    left: 295px;
+}
+
+.map-select-area .map-region #mark_45720 {
+    top: 178px;
+    left: 360px;
+}
+
+.map-select-area .map-region #mark_45730 {
+    top: 136px;
+    left: 450px;
+}
+
+.map-select-area .map-region #mark_45740 {
+    top: 244px;
+    left: 398px;
+}
+
+.map-select-area .map-region #mark_45750 {
+    top: 267px;
+    left: 296px;
+}
+
+.map-select-area .map-region #mark_45770 {
+    top: 340px;
+    left: 263px;
+}
+
+.map-select-area .map-region #mark_45790 {
+    top: 325px;
+    left: 96px;
+}
+
+.map-select-area .map-region #mark_45800 {
+    top: 233px;
+    left: 113px;
+}
+
+/* 전라남도 46000 */
+.map-select-area .map-region #mark_46110 {
+    top: 225px;
+    left: 155px;
+}
+
+.map-select-area .map-region #mark_46130 {
+    top: 224px;
+    left: 450px;
+}
+
+.map-select-area .map-region #mark_46150 {
+    top: 170px;
+    left: 384px;
+}
+
+.map-select-area .map-region #mark_46170 {
+    top: 168px;
+    left: 230px;
+}
+
+.map-select-area .map-region #mark_46230 {
+    top: 165px;
+    left: 450px;
+}
+
+.map-select-area .map-region #mark_46710 {
+    top: 80px;
+    left: 293px;
+}
+
+.map-select-area .map-region #mark_46720 {
+    top: 100px;
+    left: 361px;
+}
+
+.map-select-area .map-region #mark_46730 {
+    top: 95px;
+    left: 412px;
+}
+
+.map-select-area .map-region #mark_46770 {
+    top: 282px;
+    left: 368px;
+}
+
+.map-select-area .map-region #mark_46780 {
+    top: 217px;
+    left: 332px;
+}
+
+.map-select-area .map-region #mark_46790 {
+    top: 170px;
+    left: 302px;
+}
+
+.map-select-area .map-region #mark_46800 {
+    top: 252px;
+    left: 276px;
+}
+
+.map-select-area .map-region #mark_46810 {
+    top: 272px;
+    left: 241px;
+}
+
+.map-select-area .map-region #mark_46820 {
+    top: 302px;
+    left: 193px;
+}
+
+.map-select-area .map-region #mark_46830 {
+    top: 229px;
+    left: 205px;
+}
+
+.map-select-area .map-region #mark_46840 {
+    top: 177px;
+    left: 165px;
+}
+
+.map-select-area .map-region #mark_46860 {
+    top: 130px;
+    left: 180px;
+}
+
+.map-select-area .map-region #mark_46870 {
+    top: 85px;
+    left: 171px;
+}
+
+.map-select-area .map-region #mark_46880 {
+    top: 74px;
+    left: 242px;
+}
+
+.map-select-area .map-region #mark_46890 {
+    top: 356px;
+    left: 220px;
+}
+
+.map-select-area .map-region #mark_46900 {
+    top: 317px;
+    left: 118px;
+}
+
+.map-select-area .map-region #mark_46910 {
+    top: 150px;
+    left: 103px;
+}
+
+
+/* 경상북도 47000 ~ */
+.map-select-area .map-region #mark_47110 {
+    top: 278px;
+    left: 366px;
+}
+
+.map-select-area .map-region #mark_47130 {
+    top: 374px;
+    left: 360px;
+}
+
+.map-select-area .map-region #mark_47150 {
+    top: 300px;
+    left: 104px;
+}
+
+.map-select-area .map-region #mark_47170 {
+    top: 153px;
+    left: 252px;
+}
+
+.map-select-area .map-region #mark_47190 {
+    top: 268px;
+    left: 160px;
+}
+
+.map-select-area .map-region #mark_47210 {
+    top: 85px;
+    left: 212px;
+}
+
+.map-select-area .map-region #mark_47230 {
+    top: 318px;
+    left: 292px;
+}
+
+.map-select-area .map-region #mark_47250 {
+    top: 209px;
+    left: 97px;
+}
+
+.map-select-area .map-region #mark_47280 {
+    top: 127px;
+    left: 117px;
+}
+
+.map-select-area .map-region #mark_47290 {
+    top: 371px;
+    left: 266px;
+}
+
+.map-select-area .map-region #mark_47720 {
+    top: 274px;
+    left: 230px;
+}
+
+.map-select-area .map-region #mark_47730 {
+    top: 217px;
+    left: 213px;
+}
+
+.map-select-area .map-region #mark_47750 {
+    top: 216px;
+    left: 325px;
+}
+
+.map-select-area .map-region #mark_47760 {
+    top: 123px;
+    left: 336px;
+}
+
+.map-select-area .map-region #mark_47770 {
+    top: 189px;
+    left: 380px;
+}
+
+.map-select-area .map-region #mark_47820 {
+    top: 417px;
+    left: 252px;
+}
+
+.map-select-area .map-region #mark_47830 {
+    top: 399px;
+    left: 144px;
+}
+
+.map-select-area .map-region #mark_47840 {
+    top: 351px;
+    left: 131px;
+}
+
+.map-select-area .map-region #mark_47850 {
+    top: 318px;
+    left: 180px;
+}
+
+.map-select-area .map-region #mark_47900 {
+    top: 130px;
+    left: 174px;
+}
+
+.map-select-area .map-region #mark_47920 {
+    top: 57px;
+    left: 283px;
+}
+
+.map-select-area .map-region #mark_47930 {
+    top: 48px;
+    left: 373px;
+}
+
+.map-select-area .map-region #mark_47940 {
+    top: 52px;
+    left: 466px;
+}
+
+/* 경상남도 */
+.map-select-area .map-region #mark_48120 {
+    top: 217px;
+    left: 326px;
+}
+
+.map-select-area .map-region #mark_48170 {
+    top: 237px;
+    left: 192px;
+}
+
+.map-select-area .map-region #mark_48220 {
+    top: 340px;
+    left: 264px;
+}
+
+.map-select-area .map-region #mark_48240 {
+    top: 286px;
+    left: 180px;
+}
+
+.map-select-area .map-region #mark_48250 {
+    top: 212px;
+    left: 377px;
+}
+
+.map-select-area .map-region #mark_48270 {
+    top: 140px;
+    left: 358px;
+}
+
+.map-select-area .map-region #mark_48310 {
+    top: 342px;
+    left: 330px;
+}
+
+.map-select-area .map-region #mark_48330 {
+    top: 170px;
+    left: 429px;
+}
+
+.map-select-area .map-region #mark_48720 {
+    top: 170px;
+    left: 235px;
+}
+
+.map-select-area .map-region #mark_48730 {
+    top: 202px;
+    left: 276px;
+}
+
+.map-select-area .map-region #mark_48740 {
+    top: 134px;
+    left: 285px;
+}
+
+.map-select-area .map-region #mark_48820 {
+    top: 294px;
+    left: 233px;
+}
+
+.map-select-area .map-region #mark_48840 {
+    top: 375px;
+    left: 123px;
+}
+
+.map-select-area .map-region #mark_48850 {
+    top: 256px;
+    left: 104px;
+}
+
+.map-select-area .map-region #mark_48860 {
+    top: 180px;
+    left: 131px;
+}
+
+.map-select-area .map-region #mark_48870 {
+    top: 122px;
+    left: 88px;
+}
+
+.map-select-area .map-region #mark_48880 {
+    top: 63px;
+    left: 135px;
+}
+
+.map-select-area .map-region #mark_48890 {
+    top: 120px;
+    left: 195px;
+}
+
+/* 제주 50000 */
+.map-select-area .map-region #mark_50000 {
+    top: 217px;
+    left: 249px;
+}
+
+/* 세종 60000 */
+.map-select-area .map-region #mark_36000 {
+    top: 241px;
+    left: 249px;
+}
+
+
+
+/* **********tab ********************** */
+.map-info {
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.map-info .map-procedure {
+    /* margin-bottom: 60px; */
+}
+
+.map-info .map-info-introtxt {
+    line-height: 130px;
+    text-align: center;
+    min-height: 130px;
+    background-image: url('/static/images/cli-pc_map-procedure_txtbg.png');
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: contain;
+}
+
+.map-info .map-info-introtxt p {
+    font-size: 16px;
+    color: #00215A;
+}
+
+/* tab menu */
+.map-info .tab-container {
+    color: var(--gray3);
+    font-size: 14px;
+    line-height: 20px;
+    text-align: center;
+    position: relative;
+
+}
+
+.map-info .tab-container ul.tab-menu {
+    display: flex;
+    justify-content: flex-start;
+    /* gap: 30px; */
+}
+
+.tab-container ul.tab-menu li a {
+    font-size: 22px;
+    padding: 12px 25px;
+    display: block;
+    border-bottom: 2px solid var(--gray4);
+}
+
+.map-info .tab-container ul.tab-menu li a {
+    /* 
+    padding: 12px 0;
+    font-weight: bold; */
+
+    /* border-bottom: 2px solid var(--gray4); */
+}
+
+.map-info .tab-container ul.tab-menu li a {
+    font-weight: normal;
+}
+
+.map-info .tab-container ul.tab-menu li a.active {
+    /* background-color: #ccc; */
+    font-weight: bold;
+    color: var(--main-color2);
+    border-bottom: 2px solid var(--main-color2);
+}
+
+.map-info .tab-container .tab-content {
+    padding: 30px 0 0;
+    box-sizing: border-box;
+    /* display: none; */
+
+}
+
+.map-info .tab-container .tab-content .info-wrap {
+    display: flex;
+    justify-content: space-between;
+}
+
+.map-info .tab-container .tab-content .info-wrap .city-Info {
+    width: 49%;
+    text-align: left;
+}
+
+h3.seletedLoc {
+    font-size: 20px;
+    color: var(--gray2);
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.city-Info h3.seletedLoc+table {
+    margin-bottom: 20px;
+}
+
+.city_honor .honor_grade .grade_wrap,
+.city_honor .honor_grade,
+.city_honor {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+}
+.city_honor{
+    justify-content: flex-start;
+    gap: 20px;
+}
+.city_honor .honor_grade .grade_wrap {
+    font-weight: 700;
+    color: var(--gray2);
+}
+
+.city_honor img {
+    width: 40px;
+}
+
+.city-Info,
+.city-notice table {
+    margin-bottom: 30px;
+}
+
+.city-Info table th,
+.city-notice table th {
+    background-color: var(--gray5);
+    min-width: 90px;
+    color: var(--gray1);
+    /* font-weight: 400; */
+}
+
+.city-Info table th,
+.city-Info table td,
+.city-notice table th,
+.city-notice table td {
+    border: 1px solid var(--gray4);
+    padding: 10px 3%;
+}
+
+.city-notice table tr:nth-child(2) {
+    cursor: pointer;
+}
+
+.city-Info table tr td:first-child {
+    width: 25%;
+}
+
+.city-Info table tr td:nth-child(2) {
+    width: 75%;
+}
+
+.city-notice table tr td:first-child {
+    width: 25%;
+}
+
+.city-notice table tr .tb_tit {
+    width: 60%;
+    text-align: left;
+}
+
+.city-notice table tr .tb_dat {
+    width: 15%;
+}
+
+.city-notice_details table.notice_details {
+    margin-bottom: 30px;
+}
+
+.city-notice_details table.notice_details th,
+.city-notice_details table.notice_details td {
+    border: solid var(--gray4);
+    border-width: 1px 0;
+}
+
+.city-notice_details table.notice_details th {
+    font-size: 22px;
+    padding: 20px 40px;
+    line-height: 1.25em;
+    border-top: 2px solid var(--gray2);
+    background-color: var(--gray5);
+    color: var(--gray2);
+}
+
+.notice_details td {
+    text-align: left;
+    padding: 20px 40px;
+}
+
+.city-notice_details .btn-box {
+    margin-bottom: 0;
+}
+
+.map-info .tab-container .tab-content .info-wrap .city-Info .city-Info-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--gray2);
+    margin-bottom: calc(var(--margin-padding-8)*2) !important;
+}
+
+.city-Info-title.honor {
+    margin-bottom: 6px !important;
+}
+
+.map-info .tab-container .tab-content .info-wrap .city-Info .city-Info-txt {
+    padding: calc(var(--margin-padding-8)*3) calc(var(--margin-padding-8)*2);
+    border: 1px solid var(--gray4);
+    height: 330px;
+    overflow-x: hidden;
+    overflow-y: scroll;
+}
+
+.map-info .tab-container .tab-content .info-wrap .city-Info .city-Info-txt p {
+    white-space: pre-wrap;
+}
+
+.list-wrapper .btn-box,
+.map-wrapper .btn-box {
+    margin: 0;
+    padding-top: 50px;
+    justify-content: center;
+    clear: both;
+}
+
+.list-wrapper .btn-box button.formBtn.donation,
+.map-wrapper .btn-box button.formBtn.donation {
+    width: 300px;
+    height: 80px;
+    font-size: 36px;
+    font-weight: 700;
+    padding: 0;
+}
+
+.list-wrapper .btn-box button.formBtn.donation img,
+.map-wrapper .btn-box button.formBtn.donation img {
+    margin-right: 6px;
+    width: 82px;
+}
+
+.list-wrapper .btn-box button.formBtn.donation span,
+.map-wrapper .btn-box button.formBtn.donation span {
+    transform: translateY(2px);
+}
+
+#listContent {
+    position: relative;
+}
+
+#listContent .btn-box.tab-btn {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    margin-bottom: 0;
+    z-index: 900;
+}
+
+#locMall {
+    height: 800px;
+    overflow-x: hidden;
+    overflow-y: scroll;
+}
+
+@media screen and (max-width:1280px) {
+    .map-select-area {
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    /* tab contents */
+
+    .map-info .tab-container .tab-content .info-wrap {
+        flex-direction: column;
+    }
+
+    .map-info .tab-container .tab-content .info-wrap .city-Info {
+        width: 100%;
+    }
+
+    .map-info .tab-container .tab-content .info-wrap .city-Info {
+        margin-bottom: calc(var(--margin-padding-8)*4);
+    }
+
+    /* #listContent .btn-box.tab-btn {
+        position: absolute;
+        top: 40px;
+        right: 4%;
+    } */
+
+    /* .map-info .tab-container .tab-content .info-wrap .btn-box{
+        position: unset;
+        margin-bottom: 0;
+        align-self: flex-end;
+    } */
+}
+
+@media screen and (max-width:1030px) {
+    .s-contents{
+        padding: 60px;
+    }
+    .tab-container ul.tab-menu li a {
+        font-size: 18px;
+        padding: 4px 10px 12px;
+    }
+
+    .m-img.map-procedure {
+        width: 350px;
+    }
+
+}
+
+
+@media screen and (max-width:768px) {
+    .contents-wrap {
+        border-top: 0px solid var(--gray5);
+    }
+
+    .s-contents {
+        border: none;
+        box-shadow: none;
+        padding: 0px 0 30px;
+    }
+
+    /* .map-info .tab-container ul.tab-menu li{
+        flex: 1 1 auto;
+    } */
+    .map-info .tab-container ul.tab-menu li a {
+        font-size: 16px;
+        padding: 5px 10px;
+        letter-spacing: -2px;
+    }
+
+    .city_honor .honor_grade,
+    .city_honor .honor_grade .grade_wrap {
+        flex-direction: column;
+        gap: 0px;
+    }
+
+    .city_honor {
+        justify-content: center;
+        gap: 40px;
+    }
+
+    .city-Info-title.honor {
+        margin-bottom: 16px !important;
+    }
+
+    #listContent .btn-box.tab-btn {
+        position: unset;
+        justify-content: flex-end;
+        /* right: 80px;
+        margin-bottom: 0;
+        z-index: 900; */
+        padding-top: 20px;
+    }
+
+    .mb-none {
+        display: none;
+    }
+
+    .city-notice table.notice_details th {
+        font-size: 16px;
+    }
+
+    /* .list-wrapper .btn-box button.formBtn.donation,
+    .map-wrapper .btn-box button.formBtn.donation {
+        font-size: 24px;
+        padding: 12px 0;
+        height: unset;
+    }
+
+    .list-wrapper .btn-box button.formBtn.donation img,
+    .map-wrapper .btn-box button.formBtn.donation img {
+        width: 40px;
+    }
+
+    .list-wrapper .btn-box button.formBtn.donation span,
+    .map-wrapper .btn-box button.formBtn.donation span {
+        transform: translateY(2px);
+    } */
+
+}
+
+@media screen and (max-width:680px) {
+    .contents-wrap .map-wrapper {
+        padding: 30px;
+        margin-bottom: 100px;
+    }
+
+    .m-use-info {
+        display: block;
+    }
+
+    .contents-wrap.list-con,
+    .map-wrapper .btn-box,
+    .map-selected-txt,
+    .map-select-area,
+    .s-contents.map-info,
+    #emptyContent {
+        display: none;
+    }
+
+    .tab-container ul.tab-menu li a {
+        font-size: 18px;
+    }
+
+    .city-Info table th,
+    .city-Info table td,
+    .city-notice table th,
+    .city-notice table td {
+        font-size: 14px;
+    }
+
+    .map-info .map-info-introtxt p {
+        font-size: 14px;
+    }
+}

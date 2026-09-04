@@ -1,3 +1,11 @@
+-- ===================================================================
+-- TO-BE DB 재구성(2026-09): 물리 2개(gift + 나머지), 논리 6개 스키마 구조로 전환.
+-- 이 파일은 이제 자신의 단독 DB가 아니라 'ghlove_core' DB 안의 'admin' 스키마에 적용한다.
+-- 실행예: psql -U postgres -d ghlove_core -f service-admin.sql
+-- ===================================================================
+CREATE SCHEMA IF NOT EXISTS admin;
+SET search_path TO admin;
+
 -- Service: admin
 -- ===================================================================
 -- AS-IS 운영 DB 원본 스키마 기준 자동 생성 (159개 테이블)
@@ -965,12 +973,15 @@ CREATE TABLE IF NOT EXISTS G_MNGR_REQST (
     REJECT_RESN                  VARCHAR(2000),
     -- 최초 등록자 ID
     FRST_REGISTER_ID             BIGINT,
-    -- 최초 등록 시점
-    FRST_REGIST_PNTTM            TIMESTAMP NOT NULL DEFAULT now(),
+    -- 최초 등록 시점 (실제로 발견한 버그: 배치스캔 원본은 TIMESTAMP였지만
+    -- ManagerRequest.java/ManagerRequestService.now()는 프로젝트 관례대로 이미
+    -- VARCHAR(14) yyyyMMddHHmmss 문자열로 작성돼 있었다 - 타입 불일치라 관리자권한
+    -- 신청(submit) 자체가 한 번도 성공한 적이 없었다. DB를 코드에 맞춰 VARCHAR(14)로 수정.
+    FRST_REGIST_PNTTM            VARCHAR(14) NOT NULL,
     -- 최종 수정자 ID
     LAST_UPDUSR_ID               BIGINT,
     -- 최종 수정 시점
-    LAST_UPDT_PNTTM              TIMESTAMP,
+    LAST_UPDT_PNTTM              VARCHAR(14),
     -- 직원ID
     EMP_ID                       VARCHAR(300),
     PRIMARY KEY (USER_ID, REQST_SN)
@@ -18814,10 +18825,39 @@ ALTER SEQUENCE op_manager_user_id_seq OWNED BY OP_MANAGER.USER_ID;
 -- created/updated audit columns only) - add one for the RBAC screen's role listing order.
 ALTER TABLE OP_ROLE ADD COLUMN IF NOT EXISTS ROLE_SEQ INTEGER;
 
+-- 2026-09-01: 처음엔 ROLE_ADMIN(전체)/ROLE_OPERATOR(콘텐츠만) 2단계로 단순화해뒀었다 -
+-- 사용자가 실제 AS-IS와 다르다고 지적해 AS-IS 컨트롤러 전반(GiveStateManagerController,
+-- OrderManagerController, LogManagerController 등)에 실제로 반복되는 진짜 6단계 권한으로
+-- 교체한다. 1~4(시스템/행안부, 정·부담당자)는 AS-IS 코드에서 항상 같이 묶여 "전체보기"로
+-- 취급되고, 5~6(지자체, 정·부담당자)은 소속 지자체로 조회범위가 스코프된다 - 자세한 내용은
+-- MenuService.UNRESTRICTED_ROLES/LOCGOV_SCOPED_ROLES.
 INSERT INTO OP_ROLE (AUTHORITY, ROLE_NAME, ROLE_DESC, ROLE_SEQ) VALUES
-('ROLE_ADMIN',    '시스템관리자', '운영관리 콘솔 전체 권한(통계/정산/공통코드/콘텐츠관리 등)', 1),
-('ROLE_OPERATOR', '운영자',       '콘텐츠/공지 등 일상 운영 업무 권한',                        2)
-ON CONFLICT (AUTHORITY) DO NOTHING;
+('ROLE_ADMIN_1', '시스템주담당자', '시스템 전체 권한(정담당자) - 통계/정산/공통코드/콘텐츠관리 등 전체보기', 1),
+('ROLE_ADMIN_2', '시스템부담당자', '시스템 전체 권한(부담당자)',                                        2),
+('ROLE_ADMIN_3', '행안부주담당자', '행안부 전체 권한(정담당자)',                                        3),
+('ROLE_ADMIN_4', '행안부부담당자', '행안부 전체 권한(부담당자)',                                        4),
+('ROLE_ADMIN_5', '지자체주담당자', '소속 지자체 데이터로 조회범위가 제한된 권한(정담당자)',              5),
+('ROLE_ADMIN_6', '지자체부담당자', '소속 지자체 데이터로 조회범위가 제한된 권한(부담당자)',              6)
+ON CONFLICT (AUTHORITY) DO UPDATE SET ROLE_NAME = EXCLUDED.ROLE_NAME, ROLE_DESC = EXCLUDED.ROLE_DESC, ROLE_SEQ = EXCLUDED.ROLE_SEQ;
+DELETE FROM OP_ROLE WHERE AUTHORITY IN ('ROLE_ADMIN', 'ROLE_OPERATOR');
+
+-- 기존 OP_MANAGER 계정 이관 (ROLE_ADMIN→ROLE_ADMIN_1 전체보기 유지, ROLE_OPERATOR→
+-- ROLE_ADMIN_5 지자체담당자로 - 원래도 "메뉴 제한 확인용" 테스트 계정이었으니 스코프드
+-- 역할 테스트 용도를 그대로 유지하는 게 자연스럽다).
+ALTER TABLE OP_MANAGER ADD COLUMN IF NOT EXISTS LOCGOV_CODE VARCHAR(10);
+UPDATE OP_MANAGER SET AUTHORITY='ROLE_ADMIN_1' WHERE AUTHORITY='ROLE_ADMIN';
+UPDATE OP_MANAGER SET AUTHORITY='ROLE_ADMIN_5', LOCGOV_CODE='11230' WHERE AUTHORITY='ROLE_OPERATOR';
+
+-- 이 파일 여기저기(과거 라운드들)에 흩어져 있는 'ROLE_ADMIN'/'ROLE_OPERATOR' 대상
+-- OP_MENU_RIGHT INSERT는 이제 죽은 시드데이터다(ROLE_ADMIN_1~4는 이 표를 아예 안 거치고
+-- 항상 통과하므로 문자열 'ROLE_ADMIN' 권한을 가진 매니저 자체가 더는 없다) - 굳이
+-- 일일이 찾아 지우지 않고 무해하게 남겨둔다.
+DELETE FROM OP_MENU_RIGHT WHERE AUTHORITY IN ('ROLE_ADMIN', 'ROLE_OPERATOR');
+
+-- ROLE_ADMIN_5/6(지자체담당자) 메뉴 권한 매핑은 파일 맨 끝부분으로 이동했다 - 여기서
+-- 참조하는 MENU_ID(10~17, 36)들이 이 시점에는 아직 INSERT되지 않아(각 화면 라운드가
+-- 시간순으로 파일 뒤쪽에 이어붙여진 탓에) 처음부터 새로 실행하면 fk_op_menu_right_menu_id
+-- 위반으로 실패한다(라이브 DB는 각 라운드를 실제 시간순으로 적용해왔으니 이 문제가 없었다).
 
 INSERT INTO ADMIN_COMMON_CODE (CODE_TYPE, CODE_LANGUAGE, ID, LABEL, ORDERING, USE_YN) VALUES
 ('MANAGER_STATUS', 'ko', 'ACTIVE', '정상', 1, 'Y'),
@@ -18874,7 +18914,7 @@ INSERT INTO OP_MENU (MENU_ID, MENU_PARENT_ID, MENU_NAME, MENU_URL, MENU_SEQ, DIS
 (5, NULL, '통계',         '/stats',              5, 'Y', '1'),
 (6, NULL, '정산',         '/settlements',        6, 'Y', '1'),
 (7, NULL, '배송조회',     '/delivery-tracking',  7, 'Y', '1'),
-(8, NULL, 'NH배치',       '/batch',              8, 'Y', '1'),
+(8, NULL, 'NH배치',       '/batch/nh-export',    8, 'Y', '1'),
 (9, NULL, '관리자권한요청', '/admin/manager-requests', 9, 'Y', '1')
 ON CONFLICT (MENU_ID) DO NOTHING;
 
@@ -20485,4 +20525,134 @@ ON CONFLICT (MENU_ID) DO NOTHING;
 INSERT INTO OP_MENU_RIGHT (MENU_ID, AUTHORITY) VALUES
 (64, 'ROLE_ADMIN'),
 (65, 'ROLE_ADMIN')
+ON CONFLICT DO NOTHING;
+
+-- =====================================================================
+-- Round 8 (SFR-010 gap fill): 민간개방 API 관리. Kong Admin API로 실시간 CRUD하는
+-- 컨슈머/API키 자체는 admin DB에 저장하지 않는다(Kong이 진짜 원천) - 여기 OPEN_API_CLIENT는
+-- "누구에게 어떤 이름으로 발급했는지"의 admin측 기록(+Kong 재기동 시 재동기화용 소스),
+-- OPEN_API_USAGE_STAT은 gift 서비스가 open-api.usage 이벤트로 흘려주는 호출 로그 원본이다
+-- (STAT_GIFT_LEDGER처럼 upsert가 아니라 STAT_POINT_LEDGER처럼 append-only + 집계는 조회시점).
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS OPEN_API_CLIENT (
+    CLIENT_ID     SERIAL       PRIMARY KEY,
+    CLIENT_NAME   VARCHAR(200) NOT NULL,
+    KONG_USERNAME VARCHAR(100) NOT NULL UNIQUE,
+    API_KEY       VARCHAR(100) NOT NULL UNIQUE,
+    STATUS_CODE   VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE',
+    CREATED_DATE  TIMESTAMP    NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS OPEN_API_USAGE_STAT (
+    USAGE_ID            BIGSERIAL    PRIMARY KEY,
+    CONSUMER_USERNAME   VARCHAR(100),
+    SERVICE_NAME        VARCHAR(50),
+    ENDPOINT            VARCHAR(200),
+    CALLED_AT           VARCHAR(14),
+    CREATED_DATE        TIMESTAMP    NOT NULL DEFAULT now()
+);
+
+INSERT INTO OP_MENU (MENU_ID, MENU_PARENT_ID, MENU_NAME, MENU_URL, MENU_SEQ, DISPLAY_FLAG, STATUS_CODE) VALUES
+(66, 106, '오픈API 클라이언트 관리', '/open-api/clients', 12, 'Y', '1'),
+(67, 106, '오픈API 사용통계', '/open-api/stats', 13, 'Y', '1')
+ON CONFLICT (MENU_ID) DO NOTHING;
+
+INSERT INTO OP_MENU_RIGHT (MENU_ID, AUTHORITY) VALUES
+(66, 'ROLE_ADMIN'),
+(67, 'ROLE_ADMIN')
+ON CONFLICT DO NOTHING;
+
+-- =====================================================================
+-- Round 9 (SFR-006 gap fill): "통계 및 SLA 관리를 위한 ReadModel 제공(제공자·지자체별
+-- SLA 지표)". order 서비스가 송장등록/배송상태갱신/구매확정마다 발행하는 새 이벤트
+-- (ORDER_DELIVERY_UPDATED, order.saga 토픽 재사용)를 STAT_ORDER_LEDGER 사본에 반영한다.
+-- 이 김에 STAT_ORDER_LEDGER가 애초에 ORDER_CREATED의 locgovCode 필드를 반영하지 않고
+-- 있던 실제 드리프트 버그도 같이 잡았다(admin/event/OrderCreatedEvent.java 주석 참고).
+-- =====================================================================
+ALTER TABLE STAT_ORDER_LEDGER ADD COLUMN IF NOT EXISTS LOCGOV_CODE VARCHAR(20);
+ALTER TABLE STAT_ORDER_LEDGER ADD COLUMN IF NOT EXISTS ORDER_CONFIRMED_AT TIMESTAMP;
+ALTER TABLE STAT_ORDER_LEDGER ADD COLUMN IF NOT EXISTS DELIVERY_STATUS VARCHAR(20);
+ALTER TABLE STAT_ORDER_LEDGER ADD COLUMN IF NOT EXISTS SHIPPED_DATE TIMESTAMP;
+ALTER TABLE STAT_ORDER_LEDGER ADD COLUMN IF NOT EXISTS DELIVERED_DATE TIMESTAMP;
+ALTER TABLE STAT_ORDER_LEDGER ADD COLUMN IF NOT EXISTS DELIVERY_CONFIRMED_DATE TIMESTAMP;
+
+-- /stats/sla를 OP_MENU에 등록하지 않으면 admin-nav 프래그먼트의
+-- navTree.topMenus().?[menuId == activeTopMenuId] 평가 중 MenuService.resolve()가 이
+-- URL에 매칭되는 메뉴를 못 찾아 activeTopMenuId 모델 속성 자체가 아예 채워지지 않고
+-- (@ModelAttribute가 null을 반환하면 속성이 "없음" 상태가 된다), 그 결과 SpringEL이
+-- activeTopMenuId를 selection 안의 현재 Menu 객체 프로퍼티로 잘못 찾으려다 500 에러를
+-- 낸다 - 실제로 겪은 버그. 새 화면을 admin에 추가할 때는 항상 OP_MENU에도 등록할 것.
+INSERT INTO OP_MENU (MENU_ID, MENU_PARENT_ID, MENU_NAME, MENU_URL, MENU_SEQ, DISPLAY_FLAG, STATUS_CODE) VALUES
+(68, 101, '배송 SLA 통계', '/stats/sla', 27, 'Y', '1')
+ON CONFLICT (MENU_ID) DO NOTHING;
+
+INSERT INTO OP_MENU_RIGHT (MENU_ID, AUTHORITY) VALUES
+(68, 'ROLE_ADMIN')
+ON CONFLICT DO NOTHING;
+
+-- ROLE_ADMIN_5/6(지자체담당자) 메뉴 권한 매핑 - 원래 OP_ROLE 정의 블록 바로 뒤에 있었으나
+-- 여기서 참조하는 MENU_ID들이 그 시점엔 아직 INSERT되지 않아 fk_op_menu_right_menu_id
+-- 위반으로 이 파일을 처음부터 재실행할 수 없었다(라이브 DB는 각 라운드를 실제 시간순으로
+-- 적용해왔기 때문에 이 문제를 몰랐다). 모든 OP_MENU 시드가 끝난 이 위치로 옮김.
+-- 지자체FAQ 관리(36)는 이 파일에 OP_MENU INSERT 자체가 누락돼 있었다(라이브 DB에만
+-- 존재) - 같이 보강.
+INSERT INTO OP_MENU (MENU_ID, MENU_PARENT_ID, MENU_NAME, MENU_URL, MENU_SEQ, DISPLAY_FLAG, STATUS_CODE) VALUES
+(36, 100, '지자체FAQ 관리', '/community/locv-faq', 10, 'Y', '1')
+ON CONFLICT (MENU_ID) DO NOTHING;
+
+INSERT INTO OP_MENU_RIGHT (AUTHORITY, MENU_ID)
+SELECT authority, menu_id FROM (
+    SELECT unnest(ARRAY['ROLE_ADMIN_5','ROLE_ADMIN_6']) AS authority
+) a CROSS JOIN (
+    -- 기부금모금현황/지출내역/포인트현황/변경신청관리(102 전체) + 지정기부관리(103) +
+    -- 오프라인기부관리(104) + 1:1문의관리(콘텐츠관리 하위지만 지자체 기부 관련 문의라 포함).
+    -- 정산(105 전체, 입점업체/브랜드/쿠폰/NH배치/배송조회/주문포인트대사 포함)은 처음엔
+    -- 포함했다가 제외했다 - Settlement가 SELLER_ID 기준이라 LOCGOV_CODE 컬럼 자체가 없고
+    -- (판매자가 여러 지자체 상품을 같이 팔 수 있어 1:1로 안 묶임), 이 프로젝트의 실제
+    -- 정산 흐름은 시스템/행안부가 처리하는 제공자 정산(플랫폼 전체 재무 업무)이라 지자체
+    -- 담당자 스코프 밖으로 판단했다.
+    SELECT unnest(ARRAY[10,11,12,13,15,16,17]) AS menu_id
+) m
+ON CONFLICT DO NOTHING;
+
+-- 지자체FAQ 관리(36)는 AS-IS에서 지자체담당자(5/6)도 조회는 가능하다(쓰기만 시스템/행안부
+-- 전용) - LocgFaqAdminController의 실제 쓰기 가드와 함께 봐야 한다.
+INSERT INTO OP_MENU_RIGHT (AUTHORITY, MENU_ID) VALUES ('ROLE_ADMIN_5', 36), ('ROLE_ADMIN_6', 36)
+ON CONFLICT DO NOTHING;
+
+-- =====================================================================
+-- 답례품 카테고리 관리 (AS-IS opmanager/categories - CategoriesManagerController).
+-- gift 서비스의 GIFT_CATEGORY(대분류 공통코드)/GIFT_SUBCATEGORY(중분류)/GIFT_SUBCATEGORY_ITEM
+-- (개별품목) cross-service CRUD - 답례품몰 GNB "전체 카테고리" 메가메뉴가 실제로 읽는
+-- 구조라 여기서 바꾸면 스토어프론트에 즉시 반영된다. 브랜드/입점업체관리와 같은 gift-domain
+-- 마스터데이터 관리라 정산/배송관리(105) 하위에 둔다. menu_id는 병렬 작업과의 충돌을
+-- 피하기 위해 배정된 600~699 범위를 쓴다.
+-- =====================================================================
+INSERT INTO OP_MENU (MENU_ID, MENU_PARENT_ID, MENU_NAME, MENU_URL, MENU_SEQ, DISPLAY_FLAG, STATUS_CODE) VALUES
+(600, 105, '답례품 카테고리 관리', '/admin/gift-categories', 20, 'Y', '1')
+ON CONFLICT (MENU_ID) DO NOTHING;
+
+-- =====================================================================
+-- 답례품 상품관리(관리자) (AS-IS opmanager/item - ItemManagerController 1단계 대응).
+-- 셀러 self-service만 있던 답례품 등록/수정을 관리자가 셀러를 대신 지정해 직접 수행하고,
+-- 카테고리 일괄 배정/상품 복사를 지원한다(엑셀 대량등록/리뷰 관리자 대응은 범위 밖,
+-- as-is-admin-gap-deep-audit-part1.md #60 참고).
+-- =====================================================================
+INSERT INTO OP_MENU (MENU_ID, MENU_PARENT_ID, MENU_NAME, MENU_URL, MENU_SEQ, DISPLAY_FLAG, STATUS_CODE) VALUES
+(601, 105, '답례품 상품관리(관리자)', '/admin/gift-items', 21, 'Y', '1')
+ON CONFLICT (MENU_ID) DO NOTHING;
+-- =====================================================================
+-- 주문관리 콘솔 (AS-IS opmanager/order - OrderManagerController). 주문 검색/상세/상태변경/
+-- 클레임 처리 큐 - order 서비스의 관리자 전용 API(/api/admin/orders/**, /api/admin/claims/**)
+-- 를 OrderAdminClient가 호출한다. 정산/배송관리(105) 하위에 둔다(같은 부모 아래 이미
+-- 배송조회/NH배치/주문포인트대사가 있다 - 주문/배송 운영 업무 묶음).
+-- =====================================================================
+INSERT INTO OP_MENU (MENU_ID, MENU_PARENT_ID, MENU_NAME, MENU_URL, MENU_SEQ, DISPLAY_FLAG, STATUS_CODE) VALUES
+(501, 105, '주문관리', '/admin/orders', 1, 'Y', '1'),
+(502, 105, '클레임처리큐', '/admin/claims', 2, 'Y', '1')
+ON CONFLICT (MENU_ID) DO NOTHING;
+
+INSERT INTO OP_MENU_RIGHT (MENU_ID, AUTHORITY) VALUES
+(501, 'ROLE_ADMIN_5'), (501, 'ROLE_ADMIN_6'),
+(502, 'ROLE_ADMIN_5'), (502, 'ROLE_ADMIN_6')
 ON CONFLICT DO NOTHING;

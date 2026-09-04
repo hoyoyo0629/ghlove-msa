@@ -3,13 +3,13 @@ package com.ghlove.admin.web;
 import com.ghlove.admin.service.CommonCodeService;
 import com.ghlove.admin.service.FaqService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.List;
 
@@ -51,8 +51,8 @@ public class FaqController {
 
     /** 아코디언을 펼칠 때 AJAX로 조회수만 올린다. */
     @PostMapping("/faqs/{id}/hit")
-    @ResponseBody
-    public void hit(@PathVariable Integer id) {
+    public ResponseEntity<Void> hit(@PathVariable Integer id) {
         faqService.addHit(id);
+        return ResponseEntity.noContent().build();
     }
 }

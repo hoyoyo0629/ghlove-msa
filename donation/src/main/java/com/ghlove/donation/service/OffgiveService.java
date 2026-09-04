@@ -32,6 +32,15 @@ public class OffgiveService {
         return donationRepository.findByCntrPathCodeOrderByFrstRegistPnttmDesc(PATH_OFFLINE);
     }
 
+    /** AS-IS offgive/list.jsp의 검색조건(지자체/접수일자 범위) 재현 - startDate/endDate는
+     *  "yyyyMMdd" 문자열, 비어있으면 전체기간으로 취급한다. */
+    public List<Donation> search(String locgovCode, String startDate, String endDate) {
+        String start = (startDate == null || startDate.isBlank()) ? "00000000" : startDate;
+        String end = (endDate == null || endDate.isBlank()) ? "99999999" : endDate;
+        String locgov = (locgovCode == null || locgovCode.isBlank()) ? null : locgovCode;
+        return donationRepository.searchOffline(PATH_OFFLINE, locgov, start, end);
+    }
+
     public Donation findOrThrow(String cntrSn) {
         Donation donation = donationRepository.findById(cntrSn)
                 .orElseThrow(() -> new DonationException("기부내역을 찾을 수 없습니다."));

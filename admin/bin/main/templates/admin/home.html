@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>관리자 홈 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>관리자 홈</h3>
+
+    <div style="display:flex; gap:16px; margin:16px 0;">
+        <div style="flex:1; border:1px solid #ddd; border-radius:6px; padding:20px; text-align:center;">
+            <div style="color:#888; font-size:0.9rem;">오늘 주문 건수</div>
+            <div style="font-size:2rem; font-weight:700;" th:text="${todayOrderCount}"></div>
+        </div>
+        <div style="flex:1; border:1px solid #ddd; border-radius:6px; padding:20px; text-align:center;">
+            <div style="color:#888; font-size:0.9rem;">오늘 신규 회원</div>
+            <div style="font-size:2rem; font-weight:700;" th:text="${todayMemberCount}"></div>
+        </div>
+    </div>
+
+    <h4 style="margin-top:24px;">최근 공지사항</h4>
+    <table class="board_list_table">
+        <thead><tr><th>제목</th></tr></thead>
+        <tbody>
+        <tr th:each="n : ${recentNotices}">
+            <td><a th:href="@{'/admin/notices'}" th:text="${n.subject}"></a></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(recentNotices)}">등록된 공지가 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

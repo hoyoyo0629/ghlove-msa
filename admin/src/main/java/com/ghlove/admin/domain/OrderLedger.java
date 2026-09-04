@@ -45,4 +45,26 @@ public class OrderLedger {
 
     @Column(name = "SETTLEMENT_ID")
     private Long settlementId;
+
+    /** SFR-006 "제공자·지자체별 SLA 지표" gap fill - order.saga의 ORDER_CREATED/
+     *  ORDER_DELIVERY_UPDATED 이벤트로 채워지는 배송 리드타임 원본 데이터. */
+    @Column(name = "LOCGOV_CODE")
+    private String locgovCode;
+
+    /** 주문 확정(결제/재고 확보 완료) 시각 - 발송까지 걸린 시간의 기준점. */
+    @Column(name = "ORDER_CONFIRMED_AT")
+    private LocalDateTime orderConfirmedAt;
+
+    @Column(name = "DELIVERY_STATUS")
+    private String deliveryStatus;
+
+    @Column(name = "SHIPPED_DATE")
+    private LocalDateTime shippedDate;
+
+    @Column(name = "DELIVERED_DATE")
+    private LocalDateTime deliveredDate;
+
+    /** 구매자 수취확인(구매확정) 시각. */
+    @Column(name = "DELIVERY_CONFIRMED_DATE")
+    private LocalDateTime deliveryConfirmedDate;
 }

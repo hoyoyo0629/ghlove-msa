@@ -22,4 +22,6 @@ public interface GiftRepository extends JpaRepository<Gift, Long> {
             String dataStatusCode, String displayFlag, String locgovCode);
 
     List<Gift> findByRepresentativeItemYnOrderByItemIdDesc(String representativeItemYn);
+
+    boolean existsByCategoryCode(String categoryCode);
 }

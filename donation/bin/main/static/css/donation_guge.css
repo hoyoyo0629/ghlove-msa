@@ -1,0 +1,645 @@
+.s-contents.d-guide {
+  text-align: center;
+  padding: 60px 60px;
+}
+.center > .s-contents.d-guide:first-child,
+.contents-wrap:last-child .s-contents.d-guide {
+  margin-bottom: 60px;
+}
+
+.s-contents.d-guide.offline {
+  padding: 40px 60px;
+}
+
+.s-contents.d-guide .guide-title {
+  padding: calc(var(--margin-padding-8) * 2) 0 calc(var(--margin-padding-8) * 5);
+}
+
+.s-contents.d-guide .guide-title-list-txt {
+  text-align: left;
+  background-color: var(--gray5);
+  padding: calc(var(--margin-padding-8) * 5) calc(var(--margin-padding-8) * 10)
+    calc(var(--margin-padding-8) * 2);
+  border-radius: 90px;
+  font-size: 16px;
+  color: var(--gray2);
+  line-height: 1.5em;
+  margin-bottom: calc(var(--margin-padding-8) * 5);
+}
+
+.s-contents.d-guide .guide-title-list-txt li {
+  margin-bottom: calc(var(--margin-padding-8) * 2);
+}
+
+.s-contents.d-guide .guide-title-list-txt li img {
+  margin-right: 4px;
+}
+
+.s-contents.d-guide .guide-title-list-txt .s-txt {
+  text-indent: 17px;
+  font-size: 16px;
+}
+
+.s-contents.d-guide .donation-benefit-box img:nth-child(1) {
+  width: 292px;
+}
+
+.s-contents.d-guide .donation-benefit-box img:nth-child(2) {
+  width: 294px;
+}
+
+.s-contents.d-guide .donation-benefit-box img:nth-child(3) {
+  width: 285px;
+}
+
+.s-contents.d-guide .donation-benefit-box img:nth-child(4) {
+  width: 248px;
+}
+
+.s-contents.d-guide .donation-method-box img:nth-child(1) {
+  width: 529px;
+}
+
+.s-contents.d-guide .donation-method-box img:nth-child(3) {
+  width: 528px;
+}
+
+.s-contents.d-guide .donation-gift-box img:nth-child(1) {
+  width: 529px;
+}
+
+.s-contents.d-guide .donation-gift-box img:nth-child(2) {
+  width: 568px;
+}
+
+.s-contents.d-guide.guoff img:nth-child(1) {
+  width: 870px;
+}
+
+.s-contents.d-guide img.dt-info {
+  max-width: 100%;
+  /* 아래부터 수정 */
+  margin: auto;
+  /* object-fit: cover; */
+}
+
+.s-contents.d-guide img.m-info {
+  display: none;
+  max-width: 350px;
+}
+
+.lt-hidden {
+  margin: 0 3.5%;
+}
+
+.s-contents.d-guide .donation-method-box {
+  justify-content: space-between;
+}
+
+.s-contents.d-guide .donation-method-box img:last-child {
+  margin-top: 15px;
+  align-self: flex-start;
+  margin-bottom: 0;
+}
+
+.s-contents.d-guide .donation-gift-box {
+  align-items: flex-start;
+}
+
+.e-contents {
+  background-color: #fff;
+  margin-bottom: 60px;
+  font-size: 16px;
+}
+
+.e-contents p.wait {
+  display: inline-flex;
+}
+
+.e-contents span {
+  padding-left: 10px;
+}
+
+.e-contents span.pointRedLine {
+  text-decoration: underline;
+}
+
+/* 기부절차 안내 */
+.line.dashed {
+  border: 1px dashed var(--gray5);
+  margin: 40px 0 80px;
+}
+
+/* 기부절차안내 - 탭메뉴 */
+
+.tab_menu_wrap .tab_group {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 60px;
+}
+
+/* 추가 241025 */
+.tab_menu_wrap .tab_group .btn_h3_wrap {
+  display: contents;
+}
+
+.tab_menu_wrap .tab_group .btn_h3_wrap.on .tab_items {
+  border-color: var(--main-color2);
+  font-weight: 500;
+  color: var(--main-color2);
+}
+
+.tab_menu_wrap .tab_group .btn_h3_wrap h3.v-hidden {
+  visibility: hidden; font-size: 0;
+}
+
+
+
+
+.tab_menu_wrap .tab_group button {
+  padding: 10px calc(var(--margin-padding-8) * 2) 10px;
+  font-size: 18px;
+  color: var(--gray3);
+  border-bottom: 2px solid var(--gray5);
+  text-align: center;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 2px;
+  flex: 1 1 1;
+  box-shadow: none;
+}
+
+.tab_menu_wrap .tab_group button.on {
+  border-color: var(--main-color2);
+  font-weight: 500;
+  color: var(--main-color2);
+}
+
+.tab_menu_wrap .tab_group button span.liLabel.xst {
+  font-size: 12px;
+  white-space: nowrap;
+  letter-spacing: -0.5px;
+}
+
+.tab_menu_wrap .tab_group li {
+  padding: 20px calc(var(--margin-padding-8) * 2) 10px;
+  font-size: 18px;
+  color: var(--gray3);
+  border-bottom: 2px solid var(--gray5);
+  text-align: center;
+  /* min-width: 120px; */
+  white-space: nowrap;
+}
+
+.tab_menu_wrap .tab_group li.on {
+  border-color: var(--main-color2);
+  font-weight: 500;
+  color: var(--main-color2);
+}
+
+.tab_con {
+  display: none;
+}
+
+.tab_con.view {
+  display: block;
+}
+
+.tab_con_sub {
+  display: none;
+  text-align: center;
+  padding: 30px 60px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16);
+  background-color: #fff;
+  background-color: #fff;
+  margin-bottom: 60px;
+  border: 1px solid var(--gray5);
+}
+
+.tab_con_sub.view {
+  display: block;
+}
+
+.details_steps {
+  margin-bottom: 80px;
+  text-align: center;
+}
+
+.detailsTxt {
+  padding-top: 20px;
+  text-align: left;
+  color: var(--gray2);
+}
+
+.detailsTxt p {
+  /*margin-bottom: 4px;*/
+  line-height: 150%;
+}
+
+.martop10 {
+  margin-top: 10px;
+}
+
+.pc_img {
+  display: block;
+}
+
+.mobile_img {
+  display: none;
+}
+
+img.mobile_img {
+  max-width: 360px;
+  width: 100%;
+}
+
+.s-contents.d-guide .btn-box {
+  margin-bottom: 20px;
+}
+
+.tab_con .card_news {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 30px;
+  margin-bottom: 50px;
+}
+
+.tab_con .card_news img {
+  max-width: 550px;
+  width: 100%;
+}
+
+/* 연말정산 안내 */
+.guide-title-list-txt li span.pointRed {
+  text-decoration: underline;
+}
+
+.donation-guse-box .title-img:not(:nth-child(2n-1)) {
+  margin-top: 60px;
+}
+
+.s-contents.d-guide img.case-img {
+  width: 728px;
+}
+
+.s-contents.d-guide:last-child img.case-img {
+  width: 702px;
+}
+
+/* 오프라인 기부 안내 */
+.s-contents.d-guide .case-img {
+  margin-bottom: 40px;
+}
+
+.s-contents.d-guide .steps-box {
+  margin-bottom: 40px;
+}
+
+.s-contents.d-guide .case-img.do {
+  transform: translateX(1.7%);
+}
+
+.s-contents.d-guide .offline-step-box.steps-box {
+  justify-content: center;
+}
+
+.s-contents.d-guide .offline-step-box.steps-box img {
+  margin: 1% 0.5%;
+}
+
+.s-contents.d-guide .offline-step-box.steps-box img.step-img.dt-info {
+  max-width: 198px;
+}
+
+.s-contents.d-guide
+  .offline-step-box.steps-box
+  img.step-img.dt-info:nth-last-child(2) {
+  width: 160px;
+}
+
+/* 기부금 위반 주의사항 */
+
+.s-contents.guoff {
+  display: flex;
+  justify-content: space-between;
+}
+
+.fince_tit {
+  margin: 6px 0px 40px;
+  font-size: 32px;
+  font-weight: bold;
+  font-stretch: normal;
+  font-style: normal;
+  line-height: 1.31;
+  letter-spacing: -1.6px;
+  text-align: center;
+  color: #004cce;
+}
+
+/* 금융인증서 */
+.fince_explan .fince_block {
+  width: 5px;
+  height: 26px;
+  margin: 6px 0 3px 0px;
+  background-color: #5a5a5a;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.fince_explan .fince_sub_tit {
+  height: 35px;
+  margin: 0 12px;
+  font-size: 24px;
+  font-weight: bold;
+  font-stretch: normal;
+  font-style: normal;
+  line-height: 1.5;
+  letter-spacing: -1.2px;
+  text-align: center;
+  color: #5a5a5a;
+  vertical-align: middle;
+}
+
+.fince_explan .fince_sub_header {
+  height: 35px;
+  margin: 40px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.fince_explan .fince_line {
+  height: 1px;
+  margin: 19px 30px 15px 0;
+  background-color: #dfdede;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.fince_explan .right {
+  margin: 19px 0px 15px 30px;
+}
+
+.fince_explan .fince_sub_explan {
+  text-align: left;
+  margin: 40px 0px 20px 47px;
+}
+
+.fince_explan .fince_sub_explan img {
+  display: inline-block;
+  vertical-align: top;
+}
+
+.fince_explan .fince_sub_explan div {
+  display: inline-block;
+}
+
+.fince_explan .fince_wait_txt {
+  height: 24px;
+  margin: 10px 0 0px 10px;
+  font-size: 16px;
+  font-weight: normal;
+  font-stretch: normal;
+  font-style: normal;
+  letter-spacing: -0.8px;
+  text-align: left;
+  color: var(--point-color);
+}
+
+.fince_explan .margin_center {
+  margin: 0 auto;
+}
+
+.fince_explan .flex_1 {
+  flex: 1;
+}
+
+.fince_explan .line_270 {
+  line-height: 2.7;
+}
+
+.fince_explan .line_139 {
+  line-height: 1.39;
+}
+
+.fince_explan .fince_description {
+  padding-top: 20px;
+  text-align: center;
+  color: var(--gray2);
+}
+
+.fince_explan .fince_description p {
+  font-size: 16px;
+  font-weight: normal;
+  font-stretch: normal;
+  font-style: normal;
+  line-height: 1.63;
+  letter-spacing: -0.4px;
+  text-align: center;
+  color: #5a5a5a;
+}
+
+.fince_explan .fince_wait_sub_txt {
+  height: 20px;
+  margin: 0 10px;
+  font-size: 14px;
+  font-weight: normal;
+  font-stretch: normal;
+  font-style: normal;
+  line-height: 1.71;
+  letter-spacing: -0.35px;
+  text-align: left;
+  color: #747474;
+}
+
+.fince_explan .details_steps {
+  display: flex;
+}
+
+@media screen and (max-width: 1280px) {
+  .s-contents.d-guide {
+    padding: 40px;
+  }
+
+  .tab_menu_wrap .tab_group button {
+    /* flex: 1 1 auto; */
+    font-size: 16px;
+  }
+
+  .s-contents.d-guide .donation-method-box img {
+    margin-bottom: calc(var(--margin-padding-8) * 10);
+  }
+
+  .lt-hidden {
+    display: none;
+  }
+
+  /* 기부절차안내 */
+  .steps-d {
+    justify-content: center;
+  }
+
+  /* 기부금 위반 주의사항 */
+
+  .s-contents.guoff {
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .s-contents.d-guide.guoff img.dt-info:first-of-type,
+  .s-contents.d-guide.guoff img.m-info:nth-of-type(3) {
+    margin-bottom: 100px;
+  }
+
+  .tab_con .card_news {
+    justify-content: center;
+  }
+}
+
+@media screen and (max-width: 1030px) {
+  .tab_menu_wrap .tab_group button {
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 10px 10px;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .center > .s-contents.d-guide:first-child,
+  .contents-wrap:last-child .s-contents.d-guide {
+    margin-bottom: 0;
+  }
+  .s-contents.d-guide.first {
+    padding-top: 0;
+  }
+
+  .contents-wrap {
+    border-top: 20px solid var(--gray5);
+  }
+
+  .s-contents.d-guide .guide-title {
+    padding: 8px 0 40px;
+  }
+  .s-contents.d-guide .guide-title-list-txt .s-txt {
+    text-indent: 0;
+  }
+  .s-contents.d-guide.offline {
+    padding: 24px 0px;
+  }
+
+  .s-contents.d-guide,
+  .s-contents.guoff {
+    width: 100%;
+    box-shadow: none;
+    padding: 60px 0;
+    border: none;
+    margin-bottom: 0;
+  }
+
+  .tab_menu_wrap .tab_group button {
+    width: 33.333%;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 3px;
+    height: 46px;
+    font-size: 16px;
+  }
+
+  .tab_menu_wrap .tab_group button span.liLabel.xst {
+    font-size: 11px;
+  }
+
+  .s-contents.d-guide .guide-title-list-txt {
+    border-radius: 30px;
+    padding: calc(var(--margin-padding-8) * 4) 12%
+      calc(var(--margin-padding-8) * 1);
+    text-indent: -18px;
+  }
+
+  .s-contents.d-guide .s-txt {
+    text-indent: 0px;
+    display: inline-block;
+    text-align: left;
+  }
+
+  .s-contents.d-guide img.dt-info {
+    display: none;
+  }
+
+  .s-contents.d-guide img.m-info {
+    display: inline-block;
+  }
+
+  .s-contents.d-guide .case-img.do {
+    transform: translateX(0%);
+  }
+
+  .pc_img {
+    display: none;
+  }
+
+  .mobile_img {
+    display: inline-block;
+  }
+
+  div.mobile_img {
+    display: block;
+  }
+
+  .tab_con_sub {
+    width: 100%;
+    box-shadow: none;
+    padding: 60px 0;
+    border: none;
+  }
+
+  .fince_tit {
+    font-size: 26px;
+    letter-spacing: -1.3px;
+  }
+
+  .fince_explan .fince_sub_explan {
+    margin: 10px;
+  }
+
+  .fince_explan .fince_sub_explan img {
+    display: block;
+  }
+
+  .fince_explan .fince_wait_txt {
+    margin: 12px 0 0;
+    font-size: 16px;
+    line-height: 1.63;
+    letter-spacing: -0.8px;
+    color: var(--point-color);
+    display: block;
+    height: auto;
+  }
+
+  .fince_explan .details_steps {
+    margin: 40px 0;
+  }
+
+  .fince_explan .details_steps div:first-child {
+    margin-right: 5px;
+  }
+
+  .fince_explan .details_steps div:last-child {
+    margin-left: 5px;
+  }
+
+  .fince_explan .m_hide {
+    display: none;
+  }
+
+  .fince_explan .fince_wait_sub_txt {
+    margin: 12px 0px;
+  }
+
+  .fince_explan {
+    margin-bottom: 100px;
+  }
+}

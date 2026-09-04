@@ -87,4 +87,16 @@ public class Gift {
     /** 브랜드 ID (NULL: 자사제품, 그외: OP_BRAND 참고) - shop-statistics 브랜드별 통계용. */
     @Column(name = "BRAND_ID")
     private Integer brandId;
+
+    /** 상품라벨 (1:없음, 2:NEW, 3:SALE, 4:사기) - AS-IS OP_ITEM.ITEM_LABEL, NOT NULL DEFAULT '1'.
+     *  JPA가 매핑하는 컬럼은 항상 INSERT에 포함되므로 이 필드를 추가한 이상 모든 생성 경로
+     *  (register/adminCreate/copy)에서 명시적으로 채워야 한다 - 안 그러면 NOT NULL 위반. */
+    @Column(name = "ITEM_LABEL")
+    private String itemLabel;
+
+    /** 관리자 목록 노출순서 - AS-IS OP_ITEM에는 없는 이 MVP 전용 신규 컬럼(NULLABLE, DEFAULT 0).
+     *  값이 작을수록 상단 노출, 초기값 0이라 명시적으로 순서를 옮기기 전까지는 itemId desc와
+     *  동일하게 정렬된다(admin-console-item-mgmt-round #2 순서변경). */
+    @Column(name = "ADMIN_ORDERING")
+    private Integer adminOrdering;
 }

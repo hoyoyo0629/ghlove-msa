@@ -8,4 +8,10 @@ import java.util.List;
 public interface MenuRepository extends JpaRepository<Menu, Integer> {
 
     List<Menu> findByDisplayFlagOrderByMenuSeq(String displayFlag);
+
+    List<Menu> findAllByOrderByMenuParentIdAscMenuSeqAsc();
+
+    List<Menu> findByMenuParentId(Integer menuParentId);
+
+    Integer countByMenuParentId(Integer menuParentId);
 }

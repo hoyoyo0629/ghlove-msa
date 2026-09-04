@@ -1,0 +1,546 @@
+.page-title-box .user-grade .grade-bg {
+    background-color: var(--gray5);
+    padding: calc(var(--margin-padding-8)*1) 10%;
+    font-size: 16px;
+    border-radius: 40px;
+    color: var(--gray2);
+}
+
+.changeInfo {
+    max-width: 900px;
+    margin: 0 auto;
+
+}
+
+.round-arrow-line img {
+    border-radius: 50px;
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
+}
+
+.changeInfo .steps-box {
+    font-family: var(--fs-kangwonGyoT), sans-serif;
+    font-size: 28px;
+    color: var(--gray4);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin-bottom: calc(var(--margin-padding-8)*5);
+}
+
+.changeInfo .steps-box>div {
+    width: 26.667%;
+    background-color: #fff;
+    border-radius: 100px;
+    padding: calc(var(--margin-padding-8)*3) calc(var(--margin-padding-8)*6);
+    display: flex;
+    align-items: center;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.changeInfo .steps-box>div.on {
+    background-color: var(--main-color2);
+}
+
+.changeInfo .steps-box>div>div {
+    width: 50%;
+}
+
+.changeInfo .steps-box>div>div.icon-bg {
+    height: 60px;
+    background-repeat: no-repeat;
+    background-position: center center;
+}
+
+.changeInfo .steps-box>div.agreement>div.icon-bg {
+    background-image: url('/static/images/icon/cli-icon_agreement-off.png');
+}
+
+.changeInfo .steps-box>div.agreement.on>div.icon-bg {
+    background-image: url('/static/images/icon/cli-icon_agreement-on.png');
+}
+
+.changeInfo .steps-box>div.authentication>div.icon-bg {
+    background-image: url('/static/images/icon/cli-icon_authentication-off.png');
+}
+
+.changeInfo .steps-box>div.authentication.on>div.icon-bg {
+    background-image: url('/static/images/icon/cli-icon_authentication-on.png');
+}
+
+.changeInfo .steps-box>div.enter-info>div.icon-bg {
+    background-image: url('/static/images/icon/cli-icon_enter-info-off.png');
+}
+
+.changeInfo .steps-box>div.enter-info.on>div.icon-bg {
+    background-image: url('/static/images/icon/cli-icon_enter-info-on.png');
+}
+
+.changeInfo .steps-box>div.sign-up-complete>div.icon-bg {
+    background-image: url('/static/images/icon/cli-icon_sign-up-complete-off.png');
+}
+
+/*  약관동의 필드 -  accept-terms-area */
+.add-info-area {
+    background-color: #fff;
+    color: var(--gray2);
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
+    padding: 64px 80px;
+    margin-bottom: calc(var(--margin-padding-8)*5);
+    font-weight: 500;
+    display: flex;
+    justify-content: space-between;
+    border: 1px solid var(--gray5);
+    max-width: 900px;
+}
+
+.add-info-area .lable-field {
+    width: 16%;
+}
+
+.add-info-area h3 {
+    font-size: 22px;
+    line-height: 28px;
+    letter-spacing: -1px;
+    color: var(--main-color2);
+    margin-bottom: calc(var(--margin-padding-8)*2);
+    padding-right: 30px;
+    display: flex;
+    flex-direction: column;
+}
+
+.add-info-area .essential {
+    color: var(--main-color2);
+    padding-right: 30px;
+}
+
+.add-info-area .info-field {
+    width: 81.081%;
+}
+
+.add-info-area .info-field .line {
+    margin: calc(var(--margin-padding-8)*4) 0;
+}
+
+.add-info-area .info-field .info-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.add-info-area .info-field .info-field-items {
+    display: flex;
+
+    align-items: flex-start;
+}
+
+.add-info-area .info-field .info-field-items .flied-title {
+    display: inline-block;
+    font-size: 16px;
+    color: var(--gray2);
+    font-weight: normal;
+    width: 33%;
+    line-height: 30px;
+    font-weight: 500;
+}
+
+.add-info-area .info-field .info-field-items .form-field {
+    width: 100%;
+    gap: 8px;
+}
+
+
+.add-info-area .info-field .info-field-items .form-field input:not([type='radio']) {
+    width: 75%;
+
+}
+
+.add-info-area .info-field .info-field-items .s-txt {
+    font-size: 14px;
+    line-height: 1.75em;
+    color: var(--gray3);
+
+}
+
+.add-info-area .info-field .info-field-items .m-field {
+    gap: 8px;
+    display: flex;
+    align-items: center;
+}
+
+.add-info-area .info-field .info-field-items.memberGroup .m-field:first-child {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.add-info-area .info-field .info-field-items input:not([type='radio']) {
+    width: 100%;
+}
+
+.add-info-area .info-field .info-field-items.memberGroup .form-field button.formBtn {
+    width: fit-content;
+    max-width: unset;
+}
+
+.add-info-area .info-field .info-field-items.password .form-field button.formBtn {
+    margin: 0;
+}
+
+/* 휴대폰번호, 이메일 */
+.add-info-area .info-field .info-field-items.userNum .form-field,
+.add-info-area .info-field .info-field-items.userEmail .form-field,
+.add-info-area .info-field .info-field-items.subscribe .form-field {
+    display: flex;
+    align-items: center;
+}
+
+.add-info-area .info-field .info-field-items.userNum .form-field span.s-txt,
+.add-info-area .info-field .info-field-items.userEmail .form-field span.s-txt {
+    color: var(--gray3);
+}
+
+.add-info-area .info-field .info-field-items.userNum .form-field input,
+.add-info-area .info-field .info-field-items.userNum .form-field select {
+    width: 32%;
+    height: 40px;
+}
+
+.add-info-area .info-field .info-field-items.userEmail .form-field input,
+.add-info-area .info-field .info-field-items.userEmail .form-field select {
+    width: 46%;
+    height: 40px;
+}
+
+.add-info-area .info-field .info-field-items.userEmail .m-field {
+    margin: 0;
+    width: 60%;
+    gap: 8px;
+}
+
+.add-info-area .info-field .info-field-items.userEmail .m-field input {
+    width: 89%;
+}
+
+/* 주소 */
+.add-info-area .info-field .info-field-items.userAddress .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.add-info-area .info-field .info-field-items .form-field .search-address button {
+    width: 25%;
+}
+
+.add-info-area .info-field .info-field-items .form-field .input-address {
+   display: flex;
+   gap: 8px;
+}
+
+/* 알림서비스 수신동의 */
+.add-info-area .info-field .info-field-items.subscribe .form-field {
+    flex-direction: column;
+    padding-left: 10px;
+}
+
+.add-info-area .info-field .info-field-items.subscribe .m-field {
+    width: 100%;
+}
+
+.add-info-area .info-field .info-field-items.subscribe .m-field .s-txt {
+    min-width: 90px;
+    width: 160px;
+}
+
+.add-info-area .info-field .info-field-items.subscribe .form-field .subscribe-select {
+    margin-left: calc(var(--margin-padding-8)*2);
+    font-size: 14px;
+    height: 26px;
+}
+
+.add-info-area .info-field .info-field-items.subscribe .form-field .subscribe-select label {
+    color: var(--gray3);
+    letter-spacing: 0px;
+}
+
+/* 관심 지자체 */
+.add-info-area .info-field .info-field-items.favo {
+    padding-top: 0;
+}
+
+.add-info-area .info-field .info-field-items .form-field .select-location {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 0;
+    flex: 0 0 auto;
+    gap: 8px;
+}
+
+.add-info-area .info-field .info-field-items .form-field .select-location .select-location-items {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+gap:8px;
+}
+
+.add-info-area .info-field .info-field-items .form-field .select-location .select-location-items span {
+    white-space: nowrap;
+}
+
+.add-info-area .info-field .info-field-items .form-field .select-location .select-location-items select {
+    min-width: 160px;
+    width: unset;
+}
+
+.add-info-area .info-field .info-field-items .form-field .select-location .select-location-items:nth-child(2) {
+    padding-left: 8px;
+}
+
+.add-info-area .info-field .info-field-items .form-field .select-location .select-location-items:nth-child(2) select {
+    min-width: 140px;
+
+}
+
+.add-info-area .info-field .info-field-items .form-field .select-location button.formBtn {
+
+    width: 40px;
+    height: 40px;
+}
+
+.add-info-area .info-field .info-field-items .form-field .selected-location {
+    background-color: var(--gray5);
+    padding: calc(var(--margin-padding-8)*2);
+    display: flex;
+    flex-wrap: wrap;
+
+}
+
+.add-info-area .info-field .info-field-items .form-field .selected-location .attention-location {
+    background-color: #fff;
+    color: var(--gray3);
+    padding: calc(var(--margin-padding-8)*1) 3%;
+    border-radius: 30px;
+    border: 1px solid var(--gray4);
+    margin: calc(var(--margin-padding-4)*1) 1%;
+    transition: background-color 0.2s, color 0.1s;
+    font-size: 14px;
+}
+
+
+.add-info-area .info-field .info-field-items .form-field .selected-location .attention-location:hover {
+    border-color: var(--main-color2);
+}
+
+.add-info-area .info-field .info-field-items .form-field .selected-location .attention-location .delete {
+    margin-left: calc(var(--margin-padding-8)*1);
+}
+
+.add-info-area .info-field .info-field-items .form-field .selected-location .attention-location:hover .delete {
+    color: var(--main-color2);
+}
+
+/*관심정보 선택 메세지 */
+.add-info-area .info-field .line.favo {
+    margin: 30px 0 20px;
+}
+
+.info_txt_wrap {
+    color: var(--gray3);
+    line-height: 1.3em;
+}
+
+.info_txt_wrap li {
+    margin-bottom: 6px;
+}
+
+
+/*  필드 미입력 메세지 */
+.s-txt.input-message {
+    color: #FB502E;
+    line-height: 24px;
+    display: none;
+}
+
+.s-txt.input-message.on {
+    display: block;
+}
+
+@media screen and (max-width:900px) {
+    .add-info-area {
+        padding: calc(var(--margin-padding-8)*10) 7%;
+    }
+
+    .add-info-area .info-field .info-field-items .flied-title {
+        font-size: 14px;
+    }
+
+    /* 관심 지자체 */
+    .add-info-area .info-field .info-field-items .form-field .select-location {
+        flex-direction: column;
+    }
+
+    .add-info-area .info-field .info-field-items .form-field .select-location .select-location-items {
+        width: 100%;
+        padding-right: 0px;
+    }
+
+    .add-info-area .info-field .info-field-items .form-field .select-location .select-location-items:nth-child(2) {
+        padding-left: 0px;
+    }
+
+    .add-info-area .info-field .info-field-items .form-field .select-location .select-location-items select {
+        min-width: unset;
+        width: 100%;
+    }
+
+    .add-info-area .info-field .info-field-items .form-field .select-location .select-location-items span {
+        width: 25%;
+        padding: 1%;
+    }
+
+    .add-info-area .info-field .info-field-items .form-field .select-location button.formBtn {
+        width: 100%;
+        margin-left: 0px;
+    }
+}
+
+@media screen and (max-width:768px) {
+    .page-title-box .user-grade .grade-bg {
+        font-size: 14px;
+    }
+
+    .add-info-area {
+        flex-direction: column;
+        padding: 40px 20px;
+        /* border: none;
+        box-shadow: none; */
+        width: 100%;
+    }
+
+    .add-info-area h3 {
+        flex-direction: row;
+    }
+
+    .add-info-area .lable-field {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        margin-bottom: calc(var(--margin-padding-8)*3);
+
+    }
+
+    .add-info-area .lable-field>* {
+        margin: 0;
+        padding: 0;
+    }
+
+    .add-info-area .info-field {
+        width: 100%;
+    }
+
+    .add-info-area .info-field .info-field-items {
+        flex-direction: column;
+        padding-top: 0;
+        /* margin-bottom: 12px; */
+    }
+
+    .add-info-area .info-field .info-field-items .flied-title {
+        width: 100%;        line-height: 20px;
+
+    }
+
+    .add-info-area .info-field .info-field-items .form-field input:not([type='radio']) {
+        width: 100%;
+    }
+
+    .add-info-area .info-field .info-field-items .m-field button {
+        /* margin: 0 0 0 8px; */
+        height: 40px;
+        padding: 0 12px;
+        font-size: 13px;
+    }
+
+    .add-info-area .info-field .info-field-items .s-txt {
+        font-size: 13px;
+    }
+
+    .add-info-area .info-field .info-field-items .s-txt span {
+        display: block;
+    }
+
+    .add-info-area .info-field .info-field-items.memberGroup .form-field button.formBtn {
+        max-width: unset;
+        width: 50%;
+    }
+
+    .add-info-area .info-field .info-field-items.password .form-field button.formBtn {
+        width: 100%;
+    }
+
+    .add-info-area .info-field .info-field-items.userNum .form-field span.s-txt {
+        /* margin: 0 8px; */
+    }
+
+    .add-info-area .info-field .info-field-items.userNum .form-field input[type='number'] {
+        min-width: 70px;
+    }
+
+    .add-info-area .info-field .info-field-items.userEmail .form-field {
+        flex-direction: column;
+    }
+
+    .add-info-area .info-field .info-field-items.userEmail .m-field {
+        width: 100%;
+        gap: 8px;
+        /* margin-bottom: 8px; */
+    }
+
+    .add-info-area .info-field .info-field-items.userEmail .form-field select {
+        width: 100%;
+    }
+
+    .add-info-area .info-field .info-field-items .form-field .input-address {
+        flex-direction: column;
+    }
+
+    .add-info-area .info-field .info-field-items .form-field .input-address .info-field-items input[type='text'] {
+        margin-bottom: 0;
+    }
+
+    .add-info-area .info-field .info-field-items .form-field .search-address button {
+        width: 40%;
+    }
+
+    .add-info-area .info-field .info-field-items.subscribe .form-field {
+        padding-left: 0;
+    }
+
+    .add-info-area .info-field .info-field-items.subscribe label.flied-title {
+        width: 100%;
+    }
+
+    .add-info-area .info-field .info-field-items.fa-select {
+        display: flex;
+    }
+
+    fieldset .btn-box.many {
+        width: 90%;
+        margin: 0 auto 100px;
+    }
+
+    .add-info-area .info-field .info-field-items .m-field {
+	    gap: 0px;
+	}
+
+	.add-info-area .info-field .info-field-items.subscribe .m-field .s-txt {
+	    width: 140px;
+	}
+
+}
+
+
+
+.subscribe-select label {
+	font : 1.4rem
+}

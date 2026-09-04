@@ -1,3 +1,11 @@
+-- ===================================================================
+-- TO-BE DB 재구성(2026-09): 물리 2개(gift + 나머지), 논리 6개 스키마 구조로 전환.
+-- 이 파일은 이제 자신의 단독 DB가 아니라 'ghlove_core' DB 안의 'member' 스키마에 적용한다.
+-- 실행예: psql -U postgres -d ghlove_core -f service-member.sql
+-- ===================================================================
+CREATE SCHEMA IF NOT EXISTS member;
+SET search_path TO member;
+
 -- Service: member
 -- ===================================================================
 -- AS-IS 운영 DB 원본 스키마 기준 자동 생성 (31개 테이블)
@@ -515,7 +523,12 @@ CREATE TABLE IF NOT EXISTS OP_USER_LEVEL (
 );
 
 -- 사용자 등급 변경 로그
+-- LOG_ID는 원본 덤프에 없던 서로게이트 PK(D11 회원등급관리 라운드에서 추가) - 원본 테이블은
+-- PK 지정이 없는 순수 로그성 테이블이라 JPA 매핑을 위해 추가했다(as-is-schema-import-550-tables
+-- memory의 "의도적 override" 관행과 동일).
 CREATE TABLE IF NOT EXISTS OP_USER_LEVEL_LOG (
+    -- 로그 ID(신규 서로게이트 PK)
+    LOG_ID                        BIGSERIAL PRIMARY KEY,
     -- 회원ID
     USER_ID                      BIGINT NOT NULL DEFAULT 0,
     -- 그룹 코드
@@ -866,4 +879,24 @@ INSERT INTO OP_COMMON_CODE (CODE_TYPE, CODE_LANGUAGE, ID, LABEL, ORDERING, USE_Y
 ('LOGIN_PATH', 'ko', '500', '카카오인증', 5, 'Y'),
 ('LOGIN_PATH', 'ko', '600', '네이버인증', 6, 'Y'),
 ('LOGIN_PATH', 'ko', '700', '민간개방API', 7, 'Y')
+ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
+
+-- SFR-002 "다중 인증체계(MFA) 선택 적용" gap fill - 일반회원이 마이페이지에서 스스로 켜고
+-- 끄는 opt-in 옵션. AS-IS에는 대응 컬럼이 없다(관리자 콘솔의 강제 이메일 2차인증과 별개).
+ALTER TABLE OP_USER ADD COLUMN IF NOT EXISTS MFA_ENABLED VARCHAR(1) NOT NULL DEFAULT 'N';
+
+-- SFR-002 "데이터 파기 절차: 로그 데이터 분리 보관(익명화), 법적 보관 의무 데이터 별도 관리,
+-- 파기 이력 기록 및 보고" gap fill. 탈퇴(WITHDRAWN) 후 일정 유예기간이 지나면 개인식별정보를
+-- 익명화하고(행 자체는 FK 무결성을 위해 유지), 그 파기 사실을 별도 이력 테이블에 남긴다.
+CREATE TABLE IF NOT EXISTS USER_DATA_DESTRUCTION_LOG (
+    DESTRUCTION_ID   BIGSERIAL    PRIMARY KEY,
+    USER_ID          BIGINT       NOT NULL,
+    DESTROYED_FIELDS VARCHAR(500),
+    REASON           VARCHAR(200),
+    DESTROYED_DATE   VARCHAR(14)  NOT NULL
+);
+
+INSERT INTO OP_COMMON_CODE (CODE_TYPE, CODE_LANGUAGE, ID, LABEL, CODE_VALUE, ORDERING, USE_YN) VALUES
+('SYSTEM_CONFIG', 'ko', 'WITHDRAWN_DATA_RETENTION_DAYS', '탈퇴회원 개인정보 보관기간(일)', '30', 90, 'Y'),
+('SYSTEM_CONFIG', 'ko', 'LOGIN_LOG_RETENTION_DAYS', '로그인 로그 익명화 보관기간(일)', '365', 91, 'Y')
 ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;

@@ -110,4 +110,8 @@ public class Order {
     /** 쿠폰으로 할인된 포인트 - POINT_AMOUNT는 이미 이 금액만큼 차감된 실결제액이다. */
     @Column(name = "DISCOUNT_AMOUNT")
     private Long discountAmount = 0L;
+
+    /** admin 주문관리 콘솔 전용 - 운영자가 남기는 처리 메모(고객에게 노출되지 않음). */
+    @Column(name = "ADMIN_MEMO")
+    private String adminMemo;
 }

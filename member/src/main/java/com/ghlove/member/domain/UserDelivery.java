@@ -5,8 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
-
 /** 마이페이지 "배송지 관리" 주소록. AS-IS OP_USER_DELIVERY (배치 스캔으로 이미 존재하던
  *  테이블, PK 시퀀스만 이번에 추가) 그대로 재사용. */
 @Entity
@@ -61,6 +59,7 @@ public class UserDelivery {
     @Column(name = "ADDRESS_DETAIL")
     private String addressDetail;
 
+    /** yyyyMMddHHmmss (AS-IS 레거시 컬럼이 VARCHAR(14)). */
     @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
+    private String createdDate;
 }

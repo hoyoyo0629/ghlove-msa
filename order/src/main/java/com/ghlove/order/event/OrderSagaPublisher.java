@@ -47,6 +47,13 @@ public class OrderSagaPublisher {
                 "ORDER_CANCELLED");
     }
 
+    /** SFR-006 SLA ReadModel - 송장등록/배송상태갱신/구매확정 3곳 전부 이 한 메서드로 통일해서 부른다. */
+    public void publishDeliveryUpdated(Order order) {
+        OrderDeliveryUpdatedEvent event = new OrderDeliveryUpdatedEvent(order.getOrderId(), order.getDeliveryStatus(),
+                order.getShippedDate(), order.getDeliveredDate(), order.getConfirmedDate(), LocalDateTime.now());
+        send(order.getOrderId(), event, "ORDER_DELIVERY_UPDATED");
+    }
+
     private void send(String key, Object event, String eventType) {
         ProducerRecord<String, Object> record = new ProducerRecord<>(TOPIC, null, key, event,
                 List.of(new RecordHeader(HEADER_EVENT_TYPE, eventType.getBytes(StandardCharsets.UTF_8))));

@@ -1,10 +1,12 @@
 package com.ghlove.member.web;
 
 import com.ghlove.member.domain.User;
+import com.ghlove.member.service.AuthCookieSupport;
 import com.ghlove.member.service.ExternalLoginService;
 import com.ghlove.member.service.integration.ExternalIdentity;
 import com.ghlove.member.service.integration.OAuth2LoginClient;
 import com.ghlove.member.service.integration.OnePassClient;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Controller;
@@ -27,15 +29,18 @@ public class ExternalLoginController {
     private final OAuth2LoginClient kakaoLoginClient;
     private final OAuth2LoginClient naverLoginClient;
     private final ExternalLoginService externalLoginService;
+    private final AuthCookieSupport authCookieSupport;
 
     public ExternalLoginController(OnePassClient onePassClient,
                                     @Qualifier("kakaoLoginClient") OAuth2LoginClient kakaoLoginClient,
                                     @Qualifier("naverLoginClient") OAuth2LoginClient naverLoginClient,
-                                    ExternalLoginService externalLoginService) {
+                                    ExternalLoginService externalLoginService,
+                                    AuthCookieSupport authCookieSupport) {
         this.onePassClient = onePassClient;
         this.kakaoLoginClient = kakaoLoginClient;
         this.naverLoginClient = naverLoginClient;
         this.externalLoginService = externalLoginService;
+        this.authCookieSupport = authCookieSupport;
     }
 
     @GetMapping("/onepass-login")
@@ -48,10 +53,11 @@ public class ExternalLoginController {
     }
 
     @GetMapping("/onepass-callback")
-    public String onePassCallback(@RequestParam Map<String, String> params, HttpSession session, Model model) {
+    public String onePassCallback(@RequestParam Map<String, String> params, HttpSession session,
+                                   HttpServletResponse response, Model model) {
         try {
             ExternalIdentity identity = onePassClient.verifyCallback(params);
-            return completeLogin(identity, session);
+            return completeLogin(identity, session, response);
         } catch (RuntimeException e) {
             model.addAttribute("errorMessage", "디지털원패스 로그인에 실패했습니다: " + e.getMessage());
             return "login";
@@ -64,8 +70,9 @@ public class ExternalLoginController {
     }
 
     @GetMapping("/login/kakao/callback")
-    public String kakaoCallback(@RequestParam String code, HttpSession session, Model model) {
-        return oauthCallback(kakaoLoginClient, code, session, model);
+    public String kakaoCallback(@RequestParam String code, HttpSession session,
+                                 HttpServletResponse response, Model model) {
+        return oauthCallback(kakaoLoginClient, code, session, response, model);
     }
 
     @GetMapping("/login/naver")
@@ -74,8 +81,9 @@ public class ExternalLoginController {
     }
 
     @GetMapping("/login/naver/callback")
-    public String naverCallback(@RequestParam String code, HttpSession session, Model model) {
-        return oauthCallback(naverLoginClient, code, session, model);
+    public String naverCallback(@RequestParam String code, HttpSession session,
+                                 HttpServletResponse response, Model model) {
+        return oauthCallback(naverLoginClient, code, session, response, model);
     }
 
     /**
@@ -130,20 +138,26 @@ public class ExternalLoginController {
         return "redirect:" + client.buildAuthorizeUrl(state);
     }
 
-    private String oauthCallback(OAuth2LoginClient client, String code, HttpSession session, Model model) {
+    private String oauthCallback(OAuth2LoginClient client, String code, HttpSession session,
+                                  HttpServletResponse response, Model model) {
         try {
             ExternalIdentity identity = client.exchange(code);
-            return completeLogin(identity, session);
+            return completeLogin(identity, session, response);
         } catch (RuntimeException e) {
             model.addAttribute("errorMessage", "SNS 로그인에 실패했습니다: " + e.getMessage());
             return "login";
         }
     }
 
-    private String completeLogin(ExternalIdentity identity, HttpSession session) {
+    /** AuthController/AuthApiController와 동일하게 HttpSession(Thymeleaf 화면용)과
+     *  GH_AUTH JWT 쿠키(storefront SPA 등 JWT 기반 서비스용)를 항상 같이 발급한다 -
+     *  이 메서드가 세션만 채우고 쿠키 발급을 빠뜨리면 SNS/디지털원패스로 로그인해도
+     *  storefront에서는 로그인 상태가 반영되지 않는다. */
+    private String completeLogin(ExternalIdentity identity, HttpSession session, HttpServletResponse response) {
         User user = externalLoginService.findLinkedUser(identity)
                 .orElseGet(() -> externalLoginService.linkNewAccount(identity));
         session.setAttribute(AuthController.SESSION_USER_KEY, user);
+        authCookieSupport.issue(response, user);
         return "redirect:/";
     }
 }

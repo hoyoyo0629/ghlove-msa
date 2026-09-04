@@ -1,0 +1,167 @@
+package com.ghlove.admin.service;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+/**
+ * admin 회원관리 콘솔(docs/as-is-admin-gap-deep-audit-part2.md 배치D D2~D5) - member
+ * 서비스의 /api/admin/members, /api/admin/secede-users, /api/admin/sleep-users를 호출한다.
+ * 실제 데이터/도메인효과는 member 서비스에 있고, 여기는 admin 콘솔의 로그인/RBAC과 화면만
+ * 담당한다(OffgiveClient와 동일한 패턴).
+ */
+@Component
+public class MemberAdminClient {
+
+    private final RestClient restClient;
+
+    public MemberAdminClient(@Value("${ghlove.member-service.base-url}") String memberServiceBaseUrl) {
+        this.restClient = RestClient.create(memberServiceBaseUrl);
+    }
+
+    public SearchResult search(String fromDate, String toDate, String srchKey, String srchValue,
+                                String sbscrbSeCode, String receiveEmail, int page, int size) {
+        try {
+            SearchResult result = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/members/search")
+                            .queryParamIfPresent("fromDate", opt(fromDate))
+                            .queryParamIfPresent("toDate", opt(toDate))
+                            .queryParamIfPresent("srchKey", opt(srchKey))
+                            .queryParamIfPresent("srchValue", opt(srchValue))
+                            .queryParamIfPresent("sbscrbSeCode", opt(sbscrbSeCode))
+                            .queryParamIfPresent("receiveEmail", opt(receiveEmail))
+                            .queryParam("page", page)
+                            .queryParam("size", size)
+                            .build())
+                    .retrieve().body(SearchResult.class);
+            return result != null ? result : new SearchResult(List.of(), 0, 0);
+        } catch (RestClientException e) {
+            return new SearchResult(List.of(), 0, 0);
+        }
+    }
+
+    public Detail detail(Long userId) {
+        try {
+            return restClient.get().uri("/api/admin/members/{id}", userId).retrieve().body(Detail.class);
+        } catch (RestClientException e) {
+            return null;
+        }
+    }
+
+    public void withdraw(Long userId, String reason) {
+        try {
+            restClient.post()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/members/{id}/withdraw")
+                            .queryParamIfPresent("reason", opt(reason))
+                            .build(userId))
+                    .retrieve().toBodilessEntity();
+        } catch (RestClientResponseException e) {
+            throw new ManagerException(extractMessage(e, "탈퇴 처리에 실패했습니다."));
+        }
+    }
+
+    public SecedeSearchResult searchSecede(String fromDate, String toDate, String srchKey, String srchValue,
+                                            int page, int size) {
+        try {
+            SecedeSearchResult result = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/secede-users/search")
+                            .queryParamIfPresent("fromDate", opt(fromDate))
+                            .queryParamIfPresent("toDate", opt(toDate))
+                            .queryParamIfPresent("srchKey", opt(srchKey))
+                            .queryParamIfPresent("srchValue", opt(srchValue))
+                            .queryParam("page", page)
+                            .queryParam("size", size)
+                            .build())
+                    .retrieve().body(SecedeSearchResult.class);
+            return result != null ? result : new SecedeSearchResult(List.of(), 0, 0);
+        } catch (RestClientException e) {
+            return new SecedeSearchResult(List.of(), 0, 0);
+        }
+    }
+
+    public SleepSearchResult searchSleep(String fromDate, String toDate, String srchKey, String srchValue,
+                                          int page, int size) {
+        try {
+            SleepSearchResult result = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/sleep-users/search")
+                            .queryParamIfPresent("fromDate", opt(fromDate))
+                            .queryParamIfPresent("toDate", opt(toDate))
+                            .queryParamIfPresent("srchKey", opt(srchKey))
+                            .queryParamIfPresent("srchValue", opt(srchValue))
+                            .queryParam("page", page)
+                            .queryParam("size", size)
+                            .build())
+                    .retrieve().body(SleepSearchResult.class);
+            return result != null ? result : new SleepSearchResult(List.of(), 0, 0);
+        } catch (RestClientException e) {
+            return new SleepSearchResult(List.of(), 0, 0);
+        }
+    }
+
+    public int wakeup(List<Long> userIds) {
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        for (Long id : userIds) {
+            body.add("userIds", String.valueOf(id));
+        }
+        try {
+            Map<?, ?> result = restClient.post().uri("/api/admin/sleep-users/wakeup")
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(body)
+                    .retrieve().body(Map.class);
+            return result != null && result.get("count") != null ? ((Number) result.get("count")).intValue() : 0;
+        } catch (RestClientException e) {
+            throw new ManagerException("휴면 해제 처리에 실패했습니다.");
+        }
+    }
+
+    private static Optional<String> opt(String value) {
+        return Optional.ofNullable(value == null || value.isBlank() ? null : value);
+    }
+
+    private static String extractMessage(RestClientResponseException e, String fallback) {
+        try {
+            var body = e.getResponseBodyAs(Map.class);
+            Object msg = body != null ? body.get("message") : null;
+            return msg != null ? msg.toString() : fallback;
+        } catch (RuntimeException ex) {
+            return fallback;
+        }
+    }
+
+    public record Row(Long userId, String loginId, String userName, String email, String statusCode,
+                       String sbscrbSeCode, String createdDate, String phoneNumber) {
+    }
+
+    public record SearchResult(List<Row> content, long totalElements, int totalPages) {
+    }
+
+    public record Detail(Long userId, String loginId, String userName, String email, String statusCode,
+                          String sbscrbSeCode, String createdDate, String updatedDate, String loginDate,
+                          Integer loginCount, String leaveDate, String phoneNumber, String address,
+                          String addressDetail, String post, String gender, String birthday, String receiveEmail,
+                          String receiveSms, String receiveKakao, String leaveReason, String leaveCode,
+                          List<String> roles) {
+    }
+
+    public record SecedeRow(Long userId, String loginId, String userName, String leaveDate, String leaveReason,
+                             String leaveCode) {
+    }
+
+    public record SecedeSearchResult(List<SecedeRow> content, long totalElements, int totalPages) {
+    }
+
+    public record SleepRow(Long userId, String loginId, String userName, String loginDate, String createdDate) {
+    }
+
+    public record SleepSearchResult(List<SleepRow> content, long totalElements, int totalPages) {
+    }
+}

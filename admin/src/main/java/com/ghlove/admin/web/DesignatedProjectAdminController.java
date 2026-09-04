@@ -4,12 +4,15 @@ import com.ghlove.admin.domain.Manager;
 import com.ghlove.admin.service.DesignatedProjectClient;
 import com.ghlove.admin.service.LocgovClient;
 import com.ghlove.admin.service.ManagerException;
+import com.ghlove.admin.service.MenuService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 /** 지정기부(designated-donation) 관리 (AS-IS opmanager/designated-donation). 실제
  *  데이터는 donation 서비스에 있고(DesignatedProjectClient), 여기는 admin 콘솔의
@@ -27,8 +30,13 @@ public class DesignatedProjectAdminController {
     private final LocgovClient locgovClient;
 
     @GetMapping("/designated-projects")
-    public String list(Model model) {
-        model.addAttribute("projects", designatedProjectClient.listAll());
+    public String list(HttpSession session, Model model) {
+        Manager manager = manager(session);
+        List<DesignatedProjectClient.Project> projects = designatedProjectClient.listAll();
+        if (MenuService.isLocgovScoped(manager)) {
+            projects = projects.stream().filter(p -> manager.getLocgovCode().equals(p.lclgvCd())).toList();
+        }
+        model.addAttribute("projects", projects);
         model.addAttribute("statusLabels", statusLabels());
         model.addAttribute("bsnsTypes", designatedProjectClient.codesOf("DSGN_BSNS_TYPE"));
         return "designated/list";
@@ -42,13 +50,19 @@ public class DesignatedProjectAdminController {
     }
 
     @GetMapping("/designated-projects/{id}")
-    public String detail(@PathVariable Long id, Model model) {
+    public String detail(@PathVariable Long id, HttpSession session, Model model) {
+        Manager manager = manager(session);
+        DesignatedProjectClient.Project project;
         try {
-            model.addAttribute("project", designatedProjectClient.get(id));
+            project = designatedProjectClient.get(id);
         } catch (ManagerException e) {
             model.addAttribute("errorMessage", e.getMessage());
             return "redirect:/designated-projects";
         }
+        if (MenuService.isLocgovScoped(manager) && !manager.getLocgovCode().equals(project.lclgvCd())) {
+            return "redirect:/designated-projects";
+        }
+        model.addAttribute("project", project);
         commonFormAttrs(model, id);
         model.addAttribute("notices", designatedProjectClient.noticesOf(id));
         model.addAttribute("approvalLog", designatedProjectClient.approvalLogOf(id));
@@ -70,7 +84,7 @@ public class DesignatedProjectAdminController {
                           HttpSession session, Model model) {
         Manager manager = manager(session);
         try {
-            designatedProjectClient.create(toYmd(form), image, canSelfApprove(manager), manager.getUserId());
+            designatedProjectClient.create(toYmd(forceOwnLocgov(form, manager)), image, canSelfApprove(manager), manager.getUserId());
             return "redirect:/designated-projects";
         } catch (ManagerException e) {
             model.addAttribute("errorMessage", e.getMessage());
@@ -85,8 +99,17 @@ public class DesignatedProjectAdminController {
                           @RequestParam(required = false) MultipartFile image,
                           HttpSession session, Model model) {
         Manager manager = manager(session);
+        if (MenuService.isLocgovScoped(manager)) {
+            try {
+                if (!manager.getLocgovCode().equals(designatedProjectClient.get(id).lclgvCd())) {
+                    return "redirect:/designated-projects";
+                }
+            } catch (ManagerException e) {
+                return "redirect:/designated-projects";
+            }
+        }
         try {
-            designatedProjectClient.update(id, toYmd(form), image, canSelfApprove(manager), manager.getUserId());
+            designatedProjectClient.update(id, toYmd(forceOwnLocgov(form, manager)), image, canSelfApprove(manager), manager.getUserId());
             return "redirect:/designated-projects/" + id;
         } catch (ManagerException e) {
             model.addAttribute("errorMessage", e.getMessage());
@@ -110,6 +133,17 @@ public class DesignatedProjectAdminController {
 
     private static String stripDashes(String ymd) {
         return ymd != null ? ymd.replace("-", "") : null;
+    }
+
+    /** 지자체담당자(ROLE_ADMIN_5/6)는 화면에서 어떤 지자체를 골랐든 자기 소속으로 강제한다. */
+    private static DesignatedProjectClient.ProjectForm forceOwnLocgov(DesignatedProjectClient.ProjectForm form, Manager manager) {
+        if (!MenuService.isLocgovScoped(manager)) {
+            return form;
+        }
+        return new DesignatedProjectClient.ProjectForm(form.dsgnDntnBizTtl(), form.dsgnDntnBizCn(),
+                form.dsgnDntnBizBgngYmd(), form.dsgnDntnBizEndYmd(), form.goalAmt(), form.dsgnDntnBizSttsCd(),
+                form.rlsYn(), manager.getLocgovCode(), form.dsgnDntnBizSeCd(), form.bsnsSubType(),
+                form.contentEtc(), form.deptId());
     }
 
     @PostMapping("/designated-projects/{id}/notices")
@@ -181,7 +215,7 @@ public class DesignatedProjectAdminController {
     }
 
     private static boolean canSelfApprove(Manager manager) {
-        return "ROLE_ADMIN".equals(manager.getAuthority());
+        return MenuService.UNRESTRICTED_ROLES.contains(manager.getAuthority());
     }
 
     private static java.util.Map<String, String> statusLabels() {

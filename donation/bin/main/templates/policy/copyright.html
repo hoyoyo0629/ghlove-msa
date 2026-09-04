@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${title} + ' | 고향사랑e음'"></title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/donation_guge.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<!-- AS-IS policy/copyright.html 재현. 본문은 실제 운영사이트 API(/api/policy/copyright)
+     원문 그대로(PolicyController 참고). -->
+<section class="center">
+    <div class="page-title-box">
+        <img th:src="@{/images/icon/cli-icon-bullet.png}" alt="">
+        <h2 class="page-title-txt" th:text="${title}"></h2>
+    </div>
+
+    <div class="contents-wrap">
+        <div class="s-contents fnb" id="contents">
+            <article class="fnb-detail" th:utext="${content}"></article>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+</body>
+</html>

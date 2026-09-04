@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>포인트 예약 관리 - 고향사랑e음 (point service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="wrap">
+    <h1>포인트 예약 관리<span class="badge">point</span></h1>
+    <p style="font-size:12px; color:#888; margin-bottom:16px; text-align:center;">
+        SFR-004 예약/예약해제 기능 - 실제 주문 결제는 아직 이 예약 단계를 거치지 않고
+        바로 차감/복원되지만(order.saga 연동), 결제 확정 전 포인트를 미리 잡아두는
+        용도로 독립적으로 사용할 수 있습니다.
+    </p>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+    <div>
+        <div class="balance-card">
+            <div class="label">가용 잔액 (보유 - 예약중)</div>
+            <div class="value" th:text="${#numbers.formatInteger(availableBalance, 0, 'COMMA')} + 'P'"></div>
+        </div>
+
+        <div class="section-title">새 예약 만들기</div>
+        <form th:action="@{/reservations}" method="post" class="inline-form">
+            <input type="number" name="amount" placeholder="예약 포인트" min="1" step="1" required>
+            <input type="text" name="refKey" placeholder="참조키(선택)">
+            <input type="text" name="reason" placeholder="사유(선택)">
+            <button type="submit">예약</button>
+        </form>
+
+        <div class="section-title">예약 내역</div>
+        <table>
+            <thead>
+            <tr>
+                <th>예약ID</th>
+                <th>포인트</th>
+                <th>참조키</th>
+                <th>사유</th>
+                <th>상태</th>
+                <th>일시</th>
+                <th>처리</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="r : ${reservations}">
+                <td th:text="${r.reservationId}"></td>
+                <td th:text="${#numbers.formatInteger(r.amount, 0, 'COMMA')} + 'P'"></td>
+                <td th:text="${r.refKey}"></td>
+                <td th:text="${r.reason}"></td>
+                <td>
+                    <span class="status-tag"
+                          th:classappend="${r.status == 'RESERVED'} ? 'reserved' : (${r.status == 'CONFIRMED'} ? 'confirmed' : 'released')"
+                          th:text="${statusLabels.get(r.status)} ?: ${r.status}"></span>
+                </td>
+                <td th:text="${#temporals.format(r.createdDate, 'yyyy-MM-dd HH:mm')}"></td>
+                <td>
+                    <form th:if="${r.status == 'RESERVED'}" th:action="@{'/reservations/' + ${r.reservationId} + '/confirm'}" method="post" class="inline-form">
+                        <button type="submit" class="small-btn">확정</button>
+                    </form>
+                    <form th:if="${r.status == 'RESERVED'}" th:action="@{'/reservations/' + ${r.reservationId} + '/release'}" method="post" class="inline-form">
+                        <button type="submit" class="small-btn ghost">해제</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="empty" th:if="${#lists.isEmpty(reservations)}">예약 내역이 없습니다.</p>
+    </div>
+
+    <div class="links">
+        <a th:href="@{/}">내 포인트로</a>
+    </div>
+</div>
+</body>
+</html>

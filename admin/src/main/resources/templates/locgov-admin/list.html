@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>지자체관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/user/locgov/list.jsp 재현 - 전국 지자체 246건이 이미 시드되어 있어
+     "등록"은 새 코드를 만드는 게 아니라 그중 담당자정보가 아직 없는 행을 골라 채우는 것이다
+     (LocgovAdminService 주석 참고). -->
+<div class="contents contents_inner">
+    <h3><span>지자체관리</span></h3>
+    <div class="btn_all btn_right" style="margin-bottom:16px;">
+        <a th:href="@{/admin/locgovs/new}" class="btn btn-dark-gray btn-small">지자체 등록</a>
+    </div>
+
+    <form th:action="@{/admin/locgovs}" method="get" id="searchForm">
+        <div class="board_write">
+            <table class="board_write_table" summary="지자체관리 검색조건">
+                <colgroup><col style="width:150px;"><col><col style="width:150px;"><col></colgroup>
+                <tbody>
+                <tr>
+                    <td class="label">지자체명</td>
+                    <td><input type="text" name="locgovNm" th:value="${locgovNm}"></td>
+                    <td class="label">담당자명</td>
+                    <td><input type="text" name="chargerNm" th:value="${chargerNm}"></td>
+                </tr>
+                <tr>
+                    <td class="label">연락처</td>
+                    <td><input type="text" name="chargerCttpc" th:value="${chargerCttpc}"></td>
+                    <td class="label">등록일</td>
+                    <td>
+                        <div class="flex_box gap-08">
+                            <input type="date" name="startDate" th:value="${startDate}">
+                            <span class="wave">~</span>
+                            <input type="date" name="endDate" th:value="${endDate}">
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="btn_all btn_right" style="margin-bottom:16px;">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-dark-gray btn-small" onclick="location.href=/*[[@{/admin/locgovs}]]*/'/admin/locgovs'">초기화</button>
+                <button type="submit" class="btn btn-dark-gray btn-small">검색</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="count_title mt-40">
+        <h5>총 <span th:text="${result.totalElements}" th:remove="tag"></span>건</h5>
+    </div>
+
+    <table class="board_list_table" summary="지자체관리">
+        <caption>지자체관리</caption>
+        <thead>
+        <tr>
+            <th scope="col">지자체</th>
+            <th scope="col">등록상태</th>
+            <th scope="col">예산(백만원)</th>
+            <th scope="col">인구(명)</th>
+            <th scope="col">담당자명</th>
+            <th scope="col">연락처</th>
+            <th scope="col">등록일</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="l : ${result.content}">
+            <td><a th:href="@{'/admin/locgovs/' + ${l.locgovCode}}" th:text="(${l.upperLocgovNm} ?: '') + ' ' + ${l.locgovNm}"></a></td>
+            <td th:text="${l.bizrno != null and !#strings.isEmpty(l.bizrno)} ? '등록완료' : '미등록'"></td>
+            <td th:text="${l.locgovBudgetAmt != null} ? ${#numbers.formatInteger(l.locgovBudgetAmt, 0, 'COMMA')} : ''"></td>
+            <td th:text="${l.locgovPopltnCo}"></td>
+            <td th:text="${l.chargerNm}"></td>
+            <td th:text="${l.chargerCttpc}"></td>
+            <td th:text="${l.frstRegistPnttm != null} ? ${#temporals.format(l.frstRegistPnttm, 'yyyy-MM-dd')} : ''"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(result.content)}">조회된 지자체가 없습니다.</p>
+
+    <div class="pagination-wrap" th:if="${result.totalPages > 1}">
+        <div class="pagination">
+            <a th:if="${result.page > 0}" class="prev"
+               th:href="@{/admin/locgovs(locgovNm=${locgovNm},chargerNm=${chargerNm},chargerCttpc=${chargerCttpc},startDate=${startDate},endDate=${endDate},page=${result.page - 1})}">이전</a>
+            <span th:each="p : ${#numbers.sequence(0, result.totalPages - 1)}">
+                <strong th:if="${p == result.page}" th:text="${p + 1}"></strong>
+                <a th:unless="${p == result.page}"
+                   th:href="@{/admin/locgovs(locgovNm=${locgovNm},chargerNm=${chargerNm},chargerCttpc=${chargerCttpc},startDate=${startDate},endDate=${endDate},page=${p})}"
+                   th:text="${p + 1}"></a>
+            </span>
+            <a th:if="${result.page + 1 < result.totalPages}" class="next"
+               th:href="@{/admin/locgovs(locgovNm=${locgovNm},chargerNm=${chargerNm},chargerCttpc=${chargerCttpc},startDate=${startDate},endDate=${endDate},page=${result.page + 1})}">다음</a>
+        </div>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

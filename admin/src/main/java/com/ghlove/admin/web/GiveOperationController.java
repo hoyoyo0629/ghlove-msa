@@ -5,6 +5,7 @@ import com.ghlove.admin.service.CommonCodeService;
 import com.ghlove.admin.service.CtbnyOpratnClient;
 import com.ghlove.admin.service.LocgovClient;
 import com.ghlove.admin.service.ManagerException;
+import com.ghlove.admin.service.MenuService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -31,7 +32,8 @@ public class GiveOperationController {
 
     /** 지자체별 집계(기부금액/사용금액/잔액) - AS-IS give-operation/list.jsp. */
     @GetMapping("/give-operation")
-    public String list(Model model) {
+    public String list(HttpSession session, Model model) {
+        Manager viewer = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
         Map<String, LocgovClient.LocgovInfo> locgovsByCode = new LinkedHashMap<>();
         locgovClient.allLocgovs().forEach(l -> locgovsByCode.put(l.locgovCode(), l));
 
@@ -56,6 +58,11 @@ public class GiveOperationController {
             totalDonated = totalDonated.add(donated);
             totalSpent = totalSpent.add(spent);
         }
+        if (MenuService.isLocgovScoped(viewer)) {
+            rows = rows.stream().filter(r -> r.locgovCode().equals(viewer.getLocgovCode())).toList();
+            totalDonated = rows.stream().map(Row::donated).reduce(BigDecimal.ZERO, BigDecimal::add);
+            totalSpent = rows.stream().map(Row::spent).reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
         model.addAttribute("rows", rows);
         model.addAttribute("totalDonated", totalDonated);
         model.addAttribute("totalSpent", totalSpent);
@@ -66,7 +73,11 @@ public class GiveOperationController {
     /** 특정 지자체의 지출내역 목록+등록/수정/삭제 - AS-IS give-operation/list/{locgovCode}
      *  + popup/form.jsp를 하나의 화면으로 합쳤다(팝업 대신 같은 화면 안 인라인 폼). */
     @GetMapping("/give-operation/{locgovCode}")
-    public String detail(@PathVariable String locgovCode, Model model) {
+    public String detail(@PathVariable String locgovCode, HttpSession session, Model model) {
+        Manager viewer = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
+        if (MenuService.isLocgovScoped(viewer) && !locgovCode.equals(viewer.getLocgovCode())) {
+            return "redirect:/give-operation";
+        }
         LocgovClient.LocgovInfo info = locgovClient.allLocgovs().stream()
                 .filter(l -> locgovCode.equals(l.locgovCode())).findFirst().orElse(null);
         List<CtbnyOpratnClient.Row> list = ctbnyOpratnClient.listByLocgov(locgovCode);
@@ -86,6 +97,9 @@ public class GiveOperationController {
                           @RequestParam(required = false) List<MultipartFile> files,
                           HttpSession session, Model model) {
         Manager manager = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
+        if (MenuService.isLocgovScoped(manager) && !locgovCode.equals(manager.getLocgovCode())) {
+            return "redirect:/give-operation";
+        }
         try {
             ctbnyOpratnClient.create(locgovCode, bsnsPurpsCode, bsnsNm, bsnsCn, expndtrDe, expndtrAmt, rm,
                     manager.getUserId(), files);
@@ -104,6 +118,9 @@ public class GiveOperationController {
                           @RequestParam(required = false) List<MultipartFile> files,
                           HttpSession session, Model model) {
         Manager manager = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
+        if (MenuService.isLocgovScoped(manager) && !locgovCode.equals(manager.getLocgovCode())) {
+            return "redirect:/give-operation";
+        }
         try {
             ctbnyOpratnClient.update(registSn, bsnsPurpsCode, bsnsNm, bsnsCn, expndtrDe, expndtrAmt, rm,
                     manager.getUserId(), files);
@@ -114,13 +131,21 @@ public class GiveOperationController {
     }
 
     @PostMapping("/give-operation/{locgovCode}/{registSn}/delete")
-    public String delete(@PathVariable String locgovCode, @PathVariable Long registSn) {
+    public String delete(@PathVariable String locgovCode, @PathVariable Long registSn, HttpSession session) {
+        Manager manager = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
+        if (MenuService.isLocgovScoped(manager) && !locgovCode.equals(manager.getLocgovCode())) {
+            return "redirect:/give-operation";
+        }
         ctbnyOpratnClient.delete(registSn);
         return "redirect:/give-operation/" + locgovCode;
     }
 
     @PostMapping("/give-operation/{locgovCode}/files/{fileId}/delete")
-    public String deleteFile(@PathVariable String locgovCode, @PathVariable Long fileId) {
+    public String deleteFile(@PathVariable String locgovCode, @PathVariable Long fileId, HttpSession session) {
+        Manager manager = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
+        if (MenuService.isLocgovScoped(manager) && !locgovCode.equals(manager.getLocgovCode())) {
+            return "redirect:/give-operation";
+        }
         ctbnyOpratnClient.deleteFile(fileId);
         return "redirect:/give-operation/" + locgovCode;
     }

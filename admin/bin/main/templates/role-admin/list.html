@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>역할·메뉴권한 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- D10 역할·메뉴권한 관리 (AS-IS UserGroupController - 이름과 달리 회원그룹이 아니라
+     관리자 권한관리다). 역할 자체 CRUD + 역할별 메뉴권한 매트릭스 편집. -->
+<div class="contents contents_inner">
+    <h3>역할·메뉴권한 관리</h3>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+    <div class="btn_all btn_right" style="margin-bottom:16px;">
+        <a class="btn btn-dark-gray btn-small" th:href="@{/admin/roles/new}">+ 역할 등록</a>
+    </div>
+
+    <table class="board_list_table" summary="역할목록">
+        <caption>역할목록</caption>
+        <thead>
+        <tr>
+            <th scope="col">권한코드</th>
+            <th scope="col">역할명</th>
+            <th scope="col">설명</th>
+            <th scope="col">순서</th>
+            <th scope="col">처리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${roles}">
+            <td><a th:href="@{'/admin/roles/' + ${r.authority} + '/edit'}" th:text="${r.authority}"></a></td>
+            <td th:text="${r.roleName}"></td>
+            <td th:text="${r.roleDesc}"></td>
+            <td th:text="${r.roleSeq}"></td>
+            <td>
+                <a class="small-btn" th:href="@{'/admin/roles/' + ${r.authority} + '/matrix'}">메뉴권한 편집</a>
+                <form th:action="@{'/admin/roles/' + ${r.authority} + '/delete'}" method="post" style="display:inline;"
+                      onsubmit="return confirm('이 역할을 삭제하시겠습니까?');">
+                    <button type="submit" class="small-btn ghost">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(roles)}">등록된 역할이 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

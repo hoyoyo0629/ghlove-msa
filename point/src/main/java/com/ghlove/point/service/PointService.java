@@ -440,6 +440,31 @@ public class PointService {
                 .orElse(DEFAULT_RATE_FALLBACK);
     }
 
+    /** admin 지자체관리 화면 "포인트 지급률 등록/수정"(AS-IS user/locgov/edit.jsp "포인트
+     *  지급률") - 연도+지자체 단위로 upsert한다. 이 값이 바로 {@link #currentPointRateOf}가
+     *  읽는 실제 적립률이다. */
+    @org.springframework.transaction.annotation.Transactional
+    public com.ghlove.point.domain.LocgovPointRate upsertLocgovPointRate(String stdrYear, String locgovCode,
+                                                                           BigDecimal pointRate, String managerName) {
+        com.ghlove.point.domain.LocgovPointRate entity = locgovPointRateRepository
+                .findByStdrYearAndLocgovCode(stdrYear, locgovCode)
+                .orElseGet(() -> {
+                    com.ghlove.point.domain.LocgovPointRate e = new com.ghlove.point.domain.LocgovPointRate();
+                    e.setStdrYear(stdrYear);
+                    e.setLocgovCode(locgovCode);
+                    return e;
+                });
+        entity.setPointRate(pointRate);
+        entity.setLastUpdtPnttm(java.time.LocalDateTime.now());
+        entity.setLastUpdusrNm(managerName);
+        return locgovPointRateRepository.save(entity);
+    }
+
+    /** admin 지자체관리 "포인트 지급률 변경이력" 팝업(AS-IS locgov-point-list.jsp)용. */
+    public java.util.List<com.ghlove.point.domain.LocgovPointRate> locgovPointRateHistory(String locgovCode) {
+        return locgovPointRateRepository.findByLocgovCodeOrderByStdrYearDesc(locgovCode);
+    }
+
     private int pointValidDays() {
         return commonCodeRepository.findById(new CommonCodeId("SYSTEM_CONFIG", "ko", "POINT_VALID_DAYS"))
                 .map(com.ghlove.point.domain.CommonCode::getCodeValue)

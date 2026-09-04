@@ -50,12 +50,15 @@ public class RepresentativeBanner {
     @Column(name = "FRST_REGISTER_ID")
     private Long frstRegisterId;
 
+    /** DB 컬럼이 실제로는 timestamp 타입이다(String으로 매핑돼있던 걸 발견해 수정 -
+     *  이 프로젝트의 다른 CREATED_DATE류 컬럼 대부분이 varchar라 그 관례를 따라 잘못
+     *  매핑했었다, 이 테이블만 예외). */
     @Column(name = "FRST_REGIST_PNTTM")
-    private String frstRegistPnttm;
+    private java.time.LocalDateTime frstRegistPnttm;
 
     @Column(name = "LAST_UPDUSR_ID")
     private Long lastUpdusrId;
 
     @Column(name = "LAST_UPDT_PNTTM")
-    private String lastUpdtPnttm;
+    private java.time.LocalDateTime lastUpdtPnttm;
 }

@@ -43,9 +43,23 @@ public class WebConfig implements WebMvcConfigurer {
                         "/log/**", "/privacy-log/**", "/admin/my-cert", "/admin/my-cert/**",
                         "/mail-config", "/mail-config/**", "/isms-config", "/isms-config/**",
                         "/email", "/email/**", "/batch-job", "/batch-job/**",
-                        "/site-config", "/policy", "/policy/**", "/community/**",
+                        "/site-config", "/site-config/**", "/policy", "/policy/**", "/community/**",
                         "/seller", "/seller/**", "/brand", "/brand/**",
-                        "/coupon", "/coupon/**", "/coupon-regular", "/coupon-regular/**")
+                        "/coupon", "/coupon/**", "/coupon-regular", "/coupon-regular/**",
+                        "/admin/orders", "/admin/orders/**", "/admin/claims", "/admin/claims/**",
+                        "/admin/locgovs", "/admin/locgovs/**",
+                        "/admin/data-board", "/admin/data-board/**", "/admin/menus", "/admin/menus/**",
+                        "/admin/search-keywords", "/admin/search-keywords/**", "/admin/seo", "/admin/seo/**",
+                        "/admin/managers", "/admin/managers/**", "/admin/members", "/admin/members/**",
+                        "/admin/secede-users", "/admin/secede-users/**", "/admin/sleep-users", "/admin/sleep-users/**",
+                        "/admin/gift-categories", "/admin/gift-categories/**", "/admin/gift-items", "/admin/gift-items/**",
+                        "/admin/main-banners", "/admin/main-banners/**", "/admin",
+                        "/admin/style-books", "/admin/style-books/**",
+                        "/admin/main-display",
+                        "/admin/person-in-charge", "/admin/person-in-charge/**",
+                        "/admin/off-person-in-charge", "/admin/off-person-in-charge/**",
+                        "/admin/roles", "/admin/roles/**",
+                        "/admin/user-levels", "/admin/user-levels/**")
                 .excludePathPatterns("/admin/login", "/admin/logout",
                         "/admin/manager-requests/new", "/admin/manager-requests/complete");
     }

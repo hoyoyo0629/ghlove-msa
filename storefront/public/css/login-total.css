@@ -1,0 +1,393 @@
+#wrap {
+    background-color: var(--gray5);
+}
+
+.login-total {
+    display: flex;
+    justify-content: space-around;
+    padding: 100px 0 150px;
+    text-align: center;
+    align-items: center;
+    max-width: 900px;
+}
+
+.login-box {
+    max-width: 700px;
+    /* height: 640px; */
+    width: 95%;
+    border: 2px solid var(--main-color2);
+    padding: calc(var(--margin-padding-8)*8) 10% 124px;
+    background-color: #fff;
+    color: #5a5a5a;
+    border-radius: 30px 30px 30px 30px;
+
+}
+.login-box.digital{
+    padding-bottom: 112px;
+}
+.loginType ul {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+}
+
+.loginType ul li {
+    font-size: 20px;
+    border-bottom: 2px solid var(--gray4);
+    flex: 1;
+}
+
+.loginType ul li button {
+    display: inline-block;
+    /* white-space: nowrap; */
+    padding: 14px 0%;
+    letter-spacing: -1px;
+    line-height: 1.25em;
+    color: var(--gray3);
+}
+
+.loginType ul li.currentB {
+    border-bottom: 2px solid var(--main-color2);
+
+}
+
+.loginType ul li.currentB button {
+    color: var(--main-color2);
+    font-weight: bold;
+}
+
+.login-box .login-title-box {
+    padding: 40px 0 calc(var(--margin-padding-8)*5);
+}
+
+.login-box .login-title  + p {
+    padding-top: calc(var(--margin-padding-8)*2);
+}
+.login-box .login-title {
+    font-size: 32px;
+    line-height: 1em;
+    color: var(--main-color2);
+    padding-top: calc(var(--margin-padding-8)*2);
+    /* white-space: nowrap; */
+    font-weight: 500;
+}
+
+.login-box.digital .login-title {
+    padding-bottom: calc(var(--margin-padding-8)*3);
+}
+
+.login-box p {
+    font-size: 14px;
+    line-height: 1.5em;
+    color: var(--gray3);
+}
+
+.login-box .login-field-group {
+    width: 90%;
+    max-width: 400px;
+    margin: 0 auto;
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+
+.login-box .login-field-group .login-field-items input {
+    min-width: unset;
+    width: 100%;
+    height: 50px;
+    margin-bottom: 10px;
+}
+
+
+.login-box .login-field-group .saveId {
+    /* align-self: flex-start; */
+    text-align: left;
+    display: block;
+}
+
+.login-box .login-check-wrap {
+    display: flex;
+    justify-content: space-between;
+    /* margin-bottom: 24px;
+    padding: 4px 0% 12px; */
+    font-size: 14px;
+
+}
+
+.login-box .login-check-wrap .login-field-check input[type='checkbox'] {
+    display: none;
+}
+
+.login-box .login-check-wrap .login-field-check label {
+    position: relative;
+    padding-left: calc(var(--margin-padding-8)*3);
+    color: var(--gray3a);
+    font-weight: 400;
+}
+
+.login-box .login-check-wrap .login-field-check label span.marker {
+    position: absolute;
+    top: 0px;
+    left: 0;
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    background-color: #fff;
+    border: 2px solid var(--gray4);
+    box-sizing: border-box;
+    border-radius: 2px;
+}
+
+.login-box .login-check-wrap .login-field-check label span.marker::after {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 3px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    display: none;
+}
+
+.login-box .login-check-wrap .login-field-check input[type='checkbox']:checked~label span.marker {
+    background-color: blue;
+    border: 0;
+}
+
+.login-box .login-check-wrap .login-field-check input[type='checkbox']:checked~label span.marker::after {
+    display: block;
+}
+
+.login-box .login-check-wrap .find-wrap span {
+    margin: 0 4px;
+    color: var(--gray4);
+}
+
+.login-box .login-field-group button {
+    height: 50px;
+    /* margin: 8px 0; */
+    font-size: 16px;
+    border-radius: 30px;
+    color: #fff;
+    width: 100%;
+}
+
+button.login {
+    background-color: var(--sub-color1);
+    border: 1px solid var(--main-color1);
+    font-size: 16px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16);
+    /* margin-top: calc(var(--margin-padding-8)*3); */
+}
+
+
+
+/* 디지털원패스 로그인 */
+.login-box .login-field-group button.logind {
+    background-color: var(--sub-color1);
+}
+
+.login-box .login-field-group button.logind span {
+    display: inline-block;
+    transform: translate(8px, 3px);
+}
+
+
+/* 간편로그인 */
+.auth_wrap {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    gap: 10px;
+    padding-top: 40px
+}
+
+.auth_wrap form {
+    background-color: var(--gray5);
+    flex: 1 1 1;
+    min-width: 50%;
+    padding: 50px 0;
+}
+
+.auth_wrap .simple-login-wrap {
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.auth_wrap form,
+.financ-login-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.auth_wrap form {
+    gap: 30px;
+    justify-content: flex-end;
+}
+.auth_wrap .s-txt{
+    line-height: 1.3em;
+}
+.financ-login-wrap {
+    /* padding: 20px; */
+    word-break: keep-all;
+}
+
+.financ-login-wrap .finance-img{
+    background-color: #fff;
+    padding:30px;
+    border-radius: 150px;
+    /* margin-bottom: 10px; */
+}
+.financ-login-wrap img {
+    width: 60px;
+}
+.financ-login-wrap p {
+    display: flex;
+    flex-direction: column;
+}
+
+.simple-login-wrap .sim_auth {
+    width: 40px;
+    border-radius: 8px;
+    border: 1px solid var(--gray4);
+    overflow: hidden;
+    background: #fff;
+}
+
+button.logins {
+    width: 100%;
+    background-color: var(--main-color2);
+    border: 1px solid var(--sub-color1);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.login-box .auth_wrap .login-field-group,
+.auth_wrap button {
+    margin: 0 !important;
+}
+
+@media screen and (max-width:1030px) {
+    .loginType ul li {
+        font-size: 22px;
+    }
+
+    .loginType ul li button {
+        padding: 8px 0%;
+    }
+
+}
+
+@media screen and (max-width:768px) {
+    #wrap {
+        background-color: #fff;
+    }
+
+    .login-total {
+        padding: 30px 0 60px
+    }
+
+    .login-box {
+        width: 100%;
+        height: unset;
+        padding: calc(var(--margin-padding-8)*4) 20px;
+        border: none;
+        padding: 20px 0;
+    }
+
+    .loginType ul li {
+        font-size: 20px;
+    }
+
+    .loginType ul li button {
+        white-space: inherit;
+        /* padding: 4px 2%; */
+    }
+
+    .login-box .login-title-box {
+        padding: calc(var(--margin-padding-8)*5) 0 calc(var(--margin-padding-8)*5);
+    }
+
+    .login-box .login-title {
+        font-size: 26px;
+
+    }
+    .login-box .login-title  + p {
+        padding-top: calc(var(--margin-padding-8)*2);
+    }
+    .login-box .login-check-wrap {
+        font-size: 14px;
+    }
+    .auth_wrap{
+        padding: 30px 0 20px;
+    }
+}
+
+@media screen and (max-width:460px) {
+    .login-total {
+        padding: 0px 0 30px
+    }
+
+    .login-box .login-check-wrap {
+        gap: 10px
+    }
+
+    .login-box .login-check-wrap .login-field-check {
+        align-self: flex-start;
+        margin-bottom: 24px;
+    }
+
+    .login-box .login-title-box {
+        padding:30px 0 calc(var(--margin-padding-8)*3);
+    }
+
+    .login-box.digital .login-title {
+        padding-top: calc(var(--margin-padding-8)*2);
+        padding-bottom: calc(var(--margin-padding-8)*2);
+    }
+
+    .login-box p {
+        font-size: 13px;
+    }
+
+    .loginType ul li {
+        font-size: 16px;
+    }
+
+    .login-box .login-field-group .login-field-items input {
+        margin-bottom: 4px;
+    }
+
+    .login-box .login-field-group {
+        /* margin-bottom: calc(var(--margin-padding-8)*1); */
+    }
+
+
+    /* 간편/금융 로그인 */
+    .auth_wrap {
+        flex-direction: column;
+
+    }
+
+    .auth_wrap form {
+        padding: 30px 0;
+        gap:20px;
+    }
+
+    .auth_wrap .simple-login-wrap {
+        padding: 0 20px;
+    }
+    .financ-login-wrap p {
+        
+        flex-direction: row;
+    }
+}

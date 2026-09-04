@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>상품문의 관리 - 고향사랑e음 (gift service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<nav class="navbar">
+    <div class="logo">답례품<span class="badge">gift</span></div>
+    <div class="nav-links">
+        <a th:href="@{/}">목록으로</a>
+        <a th:href="@{/my(sellerId=${sellerId})}">내 답례품 관리</a>
+    </div>
+</nav>
+
+<div class="wrap">
+    <h1 style="text-align:left">상품문의 관리</h1>
+
+    <p class="error" th:if="${param.errorMessage != null}" th:text="${param.errorMessage}"></p>
+
+    <form th:action="@{/my/inquiries}" method="get" class="inline-form" style="max-width:320px; margin-bottom:20px;">
+        <input type="number" name="sellerId" placeholder="제공자 ID" th:value="${sellerId}" required>
+        <button type="submit" style="width:auto;">조회</button>
+    </form>
+
+    <div th:if="${inquiries != null}">
+        <div class="inquiry-card" th:each="q : ${inquiries}">
+            <div class="head">
+                <span th:text="'답례품 #' + ${q.itemId} + ' · 회원#' + ${q.userId}"></span>
+                <span class="status-tag" th:classappend="${q.status == 'ANSWERED'} ? 'answered'"
+                      th:text="${statusLabels.get(q.status)} ?: ${q.status}"></span>
+            </div>
+            <div th:if="${q.secretYn == 'Y'}" style="color:#999;">비밀글입니다.</div>
+            <div th:if="${q.secretYn != 'Y'}" th:text="${q.question}"></div>
+            <div class="answer" th:if="${q.answer}" th:text="${q.answer}"></div>
+
+            <form th:if="${q.status != 'ANSWERED'}" th:action="@{'/inquiries/' + ${q.inquiryId} + '/answer'}"
+                  method="post" style="margin-top:10px;">
+                <input type="hidden" name="sellerId" th:value="${sellerId}">
+                <textarea name="answer" rows="2" placeholder="답변을 입력하세요" required style="margin-bottom:6px;"></textarea>
+                <button type="submit" class="small-btn">답변 등록</button>
+            </form>
+        </div>
+        <p class="empty" th:if="${#lists.isEmpty(inquiries)}">등록된 문의가 없습니다.</p>
+    </div>
+</div>
+</body>
+</html>

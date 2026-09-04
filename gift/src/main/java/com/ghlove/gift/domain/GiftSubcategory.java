@@ -27,4 +27,14 @@ public class GiftSubcategory {
 
     @Column(name = "ORDERING")
     private Integer ordering;
+
+    /** 답례품 카테고리 관리(admin) SEO 메타 편집 - AS-IS OP_CATEGORY TITLE/KEYWORDS/DESCRIPTION 서브셋. */
+    @Column(name = "META_TITLE")
+    private String metaTitle;
+
+    @Column(name = "META_KEYWORDS")
+    private String metaKeywords;
+
+    @Column(name = "META_DESCRIPTION")
+    private String metaDescription;
 }

@@ -1,14 +1,20 @@
 package com.ghlove.admin.web;
 
+import com.ghlove.admin.domain.Manager;
 import com.ghlove.admin.domain.Notice;
 import com.ghlove.admin.service.CommonCodeService;
 import com.ghlove.admin.service.ContentException;
 import com.ghlove.admin.service.LocgovClient;
+import com.ghlove.admin.service.ManagerException;
+import com.ghlove.admin.service.MenuService;
 import com.ghlove.admin.service.OperationContentService;
+import com.ghlove.admin.service.PopupImageStorageService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -22,6 +28,7 @@ public class OperationContentController {
     private final OperationContentService operationContentService;
     private final CommonCodeService commonCodeService;
     private final LocgovClient locgovClient;
+    private final PopupImageStorageService popupImageStorageService;
 
     // ---- 공지사항 (공개 화면, AS-IS notice/list.html·detail.html) ----
 
@@ -90,8 +97,14 @@ public class OperationContentController {
     // ---- 공지사항 관리 (내부 운영 콘솔) ----
 
     @GetMapping("/admin/notices")
-    public String adminNotices(@RequestParam(required = false) String category, Model model) {
+    public String adminNotices(@RequestParam(required = false) String category, HttpSession session, Model model) {
+        Manager viewer = manager(session);
         List<Notice> notices = operationContentService.notices(category);
+        if (MenuService.isLocgovScoped(viewer)) {
+            notices = notices.stream()
+                    .filter(n -> viewer.getLocgovCode().equals(n.getLocgovCode()))
+                    .toList();
+        }
         Map<String, String> locgovNames = new LinkedHashMap<>();
         locgovClient.allLocgovs().forEach(l -> locgovNames.put(l.locgovCode(), l.upperLocgovNm() + " " + l.locgovNm()));
         model.addAttribute("notices", notices);
@@ -112,9 +125,10 @@ public class OperationContentController {
     @PostMapping("/admin/notices")
     public String createNotice(@RequestParam String subject, @RequestParam(required = false) String content,
                                 @RequestParam(required = false) String categoryCode,
-                                @RequestParam(required = false) String locgovCode, Model model) {
+                                @RequestParam(required = false) String locgovCode, HttpSession session, Model model) {
         try {
-            operationContentService.createNotice(subject, content, categoryCode, locgovCode);
+            Manager viewer = manager(session);
+            operationContentService.createNotice(subject, content, categoryCode, MenuService.effectiveLocgovCode(viewer, locgovCode));
             return "redirect:/admin/notices";
         } catch (ContentException e) {
             model.addAttribute("errorMessage", e.getMessage());
@@ -126,8 +140,16 @@ public class OperationContentController {
     }
 
     @GetMapping("/admin/notices/{id}/edit")
-    public String editNoticeForm(@PathVariable Integer id, Model model) {
-        model.addAttribute("notice", operationContentService.notice(id));
+    public String editNoticeForm(@PathVariable Integer id, HttpSession session,
+                                  org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes, Model model) {
+        Notice notice;
+        try {
+            notice = requireOwnLocgovOrThrow(id, session);
+        } catch (ManagerException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/admin/notices";
+        }
+        model.addAttribute("notice", notice);
         model.addAttribute("categories", commonCodeService.labelsOf("NOTICE_CATEGORY"));
         model.addAttribute("provinces", provinces());
         model.addAttribute("allLocgovs", locgovClient.allLocgovs());
@@ -138,11 +160,13 @@ public class OperationContentController {
     public String updateNotice(@PathVariable Integer id, @RequestParam String subject,
                                 @RequestParam(required = false) String content,
                                 @RequestParam(required = false) String categoryCode,
-                                @RequestParam(required = false) String locgovCode, Model model) {
+                                @RequestParam(required = false) String locgovCode, HttpSession session, Model model) {
         try {
-            operationContentService.updateNotice(id, subject, content, categoryCode, locgovCode);
+            Manager viewer = manager(session);
+            requireOwnLocgovOrThrow(id, session);
+            operationContentService.updateNotice(id, subject, content, categoryCode, MenuService.effectiveLocgovCode(viewer, locgovCode));
             return "redirect:/admin/notices";
-        } catch (ContentException e) {
+        } catch (ContentException | ManagerException e) {
             model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute("notice", operationContentService.notice(id));
             model.addAttribute("categories", commonCodeService.labelsOf("NOTICE_CATEGORY"));
@@ -153,9 +177,31 @@ public class OperationContentController {
     }
 
     @PostMapping("/admin/notices/{id}/delete")
-    public String deleteNotice(@PathVariable Integer id) {
+    public String deleteNotice(@PathVariable Integer id, HttpSession session,
+                                org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
+        try {
+            requireOwnLocgovOrThrow(id, session);
+        } catch (ManagerException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/admin/notices";
+        }
         operationContentService.deleteNotice(id);
         return "redirect:/admin/notices";
+    }
+
+    private static Manager manager(HttpSession session) {
+        return (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
+    }
+
+    /** 지자체담당자(ROLE_ADMIN_5/6)는 자기 지자체 공지만 수정/삭제할 수 있다 - AS-IS와 달리
+     * 이 프로젝트는 그동안 이 스코핑이 빠져있어 다른 지자체 공지를 건드릴 수 있는 권한버그였다. */
+    private Notice requireOwnLocgovOrThrow(Integer id, HttpSession session) {
+        Manager viewer = manager(session);
+        Notice notice = operationContentService.notice(id);
+        if (MenuService.isLocgovScoped(viewer) && !viewer.getLocgovCode().equals(notice.getLocgovCode())) {
+            throw new ManagerException("소속 지자체의 공지사항만 처리할 수 있습니다.");
+        }
+        return notice;
     }
 
     @PostMapping("/admin/notices/{id}/toggle")
@@ -238,6 +284,14 @@ public class OperationContentController {
 
     @GetMapping("/popups/new")
     public String popupForm(Model model) {
+        model.addAttribute("popup", null);
+        model.addAttribute("types", commonCodeService.labelsOf("POPUP_TYPE"));
+        return "content/popup-form";
+    }
+
+    @GetMapping("/popups/{id}/edit")
+    public String popupEditForm(@PathVariable Integer id, Model model) {
+        model.addAttribute("popup", operationContentService.popup(id));
         model.addAttribute("types", commonCodeService.labelsOf("POPUP_TYPE"));
         return "content/popup-form";
     }
@@ -246,15 +300,45 @@ public class OperationContentController {
     public String createPopup(@RequestParam String subject, @RequestParam(required = false) String content,
                                @RequestParam(required = false) String popupType,
                                @RequestParam(required = false) String startDate,
-                               @RequestParam(required = false) String endDate, Model model) {
+                               @RequestParam(required = false) String endDate,
+                               @RequestParam(required = false) String popupStyle,
+                               @RequestParam(required = false) String popupClose,
+                               @RequestParam(required = false) MultipartFile image, Model model) {
         try {
-            operationContentService.createPopup(subject, content, popupType, startDate, endDate);
+            String imageUrl = popupImageStorageService.store(image);
+            operationContentService.createPopup(subject, content, popupType, startDate, endDate, popupStyle, popupClose, imageUrl);
             return "redirect:/popups";
         } catch (ContentException e) {
             model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute("types", commonCodeService.labelsOf("POPUP_TYPE"));
             return "content/popup-form";
         }
+    }
+
+    @PostMapping("/popups/{id}")
+    public String updatePopup(@PathVariable Integer id, @RequestParam String subject, @RequestParam(required = false) String content,
+                               @RequestParam(required = false) String popupType,
+                               @RequestParam(required = false) String startDate,
+                               @RequestParam(required = false) String endDate,
+                               @RequestParam(required = false) String popupStyle,
+                               @RequestParam(required = false) String popupClose,
+                               @RequestParam(required = false) MultipartFile image, Model model) {
+        try {
+            String imageUrl = popupImageStorageService.store(image);
+            operationContentService.updatePopup(id, subject, content, popupType, startDate, endDate, popupStyle, popupClose, imageUrl);
+            return "redirect:/popups";
+        } catch (ContentException e) {
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("popup", operationContentService.popup(id));
+            model.addAttribute("types", commonCodeService.labelsOf("POPUP_TYPE"));
+            return "content/popup-form";
+        }
+    }
+
+    @PostMapping("/popups/{id}/delete")
+    public String deletePopup(@PathVariable Integer id) {
+        operationContentService.deletePopup(id);
+        return "redirect:/popups";
     }
 
     @PostMapping("/popups/{id}/toggle")

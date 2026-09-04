@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>고객센터 &gt; Q&amp;A - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/mypage-status.css}">
+    <link rel="stylesheet" th:href="@{/css/data_v.css}">
+    <link rel="stylesheet" th:href="@{/css/ct_nov.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<!-- AS-IS qna/qna-open.html 재현 - 로그인 없이도 누구나 볼 수 있는 공개 Q&A 게시판.
+     마이페이지 "1:1 문의"(qna/list.html)와 OP_QNA를 공유한다: 그 화면에서 등록한 글이
+     여기 전체 회원 대상으로 노출된다. AS-IS처럼 질문행과(있으면) 답변행이 하나의
+     리스트에 순서대로 나오고, No. 컬럼도 그 합쳐진 리스트 기준으로 매겨진다(서버에서
+     이미 계산해서 내려줌 - QnaService.publicBoard 참고). 비밀글은 제목까지는 그대로
+     보이되(AS-IS와 동일) 클릭하면 작성자 본인이 아닌 한 "비밀글입니다" 알림만 뜨고
+     상세로 넘어가지 않는다 - 상세 라우트 자체도 서버에서 한 번 더 막는다(URL 직접 접근 방지). -->
+<section>
+    <div class="page-title-box">
+        <span class="ali_breadcrumb">
+            <a th:href="@{'http://localhost:8081/'}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            고객센터
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            Q&amp;A
+        </span>
+        <h2 class="page-title-txt">Q&amp;A</h2>
+        <p>해당 Q&amp;A는 기부 관련 사항에 대해 질문을 해주시기 바랍니다.<br>
+            (예: 기부결제오류 , 접속장애, 페이지에러 등....)</p>
+    </div>
+</section>
+
+<div th:replace="~{fragments/customer-lnb :: customer-lnb('qna')}"></div>
+
+<div class="contents-wrap" id="contents">
+    <div class="center">
+        <div class="s-contents list-wrapper qna">
+            <div class="list-select-area">
+                <header class="list-search-header">
+                    <div class="list-count-box" th:text="'전체 글 : ' + ${result.totalCount} + ' 건'"></div>
+                    <form th:action="@{/qna/board}" method="get" class="search-select">
+                        <div class="form-item">
+                            <label for="category" class="sr-only">검색구분</label>
+                            <select id="category" name="where" aria-label="구분">
+                                <option value="SUBJECT" th:selected="${where == 'SUBJECT'}">제목</option>
+                                <option value="USER_NAME" th:selected="${where == 'USER_NAME'}">작성자</option>
+                            </select>
+                        </div>
+                        <div class="form-item search-field">
+                            <label for="search" class="sr-only">검색 키워드</label>
+                            <input type="search" id="search" name="q" th:value="${q}" placeholder="검색 키워드">
+                            <button type="submit" class="button search" aria-label="조회"></button>
+                        </div>
+                        <div class="m-field">
+                            <div class="form-item">
+                                <label for="ordering" class="sr-only">정렬순서</label>
+                                <select id="ordering" name="orderBySort" onchange="applyOrdering(this.value)">
+                                    <option value="CREATED_DATE__DESC" th:selected="${orderBy == 'CREATED_DATE' and sort == 'DESC'}">최신순</option>
+                                    <option value="CREATED_DATE__ASC" th:selected="${orderBy == 'CREATED_DATE' and sort == 'ASC'}">오래된순</option>
+                                    <option value="HITS__DESC" th:selected="${orderBy == 'HITS'}">조회수순</option>
+                                </select>
+                            </div>
+                            <div class="form-item">
+                                <label for="page-size" class="sr-only">목록수</label>
+                                <select id="page-size" name="size" onchange="this.form.submit()">
+                                    <option value="10" th:selected="${size == 10}">10개</option>
+                                    <option value="20" th:selected="${size == 20}">20개</option>
+                                    <option value="30" th:selected="${size == 30}">30개</option>
+                                    <option value="50" th:selected="${size == 50}">50개</option>
+                                </select>
+                            </div>
+                        </div>
+                        <input type="hidden" id="orderByField" name="orderBy" th:value="${orderBy}">
+                        <input type="hidden" id="sortField" name="sort" th:value="${sort}">
+                    </form>
+                </header>
+
+                <div class="list-notice-body table-container qna">
+                    <table>
+                        <caption>QNA - 순번, 작성자, 제목, 등록일, 조회수로 구성</caption>
+                        <thead class="list-notice-title">
+                        <tr class="items_wrap">
+                            <th class="date-col content" scope="col">No.</th>
+                            <th class="date-col content" scope="col">작성자</th>
+                            <th class="date-col title" scope="col">제목</th>
+                            <th class="date-col date" scope="col">등록일</th>
+                            <th class="date-col content" scope="col">조회수</th>
+                        </tr>
+                        </thead>
+                        <tbody class="list-notice-group" th:if="${not #lists.isEmpty(result.rows)}">
+                        <tr th:each="row : ${result.rows}">
+                            <td class="date-col content" th:text="${row.no}"></td>
+                            <td class="date-col content" th:text="${row.userName}"></td>
+                            <td class="notice_tit">
+                                <a th:if="${!row.locked}" class="list-items"
+                                   th:href="@{/qna/board/{id}(id=${row.qnaId})}">
+                                    <span th:if="${row.type == 'A'}" class="pointRed">
+                                        <img th:src="@{/images/icon/bottom_curved_arrow.png}" alt="답글 화살표">
+                                    </span>
+                                    <span th:text="${row.subject}"></span>
+                                </a>
+                                <a th:if="${row.locked}" href="#" class="list-items"
+                                   onclick="alert('비밀글입니다.'); return false;">
+                                    🔒 <span th:text="${row.subject}"></span>
+                                </a>
+                            </td>
+                            <td>
+                                <div class="date-col date" aria-label="등록일" th:text="${#strings.substring(row.createdDate, 0, 8)}"></div>
+                            </td>
+                            <td>
+                                <div class="date-col content" aria-label="조회수" th:text="${row.hits}"></div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <div class="list-none" th:if="${#lists.isEmpty(result.rows)}">
+                        <img th:src="@{/images/icon/non-list.png}" alt="게시물이 없음">
+                        Q&amp;A 정보가 존재하지 않습니다.
+                    </div>
+                </div>
+
+                <div class="card-pagination" th:if="${result.totalPages > 1}">
+                    <div class="pagination_ali">
+                        <ul class="pagination-frame">
+                            <li><a class="fist arrow_btn" th:href="@{/qna/board(where=${where},q=${q},orderBy=${orderBy},sort=${sort},size=${size},page=1)}"><img th:src="@{/images/icon/paging_btn-first.png}" alt="처음"></a></li>
+                            <li><a class="prev arrow_btn" th:href="@{/qna/board(where=${where},q=${q},orderBy=${orderBy},sort=${sort},size=${size},page=${result.currentPage > 1 ? result.currentPage - 1 : 1})}"><img th:src="@{/images/icon/paging_btn-prev.png}" alt="이전"></a></li>
+                            <li th:each="p : ${#numbers.sequence(1, result.totalPages)}" th:classappend="${p == result.currentPage} ? 'selected-page'">
+                                <a class="page-text" th:href="@{/qna/board(where=${where},q=${q},orderBy=${orderBy},sort=${sort},size=${size},page=${p})}" th:text="${p}"></a>
+                            </li>
+                            <li><a class="next arrow_btn" th:href="@{/qna/board(where=${where},q=${q},orderBy=${orderBy},sort=${sort},size=${size},page=${result.currentPage < result.totalPages ? result.currentPage + 1 : result.totalPages})}"><img th:src="@{/images/icon/paging_btn-next.png}" alt="다음"></a></li>
+                            <li><a class="last arrow_btn" th:href="@{/qna/board(where=${where},q=${q},orderBy=${orderBy},sort=${sort},size=${size},page=${result.totalPages})}"><img th:src="@{/images/icon/paging_btn-last.png}" alt="마지막"></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-box">
+                <button type="button" class="blueBtn u-confirm" onclick="location.href='/qna'">
+                    글쓰기<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt=""></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+
+<script th:inline="none">
+function applyOrdering(value) {
+    var parts = value.split('__');
+    document.getElementById('orderByField').value = parts[0];
+    document.getElementById('sortField').value = parts[1];
+    document.getElementById('orderByField').form.submit();
+}
+</script>
+</body>
+</html>

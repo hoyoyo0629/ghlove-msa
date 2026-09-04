@@ -206,6 +206,21 @@ public class ShopStatisticsTierBController {
         return "shop-statistics/dashboard-month";
     }
 
+    // ---- R. 대시보드 텍스트 리포트 (AS-IS opmanager/report - ReportController, 행안부 일일/주간보고
+    // 클립보드복사용 텍스트 생성. 이미 있는 대시보드 데이터를 정형 텍스트로만 포맷팅한다) ----
+
+    @GetMapping("/shop-statistics/dashboard/day/report")
+    @org.springframework.web.bind.annotation.ResponseBody
+    public String dashboardDayReport(@RequestParam(required = false) String date) {
+        return service.dashboardDayReportText(service.dashboardDay(date));
+    }
+
+    @GetMapping("/shop-statistics/dashboard/month/report")
+    @org.springframework.web.bind.annotation.ResponseBody
+    public String dashboardMonthReport(@RequestParam(required = false) String yearMonth) {
+        return service.dashboardMonthReportText(service.dashboardMonth(yearMonth));
+    }
+
     // ---- Q. 농협 사업자 답례품 현황 ----
 
     @GetMapping("/shop-statistics/sales/nh-item-sales")

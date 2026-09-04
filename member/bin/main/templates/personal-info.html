@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>개인정보 수정 - 고향사랑e음</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/change-info.css}">
+    <link rel="stylesheet" th:href="@{/css/change-pw.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<!-- AS-IS users/modify.html의 "개인정보 수정"(이름/생년월일)은 Siren24 PCC 본인인증
+     팝업(getMobileAuth('name'))을 통과해야만 열린다 - 본인인증 미완료 상태면 AS-IS도
+     실제 수정 폼을 보여주지 않고 "본인인증 미완료 상태입니다. 본인인증 완료 후 수정하시길
+     바랍니다." 안내만 띄운다. 이 MSA는 그 유료 실명인증 연동이 없으므로(다른 외부연동과
+     동일한 의도적 축소), 검증되지 않은 요청으로 실명·생년월일이 바뀌는 걸 막기 위해
+     안내 화면만 재현하고 실제 수정 폼은 열지 않는다. -->
+<section class="find-idpw center">
+    <div class="page-title-box">
+        <span class="ali_breadcrumb">
+            <a th:href="@{/}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            <a th:href="@{/profile}">회원정보 수정</a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            개인정보 수정
+        </span>
+        <h2 class="page-title-txt">개인정보 수정</h2>
+    </div>
+
+    <div class="change-info-area">
+        <div class="info-mess">
+            <p class="sub-title">본인인증이 필요한 서비스입니다.</p>
+            <p class="title">본인인증 완료 후<br><strong>이름·생년월일</strong>을 수정하실 수 있습니다.</p>
+        </div>
+        <div class="line"></div>
+        <p class="s_txt" style="text-align:center;">
+            이름·생년월일 변경은 본인확인기관(휴대폰 본인인증)을 통한 실명 확인이 필요한 정보라,
+            해당 연동이 열리기 전까지는 이 화면에서 직접 수정할 수 없습니다.
+        </p>
+    </div>
+
+    <div class="btn-box">
+        <button type="button" class="blueBtn u-confirm" th:attr="data-url=@{/profile}" onclick="location.href=this.dataset.url">
+            회원정보 수정으로 돌아가기<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt=""></span>
+        </button>
+    </div>
+</section>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+</body>
+</html>

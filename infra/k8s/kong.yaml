@@ -15,6 +15,8 @@ data:
     # SFR-010: member-route를 제외한 5개 라우트에 jwt 플러그인을 적용해 GH_AUTH 쿠키를
     # 게이트웨이 단에서도 검증한다(심층방어 - 각 서비스도 자체 JwtVerifier를 갖고 있음).
     # 비밀키는 실서비스에서는 여기 평문 대신 K8s Secret(ghlove-jwt-secret 등)으로 옮겨야 한다.
+    # SFR-010 트래픽 제어: 내부 라우트는 분당 300회, 민간개방 API(gift-open-api-route)는
+    # 분당 60회 rate-limiting - 상세 근거는 infra/kong/kong-local.yaml 주석 참고.
     consumers:
       - username: ghlove-app
         jwt_secrets:
@@ -28,6 +30,12 @@ data:
           - name: member-route
             paths: ["/member"]
             strip_path: true
+            plugins:
+              - name: rate-limiting
+                config:
+                  minute: 300
+                  policy: local
+                  fault_tolerant: true
       - name: donation-service
         url: http://donation-service:8082
         routes:
@@ -40,6 +48,11 @@ data:
                   cookie_names: ["GH_AUTH"]
                   key_claim_name: "iss"
                   claims_to_verify: ["exp"]
+              - name: rate-limiting
+                config:
+                  minute: 300
+                  policy: local
+                  fault_tolerant: true
       - name: point-service
         url: http://point-service:8083
         routes:
@@ -52,6 +65,11 @@ data:
                   cookie_names: ["GH_AUTH"]
                   key_claim_name: "iss"
                   claims_to_verify: ["exp"]
+              - name: rate-limiting
+                config:
+                  minute: 300
+                  policy: local
+                  fault_tolerant: true
       - name: gift-service
         url: http://gift-service:8084
         routes:
@@ -64,6 +82,11 @@ data:
                   cookie_names: ["GH_AUTH"]
                   key_claim_name: "iss"
                   claims_to_verify: ["exp"]
+              - name: rate-limiting
+                config:
+                  minute: 300
+                  policy: local
+                  fault_tolerant: true
       - name: order-service
         url: http://order-service:8085
         routes:
@@ -76,6 +99,11 @@ data:
                   cookie_names: ["GH_AUTH"]
                   key_claim_name: "iss"
                   claims_to_verify: ["exp"]
+              - name: rate-limiting
+                config:
+                  minute: 300
+                  policy: local
+                  fault_tolerant: true
       - name: admin-service
         url: http://admin-service:8086
         routes:
@@ -88,6 +116,26 @@ data:
                   cookie_names: ["GH_AUTH"]
                   key_claim_name: "iss"
                   claims_to_verify: ["exp"]
+              - name: rate-limiting
+                config:
+                  minute: 300
+                  policy: local
+                  fault_tolerant: true
+      - name: gift-open-api
+        url: http://gift-service:8084/api/open/gifts
+        routes:
+          - name: gift-open-api-route
+            paths: ["/open-api/gifts"]
+            strip_path: true
+            plugins:
+              - name: key-auth
+                config:
+                  key_names: ["apikey"]
+              - name: rate-limiting
+                config:
+                  minute: 60
+                  policy: local
+                  fault_tolerant: true
 ---
 apiVersion: apps/v1
 kind: Deployment

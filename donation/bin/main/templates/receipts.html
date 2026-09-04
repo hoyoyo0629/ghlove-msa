@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>기부확인증 - 고향사랑e음 (donation service)</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/mypage-status.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<!-- AS-IS mypage/receiptList.html 재현 (page-title-box/user-grade/s-contents.mypageS/table-wrapper
+     클래스 그대로). SFR-010: 로그인 JWT 쿠키로 회원을 식별한다. -->
+<section>
+    <div class="page-title-box">
+        <span class="ali_breadcrumb">
+            <a th:href="@{/}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            <a href="http://localhost:8081/mypage">마이페이지</a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            기부확인증
+        </span>
+        <h2 class="page-title-txt">기부확인증</h2>
+        <div class="user-grade point" th:if="${userName != null}">
+            <span class="grade-bg">
+                <img class="icon-img" th:src="@{/images/icon/cli-icon_my-user-name.png}" alt="회원님">
+                <span class="blue-txt" th:text="${userName}"></span> 회원님
+            </span>
+        </div>
+        <p class="point-txt">
+            기부 결제 후 연계 시스템 지연에 따라 <span style="font-weight:bold;">기부 결제 내역이 최대 3일</span>까지 반영되지 않을 수 있으므로 참고 바랍니다.
+        </p>
+    </div>
+</section>
+
+<section id="contents" class="receipt-contents">
+    <div class="center">
+        <div class="contents-wrap myDonation">
+
+            <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+            <div>
+
+                <!-- SEARCH -->
+                <div class="s-contents mypageS">
+                    <div class="mypage-top">
+                        <div class="mypage-top-list">
+                            <label class="search-title" for="totalAmt">
+                                <img class="icon-img" th:src="@{/images/icon/cli-icon_my-amount-all.png}" alt="총 기부금액">
+                                <span class="label-title"> 총 기부금액</span>
+                            </label>
+                            <span class="m-field">
+                                <input type="text" id="totalAmt" readonly
+                                       th:value="${#numbers.formatInteger(totalCntrAmt, 0, 'COMMA')}"><span class="s_txt">원</span>
+                            </span>
+                            <span class="s_txt">(실 납부액 기준)</span>
+                        </div>
+                    </div>
+
+                    <div class="line"></div>
+
+                    <form th:action="@{/receipts}" method="get" class="mypage-top" id="searchForm">
+                        <label class="search-title">검색</label>
+                        <div class="selected-field">
+                            <div class="selected-field-line">
+                                <div class="selected-item">
+                                    <label for="startDate" class="sr-only">시작일</label>
+                                    <input type="date" name="searchStartDate" id="startDate" th:value="${searchStartDate}">
+                                    <span class="s_txt"> ~ </span>
+                                    <input type="date" name="searchEndDate" id="endDate" th:value="${searchEndDate}">
+                                    <label for="endDate" class="sr-only">종료일</label>
+                                </div>
+                                <div class="formbtn-box">
+                                    <button class="formBtn week-1" type="button" onclick="getDiffDate('week',1)">1주일</button>
+                                    <button class="formBtn month-1" type="button" onclick="getDiffDate('month',1)">1개월</button>
+                                    <button class="formBtn month-3" type="button" onclick="getDiffDate('month',3)">3개월</button>
+                                    <button class="formBtn month-6" type="button" onclick="getDiffDate('month',6)">6개월</button>
+                                </div>
+                            </div>
+                            <div class="selected-field-line city">
+                                <div class="selected-item">
+                                    <label for="upperLocgovCode" class="sr-only">시·도 선택</label>
+                                    <select title="시·도 선택" id="upperLocgovCode" name="upperLocgovCode" onchange="filterLocgov()">
+                                        <option value="">시·도 선택</option>
+                                        <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"
+                                                th:selected="${p.key == upperLocgovCode}"></option>
+                                    </select>
+                                </div>
+                                <div class="selected-item">
+                                    <label for="locgovCode" class="sr-only">시·군·구 선택</label>
+                                    <select title="시·군·구 선택" id="locgovCode" name="locgovCode">
+                                        <option value="">시·군·구 선택</option>
+                                        <option th:each="l : ${locgovs}" th:value="${l.locgovCode}"
+                                                th:text="${l.upperLocgovNm} + ' ' + ${l.locgovNm}"
+                                                th:data-upper="${l.upperLocgovCode}"
+                                                th:selected="${l.locgovCode == locgovCode}"></option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <!-- SEARCH END -->
+
+                <div class="btn-box many">
+                    <button type="button" class="blueBtn cancellation"
+                            th:attr="data-url=@{/receipts}" onclick="location.href=this.dataset.url">
+                        초기화<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt="초기화"></span>
+                    </button>
+                    <button type="button" class="blueBtn u-confirm" onclick="document.getElementById('searchForm').submit()">
+                        검색<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt="검색"></span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="s-con receipt-con">
+    <div class="center">
+        <div class="s-contents table-wrapper myDonation">
+            <form th:action="@{/receipts/certificate}" method="post" id="certForm">
+                <div class="table-top">
+                    <div class="btn-box many" style="margin-bottom:20px;">
+                        <button type="button" class="blueBtn u-confirm" onclick="submitCert('view', false)">
+                            기부확인증 보기<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt="기부확인증 보기"></span>
+                        </button>
+                        <button type="button" class="blueBtn u-confirm" onclick="submitCert('print', true)">
+                            기부확인증 출력<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt="기부확인증 출력"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-result-body">
+                        <table>
+                            <caption class="sr-only">기부확인증 목록</caption>
+                            <colgroup>
+                                <col style="width:10%"><col style="width:20%"><col style="width:50%"><col style="width:20%">
+                            </colgroup>
+                            <tr class="result-title">
+                                <th><label for="toggleCheckbox" class="sr-only">기부확인증 전체 선택</label>
+                                    <input id="toggleCheckbox" type="checkbox" onchange="toggleAll(this)"></th>
+                                <th>기부일자</th>
+                                <th>기부지자체</th>
+                                <th>기부액 (원)</th>
+                            </tr>
+                            <tr class="result-row" th:each="r : ${rows}">
+                                <td><label class="sr-only" th:for="'cs' + ${r.cntrSn}" th:text="'기부확인증 ' + ${r.upperLocgovNm} + ' 선택'"></label>
+                                    <input type="checkbox" class="row-check" name="cntrSn" th:id="'cs' + ${r.cntrSn}" th:value="${r.cntrSn}"></td>
+                                <td th:text="${r.cntrDeDisplay}"></td>
+                                <td th:text="(${r.upperLocgovNm} != null ? ${r.upperLocgovNm} + ' ' : '') + ${r.locgovNm}"></td>
+                                <td th:text="${#numbers.formatInteger(r.cntrAmt, 0, 'COMMA')}"></td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(rows)}">
+                                <td colspan="4" class="empty">기부확인증을 발급할 완료된 기부 내역이 없습니다.</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="pagination_ali" th:if="${totalPages != null and totalPages > 0}">
+                        <ul class="pagination-frame">
+                            <li><a class="fist arrow_btn" th:href="@{/receipts(locgovCode=${locgovCode},upperLocgovCode=${upperLocgovCode},searchStartDate=${searchStartDate},searchEndDate=${searchEndDate},page=1)}"><img th:src="@{/images/icon/paging_btn-first.png}" alt="처음"></a></li>
+                            <li><a class="prev arrow_btn" th:href="@{/receipts(locgovCode=${locgovCode},upperLocgovCode=${upperLocgovCode},searchStartDate=${searchStartDate},searchEndDate=${searchEndDate},page=${currentPage > 1 ? currentPage - 1 : 1})}"><img th:src="@{/images/icon/paging_btn-prev.png}" alt="이전"></a></li>
+                            <li th:each="p : ${#numbers.sequence(1, totalPages)}" th:classappend="${p == currentPage} ? 'selected-page'">
+                                <a class="page-text" th:href="@{/receipts(locgovCode=${locgovCode},upperLocgovCode=${upperLocgovCode},searchStartDate=${searchStartDate},searchEndDate=${searchEndDate},page=${p})}" th:text="${p}"></a>
+                            </li>
+                            <li><a class="next arrow_btn" th:href="@{/receipts(locgovCode=${locgovCode},upperLocgovCode=${upperLocgovCode},searchStartDate=${searchStartDate},searchEndDate=${searchEndDate},page=${currentPage < totalPages ? currentPage + 1 : totalPages})}"><img th:src="@{/images/icon/paging_btn-next.png}" alt="다음"></a></li>
+                            <li><a class="last arrow_btn" th:href="@{/receipts(locgovCode=${locgovCode},upperLocgovCode=${upperLocgovCode},searchStartDate=${searchStartDate},searchEndDate=${searchEndDate},page=${totalPages})}"><img th:src="@{/images/icon/paging_btn-last.png}" alt="마지막"></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+
+<!-- AS-IS receiptList.html의 vm.getDiffDate/toggleSelectAll/checkedValues를 순수 JS로 재현.
+     "1주일/1개월/..." 버튼은 AS-IS 원본도 날짜 입력칸만 채우고 검색은 자동 실행하지 않는다
+     (사용자가 직접 검색 버튼을 눌러야 한다) - 동일하게 맞춘다. -->
+<script th:inline="none">
+function addZero(n) { return n < 10 ? '0' + n : '' + n; }
+function toIso(d) { return d.getFullYear() + '-' + addZero(d.getMonth() + 1) + '-' + addZero(d.getDate()); }
+function getDiffDate(mode, value) {
+    var end = new Date();
+    var start = new Date();
+    if (mode === 'week') start.setDate(start.getDate() - value * 7);
+    else if (mode === 'month') start.setMonth(start.getMonth() - value);
+    document.getElementById('startDate').value = toIso(start);
+    document.getElementById('endDate').value = toIso(end);
+}
+function toggleAll(checkbox) {
+    document.querySelectorAll('.row-check').forEach(function (c) { c.checked = checkbox.checked; });
+}
+function checkedValues() {
+    return Array.prototype.slice.call(document.querySelectorAll('.row-check:checked')).map(function (c) { return c.value; });
+}
+function submitCert(mode, newTab) {
+    if (checkedValues().length === 0) {
+        alert('선택한 기부내역이 없습니다.\n선택한 기부내역만 기부확인증에 출력됩니다.');
+        return;
+    }
+    var form = document.getElementById('certForm');
+    var modeInput = document.createElement('input');
+    modeInput.type = 'hidden'; modeInput.name = 'mode'; modeInput.value = mode;
+    form.appendChild(modeInput);
+    form.target = newTab ? '_blank' : '';
+    form.submit();
+    form.removeChild(modeInput);
+}
+function filterLocgov() {
+    var upper = document.getElementById('upperLocgovCode').value;
+    var select = document.getElementById('locgovCode');
+    Array.prototype.forEach.call(select.options, function (opt) {
+        if (!opt.value) { return; }
+        opt.hidden = upper !== '' && opt.dataset.upper !== upper;
+    });
+    select.value = '';
+}
+</script>
+</body>
+</html>

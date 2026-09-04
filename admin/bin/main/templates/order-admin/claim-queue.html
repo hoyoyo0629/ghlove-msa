@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>클레임 처리 큐 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/order 클레임(반품/교환) 승인 큐 재현. 승인 시 원 주문이 자동으로 취소
+     처리되며 재고/포인트가 보상된다(ClaimService.approve/complete, 이번 라운드는 그 SAGA
+     로직을 건드리지 않고 그대로 재사용한다). 지자체 스코프는 원 주문의 LOCGOV_CODE로
+     판정한다 - 지자체담당자에게는 소속 지자체 주문의 클레임만 보인다. -->
+<div class="contents contents_inner">
+    <h3><span>클레임(반품/교환) 처리 큐</span></h3>
+    <p><a th:href="@{/admin/orders}">&larr; 주문관리로</a></p>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+    <form th:action="@{/admin/claims}" method="get" style="margin-bottom:16px;">
+        <select name="status" onchange="this.form.submit()">
+            <option value="" th:selected="${status == null or status == ''}">전체</option>
+            <option value="REQUESTED" th:selected="${status == 'REQUESTED'}">접수(처리대기)</option>
+            <option value="APPROVED" th:selected="${status == 'APPROVED'}">승인(회수/재발송 대기)</option>
+            <option value="REJECTED" th:selected="${status == 'REJECTED'}">거절</option>
+            <option value="COMPLETED" th:selected="${status == 'COMPLETED'}">처리완료</option>
+        </select>
+    </form>
+
+    <div class="count_title">
+        <h5>총 <span th:text="${#lists.size(claims)}" th:remove="tag"></span>건</h5>
+    </div>
+
+    <table class="board_list_table" summary="클레임 처리 큐">
+        <caption>클레임목록</caption>
+        <thead>
+        <tr>
+            <th scope="col">클레임ID</th>
+            <th scope="col">주문번호</th>
+            <th scope="col">답례품명</th>
+            <th scope="col">주문자ID</th>
+            <th scope="col">수취인</th>
+            <th scope="col">구분</th>
+            <th scope="col">사유</th>
+            <th scope="col">상태</th>
+            <th scope="col">신청일시</th>
+            <th scope="col">메모</th>
+            <th scope="col">처리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="c : ${claims}">
+            <td th:text="${c.claimId()}"></td>
+            <td><a th:href="@{'/admin/orders/' + ${c.orderId()}}" th:text="${c.orderId()}"></a></td>
+            <td class="tleft" th:text="${c.itemName() ?: '-'}"></td>
+            <td th:text="${c.userId() ?: '-'}"></td>
+            <td th:text="${c.receiverName() ?: '-'}"></td>
+            <td th:text="${c.claimType() == 'RETURN'} ? '반품' : '교환'"></td>
+            <td class="tleft" th:text="${c.reason() ?: '-'}"></td>
+            <td th:text="${c.status() == 'REQUESTED'} ? '접수' : (${c.status() == 'APPROVED'} ? '승인' : (${c.status() == 'REJECTED'} ? '거절' : '처리완료'))"></td>
+            <td th:text="${c.createdDate() != null ? #strings.substring(c.createdDate(), 0, 16) : '-'}"></td>
+            <td class="tleft">
+                <div th:each="m : ${memosByClaimId.get(c.claimId())}" style="font-size:12px; color:#666;">
+                    <span th:text="${m.managerName() ?: ('관리자#' + m.managerId())}"></span>:
+                    <span th:text="${m.memo()}"></span>
+                </div>
+                <form th:action="@{'/admin/claims/' + ${c.claimId()} + '/memo'}" method="post" class="flex_box gap-08" style="margin-top:4px;">
+                    <input type="text" name="memo" placeholder="메모 추가" style="width:140px;" required>
+                    <button type="submit" class="small-btn">등록</button>
+                </form>
+            </td>
+            <td>
+                <div th:if="${c.status() == 'REQUESTED'}" class="flex_box gap-08">
+                    <form th:action="@{'/admin/claims/' + ${c.claimId()} + '/approve'}" method="post" onsubmit="return confirm('승인하시겠습니까?');">
+                        <button type="submit" class="small-btn">승인</button>
+                    </form>
+                    <form th:action="@{'/admin/claims/' + ${c.claimId()} + '/reject'}" method="post" onsubmit="return confirm('거절하시겠습니까?');">
+                        <button type="submit" class="small-btn ghost">거절</button>
+                    </form>
+                </div>
+                <div th:if="${c.status() == 'APPROVED'}">
+                    <form th:action="@{'/admin/claims/' + ${c.claimId()} + '/complete'}" method="post" onsubmit="return confirm('회수/재발송이 완료되었습니까? 처리완료 시 주문이 취소되고 재고/포인트가 복원됩니다.');">
+                        <button type="submit" class="small-btn">처리완료(회수확인)</button>
+                    </form>
+                </div>
+                <span th:if="${c.status() == 'REJECTED' or c.status() == 'COMPLETED'}">-</span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(claims)}">조회된 클레임이 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

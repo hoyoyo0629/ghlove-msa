@@ -52,6 +52,35 @@ public class CntrReqmngClient {
         }
     }
 
+    /** AS-IS list.jsp의 검색조건(지자체/요청분류/승인여부/기간)+페이지네이션 재현. */
+    public SearchResult search(String locgovCode, String cntrReqmngCode, String reqStatusCode,
+                                String startDate, String endDate, int page, int size) {
+        try {
+            PageResponse<Row> result = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/cntr-reqmng/search")
+                            .queryParamIfPresent("locgovCode", java.util.Optional.ofNullable(blankToNull(locgovCode)))
+                            .queryParamIfPresent("cntrReqmngCode", java.util.Optional.ofNullable(blankToNull(cntrReqmngCode)))
+                            .queryParamIfPresent("reqStatusCode", java.util.Optional.ofNullable(blankToNull(reqStatusCode)))
+                            .queryParamIfPresent("startDate", java.util.Optional.ofNullable(blankToNull(startDate)))
+                            .queryParamIfPresent("endDate", java.util.Optional.ofNullable(blankToNull(endDate)))
+                            .queryParam("page", page)
+                            .queryParam("size", size)
+                            .build())
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<PageResponse<Row>>() {
+                    });
+            return result != null
+                    ? new SearchResult(result.content(), result.totalElements(), result.totalPages(), result.page(), result.size())
+                    : new SearchResult(List.of(), 0, 0, page, size);
+        } catch (RestClientException e) {
+            return new SearchResult(List.of(), 0, 0, page, size);
+        }
+    }
+
+    private static String blankToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s;
+    }
+
     public DonationInfo donationInfo(String cntrSn) {
         try {
             return restClient.get()
@@ -133,6 +162,12 @@ public class CntrReqmngClient {
     }
 
     public record DonationInfo(String cntrSn, String cntrDe, Long userId, String locgovCode, BigDecimal cntrAmt,
-                                String cntrSttusCode, boolean pointsUsed) {
+                                String cntrSttusCode, boolean pointsUsed, String userName, String loginId) {
+    }
+
+    public record SearchResult(List<Row> content, long totalElements, int totalPages, int page, int size) {
+    }
+
+    private record PageResponse<T>(List<T> content, long totalElements, int totalPages, int page, int size) {
     }
 }

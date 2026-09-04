@@ -1,3 +1,11 @@
+-- ===================================================================
+-- TO-BE DB 재구성(2026-09): 물리 2개(gift + 나머지), 논리 6개 스키마 구조로 전환.
+-- 이 파일은 이제 자신의 단독 DB가 아니라 'ghlove_core' DB 안의 'ord' 스키마에 적용한다.
+-- 실행예: psql -U postgres -d ghlove_core -f service-order.sql
+-- ===================================================================
+CREATE SCHEMA IF NOT EXISTS ord;
+SET search_path TO ord;
+
 -- Service: order
 -- ===================================================================
 -- AS-IS 운영 DB 원본 스키마 기준 자동 생성 (55개 테이블)
@@ -2075,3 +2083,43 @@ ALTER SEQUENCE op_coupon_regular_coupon_id_seq OWNED BY OP_COUPON_REGULAR.COUPON
 -- 반영된 실제 차감 포인트가 저장된다. COUPON_ISSUE_ID는 OP_COUPON_USER.COUPON_USER_ID 참조).
 ALTER TABLE OD_ORDER ADD COLUMN IF NOT EXISTS COUPON_ISSUE_ID INTEGER;
 ALTER TABLE OD_ORDER ADD COLUMN IF NOT EXISTS DISCOUNT_AMOUNT BIGINT NOT NULL DEFAULT 0;
+
+-- =====================================================================
+-- admin 주문관리 콘솔 (AS-IS opmanager/order - OrderManagerController, 3700줄/70+ 엔드포인트
+-- 중 검색/상세/상태변경/클레임처리큐/엑셀다운로드 핵심을 재구현). 이 라운드에서 admin이
+-- 호출하는 신규 admin-only REST API(/api/admin/orders/**, /api/admin/claims/**)와, 지금까지
+-- 무인증 상태였던 기존 /claims, /claims/{id}/approve|reject|complete,
+-- /orders/{orderId}/invoice, /orders/{orderId}/delivery-status를 전부 AdminApiAuthInterceptor
+-- (공유시크릿 헤더 검증)로 게이트한다 - "아직 운영자 로그인 모델이 없어서 무인증"이었던
+-- 실보안결함을 이걸로 해소한다.
+-- =====================================================================
+ALTER TABLE OD_ORDER ADD COLUMN IF NOT EXISTS ADMIN_MEMO VARCHAR(1000);
+
+CREATE TABLE IF NOT EXISTS OD_CLAIM_MEMO (
+    CLAIM_MEMO_ID    BIGSERIAL PRIMARY KEY,
+    CLAIM_ID         BIGINT        NOT NULL,
+    MANAGER_ID       BIGINT,
+    MANAGER_NAME     VARCHAR(100),
+    MEMO             VARCHAR(1000) NOT NULL,
+    CREATED_DATE     TIMESTAMP     NOT NULL DEFAULT now()
+);
+
+ALTER TABLE OD_CLAIM_MEMO ADD CONSTRAINT fk_od_claim_memo_claim_id
+    FOREIGN KEY (CLAIM_ID) REFERENCES OD_CLAIM (CLAIM_ID);
+
+CREATE TABLE IF NOT EXISTS OD_EXCEL_DOWNLOAD_LOG (
+    DOWNLOAD_LOG_ID  BIGSERIAL PRIMARY KEY,
+    MANAGER_ID       BIGINT,
+    MANAGER_NAME     VARCHAR(100),
+    DOWNLOAD_REASON  VARCHAR(500)  NOT NULL,
+    SEARCH_CONDITION VARCHAR(1000),
+    ROW_COUNT        INTEGER,
+    CREATED_DATE     TIMESTAMP     NOT NULL DEFAULT now()
+);
+
+-- 새 테이블은 postgres 소유로 생성되므로 앱 접속계정(orderdb)에 명시적으로 권한을 줘야 한다
+-- (다른 OD_* 테이블과 동일한 배치스캔/보강 패턴).
+GRANT ALL PRIVILEGES ON OD_CLAIM_MEMO TO orderdb;
+GRANT ALL PRIVILEGES ON OD_EXCEL_DOWNLOAD_LOG TO orderdb;
+GRANT ALL PRIVILEGES ON SEQUENCE od_claim_memo_claim_memo_id_seq TO orderdb;
+GRANT ALL PRIVILEGES ON SEQUENCE od_excel_download_log_download_log_id_seq TO orderdb;

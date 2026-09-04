@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>오픈API 사용통계 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- SFR-010 "민간개방 API... 관련 통계" - gift 서비스가 open-api.usage 이벤트로 흘려주는
+     호출 로그(OPEN_API_USAGE_STAT)를 컨슈머(발급 업체)별로 집계한다. 다른 admin 통계
+     화면들과 동일하게 원장은 각 서비스에, admin은 이벤트로 받은 사본만 갖는 CQRS ReadModel. -->
+<div class="contents contents_inner">
+    <h3><span>오픈API 사용통계</span></h3>
+    <p style="color:#666; margin-bottom:16px;">최근 500건 호출 기준 집계입니다.</p>
+
+    <h4>컨슈머별 호출건수</h4>
+    <table class="board_list_table" summary="컨슈머별 호출건수">
+        <caption>컨슈머별 호출건수</caption>
+        <thead>
+        <tr><th scope="col">컨슈머(Kong username)</th><th scope="col">호출건수</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="entry : ${callCountByConsumer}">
+            <td th:text="${entry.key}"></td>
+            <td th:text="${entry.value}"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#maps.isEmpty(callCountByConsumer)}">집계된 호출 이력이 없습니다.</p>
+
+    <h4 class="mt-40">최근 호출 로그</h4>
+    <table class="board_list_table" summary="최근 호출 로그">
+        <caption>최근 호출 로그</caption>
+        <thead>
+        <tr><th scope="col">컨슈머</th><th scope="col">서비스</th><th scope="col">엔드포인트</th><th scope="col">호출시각</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="log : ${recentCalls}">
+            <td th:text="${log.consumerUsername}"></td>
+            <td th:text="${log.serviceName}"></td>
+            <td th:text="${log.endpoint}"></td>
+            <td th:text="${log.calledAt}"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(recentCalls)}">호출 이력이 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

@@ -25,6 +25,14 @@ public class OffgiveApiController {
         return offgiveService.list().stream().map(DonationDto::of).toList();
     }
 
+    /** AS-IS offgive/list.jsp 검색조건(지자체/접수일자 범위) 재현. */
+    @GetMapping("/api/offgive/search")
+    public List<DonationDto> search(@RequestParam(required = false) String locgovCode,
+                                     @RequestParam(required = false) String startDate,
+                                     @RequestParam(required = false) String endDate) {
+        return offgiveService.search(locgovCode, startDate, endDate).stream().map(DonationDto::of).toList();
+    }
+
     @GetMapping("/api/offgive/{cntrSn}")
     public ResponseEntity<?> get(@PathVariable String cntrSn) {
         try {

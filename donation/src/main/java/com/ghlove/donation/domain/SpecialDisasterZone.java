@@ -18,7 +18,7 @@ public class SpecialDisasterZone {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "SPEL_DSTR_ZN_ID")
+    @Column(name = "ID")
     private Long spelDstrZnId;
 
     @Column(name = "LOCGOV_NM")

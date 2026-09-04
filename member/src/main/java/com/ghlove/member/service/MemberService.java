@@ -3,6 +3,7 @@ package com.ghlove.member.service;
 import com.ghlove.member.domain.LoginLog;
 import com.ghlove.member.domain.User;
 import com.ghlove.member.domain.UserChangeLog;
+import com.ghlove.member.domain.UserDataDestructionLog;
 import com.ghlove.member.domain.UserDetail;
 import com.ghlove.member.domain.UserRole;
 import com.ghlove.member.repository.CommonCodeRepository;
@@ -48,6 +49,7 @@ public class MemberService {
     private final LoginLogRepository loginLogRepository;
     private final UserChangeLogRepository userChangeLogRepository;
     private final UserRoleRepository userRoleRepository;
+    private final com.ghlove.member.repository.UserDataDestructionLogRepository userDataDestructionLogRepository;
     private final PasswordEncoder passwordEncoder;
     private final NotificationClient notificationClient;
 
@@ -174,6 +176,63 @@ public class MemberService {
      */
     @Transactional(noRollbackFor = MemberException.class)
     public User login(String loginId, String rawPassword, String remoteAddr) {
+        return completeLogin(checkCredentials(loginId, rawPassword, remoteAddr), remoteAddr);
+    }
+
+    /**
+     * SFR-002 "다중 인증체계(MFA) 선택 적용" 로그인 진입점 - 아이디/비번까지만 확인하고,
+     * MFA를 켜둔 회원(User.mfaEnabled='Y')이면 로그인을 아직 완료하지 않은 채 인증번호
+     * 발송 결과만 돌려준다(완료는 {@link #verifyMfaAndCompleteLogin}에서). MFA를 안 켠
+     * 회원은 기존과 동일하게 이 한 번의 호출로 바로 로그인이 끝난다.
+     */
+    public record LoginOutcome(User user, boolean mfaRequired, String maskedPhone, String devCode) {
+    }
+
+    public LoginOutcome loginWithMfaCheck(String loginId, String rawPassword, String remoteAddr) {
+        User user = checkCredentials(loginId, rawPassword, remoteAddr);
+        if (!"Y".equals(user.getMfaEnabled())) {
+            return new LoginOutcome(completeLogin(user, remoteAddr), false, null, null);
+        }
+        UserDetail detail = userDetailRepository.findById(user.getUserId()).orElse(null);
+        String phoneNumber = detail != null ? detail.getPhoneNumber() : null;
+        if (phoneNumber == null || phoneNumber.isBlank()) {
+            // 휴대폰번호가 없으면 MFA를 켜둔 의미가 없다 - 인증수단이 없으니 그냥 통과시킨다
+            // (설정 화면에서 휴대폰번호 없이는 MFA를 켤 수 없게 막는 게 근본 해결이지만,
+            // 이미 켜둔 상태에서 번호를 지운 경우까지 로그인 자체를 막아버리면 계정이 잠긴다).
+            return new LoginOutcome(completeLogin(user, remoteAddr), false, null, null);
+        }
+        String code = String.format("%06d", new SecureRandom().nextInt(1_000_000));
+        notificationClient.sendAlimtalk(phoneNumber, "LOGIN_MFA", Map.of("code", code));
+        pendingMfaCodes.put(user.getUserId(), new PendingMfaCode(code, LocalDateTime.now(), remoteAddr));
+        return new LoginOutcome(user, true, maskPhone(phoneNumber), notificationClient.enabled ? null : code);
+    }
+
+    /** MFA 2단계 - 인증번호가 맞으면 그제서야 로그인을 완료(로그인횟수/최종로그인일시/성공로그)한다. */
+    public User verifyMfaAndCompleteLogin(Long userId, String inputCode) {
+        PendingMfaCode pending = pendingMfaCodes.get(userId);
+        if (pending == null || pending.issuedAt.isBefore(LocalDateTime.now().minusMinutes(5))) {
+            pendingMfaCodes.remove(userId);
+            throw new MemberException("인증 시간이 초과되었습니다. 다시 로그인해 주세요.");
+        }
+        if (inputCode == null || !inputCode.trim().equals(pending.code)) {
+            throw new MemberException("인증번호가 일치하지 않습니다.");
+        }
+        pendingMfaCodes.remove(userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new MemberException("회원 정보를 찾을 수 없습니다."));
+        return completeLogin(user, pending.remoteAddr);
+    }
+
+    private record PendingMfaCode(String code, LocalDateTime issuedAt, String remoteAddr) {
+    }
+
+    /** MFA 대기중인 코드 저장소 - 관리자 콘솔의 ManagerLoginEmail(DB 테이블)과 달리 일반회원
+     *  로그인은 트래픽이 훨씬 많아 매 로그인 시도마다 행을 쌓는 대신 인메모리로 둔다(5분
+     *  TTL이라 오래 쌓이지 않는다 - 서버 재시작 시 대기중이던 로그인만 다시 하면 된다). */
+    private final java.util.Map<Long, PendingMfaCode> pendingMfaCodes = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** 1단계: 아이디/비번 확인(실패 횟수 누적/계정 잠금 포함) - MFA 여부와 무관하게 공통. */
+    private User checkCredentials(String loginId, String rawPassword, String remoteAddr) {
         User user = userRepository.findByLoginId(loginId).orElse(null);
         if (user == null) {
             recordLoginLog(loginId, "N", remoteAddr, "존재하지 않는 아이디");
@@ -204,13 +263,27 @@ public class MemberService {
             }
             throw new MemberException("아이디 또는 비밀번호가 올바르지 않습니다.");
         }
+        return user;
+    }
 
+    /** 2단계: 로그인 확정(횟수/최종로그인일시 갱신+성공 로그) - MFA 없는 회원은 1단계 직후,
+     *  MFA 회원은 인증번호 확인 후 호출된다. */
+    private User completeLogin(User user, String remoteAddr) {
         user.setLoginFailCount(0);
         user.setLoginCount((user.getLoginCount() == null ? 0 : user.getLoginCount()) + 1);
         user.setLoginDate(now());
         User saved = userRepository.save(user);
-        recordLoginLog(loginId, "Y", remoteAddr, null);
+        recordLoginLog(user.getLoginId(), "Y", remoteAddr, null);
         return saved;
+    }
+
+    /** MFA 설정 화면 - 회원이 스스로 켜고 끈다. */
+    @Transactional
+    public void setMfaEnabled(Long userId, boolean enabled) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new MemberException("회원 정보를 찾을 수 없습니다."));
+        user.setMfaEnabled(enabled ? "Y" : "N");
+        userRepository.save(user);
     }
 
     /**
@@ -473,6 +546,98 @@ public class MemberService {
         User saved = userRepository.save(user);
         recordChangeLog(user.getUserId(), "DORMANT_RELEASED", remoteAddr);
         return saved;
+    }
+
+    private static final String DESTROYED_NAME_MARKER = "탈퇴회원(파기됨)";
+    private static final String ANONYMIZED_IP_MARKER = "0.0.0.0";
+    private static final int DEFAULT_WITHDRAWN_DATA_RETENTION_DAYS = 30;
+    private static final int DEFAULT_LOGIN_LOG_RETENTION_DAYS = 365;
+
+    /**
+     * SFR-002 "데이터 파기 절차" 1/2 - 탈퇴 후 유예기간(기본 30일, 분쟁/이의제기 대비 최소
+     * 보관)이 지난 회원의 개인식별정보를 익명화한다. 행 자체는 지우지 않는다(donation/point/
+     * order 등 다른 서비스가 userId FK로 참조 중이라 실제 삭제는 서비스 경계를 넘는 정합성
+     * 문제를 일으킨다) - 이름/이메일/전화/주소/본인인증CI·DI 등 식별정보만 지운다. loginId는
+     * 남겨둔다(재가입 방지 목적으로 유지하는 게 흔한 실무 관행). 매 실행마다 대상 전체를
+     * 처리하고 이력을 남긴다 - 실시간 스케줄러가 없어 운영자가 수동으로 트리거한다(다른
+     * batch/* 화면들과 동일한 패턴).
+     */
+    @Transactional
+    public int purgeWithdrawnUserData() {
+        String cutoff = DATE_FORMAT.format(LocalDateTime.now().minusDays(withdrawnDataRetentionDays()));
+        List<User> targets = userRepository.findByStatusCodeAndLeaveDateBeforeAndUserNameNot(
+                STATUS_WITHDRAWN, cutoff, DESTROYED_NAME_MARKER);
+        for (User user : targets) {
+            user.setUserName(DESTROYED_NAME_MARKER);
+            user.setEmail(null);
+            user.setMberCi(null);
+            user.setMberDi(null);
+            user.setMberDn(null);
+            user.setUpdatedDate(now());
+            userRepository.save(user);
+
+            userDetailRepository.findById(user.getUserId()).ifPresent(detail -> {
+                detail.setPhoneNumber(null);
+                detail.setAddress(null);
+                detail.setAddressDetail(null);
+                detail.setBirthday(null);
+                detail.setGender(null);
+                userDetailRepository.save(detail);
+            });
+
+            UserDataDestructionLog log = new UserDataDestructionLog();
+            log.setUserId(user.getUserId());
+            log.setDestroyedFields("userName,email,mberCi,mberDi,mberDn,phoneNumber,address,addressDetail,birthday,gender");
+            log.setReason("탈퇴 후 보관기간(" + withdrawnDataRetentionDays() + "일) 경과");
+            log.setDestroyedDate(now());
+            userDataDestructionLogRepository.save(log);
+        }
+        return targets.size();
+    }
+
+    /**
+     * SFR-002 "데이터 파기 절차" 2/2 - "로그 데이터 분리 보관(익명화)". 로그인 로그는 이미
+     * OP_USER_LOGIN_LOG로 회원 PII와 물리적으로 분리 보관되고 있으니, 여기서는 보관기간
+     * (기본 1년)이 지난 로그의 접속 IP를 마스킹한다 - 통계/감사 목적(성공/실패 건수, 시각)은
+     * 유지하면서 개인 식별에 쓰일 수 있는 IP만 지운다.
+     */
+    @Transactional
+    public int anonymizeOldLoginLogs() {
+        String cutoff = DATE_FORMAT.format(LocalDateTime.now().minusDays(loginLogRetentionDays()));
+        List<LoginLog> targets = loginLogRepository.findByLoginDateBeforeAndRemoteAddrNot(cutoff, ANONYMIZED_IP_MARKER);
+        for (LoginLog log : targets) {
+            log.setRemoteAddr(ANONYMIZED_IP_MARKER);
+            loginLogRepository.save(log);
+        }
+        if (!targets.isEmpty()) {
+            UserDataDestructionLog historyEntry = new UserDataDestructionLog();
+            historyEntry.setUserId(0L);
+            historyEntry.setDestroyedFields("OP_USER_LOGIN_LOG.REMOTE_ADDR x " + targets.size() + "건");
+            historyEntry.setReason("로그 보관기간(" + loginLogRetentionDays() + "일) 경과");
+            historyEntry.setDestroyedDate(now());
+            userDataDestructionLogRepository.save(historyEntry);
+        }
+        return targets.size();
+    }
+
+    public List<UserDataDestructionLog> destructionHistory() {
+        return userDataDestructionLogRepository.findTop200ByOrderByDestructionIdDesc();
+    }
+
+    private int withdrawnDataRetentionDays() {
+        return commonCodeRepository.findById(new com.ghlove.member.domain.CommonCodeId("SYSTEM_CONFIG", "ko", "WITHDRAWN_DATA_RETENTION_DAYS"))
+                .map(com.ghlove.member.domain.CommonCode::getCodeValue)
+                .filter(v -> v != null && !v.isBlank())
+                .map(Integer::parseInt)
+                .orElse(DEFAULT_WITHDRAWN_DATA_RETENTION_DAYS);
+    }
+
+    private int loginLogRetentionDays() {
+        return commonCodeRepository.findById(new com.ghlove.member.domain.CommonCodeId("SYSTEM_CONFIG", "ko", "LOGIN_LOG_RETENTION_DAYS"))
+                .map(com.ghlove.member.domain.CommonCode::getCodeValue)
+                .filter(v -> v != null && !v.isBlank())
+                .map(Integer::parseInt)
+                .orElse(DEFAULT_LOGIN_LOG_RETENTION_DAYS);
     }
 
     private int dormantInactiveDays() {

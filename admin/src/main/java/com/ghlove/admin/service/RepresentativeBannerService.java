@@ -67,9 +67,9 @@ public class RepresentativeBannerService {
         banner.setFileNamePc(store(pcImage));
         banner.setFileNameMobile(store(mobileImage));
         banner.setFrstRegisterId(managerId);
-        banner.setFrstRegistPnttm(LocalDateTime.now().format(TS));
+        banner.setFrstRegistPnttm(LocalDateTime.now());
         banner.setLastUpdusrId(managerId);
-        banner.setLastUpdtPnttm(LocalDateTime.now().format(TS));
+        banner.setLastUpdtPnttm(LocalDateTime.now());
         return repository.save(banner);
     }
 
@@ -90,7 +90,7 @@ public class RepresentativeBannerService {
             banner.setFileNameMobile(store(mobileImage));
         }
         banner.setLastUpdusrId(managerId);
-        banner.setLastUpdtPnttm(LocalDateTime.now().format(TS));
+        banner.setLastUpdtPnttm(LocalDateTime.now());
         return repository.save(banner);
     }
 
@@ -99,7 +99,7 @@ public class RepresentativeBannerService {
         RepresentativeBanner banner = get(id);
         banner.setUseYn("Y".equals(banner.getUseYn()) ? "N" : "Y");
         banner.setLastUpdusrId(managerId);
-        banner.setLastUpdtPnttm(LocalDateTime.now().format(TS));
+        banner.setLastUpdtPnttm(LocalDateTime.now());
         return repository.save(banner);
     }
 

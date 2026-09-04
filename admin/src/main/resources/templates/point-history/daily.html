@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>일별 포인트 현황 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
+
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>일별 포인트 현황</h3>
+    <p style="color:#666; margin-bottom:12px;">일자별 포인트 발생(적립)/사용/소멸 합계입니다.</p>
+
+    <form method="get" th:action="@{/point-history/daily}" class="field" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <select name="locgovCode">
+            <option value="">전체 지자체</option>
+            <option th:each="l : ${locgovs}" th:value="${l.locgovCode()}" th:text="${l.locgovNm()}" th:selected="${l.locgovCode() == locgovCode}"></option>
+        </select>
+        <input type="date" name="fromDate" th:value="${fromDate}">
+        ~
+        <input type="date" name="toDate" th:value="${toDate}">
+        <button type="submit" class="btn">조회</button>
+    </form>
+
+    <p>
+        기간 합계 - 발생 <strong th:text="${#numbers.formatInteger(totalEarnAmount, 0, 'COMMA')} + 'P'"></strong> /
+        사용 <strong th:text="${#numbers.formatInteger(totalUseAmount, 0, 'COMMA')} + 'P'"></strong> /
+        소멸 <strong th:text="${#numbers.formatInteger(totalExpireAmount, 0, 'COMMA')} + 'P'"></strong>
+    </p>
+
+    <table class="board_list_table">
+        <thead>
+        <tr><th>일자</th><th>발생건수</th><th>발생포인트</th><th>사용건수</th><th>사용포인트</th><th>소멸건수</th><th>소멸포인트</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="s : ${stats}">
+            <td th:text="${s.date()}"></td>
+            <td th:text="${s.earnCount()} + '건'"></td>
+            <td th:text="${#numbers.formatInteger(s.earnAmount(), 0, 'COMMA')} + 'P'"></td>
+            <td th:text="${s.useCount()} + '건'"></td>
+            <td th:text="${#numbers.formatInteger(s.useAmount(), 0, 'COMMA')} + 'P'"></td>
+            <td th:text="${s.expireCount()} + '건'"></td>
+            <td th:text="${#numbers.formatInteger(s.expireAmount(), 0, 'COMMA')} + 'P'"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(stats)}">해당 조건의 데이터가 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

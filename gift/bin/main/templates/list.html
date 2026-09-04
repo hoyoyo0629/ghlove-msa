@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${pageTitle} ?: '답례품 - 고향사랑e음'"></title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+    <link rel="stylesheet" th:href="@{/css/goods_card.css}">
+    <link rel="stylesheet" th:href="@{/css/lclgv-map.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+<div th:replace="~{fragments/mall-header :: mall-header}"></div>
+
+<!-- AS-IS goods/index-main.html 재현 (goods_card.css의 실제 클래스 그대로 - condi_section의
+     카테고리 버튼열 + goods-list-group 카드 그리드). SFR-010: 관심답례품(하트) 아이콘은
+     로그인 JWT 쿠키가 있을 때만 토글 가능하고, 없으면 클릭 시 로그인으로 보낸다. 신규(14일
+     이내 등록) 배지는 tag_box, 품절은 이미지 오버레이로 표시한다. AS-IS의 포인트 구간별
+     필터(1만/3만/5만 이하 등)는 이번 라운드 범위 밖이라 카테고리 필터만 옮겼다. -->
+<script th:inline="none">
+function toggleWishlist(btn, itemId) {
+    fetch('/wishlist/' + itemId + '/toggle', { method: 'POST' })
+        .then(function (res) {
+            if (res.status === 401) {
+                location.href = 'http://localhost:8081/login?target=' + encodeURIComponent(location.href);
+                return null;
+            }
+            return res.json();
+        })
+        .then(function (data) {
+            if (!data) { return; }
+            btn.classList.toggle('on', data.wishlisted);
+            btn.setAttribute('aria-label', data.wishlisted ? '관심 답례품 등록 상태, 해제하기' : '관심 답례품 해제 상태, 등록하기');
+        });
+}
+</script>
+
+<section class="page-title-box mall center">
+    <span class="ali_breadcrumb">
+        <a th:href="@{'http://localhost:8081/'}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+        <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+        <a th:href="@{/}">답례품</a>
+        <span class="txt-arrow" th:if="${pageTitle != null or (selectedCategory != null and #strings.isEmpty(q))}"><span class="sr-only">&gt;</span></span>
+        <span th:if="${pageTitle != null}" th:text="${pageTitle}"></span>
+        <span th:if="${pageTitle == null and selectedCategory != null}" th:text="${categories.get(selectedCategory)}"></span>
+    </span>
+    <h2 class="page-title-txt"
+        th:text="${pageTitle} ?: (${selectedCategory != null} ? ${categories.get(selectedCategory)} : '답례품몰')"></h2>
+</section>
+
+<div class="center" id="itemArea">
+    <div class="section condi_section" th:if="${pageTitle == null}">
+        <div class="category_group">
+            <ul class="condition_list">
+                <li>
+                    <a th:href="@{/}" th:classappend="${selectedCategory == null and #strings.isEmpty(q)} ? 'on'">
+                        <span class="icon_txt">전체</span>
+                    </a>
+                </li>
+                <li th:each="c : ${categories}">
+                    <a th:href="@{/(categoryCode=${c.key})}" th:classappend="${selectedCategory == c.key} ? 'on'">
+                        <span class="icon_img"><img class="de-img" th:src="@{'/images/goods/' + ${categoryIcons.get(c.key)}}" alt=""></span>
+                        <span class="icon_txt" th:text="${c.value}"></span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <p style="font-size:13px; color:#777; margin:8px 0 16px;" th:if="${q != null and !q.isEmpty()}">
+        '<span th:text="${q}"></span>' 검색 결과 <span th:text="${#lists.size(gifts)}"></span>건
+    </p>
+
+    <div class="section all_goods" id="contents">
+        <ul class="goods-list-group">
+            <li class="goods-list-items" th:each="g : ${gifts}">
+                <div class="list_inner">
+                    <span class="img_frame">
+                        <a class="img_cover_link" th:href="@{'/gifts/' + ${g.itemId}}">
+                            <img class="item_img"
+                                 th:src="${thumbnails.get(g.itemId)} != null ? @{'/uploads/' + ${thumbnails.get(g.itemId)}} : @{/images/thumb.png}"
+                                 th:alt="${g.itemName}">
+                            <img th:if="${g.soldOut == '1'}" th:src="@{/images/goods/goods_sold-out.png}" alt="품절">
+                        </a>
+                        <button type="button" class="icon-md-img hidden_txt"
+                                th:classappend="${wishlistedItemIds.contains(g.itemId)} ? 'on'"
+                                th:attr="data-item-id=${g.itemId}"
+                                th:aria-label="${wishlistedItemIds.contains(g.itemId)} ? '관심 답례품 등록 상태, 해제하기' : '관심 답례품 해제 상태, 등록하기'"
+                                onclick="toggleWishlist(this, this.dataset.itemId)">관심답례품</button>
+                        <span class="tag_box" th:if="${newItemIds.contains(g.itemId)}">신규</span>
+                    </span>
+                    <button type="button" class="do_btn" th:attr="data-url=@{'http://localhost:8082/'}" onclick="location.href=this.dataset.url">
+                        <span class="btn_icon"></span>
+                        <span class="btn_txt" th:text="${locgovNames.get(g.locgovCode)} + ' 기부'"></span>
+                        <span class="btn_arrow"></span>
+                    </button>
+                    <a class="card_title" th:href="@{'/gifts/' + ${g.itemId}}" th:classappend="${g.soldOut == '1'} ? 'grayTxt_so'" th:text="${g.itemName}"></a>
+                    <span class="deepBlue" th:classappend="${g.soldOut == '1'} ? 'grayTxt_so'">
+                        <span class="pointSize" th:text="${#numbers.formatInteger(g.salePrice, 0, 'COMMA')}"></span> P
+                    </span>
+                </div>
+            </li>
+        </ul>
+        <div class="common_none" th:if="${#lists.isEmpty(gifts)}">
+            <p>등록된 답례품이 없습니다.</p>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+</body>
+</html>

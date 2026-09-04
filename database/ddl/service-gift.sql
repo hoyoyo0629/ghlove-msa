@@ -2649,6 +2649,16 @@ ALTER TABLE OP_ITEM_REVIEW ALTER COLUMN ITEM_REVIEW_ID SET DEFAULT nextval('op_i
 
 ALTER SEQUENCE op_item_review_review_id_seq OWNED BY OP_ITEM_REVIEW.ITEM_REVIEW_ID;
 
+-- 실버그: AS-IS OP_ITEM_REVIEW.CREATED_DATE는 다른 테이블들과 같은 legacy VARCHAR(14)
+-- (yyyyMMddHHmmss) 컬럼인데, Review.java의 CREATED_DATE는 처음부터 LocalDateTime으로
+-- 매핑돼 있었다(detail.html의 #temporals.format(r.createdDate, ...), my-reviews.html의
+-- #strings.toString(r.createdDate).substring(0,10) 둘 다 진짜 Temporal 타입을 전제함 -
+-- String으로 바꾸면 이 템플릿들이 깨진다). 시드 데이터에 리뷰가 한 번도 없어서 이 타입
+-- 불일치가 발각되지 않고 있었다 - 답례품몰 라운드에서 실제로 리뷰를 등록해보다가
+-- "value too long for type character varying(14)" INSERT 실패로 발견함. 엔티티가 아니라
+-- 컬럼 쪽을 고친다(다른 서비스의 STATUS_CODE/날짜필드 타입버그와 동일한 성격).
+ALTER TABLE OP_ITEM_REVIEW ALTER COLUMN CREATED_DATE TYPE TIMESTAMP USING NULL;
+
 CREATE SEQUENCE IF NOT EXISTS op_item_review_image_id_seq START WITH 1;
 
 ALTER TABLE OP_ITEM_REVIEW_IMAGE ALTER COLUMN ITEM_REVIEW_IMAGE_ID SET DEFAULT nextval('op_item_review_image_id_seq');
@@ -2735,7 +2745,12 @@ CREATE TABLE IF NOT EXISTS GIFT_SUBCATEGORY (
     SUBCATEGORY_ID   BIGSERIAL PRIMARY KEY,
     CATEGORY_CODE    VARCHAR(20)  NOT NULL, -- GIFT_CATEGORY.ID (TOUR/AGRI/SEAFOOD/PROCESSED/LIVING/VOUCHER)
     NAME             VARCHAR(100) NOT NULL,
-    ORDERING         INTEGER      NOT NULL
+    ORDERING         INTEGER      NOT NULL,
+    -- 답례품 카테고리 관리(admin /admin/gift-categories, AS-IS CategoriesManagerController의
+    -- SEO 메타 편집 기능 대응) - AS-IS OP_CATEGORY의 TITLE/KEYWORDS/DESCRIPTION 서브셋.
+    META_TITLE       VARCHAR(200),
+    META_KEYWORDS    VARCHAR(500),
+    META_DESCRIPTION VARCHAR(500)
 );
 
 INSERT INTO GIFT_SUBCATEGORY (CATEGORY_CODE, NAME, ORDERING) VALUES
@@ -2891,3 +2906,67 @@ WHERE i.SELLER_ID IS NOT NULL
 CREATE SEQUENCE IF NOT EXISTS op_brand_brand_id_seq START WITH 1000;
 ALTER TABLE OP_BRAND ALTER COLUMN BRAND_ID SET DEFAULT nextval('op_brand_brand_id_seq');
 ALTER SEQUENCE op_brand_brand_id_seq OWNED BY OP_BRAND.BRAND_ID;
+
+-- =====================================================================
+-- Round 7 (답례품몰 Vue3 전환): 최초 4개뿐이던 시드 답례품을 지자체 특산품 11개로
+-- 확충하고, 그동안 비어있던 OP_ITEM_IMAGE도 채운다(실제 사진 - Wikimedia Commons
+-- 공개 라이선스 이미지를 다운로드해 FileStorageService/ThumbnailService와 동일한
+-- 규칙(UUID 파일명 + 소/중/대 썸네일)으로 gift/uploads/gift/에 배치했다). SELLER_ID로
+-- 매칭해 신규 아이템만 골라 삽입하므로(9005~9015가 이미 있으면 스킵) 재실행해도 안전.
+-- 지역사랑상품권 2건(1002/1014)은 실물 상품 사진이 없는 카테고리 특성상 이미지 없이 둔다.
+-- =====================================================================
+INSERT INTO OP_ITEM (SELLER_ID, ITEM_NAME, ITEM_SUMMARY, DETAIL_CONTENT, CATEGORY_CODE, LOCGOV_CODE,
+                      SALE_PRICE, STOCK_QUANTITY, SOLD_OUT, DISPLAY_FLAG, DATA_STATUS_CODE, CREATED_DATE)
+SELECT * FROM (VALUES
+    (9005::BIGINT, '횡성한우 등심 선물세트', '1등급 이상 횡성한우 등심 1kg', '횡성군 인증 한우 브랜드입니다.', 'AGRI', '51730', 120000, 40, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9006::BIGINT, '청송 사과 선물세트', '당도 높은 청송 부사 사과 5kg', '해발 높은 청송에서 재배한 사과입니다.', 'AGRI', '47750', 45000, 60, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9007::BIGINT, '나주 배 선물세트', '과즙 가득한 나주 신고배 5kg', '나주시 특산 신고배입니다.', 'AGRI', '12170', 40000, 55, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9008::BIGINT, '보성 녹차 선물세트', '보성 다원 녹차잎으로 만든 프리미엄 녹차 세트', '보성 다원에서 재배한 녹차입니다.', 'PROCESSED', '12750', 38000, 70, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9009::BIGINT, '완도 전복 세트', '싱싱한 완도산 전복 1kg', '청정 완도 해역에서 양식한 전복입니다.', 'SEAFOOD', '12850', 90000, 25, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9010::BIGINT, '논산 딸기 세트', '달콤한 논산 설향 딸기 2kg', '논산시 특산 설향 딸기입니다.', 'AGRI', '44230', 32000, 45, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9011::BIGINT, '부여 밤 선물세트', '알이 굵은 부여 햇밤 3kg', '부여군에서 수확한 햇밤입니다.', 'AGRI', '44760', 28000, 50, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9012::BIGINT, '상주 곶감 세트', '자연건조로 만든 상주 곶감 30입', '상주시 특산 곶감입니다.', 'AGRI', '47250', 42000, 35, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9013::BIGINT, '고창 복분자즙 세트', '고창 복분자로 만든 건강즙 30포', '고창군 특산 복분자로 만들었습니다.', 'PROCESSED', '52790', 35000, 65, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9014::BIGINT, '강진 청자 머그컵 세트', '강진 청자 장인이 만든 머그컵 2p 세트', '강진 청자 도예가가 직접 제작했습니다.', 'LIVING', '12780', 48000, 20, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9015::BIGINT, '제주 지역사랑상품권 5만원권', '제주 가맹점 사용 가능 상품권', '제주도 가맹점에서 사용 가능한 상품권입니다.', 'VOUCHER', '50000', 30000, 80, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS'))
+) AS seed(seller_id, item_name, item_summary, detail_content, category_code, locgov_code, sale_price, stock_quantity, sold_out, display_flag, data_status_code, created_date)
+WHERE NOT EXISTS (SELECT 1 FROM OP_ITEM WHERE SELLER_ID = seed.seller_id);
+
+INSERT INTO OP_SELLER (SELLER_ID, SELLER_NAME, LOGIN_ID, COMPANY_NAME, STATUS_CODE, CREATED_DATE, CREATED_USER_ID)
+SELECT DISTINCT i.SELLER_ID, '미등록 판매자 ' || i.SELLER_ID, 'seller' || i.SELLER_ID, '미등록 판매자 ' || i.SELLER_ID,
+       '1', to_char(now(), 'YYYYMMDDHH24MISS'), 0
+FROM OP_ITEM i
+WHERE i.SELLER_ID IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM OP_SELLER s WHERE s.SELLER_ID = i.SELLER_ID);
+
+INSERT INTO OP_ITEM_IMAGE (ITEM_ID, IMAGE_NAME, ORDERING, CREATED_DATE, THUMBNAIL_SMALL, THUMBNAIL_MEDIUM, THUMBNAIL_LARGE)
+SELECT i.ITEM_ID, x.image_name, 0, to_char(now(), 'YYYYMMDDHH24MISS'),
+       regexp_replace(x.image_name, '\.jpg$', '_small.png'),
+       regexp_replace(x.image_name, '\.jpg$', '_medium.png'),
+       regexp_replace(x.image_name, '\.jpg$', '_large.png')
+FROM OP_ITEM i
+JOIN (VALUES
+    (9005, '72764724-3b31-4fb8-937f-54585a2b0234.jpg'),
+    (9006, '870aa48d-0fd3-4df6-a9c0-b6f413a88886.jpg'),
+    (9007, 'b307c4e9-47ad-454a-954f-6f1057cb8789.jpg'),
+    (9008, '60733033-93c4-42e8-9801-600fb0d47e14.jpg'),
+    (9009, 'f74b2da1-924d-418c-8721-69f483391186.jpg'),
+    (9010, '4768b5b8-ca78-452d-b1d4-6847eabeae65.jpg'),
+    (9011, '0c857e96-6372-4e86-9255-c1858f8f6896.jpg'),
+    (9012, '92d141a7-6c44-4f56-be80-f00f7ce821fc.jpg'),
+    (9013, '4dd878a2-cf2c-457c-846d-80546fa64087.jpg'),
+    (9014, '699af444-4adb-4f3a-91cd-3e9adc33ed64.jpg')
+) AS x(seller_id, image_name) ON i.SELLER_ID = x.seller_id
+WHERE NOT EXISTS (SELECT 1 FROM OP_ITEM_IMAGE ii WHERE ii.ITEM_ID = i.ITEM_ID);
+
+INSERT INTO OP_ITEM_IMAGE (ITEM_ID, IMAGE_NAME, ORDERING, CREATED_DATE, THUMBNAIL_SMALL, THUMBNAIL_MEDIUM, THUMBNAIL_LARGE)
+SELECT x.item_id, x.image_name, 0, to_char(now(), 'YYYYMMDDHH24MISS'),
+       regexp_replace(x.image_name, '\.jpg$', '_small.png'),
+       regexp_replace(x.image_name, '\.jpg$', '_medium.png'),
+       regexp_replace(x.image_name, '\.jpg$', '_large.png')
+FROM (VALUES
+    (1000, '23c1795d-9371-45d5-9d2c-5f54a71a085d.jpg'),
+    (1001, '33201915-c5ec-483f-ba18-7fc9b27322e7.jpg'),
+    (1003, '9a0dbb0f-315b-4fdd-a233-8fd5fe0d1a69.jpg')
+) AS x(item_id, image_name)
+WHERE NOT EXISTS (SELECT 1 FROM OP_ITEM_IMAGE ii WHERE ii.ITEM_ID = x.item_id);

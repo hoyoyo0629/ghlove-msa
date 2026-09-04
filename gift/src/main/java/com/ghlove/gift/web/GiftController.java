@@ -118,7 +118,8 @@ public class GiftController {
 
     @GetMapping("/gifts/{itemId}")
     public String detail(@PathVariable Long itemId,
-                          @RequestParam(required = false) String errorMessage, Model model) {
+                          @RequestParam(required = false) String errorMessage,
+                          HttpServletRequest request, Model model) {
         model.addAttribute("errorMessage", errorMessage);
         Gift gift = giftService.detail(itemId);
         model.addAttribute("gift", gift);
@@ -127,6 +128,10 @@ public class GiftController {
         model.addAttribute("images", giftService.imagesOf(itemId));
         model.addAttribute("locgovName", locgovClient.namesByCode().get(gift.getLocgovCode()));
         model.addAttribute("seller", giftService.sellerOf(gift.getSellerId()));
+
+        var authUserId = jwtVerifier.currentUserId(request);
+        model.addAttribute("wishlisted", authUserId.isPresent()
+                && wishlistService.wishlistedItemIds(authUserId.get(), List.of(itemId)).contains(itemId));
 
         List<Review> reviews = reviewService.reviewsOf(itemId);
         model.addAttribute("reviews", reviews);

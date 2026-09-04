@@ -216,7 +216,9 @@ public class OrderService {
         order.setDeliveryStatus(DELIVERY_SHIPPED);
         order.setShippedDate(LocalDateTime.now());
         order.setUpdatedDate(LocalDateTime.now());
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        orderSagaPublisher.publishDeliveryUpdated(saved);
+        return saved;
     }
 
     /**
@@ -241,7 +243,9 @@ public class OrderService {
             order.setDeliveredDate(LocalDateTime.now());
         }
         order.setUpdatedDate(LocalDateTime.now());
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        orderSagaPublisher.publishDeliveryUpdated(saved);
+        return saved;
     }
 
     /** 수취확인(구매확정) - 배송완료 상태에서 구매자 본인만 가능. */
@@ -257,7 +261,9 @@ public class OrderService {
         order.setDeliveryStatus(DELIVERY_CONFIRMED);
         order.setConfirmedDate(LocalDateTime.now());
         order.setUpdatedDate(LocalDateTime.now());
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        orderSagaPublisher.publishDeliveryUpdated(saved);
+        return saved;
     }
 
     /** 배송지 변경 - 아직 발송 전(송장 미등록)인 주문만, 구매자 본인만 가능. */

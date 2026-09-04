@@ -40,14 +40,15 @@ public class OpEmailService {
         return opEmailRepository.findById(emailId).orElseThrow(() -> new ManagerException("메일을 찾을 수 없습니다."));
     }
 
-    /** 대상(전체 관리자 / ROLE_ADMIN / ROLE_OPERATOR)에게 즉시 발송한다 - EmailClient가
-     *  enabled=false 모크면 실제 발송 없이 로그만 남긴다(관리자 로그인 2FA와 동일 관행). */
+    /** 대상(전체 관리자 / 시스템·행안부[ROLE_ADMIN_1~4] / 지자체담당자[ROLE_ADMIN_5~6])에게
+     *  즉시 발송한다 - EmailClient가 enabled=false 모크면 실제 발송 없이 로그만 남긴다
+     *  (관리자 로그인 2FA와 동일 관행). */
     @Transactional
     public OpEmail sendNow(String subject, String content, String authTarget, Long senderId) {
-        String roleFilter = TARGET_ADMIN.equals(authTarget) ? "ROLE_ADMIN"
-                : TARGET_OPERATOR.equals(authTarget) ? "ROLE_OPERATOR" : null;
+        java.util.Set<String> roleFilter = TARGET_ADMIN.equals(authTarget) ? MenuService.UNRESTRICTED_ROLES
+                : TARGET_OPERATOR.equals(authTarget) ? MenuService.LOCGOV_SCOPED_ROLES : null;
         List<Manager> targets = managerRepository.findAll().stream()
-                .filter(m -> roleFilter == null || roleFilter.equals(m.getAuthority()))
+                .filter(m -> roleFilter == null || roleFilter.contains(m.getAuthority()))
                 .filter(m -> m.getEmail() != null && !m.getEmail().isBlank())
                 .toList();
 

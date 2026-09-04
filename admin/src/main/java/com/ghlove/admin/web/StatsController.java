@@ -28,6 +28,14 @@ public class StatsController {
         return "stats/dashboard";
     }
 
+    /** SFR-006 "제공자·지자체별 SLA 지표". */
+    @GetMapping("/stats/sla")
+    public String sla(Model model) {
+        model.addAttribute("bySeller", statsService.slaStatsBySeller());
+        model.addAttribute("byLocgov", statsService.slaStatsByLocgov());
+        return "stats/sla";
+    }
+
     /** ReadModel 재동기화 수동 실행 (SFR-009) - 배포/DB 재구성 직후, 또는 Kafka 보존기간을
      *  넘긴 장애 복구 시 사용. */
     @PostMapping("/stats/resync")

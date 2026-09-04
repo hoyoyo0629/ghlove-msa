@@ -21,9 +21,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +53,7 @@ public class GiftService {
     private static final String IN_STOCK = "0";
     private static final String RESERVATION_RESERVED = "RESERVED";
     private static final String RESERVATION_RESTORED = "RESTORED";
+    private static final String LABEL_NONE = "1";
     private static final DateTimeFormatter CREATED_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
@@ -229,6 +236,7 @@ public class GiftService {
         gift.setDisplayStartDate(normalizeDate(displayStartDate));
         gift.setDisplayEndDate(normalizeDate(displayEndDate));
         gift.setMinDonationAmount(minDonationAmount);
+        gift.setItemLabel(LABEL_NONE);
         Gift saved = giftRepository.save(gift);
         giftLifecyclePublisher.publish(saved);
 
@@ -385,6 +393,186 @@ public class GiftService {
     /** <input type=date>는 yyyy-MM-dd로 제출되는데 저장 형식은 yyyyMMdd라 하이픈을 제거한다. */
     private String normalizeDate(String value) {
         return (value == null || value.isBlank()) ? null : value.replace("-", "");
+    }
+
+    // ---- 답례품 관리자 직접 CRUD (AS-IS opmanager/item - ItemManagerController 1단계 대응).
+    // 셀러 self-service(register/edit)와 달리 관리자가 셀러를 대신해 직접 등록/수정한다 -
+    // 소유권 검증이 없고, 관리자가 직접 만든 상품이라 승인 대기 없이 즉시 APPROVED+노출로
+    // 시작한다(관리자가 만드는 시점에 이미 검수를 마쳤다고 간주). ----
+
+    @Transactional
+    public Gift adminCreate(Long sellerId, String itemName, String itemSummary, String detailContent,
+                             String categoryCode, String locgovCode, Integer salePrice, Integer stockQuantity,
+                             String displayType, String displayStartDate, String displayEndDate,
+                             Integer minDonationAmount, Integer brandId, List<MultipartFile> images) {
+        if (sellerId == null || !sellerRepository.existsById(sellerId)) {
+            throw new GiftException("등록된 판매자를 선택해 주세요.");
+        }
+        if (itemName == null || itemName.isBlank()) {
+            throw new GiftException("답례품명을 입력해 주세요.");
+        }
+        if (!codesOf("GIFT_CATEGORY").containsKey(categoryCode)) {
+            throw new GiftException("올바른 카테고리를 선택해 주세요.");
+        }
+        if (salePrice == null || salePrice <= 0) {
+            throw new GiftException("가격은 0보다 커야 합니다.");
+        }
+        if (stockQuantity == null || stockQuantity < 0) {
+            throw new GiftException("재고 수량은 0 이상이어야 합니다.");
+        }
+        String resolvedDisplayType = (displayType == null || displayType.isBlank()) ? DISPLAY_TYPE_ALWAYS : displayType;
+        if (!codesOf("GIFT_DISPLAY_TYPE").containsKey(resolvedDisplayType)) {
+            throw new GiftException("올바른 노출 유형을 선택해 주세요.");
+        }
+
+        Gift gift = new Gift();
+        gift.setSellerId(sellerId);
+        gift.setItemName(itemName);
+        gift.setItemSummary(itemSummary);
+        gift.setDetailContent(detailContent);
+        gift.setCategoryCode(categoryCode);
+        gift.setLocgovCode(locgovCode);
+        gift.setSalePrice(salePrice);
+        gift.setStockQuantity(stockQuantity);
+        gift.setSoldOut(stockQuantity <= 0 ? SOLD_OUT : IN_STOCK);
+        gift.setDisplayFlag(DISPLAY_ON);
+        gift.setDataStatusCode(STATUS_APPROVED);
+        gift.setCreatedDate(CREATED_DATE_FORMAT.format(LocalDateTime.now()));
+        gift.setDisplayType(resolvedDisplayType);
+        gift.setDisplayStartDate(normalizeDate(displayStartDate));
+        gift.setDisplayEndDate(normalizeDate(displayEndDate));
+        gift.setMinDonationAmount(minDonationAmount);
+        gift.setBrandId(brandId);
+        gift.setItemLabel(LABEL_NONE);
+        Gift saved = giftRepository.save(gift);
+        giftLifecyclePublisher.publish(saved);
+
+        if (images != null) {
+            int ordering = 0;
+            for (MultipartFile file : images) {
+                if (file == null || file.isEmpty()) {
+                    continue;
+                }
+                String storedName = fileStorageService.store(file);
+                ItemImage itemImage = new ItemImage();
+                itemImage.setItemId(saved.getItemId());
+                itemImage.setImageName(storedName);
+                itemImage.setOrdering(ordering++);
+                itemImage.setCreatedDate(CREATED_DATE_FORMAT.format(LocalDateTime.now()));
+                itemImageRepository.save(itemImage);
+            }
+        }
+        return saved;
+    }
+
+    /** 관리자 직접 수정 - 셀러 소유권 검증 없이(edit()과 달리) 모든 답례품을 수정할 수 있고,
+     *  판매자 재지정/재고수량 수정도 가능하다(둘 다 셀러 self-service edit()에는 없는 항목). */
+    @Transactional
+    public Gift adminEdit(Long itemId, Long sellerId, String itemName, String itemSummary, String detailContent,
+                           String categoryCode, Integer salePrice, Integer stockQuantity, String displayType,
+                           String displayStartDate, String displayEndDate, Integer minDonationAmount, Integer brandId) {
+        Gift gift = detail(itemId);
+        if (sellerId == null || !sellerRepository.existsById(sellerId)) {
+            throw new GiftException("등록된 판매자를 선택해 주세요.");
+        }
+        if (itemName == null || itemName.isBlank()) {
+            throw new GiftException("답례품명을 입력해 주세요.");
+        }
+        if (!codesOf("GIFT_CATEGORY").containsKey(categoryCode)) {
+            throw new GiftException("올바른 카테고리를 선택해 주세요.");
+        }
+        if (salePrice == null || salePrice <= 0) {
+            throw new GiftException("가격은 0보다 커야 합니다.");
+        }
+        if (stockQuantity == null || stockQuantity < 0) {
+            throw new GiftException("재고 수량은 0 이상이어야 합니다.");
+        }
+        String resolvedDisplayType = (displayType == null || displayType.isBlank()) ? DISPLAY_TYPE_ALWAYS : displayType;
+        if (!codesOf("GIFT_DISPLAY_TYPE").containsKey(resolvedDisplayType)) {
+            throw new GiftException("올바른 노출 유형을 선택해 주세요.");
+        }
+
+        gift.setSellerId(sellerId);
+        gift.setItemName(itemName);
+        gift.setItemSummary(itemSummary);
+        gift.setDetailContent(detailContent);
+        gift.setCategoryCode(categoryCode);
+        gift.setSalePrice(salePrice);
+        gift.setStockQuantity(stockQuantity);
+        gift.setSoldOut(stockQuantity <= 0 ? SOLD_OUT : IN_STOCK);
+        gift.setDisplayType(resolvedDisplayType);
+        gift.setDisplayStartDate(normalizeDate(displayStartDate));
+        gift.setDisplayEndDate(normalizeDate(displayEndDate));
+        gift.setMinDonationAmount(minDonationAmount);
+        gift.setBrandId(brandId);
+        Gift saved = giftRepository.save(gift);
+        giftLifecyclePublisher.publish(saved);
+        return saved;
+    }
+
+    /** 카테고리 일괄 배정 (AS-IS add-items-to-category). */
+    @Transactional
+    public int bulkAssignCategory(List<Long> itemIds, String categoryCode) {
+        if (!codesOf("GIFT_CATEGORY").containsKey(categoryCode)) {
+            throw new GiftException("올바른 카테고리를 선택해 주세요.");
+        }
+        List<Gift> gifts = giftRepository.findAllById(itemIds);
+        gifts.forEach(g -> g.setCategoryCode(categoryCode));
+        giftRepository.saveAll(gifts);
+        return gifts.size();
+    }
+
+    /** 상품 복사 (AS-IS copy/{itemId}) - 이미지 포함 전체 필드를 복제한 새 답례품을 PENDING/
+     *  비노출 초안으로 만든다(원본이 이미 승인돼 있어도 복사본은 관리자가 다시 검수하도록
+     *  안전하게 시작). */
+    @Transactional
+    public Gift copy(Long itemId) {
+        Gift source = detail(itemId);
+        Gift copy = new Gift();
+        copy.setSellerId(source.getSellerId());
+        copy.setItemName(source.getItemName() + " (사본)");
+        copy.setItemSummary(source.getItemSummary());
+        copy.setDetailContent(source.getDetailContent());
+        copy.setCategoryCode(source.getCategoryCode());
+        copy.setLocgovCode(source.getLocgovCode());
+        copy.setSalePrice(source.getSalePrice());
+        copy.setStockQuantity(source.getStockQuantity());
+        copy.setSoldOut(source.getStockQuantity() != null && source.getStockQuantity() <= 0 ? SOLD_OUT : IN_STOCK);
+        copy.setDisplayFlag(DISPLAY_OFF);
+        copy.setDataStatusCode(STATUS_PENDING);
+        copy.setCreatedDate(CREATED_DATE_FORMAT.format(LocalDateTime.now()));
+        copy.setDisplayType(source.getDisplayType());
+        copy.setDisplayStartDate(source.getDisplayStartDate());
+        copy.setDisplayEndDate(source.getDisplayEndDate());
+        copy.setMinDonationAmount(source.getMinDonationAmount());
+        copy.setBrandId(source.getBrandId());
+        copy.setItemLabel(source.getItemLabel() != null ? source.getItemLabel() : LABEL_NONE);
+        Gift saved = giftRepository.save(copy);
+        giftLifecyclePublisher.publish(saved);
+
+        int ordering = 0;
+        for (ItemImage img : imagesOf(itemId)) {
+            ItemImage newImage = new ItemImage();
+            newImage.setItemId(saved.getItemId());
+            newImage.setImageName(img.getImageName());
+            newImage.setOrdering(ordering++);
+            newImage.setCreatedDate(CREATED_DATE_FORMAT.format(LocalDateTime.now()));
+            itemImageRepository.save(newImage);
+        }
+        return saved;
+    }
+
+    /** 관리자 상품관리 목록 - 검색조건(상품명/카테고리/판매자/상태) 조합. 시드 규모가 작아
+     *  인메모리 필터링으로 처리한다(다른 admin 목록화면들과 동일한 관행). */
+    public List<Gift> adminSearch(String itemName, String categoryCode, Long sellerId, String dataStatusCode) {
+        return giftRepository.findAll().stream()
+                .filter(g -> itemName == null || itemName.isBlank() || (g.getItemName() != null && g.getItemName().contains(itemName)))
+                .filter(g -> categoryCode == null || categoryCode.isBlank() || categoryCode.equals(g.getCategoryCode()))
+                .filter(g -> sellerId == null || sellerId.equals(g.getSellerId()))
+                .filter(g -> dataStatusCode == null || dataStatusCode.isBlank() || dataStatusCode.equals(g.getDataStatusCode()))
+                .sorted(Comparator.<Gift, Integer>comparing(g -> g.getAdminOrdering() == null ? 0 : g.getAdminOrdering())
+                        .thenComparing(Gift::getItemId, Comparator.reverseOrder()))
+                .toList();
     }
 
     /** 판매중지. 승인된 상품을 제공자/지자체가 임시로 노출에서 내릴 때 사용. */

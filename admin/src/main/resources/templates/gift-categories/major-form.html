@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>대분류 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/gift-categories}">답례품 카테고리 관리</a></div>
+    <h3><span th:text="${major.id()} != null ? '대분류 수정' : '대분류 등록'"></span></h3>
+    <p style="color:#c00;" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="대분류 등록/수정">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>카테고리코드</td>
+                <td>
+                    <input type="text" name="id" th:value="${major.id()}" th:readonly="${major.id()} != null"
+                           placeholder="예: HANDICRAFT (영문 대문자/숫자/언더스코어)" required form="majorForm">
+                    <span style="color:#999; font-size:12px;" th:if="${major.id()} != null">등록 후에는 카테고리코드를 바꿀 수 없습니다.</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>카테고리명</td>
+                <td><input type="text" name="label" th:value="${major.label()}" required form="majorForm"></td>
+            </tr>
+            <tr>
+                <td class="label">노출순서</td>
+                <td><input type="number" name="ordering" th:value="${major.ordering()}" style="width:100px;" form="majorForm"></td>
+            </tr>
+            <tr th:if="${major.id()} != null">
+                <td class="label">노출여부</td>
+                <td><input type="checkbox" name="useYn" value="Y" th:checked="${major.useYn()} == 'Y'" form="majorForm"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <form id="majorForm"
+          th:action="${major.id()} != null ? @{/admin/gift-categories/majors/{id}(id=${major.id()})} : @{/admin/gift-categories/majors}"
+          method="post"></form>
+    <div class="btn_all btn_center">
+        <button type="submit" form="majorForm" class="btn btn-dark-gray btn-small">저장</button>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

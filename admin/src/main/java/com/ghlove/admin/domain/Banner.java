@@ -5,8 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
-
 /** 메인 배너. Maps a subset of the AS-IS OP_MAIN_BANNER columns (이미지는 업로드가 아니라
  *  이미 static 리소스로 배포된 AS-IS 배너 이미지 경로를 그대로 참조한다). */
 @Entity
@@ -40,6 +38,10 @@ public class Banner {
     @Column(name = "DISPLAY_FLAG")
     private String displayFlag;
 
+    /** yyyyMMddHHmmss - DB 컬럼이 VARCHAR(14)인 AS-IS 관례(다른 콘텐츠 엔티티들과 동일).
+     *  실제로 발견한 버그: 이 필드가 예전엔 LocalDateTime으로 잘못 매핑돼 있어서 배너
+     *  등록(createBanner) 자체가 매번 타입 불일치로 실패하고 있었다 - 메인화면에
+     *  배너가 하나도 안 쌓여있던(=슬라이드가 안 보이던) 진짜 원인. */
     @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
+    private String createdDate;
 }

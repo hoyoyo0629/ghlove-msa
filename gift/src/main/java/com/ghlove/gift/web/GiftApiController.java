@@ -1,6 +1,8 @@
 package com.ghlove.gift.web;
 
+import com.ghlove.gift.domain.Gift;
 import com.ghlove.gift.domain.Seller;
+import com.ghlove.gift.event.OpenApiUsagePublisher;
 import com.ghlove.gift.repository.InquiryRepository;
 import com.ghlove.gift.repository.GiftRepository;
 import com.ghlove.gift.repository.ReviewRepository;
@@ -12,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -29,6 +32,29 @@ public class GiftApiController {
     private final GiftService giftService;
     private final SellerRepository sellerRepository;
     private final GiftRepository giftRepository;
+    private final OpenApiUsagePublisher openApiUsagePublisher;
+
+    /** SFR-010 민간개방 API - 외부 이용업체가 API 키(Kong key-auth)로만 호출하는 공개
+     *  답례품 목록. Kong이 인증을 통과시킨 요청에는 X-Consumer-Username 헤더를 자동으로
+     *  실어보내주므로(key-auth 플러그인 기본 동작), 별도 인증 로직 없이 그 값을 그대로
+     *  호출자 식별자로 써서 사용통계를 admin에 이벤트로 흘려보낸다. 이 경로는 Kong을
+     *  거치지 않고 직접 호출하면(X-Consumer-Username 없음) 통계만 안 남을 뿐 동작 자체는
+     *  막지 않는다 - 실제 접근 제어는 Kong의 key-auth가 게이트웨이 단에서 전담한다. */
+    @GetMapping("/api/open/gifts")
+    public List<OpenGiftDto> openGifts(@RequestParam(required = false) String categoryCode,
+                                        @RequestParam(required = false) String locgovCode,
+                                        @RequestHeader(value = "X-Consumer-Username", required = false) String consumerUsername) {
+        openApiUsagePublisher.publish(consumerUsername != null ? consumerUsername : "unknown", "/api/open/gifts");
+        List<Gift> gifts = giftService.publicGifts(categoryCode, null, locgovCode);
+        return gifts.stream()
+                .map(g -> new OpenGiftDto(g.getItemId(), g.getItemName(), g.getCategoryCode(), g.getLocgovCode(),
+                        g.getSalePrice(), g.getStockQuantity()))
+                .toList();
+    }
+
+    public record OpenGiftDto(Long itemId, String itemName, String categoryCode, String locgovCode,
+                               Integer salePrice, Integer stockQuantity) {
+    }
 
     @GetMapping("/api/my-summary")
     public MySummaryDto mySummary(@RequestParam Long userId) {

@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface DataBoardRepository extends JpaRepository<DataBoard, Integer> {
     List<DataBoard> findByUseYn(String useYn);
+
+    List<DataBoard> findAllByOrderByDataIdDesc();
 }

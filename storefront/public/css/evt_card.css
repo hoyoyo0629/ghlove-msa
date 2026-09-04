@@ -1,0 +1,193 @@
+.mall_search-result-info {
+    padding: 80px 0;
+}
+.amount_goods{
+    margin-bottom: 12px;
+}
+.goods-evt-group {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin: 0 -8px;
+}
+
+.goods-evt-group .evt-list-items {
+    padding: 0 8px;
+    width: 25%;
+    margin-bottom: 60px;
+    /* cursor: pointer; */
+}
+
+.goods-evt-group .evt-list-items .list_inner {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    position: relative;
+}
+
+
+.goods-evt-group .evt-list-items .list_inner span.img_frame {
+    overflow: hidden;
+    width: 100%;
+    position: relative;
+    padding-top: 100%;
+    margin-bottom: 13px;
+}
+.goods-evt-group .evt-list-items .list_inner span.img_frame .tag_box {
+    position: absolute;
+    top: 10px;
+    left: 0;
+    padding-left: 3%;
+    width: 100%;
+    z-index: 100;
+}
+
+.goods-evt-group .evt-list-items .list_inner span.img_frame .tag_box .tag {
+    width: 56px;
+    margin-right: 4px;
+}
+.goods-evt-group .evt-list-items .list_inner span.img_frame a {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top:0;
+    left: 0;
+    cursor: pointer;
+}
+.goods-evt-group .evt-list-items .list_inner span.img_frame a:focus-visible {
+    outline: none;
+    border: 2px dashed #000;
+    overflow: hidden;
+}
+.goods-evt-group .evt-list-items .list_inner span.img_frame img {
+    position: absolute;
+    top:0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* max-width: unset;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1); */
+}
+.goods-evt-group .evt-list-items .list_inner span.img_frame a:focus-visible img,
+.goods-evt-group .evt-list-items .list_inner span.img_frame a:hover img {
+    transform: scale(1.2);
+    opacity: 0.8;
+    transition: transform 0.3s, opacity 0.5s;
+}
+
+.goods-evt-group .evt-list-items .list_inner span.card_title,
+.goods-evt-group .evt-list-items .list_inner span.pointGray {
+    display: block;
+    width: 100%;
+    /* 여러줄 말줄임 */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.5em;
+}
+
+.goods-evt-group .evt-list-items .list_inner span.card_evt-du {
+    font-size: 16px;
+    color: var(--gray2);
+    margin-bottom: 4px;
+}
+
+.goods-evt-group .evt-list-items .list_inner span.card_title {
+    font-size: 22px;
+    color: var(--gray2);
+    line-height: 1.2em;
+    margin-bottom: 6px;
+    font-weight: bold;
+}
+
+.goods-evt-group .evt-list-items .list_inner>span {
+    display: inline-block;
+}
+
+.formBtn.more {
+    min-width: 280px;
+    border-color: var(--gray4);
+    color: var(--gray3);
+}
+
+.formBtn.more:hover {
+    box-shadow: none;
+}
+
+.list-none {
+    text-align: center;
+    padding: 0px 0 150px;
+}
+
+@media screen and (max-width:1030px) {
+    .goods-evt-group .evt-list-items {
+        /* padding: 0 2%; */
+        width: 33.333%;
+    }
+}
+
+@media screen and (max-width:768px) {
+    .goods-evt-group .evt-list-items {
+        padding: 0 2%;
+        width: 50%;
+        margin-bottom: 50px;
+    }
+
+    .goods-evt-group .evt-list-items .list_inner span.card_evt-du {
+        font-size: 14px;
+    }
+
+    .goods-evt-group .evt-list-items .list_inner span.card_title {
+        font-size: 16px;
+    }
+
+    .goods-evt-group .evt-list-items .list_inner span.pointGray {
+        font-size: 12px;
+    }
+}
+
+@media screen and (max-width:460px) {
+    .goods-evt-group .evt-list-items .list_inner span.img_frame .tag_box {
+        top: 5px;
+    }
+
+    .goods-evt-group .evt-list-items .list_inner span.img_frame .tag_box .tag {
+        width: 44px;
+        margin-right: 2px;
+    }
+
+
+    .goods-evt-group .evt-list-items .list_inner span.img_frame .cart {
+        width: 40px;
+        height: 40px;
+        background-image: url('/static/images/goods/thumb_cart_m.png');
+        background-size: 20px;
+        right: 6px;
+        bottom: 6px;
+    }
+
+    .goods-evt-group .evt-list-items .list_inner span.img_frame .cart::before {
+        left: 9px;
+    }
+
+    .goods-evt-group .evt-list-items .list_inner span.img_frame .cart:hover {
+        background-image: url('/static/images/goods/thumb_cart-on_m.png');
+    }
+
+    .goods-evt-group .evt-list-items .list_inner span.img_frame .cart:hover::before {
+        width: 10px;
+    }
+
+    .do_btn {
+        font-size: 12px;
+        word-break: keep-all;
+        margin: 8px 0;
+    }
+}

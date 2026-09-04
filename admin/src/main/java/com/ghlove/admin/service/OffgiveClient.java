@@ -36,6 +36,28 @@ public class OffgiveClient {
         }
     }
 
+    /** AS-IS offgive/list.jsp 검색조건(지자체/접수일자 범위) 재현. */
+    public List<Donation> search(String locgovCode, String startDate, String endDate) {
+        try {
+            List<Donation> list = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/offgive/search")
+                            .queryParamIfPresent("locgovCode", java.util.Optional.ofNullable(blankToNull(locgovCode)))
+                            .queryParamIfPresent("startDate", java.util.Optional.ofNullable(blankToNull(startDate)))
+                            .queryParamIfPresent("endDate", java.util.Optional.ofNullable(blankToNull(endDate)))
+                            .build())
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<Donation>>() {
+                    });
+            return list != null ? list : List.of();
+        } catch (RestClientException e) {
+            return List.of();
+        }
+    }
+
+    private static String blankToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s;
+    }
+
     public Donation get(String cntrSn) {
         try {
             return restClient.get().uri("/api/offgive/{cntrSn}", cntrSn).retrieve().body(Donation.class);

@@ -162,14 +162,13 @@ public class ManagerAuthController {
         return "admin/access-denied";
     }
 
-    /** ROLE_ADMIN 전용 화면(/stats)이 기본값이면 ROLE_OPERATOR는 로그인하자마자 접근거부
-     *  화면을 보게 된다 - 실제로 접근 가능한 첫 메뉴로 보낸다. */
+    /** 로그인 직후 랜딩 화면. AdminHomeController(/admin)가 실제 대시보드(오늘 주문/회원
+     *  카운트+최근 공지)를 보여주고 위젯 접근권한과 무관하게 모든 로그인 관리자가 볼 수
+     *  있다 - 예전엔 이 대시보드 자체가 없어서 "접근 가능한 첫 메뉴"로 그냥 넘겨버렸는데,
+     *  그러면 지자체담당자(ROLE_ADMIN_5/6)가 로그인할 때마다 자기 업무와 무관한 메뉴에
+     *  떨어지는 문제가 있었다. */
     private String defaultLandingPage(Manager manager) {
-        return menuService.visibleMenus().stream()
-                .filter(menu -> menuService.hasAccess(manager, menu))
-                .map(Menu::getMenuUrl)
-                .findFirst()
-                .orElse("/admin/access-denied");
+        return "/admin";
     }
 
     private static Map<String, Object> result(String status, String message, String devCode) {

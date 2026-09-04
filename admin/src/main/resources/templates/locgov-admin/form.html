@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>지자체 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/user/locgov/form.jsp + edit.jsp를 하나로 통합했다(구조가 사실상 동일).
+     mode: create(SYS가 미등록 지자체 새로 고름) / create-existing(URL로 바로 들어온 미등록
+     지자체, 주로 LOC 담당자 자기 지자체) / edit(이미 등록된 지자체 수정). -->
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/locgovs}">지자체관리</a></div>
+    <h3><span th:text="${mode == 'edit'} ? '지자체 수정' : '지자체 등록'"></span></h3>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c00;"></p>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="지자체 등록/수정">
+            <colgroup><col style="width:220px;"><col><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr th:if="${mode == 'create'}">
+                <td class="label"><span class="required_mark">*</span>지자체</td>
+                <td colspan="3">
+                    <select id="locgovCodeSelect" required>
+                        <option value="">- 지자체 선택 -</option>
+                        <option th:each="l : ${registrable}" th:value="${l.locgovCode}"
+                                th:text="(${l.upperLocgovNm} ?: '') + ' ' + ${l.locgovNm} + ' (' + ${l.locgovCode} + ')'"></option>
+                    </select>
+                </td>
+            </tr>
+            <tr th:if="${mode != 'create'}">
+                <td class="label">지자체</td>
+                <td colspan="3">
+                    <div th:text="(${detail.upperLocgovNm} ?: '') + ' ' + ${detail.locgovNm} + ' (' + ${detail.locgovCode} + ')'"></div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>사업자 등록번호</td>
+                <td><input type="text" id="bizrno" name="bizrno" th:value="${detail?.bizrno}" placeholder="000-00-00000" form="locgovForm"></td>
+                <td class="label"><span class="required_mark">*</span>담당자명</td>
+                <td><input type="text" id="chargerNm" name="chargerNm" th:value="${detail?.chargerNm}" form="locgovForm"></td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>담당자 연락처</td>
+                <td><input type="text" id="chargerCttpc" name="chargerCttpc" th:value="${detail?.chargerCttpc}" placeholder="000-0000-0000" form="locgovForm"></td>
+                <td class="label"><span class="required_mark">*</span>담당자 이메일</td>
+                <td><input type="email" id="chargerEmail" name="chargerEmail" th:value="${detail?.chargerEmail}" form="locgovForm"></td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>지자체 홈페이지</td>
+                <td colspan="3"><input type="text" id="locgovHmpg" name="locgovHmpg" th:value="${detail?.locgovHmpg}" class="half" form="locgovForm"></td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>지자체 소개</td>
+                <td colspan="3"><textarea id="locgovIntrcnCn" name="locgovIntrcnCn" rows="6" th:text="${detail?.locgovIntrcnCn}" form="locgovForm"></textarea></td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>지자체 우편번호</td>
+                <td><input type="text" id="locgovZip" name="locgovZip" th:value="${detail?.locgovZip}" form="locgovForm"></td>
+                <td class="label"><span class="required_mark">*</span>기본 주소</td>
+                <td><input type="text" id="bassAdres" name="bassAdres" th:value="${detail?.bassAdres}" form="locgovForm"></td>
+            </tr>
+            <tr>
+                <td class="label">상세 주소</td>
+                <td colspan="3"><input type="text" id="dtlAdres" name="dtlAdres" th:value="${detail?.dtlAdres}" class="half" form="locgovForm"></td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>예산(백만원)</td>
+                <td><input type="number" id="locgovBudgetAmt" name="locgovBudgetAmt" th:value="${detail?.locgovBudgetAmt}" form="locgovForm"></td>
+                <td class="label"><span class="required_mark">*</span>인구수(명)</td>
+                <td><input type="text" id="locgovPopltnCo" name="locgovPopltnCo" th:value="${detail?.locgovPopltnCo}" form="locgovForm"></td>
+            </tr>
+            <tr>
+                <td class="label">지자체 면적</td>
+                <td><input type="text" id="locgovAr" name="locgovAr" th:value="${detail?.locgovAr}" form="locgovForm"></td>
+                <td class="label">지자체 특산물</td>
+                <td><input type="text" id="locgovSpcprd" name="locgovSpcprd" th:value="${detail?.locgovSpcprd}" form="locgovForm"></td>
+            </tr>
+            <tr>
+                <td class="label">상품권 사용</td>
+                <td><input type="checkbox" id="gcctUseAt" name="gcctUseAt" value="Y" th:checked="${detail?.gcctUseAt == 'Y'}" form="locgovForm"></td>
+                <td class="label">전자화폐 사용</td>
+                <td><input type="checkbox" id="etrcshUseAt" name="etrcshUseAt" value="Y" th:checked="${detail?.etrcshUseAt == 'Y'}" form="locgovForm"></td>
+            </tr>
+            <tr>
+                <td class="label">주류 판매</td>
+                <td colspan="3"><input type="checkbox" id="achlqrSleAt" name="achlqrSleAt" value="Y" th:checked="${detail?.achlqrSleAt == 'Y'}" form="locgovForm"></td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>부서명</td>
+                <td><input type="text" id="chargerPsitnDept" name="chargerPsitnDept" th:value="${detail?.chargerPsitnDept}" form="locgovForm"></td>
+                <td class="label"><span class="required_mark">*</span>부서코드(11자리)</td>
+                <td><input type="text" id="processDeptCode" name="processDeptCode" maxlength="11" th:value="${detail?.processDeptCode}" form="locgovForm"></td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>행정표준기관코드</td>
+                <td><input type="text" id="administInsttCode" name="administInsttCode" maxlength="7" th:value="${detail?.administInsttCode}" form="locgovForm"></td>
+                <td class="label"><span class="required_mark">*</span>회계구분</td>
+                <td>
+                    <select id="fisSp" name="fisSp" form="locgovForm">
+                        <option value="">- 선택 -</option>
+                        <option value="31" th:selected="${detail?.fisSp == '31'}">일반회계(광역)</option>
+                        <option value="51" th:selected="${detail?.fisSp == '51'}">특별회계(광역)</option>
+                        <option value="41" th:selected="${detail?.fisSp == '41'}">일반회계(기초)</option>
+                        <option value="61" th:selected="${detail?.fisSp == '61'}">특별회계(기초)</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">포인트 지급률(%)</td>
+                <td colspan="3">
+                    <input type="number" step="0.01" id="pointRate" name="pointRate" form="locgovForm"
+                           th:placeholder="${mode == 'edit'} ? '아래 이력의 ' + ${currentYear} + '년 값이 없으면 비워두세요' : ''">
+                </td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>직인명</td>
+                <td colspan="3"><input type="text" id="offcsNm" name="offcsNm" th:value="${detail?.offcsNm}" form="locgovForm"></td>
+            </tr>
+            <tr>
+                <td class="label" th:text="${detail?.hasSeal} ? '직인이미지 교체' : '직인이미지'"></td>
+                <td colspan="3">
+                    <div class="flex_box gap-08 item-center">
+                        <input type="file" name="offcsFile" accept="image/*" form="locgovForm">
+                        <img th:if="${detail?.hasSeal}" th:src="@{'/admin/locgovs/' + ${detail.locgovCode} + '/seal'}" style="max-width:200px;">
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label" rowspan="2">답례품 배경이미지</td>
+                <td colspan="3">
+                    <div class="flex_box gap-08 item-center">
+                        PC (권장 1920x220) <input type="file" name="addPcFile" accept="image/*" form="locgovForm">
+                        <img th:if="${detail?.hasPcImage}" th:src="@{'/admin/locgovs/' + ${detail.locgovCode} + '/image/pc'}" style="height:60px;">
+                        <form th:if="${detail?.hasPcImage}" th:action="@{'/admin/locgovs/' + ${detail.locgovCode} + '/image/pc/delete'}" method="post" class="inline-form"
+                              onsubmit="return confirm('PC 배경이미지를 삭제하시겠습니까?')" style="display:inline;">
+                            <button type="submit" class="small-btn danger">삭제</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="3">
+                    <div class="flex_box gap-08 item-center">
+                        MOBILE (권장 768x180) <input type="file" name="addMbFile" accept="image/*" form="locgovForm">
+                        <img th:if="${detail?.hasMobileImage}" th:src="@{'/admin/locgovs/' + ${detail.locgovCode} + '/image/mobile'}" style="height:60px;">
+                        <form th:if="${detail?.hasMobileImage}" th:action="@{'/admin/locgovs/' + ${detail.locgovCode} + '/image/mobile/delete'}" method="post" class="inline-form"
+                              onsubmit="return confirm('모바일 배경이미지를 삭제하시겠습니까?')" style="display:inline;">
+                            <button type="submit" class="small-btn danger">삭제</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <form id="locgovForm" enctype="multipart/form-data" method="post"
+          th:action="${mode == 'edit'} ? @{'/admin/locgovs/' + ${detail.locgovCode}} : (${mode == 'create-existing'} ? @{'/admin/locgovs/' + ${detail.locgovCode} + '/register'} : '#')"
+          onsubmit="return beforeSubmit(event)"></form>
+
+    <div class="btn_all btn_center">
+        <button type="submit" form="locgovForm" class="btn btn-dark-gray btn-small" th:text="${mode == 'edit'} ? '저장' : '등록'"></button>
+        <form th:if="${mode == 'edit' and !locgovScoped}" th:action="@{'/admin/locgovs/' + ${detail.locgovCode} + '/delete'}"
+              method="post" class="inline-form" onsubmit="return confirm('이 지자체를 비활성화하시겠습니까?')" style="display:inline;">
+            <button type="submit" class="btn btn-small">비활성화</button>
+        </form>
+    </div>
+
+    <!-- 포인트 지급률 변경이력 (AS-IS locgov-point-list.jsp 팝업을 같은 화면 하단 표로) -->
+    <div th:if="${mode == 'edit' or mode == 'create-existing'}" style="margin-top:32px;">
+        <h4>포인트 지급률 변경이력</h4>
+        <table class="board_list_table">
+            <thead><tr><th>년도</th><th>지급률</th><th>변경일</th><th>작성자</th></tr></thead>
+            <tbody>
+            <tr th:each="r : ${pointRateHistory}">
+                <td th:text="${r.stdrYear}"></td>
+                <td th:text="${r.pointRate} + '%'"></td>
+                <td th:text="${r.lastUpdtPnttm != null} ? ${#temporals.format(r.lastUpdtPnttm, 'yyyy-MM-dd HH:mm')} : ''"></td>
+                <td th:text="${r.lastUpdusrNm}"></td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="empty" th:if="${#lists.isEmpty(pointRateHistory)}">등록된 포인트 지급률 이력이 없습니다.</p>
+    </div>
+
+    <!-- 부서코드 이력 (AS-IS user/locgov/popup) -->
+    <div th:if="${mode == 'edit' or mode == 'create-existing'}" style="margin-top:32px;">
+        <h4>부서코드 변경이력</h4>
+        <table class="board_list_table">
+            <thead><tr><th>변경 전 부서코드</th><th>변경일</th></tr></thead>
+            <tbody>
+            <tr th:each="h : ${deptHist}">
+                <td th:text="${h.processDeptCode}"></td>
+                <td th:text="${h.changedAt != null} ? ${#temporals.format(h.changedAt, 'yyyy-MM-dd HH:mm')} : ''"></td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="empty" th:if="${#lists.isEmpty(deptHist)}">부서코드 변경이력이 없습니다.</p>
+    </div>
+
+    <!-- 기부금모금제한 (기간+사유) - AS-IS G_CNTR_LMTT, 이번 라운드까지 TO-BE에 없던 기능 -->
+    <div th:if="${mode == 'edit' or mode == 'create-existing'}" style="margin-top:32px;">
+        <h4>기부금모금제한</h4>
+        <table class="board_list_table">
+            <thead><tr><th>제한 시작일</th><th>제한 종료일</th><th>위반사유코드</th><th>위반사유</th><th>등록자</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="lm : ${lmttList}">
+                <td th:text="${lm.lmttBgnDe}"></td>
+                <td th:text="${lm.lmttEndDe}"></td>
+                <td th:text="${lm.violtResnCode}"></td>
+                <td th:text="${lm.violtResnCn}"></td>
+                <td th:text="${lm.registerNm}"></td>
+                <td>
+                    <form th:action="@{'/admin/locgovs/' + ${detail.locgovCode} + '/lmtt/delete'}" method="post" class="inline-form"
+                          onsubmit="return confirm('삭제하시겠습니까?')" style="display:inline;">
+                        <input type="hidden" name="lmttBgnDe" th:value="${lm.lmttBgnDe}">
+                        <input type="hidden" name="lmttEndDe" th:value="${lm.lmttEndDe}">
+                        <button type="submit" class="small-btn danger">삭제</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="empty" th:if="${#lists.isEmpty(lmttList)}">등록된 기부금모금제한이 없습니다.</p>
+
+        <form th:action="@{'/admin/locgovs/' + ${detail.locgovCode} + '/lmtt'}" method="post" style="margin-top:12px;">
+            <div class="flex_box gap-08 item-center">
+                <input type="date" name="lmttBgnDe" required title="제한 시작일">
+                <span class="wave">~</span>
+                <input type="date" name="lmttEndDe" required title="제한 종료일">
+                <select name="violtResnCode" required>
+                    <option value="">- 위반사유 -</option>
+                    <option value="01">모금강요</option>
+                    <option value="02">경제적이익 제공</option>
+                    <option value="03">지정기부 강요</option>
+                    <option value="99">기타</option>
+                </select>
+                <input type="text" name="violtResnCn" placeholder="위반사유 상세" style="width:240px;">
+                <button type="submit" class="btn btn-dark-gray btn-mini">등록</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script th:inline="none">
+function beforeSubmit(e) {
+    var select = document.getElementById('locgovCodeSelect');
+    if (select) {
+        if (!select.value) {
+            alert('지자체를 선택해 주세요.');
+            e.preventDefault();
+            return false;
+        }
+        document.getElementById('locgovForm').action = '/admin/locgovs/' + select.value + '/register';
+    }
+    return true;
+}
+</script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

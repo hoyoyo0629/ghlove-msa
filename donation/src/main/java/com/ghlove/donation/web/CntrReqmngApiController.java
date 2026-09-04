@@ -3,7 +3,10 @@ package com.ghlove.donation.web;
 import com.ghlove.donation.domain.CntrReqmng;
 import com.ghlove.donation.service.CntrReqmngService;
 import com.ghlove.donation.service.DonationException;
+import com.ghlove.donation.service.MemberClient;
+import com.ghlove.donation.service.MemberInfo;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +25,7 @@ import java.util.Map;
 public class CntrReqmngApiController {
 
     private final CntrReqmngService cntrReqmngService;
+    private final MemberClient memberClient;
 
     @GetMapping("/api/cntr-reqmng")
     public List<CntrReqmngDto> list(@RequestParam(required = false) String locgovCode) {
@@ -31,14 +35,32 @@ public class CntrReqmngApiController {
         return list.stream().map(CntrReqmngDto::of).toList();
     }
 
+    /** AS-IS list.jsp의 검색조건(지자체/요청분류/승인여부/변경신청일자 범위)+페이지네이션
+     *  재현. 날짜는 yyyyMMdd. */
+    @GetMapping("/api/cntr-reqmng/search")
+    public PageResponse<CntrReqmngDto> search(@RequestParam(required = false) String locgovCode,
+                                               @RequestParam(required = false) String cntrReqmngCode,
+                                               @RequestParam(required = false) String reqStatusCode,
+                                               @RequestParam(required = false) String startDate,
+                                               @RequestParam(required = false) String endDate,
+                                               @RequestParam(defaultValue = "0") int page,
+                                               @RequestParam(defaultValue = "10") int size) {
+        Page<CntrReqmng> result = cntrReqmngService.search(locgovCode, cntrReqmngCode, reqStatusCode,
+                startDate, endDate, page, size);
+        return new PageResponse<>(result.getContent().stream().map(CntrReqmngDto::of).toList(),
+                result.getTotalElements(), result.getTotalPages(), result.getNumber(), result.getSize());
+    }
+
     @GetMapping("/api/cntr-reqmng/donation/{cntrSn}")
     public ResponseEntity<?> donationInfo(@PathVariable String cntrSn) {
         try {
             var donation = cntrReqmngService.donationOf(cntrSn);
             boolean usedPoints = cntrReqmngService.hasUsedPoints(cntrSn);
+            MemberInfo member = memberClient.fetchOrNull(donation.getUserId());
             return ResponseEntity.ok(new DonationInfoDto(donation.getCntrSn(), donation.getCntrDe(),
                     donation.getUserId(), donation.getCntrLocgovCode(), donation.getCntrAmt(),
-                    donation.getCntrSttusCode(), usedPoints));
+                    donation.getCntrSttusCode(), usedPoints,
+                    member != null ? member.userName() : null, member != null ? member.loginId() : null));
         } catch (DonationException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -54,7 +76,7 @@ public class CntrReqmngApiController {
                                      @RequestParam Long managerId) {
         try {
             CntrReqmng saved = cntrReqmngService.submit(cntrSn, cntrReqmngCode, discription,
-                    parseDate(taxSysCancelDe), relatedDocDptNm, relatedDocNum, parseDate(relatedDocDe), managerId);
+                    taxSysCancelDe, relatedDocDptNm, relatedDocNum, relatedDocDe, managerId);
             return ResponseEntity.ok(CntrReqmngDto.of(saved));
         } catch (DonationException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -92,7 +114,7 @@ public class CntrReqmngApiController {
                                  String reqStatusCode, String cntrSn, String apprDt, String cancleDt) {
         static CntrReqmngDto of(CntrReqmng e) {
             return new CntrReqmngDto(e.getReqId(), e.getLoginId(), e.getUserName(), e.getLocgovCode(),
-                    isoOrNull(e.getSttemntPayDe()), e.getCntrAmt(), e.getCntrReqmngCode(), e.getDiscription(),
+                    e.getSttemntPayDe(), e.getCntrAmt(), e.getCntrReqmngCode(), e.getDiscription(),
                     e.getFrstRegisterId(), isoOrNull(e.getFrstRegistPnttm()), e.getReqStatusCode(), e.getCntrSn(),
                     isoOrNull(e.getApprDt()), isoOrNull(e.getCancleDt()));
         }
@@ -103,6 +125,10 @@ public class CntrReqmngApiController {
     }
 
     public record DonationInfoDto(String cntrSn, String cntrDe, Long userId, String locgovCode,
-                                   BigDecimal cntrAmt, String cntrSttusCode, boolean pointsUsed) {
+                                   BigDecimal cntrAmt, String cntrSttusCode, boolean pointsUsed,
+                                   String userName, String loginId) {
+    }
+
+    public record PageResponse<T>(List<T> content, long totalElements, int totalPages, int page, int size) {
     }
 }

@@ -1,0 +1,11 @@
+/* 실제 AS-IS opmanager.css를 그대로 쓰기 시작하면서(opmanager.css/bootstrap.css/jquery-ui/
+   fileUploadModal.css), 예전에 이 프로젝트가 자체 발명했던 style.css는 더 이상 링크하지 않는다.
+   다만 access-denied/manager-request-*/cert-login류(=이 프로젝트가 새로 만든 RBAC 권한요청
+   워크플로우, AS-IS에 대응 JSP 자체가 없음)와 login.html이 쓰던 "가운데 정렬 카드" 레이아웃은
+   opmanager.css에 대응 클래스가 없어서 최소한으로 남겨둔다 - 색상 값은 실제 AS-IS 토큰
+   (#00215A/#002C77/#EB474D) 그대로 사용. */
+.wrap.narrow { max-width: 480px; margin: 60px auto; background: #fff; padding: 0 0 36px; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+.wrap.narrow-in-shell { max-width: 480px; margin: 60px auto; background: #fff; padding: 36px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+.wrap.narrow h1, .wrap.narrow > form, .wrap.narrow .links, .wrap.narrow .error { padding-left: 40px; padding-right: 40px; }
+.wrap.narrow h1 { padding-top: 32px; background: #00215A; color: #fff; margin: 0 0 24px; padding-top: 32px; padding-bottom: 20px; text-align: center; }
+.wrap.narrow .error { color: #EB474D; font-size: 13px; }

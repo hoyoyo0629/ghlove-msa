@@ -1,9 +1,9 @@
 package com.ghlove.member.web;
 
 import com.ghlove.member.domain.User;
+import com.ghlove.member.service.AuthCookieSupport;
 import com.ghlove.member.service.BannerClient;
 import com.ghlove.member.service.DonationClient;
-import com.ghlove.member.service.JwtSupport;
 import com.ghlove.member.service.MemberException;
 import com.ghlove.member.service.MemberService;
 import com.ghlove.member.service.PointClient;
@@ -13,8 +13,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -39,7 +37,7 @@ public class AuthController {
     private final DonationClient donationClient;
     private final BannerClient bannerClient;
     private final PointClient pointClient;
-    private final JwtSupport jwtSupport;
+    private final AuthCookieSupport authCookieSupport;
 
     /**
      * 메인 화면 (AS-IS https://www.ilovegohyang.go.kr/main.html 과 동일하게 로그인 없이도
@@ -101,17 +99,56 @@ public class AuthController {
         return "login";
     }
 
+    private static final String SESSION_PENDING_MFA_USER_ID = "pendingMfaUserId";
+    private static final String SESSION_PENDING_MFA_TARGET = "pendingMfaTarget";
+
+    /**
+     * SFR-002 "다중 인증체계(MFA) 선택 적용" - 회원이 마이페이지에서 MFA를 켜둔 경우 아이디/
+     * 비번이 맞아도 곧바로 로그인되지 않고, 휴대폰으로 발송된(모크 - devCode) 인증번호까지
+     * 맞아야 한다({@link #loginMfaVerify}). 기존 login.html 폼 하나에 인증번호 입력 단계만
+     * 조건부로 덧붙인다(같은 화면, 같은 이벤트 흐름 - [[feedback-mock-integration-same-screen]]).
+     */
     @PostMapping("/login")
     public String login(@RequestParam String loginId, @RequestParam String password,
                          @RequestParam(required = false) String target,
                          HttpServletRequest request, HttpServletResponse response, HttpSession session, Model model) {
         try {
-            User user = memberService.login(loginId, password, request.getRemoteAddr());
-            session.setAttribute(SESSION_USER_KEY, user);
-            issueAuthCookie(response, user);
+            MemberService.LoginOutcome outcome = memberService.loginWithMfaCheck(loginId, password, request.getRemoteAddr());
+            if (outcome.mfaRequired()) {
+                session.setAttribute(SESSION_PENDING_MFA_USER_ID, outcome.user().getUserId());
+                session.setAttribute(SESSION_PENDING_MFA_TARGET, target);
+                model.addAttribute("mfaStep", true);
+                model.addAttribute("maskedPhone", outcome.maskedPhone());
+                model.addAttribute("devCode", outcome.devCode());
+                return "login";
+            }
+            session.setAttribute(SESSION_USER_KEY, outcome.user());
+            authCookieSupport.issue(response, outcome.user());
             return "redirect:" + safeRedirectTarget(target);
         } catch (MemberException e) {
             model.addAttribute("errorMessage", e.getMessage());
+            return "login";
+        }
+    }
+
+    @PostMapping("/login/mfa-verify")
+    public String loginMfaVerify(@RequestParam String code, HttpServletRequest request,
+                                  HttpServletResponse response, HttpSession session, Model model) {
+        Long userId = (Long) session.getAttribute(SESSION_PENDING_MFA_USER_ID);
+        String target = (String) session.getAttribute(SESSION_PENDING_MFA_TARGET);
+        if (userId == null) {
+            return "redirect:/login";
+        }
+        try {
+            User user = memberService.verifyMfaAndCompleteLogin(userId, code);
+            session.removeAttribute(SESSION_PENDING_MFA_USER_ID);
+            session.removeAttribute(SESSION_PENDING_MFA_TARGET);
+            session.setAttribute(SESSION_USER_KEY, user);
+            authCookieSupport.issue(response, user);
+            return "redirect:" + safeRedirectTarget(target);
+        } catch (MemberException e) {
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("mfaStep", true);
             return "login";
         }
     }
@@ -129,8 +166,8 @@ public class AuthController {
     @GetMapping("/logout")
     public String logout(HttpSession session, HttpServletResponse response) {
         session.invalidate();
-        clearAuthCookie(response);
-        return "redirect:/login";
+        authCookieSupport.clear(response);
+        return "redirect:/";
     }
 
     private static final String SESSION_FIND_ID_USER_ID = "pendingFindIdUserId";
@@ -226,7 +263,7 @@ public class AuthController {
 
             User user = memberService.byId(userId);
             session.setAttribute(SESSION_USER_KEY, user);
-            issueAuthCookie(response, user);
+            authCookieSupport.issue(response, user);
             java.util.Map<String, Object> body = result("OK", null, null);
             body.put("redirect", "/mypage");
             return body;
@@ -296,7 +333,7 @@ public class AuthController {
             memberService.changePassword(loginUser.getUserId(), currentPassword, newPassword, newPasswordConfirm,
                     request.getRemoteAddr());
             session.invalidate();
-            clearAuthCookie(response);
+            authCookieSupport.clear(response);
             return "redirect:/login?passwordChanged=success";
         } catch (MemberException e) {
             model.addAttribute("errorMessage", e.getMessage());
@@ -335,7 +372,7 @@ public class AuthController {
         try {
             memberService.withdraw(loginUser.getUserId(), password, leaveCode, reason, request.getRemoteAddr());
             session.invalidate();
-            clearAuthCookie(response);
+            authCookieSupport.clear(response);
             return "redirect:/login?withdrawn=success";
         } catch (MemberException e) {
             return withdrawFormWithError(loginUser, e.getMessage(), model);
@@ -353,33 +390,5 @@ public class AuthController {
 
     private User requireLogin(HttpSession session) {
         return (User) session.getAttribute(SESSION_USER_KEY);
-    }
-
-    /**
-     * localhost의 다른 포트(8082~8086)에도 이 쿠키가 자동으로 같이 전송된다(쿠키 스코프는
-     * 포트를 구분하지 않음) - Domain 속성을 일부러 지정하지 않는다. secure=false는 이
-     * 로컬 개발환경이 평문 http라서 그런 것 - 운영에서는 반드시 true로 바꿔야 한다.
-     */
-    private void issueAuthCookie(HttpServletResponse response, User user) {
-        String token = jwtSupport.issue(user.getUserId(), user.getLoginId());
-        ResponseCookie cookie = ResponseCookie.from(JwtSupport.COOKIE_NAME, token)
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .sameSite("Lax")
-                .maxAge(jwtSupport.expirationSeconds())
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-    }
-
-    private void clearAuthCookie(HttpServletResponse response) {
-        ResponseCookie cookie = ResponseCookie.from(JwtSupport.COOKIE_NAME, "")
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .sameSite("Lax")
-                .maxAge(0)
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }

@@ -130,4 +130,30 @@ public class PointApiController {
 
     public record LocgovPointSummaryDto(String locgovCode, String upperLocgovNm, String locgovNm, long remaining) {
     }
+
+    /** admin 지자체관리 화면 "포인트 지급률 변경이력" 팝업용 - 연도별 행 자체가 이력. */
+    @GetMapping("/api/admin/locgov-point-rate")
+    public List<LocgovPointRateDto> locgovPointRateHistory(@RequestParam String locgovCode) {
+        return pointService.locgovPointRateHistory(locgovCode).stream()
+                .map(r -> new LocgovPointRateDto(r.getStdrYear(), r.getLocgovCode(), r.getPointRate(),
+                        r.getLastUpdtPnttm(), r.getLastUpdusrNm()))
+                .toList();
+    }
+
+    /** admin 지자체관리 화면 "포인트 지급률 등록/수정"(AS-IS user/locgov/edit.jsp) - 연도+지자체
+     *  단위 upsert. */
+    @PostMapping("/api/admin/locgov-point-rate")
+    public LocgovPointRateDto upsertLocgovPointRate(@RequestBody LocgovPointRateUpsertRequest req) {
+        var saved = pointService.upsertLocgovPointRate(req.stdrYear(), req.locgovCode(), req.pointRate(), req.managerName());
+        return new LocgovPointRateDto(saved.getStdrYear(), saved.getLocgovCode(), saved.getPointRate(),
+                saved.getLastUpdtPnttm(), saved.getLastUpdusrNm());
+    }
+
+    public record LocgovPointRateDto(String stdrYear, String locgovCode, BigDecimal pointRate,
+                                      LocalDateTime lastUpdtPnttm, String lastUpdusrNm) {
+    }
+
+    public record LocgovPointRateUpsertRequest(String stdrYear, String locgovCode, BigDecimal pointRate,
+                                                 String managerName) {
+    }
 }

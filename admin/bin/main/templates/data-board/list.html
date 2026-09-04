@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>고객센터 &gt; 자료실 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/mypage-status.css}">
+    <link rel="stylesheet" th:href="@{/css/data_v.css}">
+    <link rel="stylesheet" th:href="@{/css/ct_nov.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<!-- AS-IS data-board/list.html 재현(data_v.css/ct_nov.css의 table-container/list-notice-*
+     실클래스). 정렬은 AS-IS와 동일하게 CREATED_DATE__DESC/ASC, HITS__DESC 값을 그대로 쓴다. -->
+<section>
+    <div class="page-title-box">
+        <span class="ali_breadcrumb">
+            <a th:href="@{'http://localhost:8081/'}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            고객센터
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            자료실
+        </span>
+        <h2 class="page-title-txt">자료실</h2>
+    </div>
+</section>
+
+<div th:replace="~{fragments/customer-lnb :: customer-lnb('data-board')}"></div>
+
+<div class="contents-wrap" id="contents">
+    <div class="center">
+        <div class="s-contents list-wrapper">
+            <div class="list-select-area">
+                <header class="list-search-header">
+                    <div class="list-count-box" th:text="'전체 글 : ' + ${totalCount} + ' 건'"></div>
+                    <form th:action="@{/data-board}" method="get" class="search-select">
+                        <div class="form-item">
+                            <label for="where" class="sr-only">검색구분</label>
+                            <select id="where" name="where">
+                                <option value="SUBJECT" th:selected="${where == 'SUBJECT'}">제목</option>
+                                <option value="ORG_FILE_NAME" th:selected="${where == 'ORG_FILE_NAME'}">파일명</option>
+                            </select>
+                        </div>
+                        <div class="form-item search-field">
+                            <label for="q" class="sr-only">검색 키워드</label>
+                            <input type="search" id="q" name="q" th:value="${q}" placeholder="검색 키워드">
+                            <button type="submit" class="button search" aria-label="조회"></button>
+                        </div>
+                        <div class="m-field">
+                            <div class="form-item">
+                                <label for="sort" class="sr-only">정렬순서</label>
+                                <select id="sort" name="sort" onchange="this.form.submit()">
+                                    <option value="CREATED_DATE__DESC" th:selected="${sort == 'CREATED_DATE__DESC'}">최신순</option>
+                                    <option value="CREATED_DATE__ASC" th:selected="${sort == 'CREATED_DATE__ASC'}">오래된순</option>
+                                    <option value="HITS__DESC" th:selected="${sort == 'HITS__DESC'}">조회수순</option>
+                                </select>
+                            </div>
+                            <div class="form-item">
+                                <label for="size" class="sr-only">목록수</label>
+                                <select id="size" name="size" onchange="this.form.submit()">
+                                    <option value="10" th:selected="${size == 10}">10개</option>
+                                    <option value="20" th:selected="${size == 20}">20개</option>
+                                    <option value="30" th:selected="${size == 30}">30개</option>
+                                    <option value="50" th:selected="${size == 50}">50개</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </header>
+
+                <div class="table-container">
+                    <div class="list-notice-body w3c_v_2410">
+                        <table>
+                            <caption>자료실 - 파일유형, 제목, 등록일, 조회수로 구성</caption>
+                            <thead class="list-notice-title">
+                                <tr class="items_wrap">
+                                    <th class="date-col view" scope="col">No</th>
+                                    <th class="date-col view" scope="col">파일유형</th>
+                                    <th class="date-col title" scope="col">제목</th>
+                                    <th class="date-col date" scope="col">등록일</th>
+                                    <th class="date-col view" scope="col">조회수</th>
+                                </tr>
+                            </thead>
+                            <tbody class="list-notice-group data-board" th:if="${not #lists.isEmpty(boards)}">
+                                <tr th:each="b, iter : ${boards}">
+                                    <td><div class="date-col view_c" th:text="${totalCount - ((currentPage - 1) * size) - iter.index}"></div></td>
+                                    <td><div class="date-col view_c" th:text="${fileTypes.get(b.dataId)}"></div></td>
+                                    <td>
+                                        <a th:href="@{/data-board/{id}(id=${b.dataId})}" class="list-items">
+                                            <div class="notice_tit">
+                                                <span class="data-board-icon" th:if="${b.noticeFlag == 'Y'}">추천</span>
+                                                <div class="notice_txt" th:text="${b.subject}"></div>
+                                            </div>
+                                        </a>
+                                    </td>
+                                    <td><div class="date-col date" th:text="${displayDates.get(b.dataId)}"></div></td>
+                                    <td>
+                                        <div class="date-col view_c">
+                                            <img th:src="@{/images/icon/cli-icon_pw-show.png}" alt="조회수" class="board_icon">
+                                            <span th:text="${b.hits}"></span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="list-none" th:if="${#lists.isEmpty(boards)}">
+                            <img th:src="@{/images/icon/non-list.png}" alt="게시물이 없음">
+                            자료실 정보가 존재하지 않습니다.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-pagination" th:if="${totalPages > 1}">
+                    <div class="pagination_ali">
+                        <ul class="pagination-frame">
+                            <li><a class="fist arrow_btn" th:href="@{/data-board(where=${where},q=${q},sort=${sort},size=${size},page=1)}"><img th:src="@{/images/icon/paging_btn-first.png}" alt="처음"></a></li>
+                            <li><a class="prev arrow_btn" th:href="@{/data-board(where=${where},q=${q},sort=${sort},size=${size},page=${currentPage > 1 ? currentPage - 1 : 1})}"><img th:src="@{/images/icon/paging_btn-prev.png}" alt="이전"></a></li>
+                            <li th:each="p : ${#numbers.sequence(1, totalPages)}" th:classappend="${p == currentPage} ? 'selected-page'">
+                                <a class="page-text" th:href="@{/data-board(where=${where},q=${q},sort=${sort},size=${size},page=${p})}" th:text="${p}"></a>
+                            </li>
+                            <li><a class="next arrow_btn" th:href="@{/data-board(where=${where},q=${q},sort=${sort},size=${size},page=${currentPage < totalPages ? currentPage + 1 : totalPages})}"><img th:src="@{/images/icon/paging_btn-next.png}" alt="다음"></a></li>
+                            <li><a class="last arrow_btn" th:href="@{/data-board(where=${where},q=${q},sort=${sort},size=${size},page=${totalPages})}"><img th:src="@{/images/icon/paging_btn-last.png}" alt="마지막"></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+</body>
+</html>

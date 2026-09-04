@@ -264,7 +264,9 @@ public class DonationService {
 
         validateAnnualLimit(userId, locgov.getLocgovCode(), amount);
         Donation donation = saveRequested(userId, locgov.getLocgovCode(), amount, null);
-        donation.setPsitnLocgovCode(psitnLocgovCode);
+        if (psitnLocgovCode != null && !psitnLocgovCode.isBlank()) {
+            donation.setPsitnLocgovCode(psitnLocgovCode);
+        }
         donation.setRtnpsntReqstCode(presentType);
         donation.setInfoAgreAt("Y");
         return donationRepository.save(donation);
@@ -584,6 +586,13 @@ public class DonationService {
         donation.setDsgnDntnBizId(dsgnDntnBizId);
         donation.setRceptBankCode(rceptBankCode);
         donation.setRceptBankNm(rceptBankNm);
+        // PSITN_LOCGOV_CODE(주소지 지자체)는 DB가 NOT NULL이면서 G_LOCGOV FK도 걸려있다.
+        // 일반기부(createGeneralDonation)만 실제 거주지 확인값을 알고 있어서 저장 직후
+        // 별도로 덮어쓴다(자기 주소지 기부 차단 검증용) - 지정기부/오프라인 접수는 거주지
+        // 확인 절차 자체가 없으므로, FK를 만족하는 값이 필요할 때는 기부 대상 지자체
+        // 코드(locgovCode)를 그대로 기본값으로 쓴다(빈 문자열은 FK 위반으로 실패했다 -
+        // 실제로 발견된 버그, 두 경로 다 지금까지 한 번도 성공한 적이 없었다).
+        donation.setPsitnLocgovCode(locgovCode);
         return donationRepository.save(donation);
     }
 
@@ -592,6 +601,13 @@ public class DonationService {
      * 대신 등록한다. 온라인 기부와 동일하게 연간한도 검증을 거치고 REQUESTED로
      * 생성되며, completeDonation() 호출 시 세외수입/국세청 연계도 동일하게 탄다 -
      * 접수 경로만 CNTR_PATH_CODE=OFFLINE으로 구분된다.
+     *
+     * PSITN_LOCGOV_CODE(주소지 지자체)는 DB가 NOT NULL인데, 이 오프라인 접수 화면엔
+     * 그 항목 자체가 없다(대면 접수라 담당자가 이미 신분증으로 본인 확인을 마쳤으므로
+     * 온라인의 "자기 주소지 기부 차단" 검증이 필요없는 시나리오) - 실제로 이 메서드는
+     * 지금까지 한 번도 성공한 적이 없었다(항상 NOT NULL 위반으로 500). 빈 문자열로
+     * 채워서 온라인 기부(createGeneralDonation)의 isSelfResidence 검증 대상에서
+     * 자연히 제외되게 한다(빈 문자열은 어떤 실제 지자체 코드와도 같을 수 없다).
      */
     @Transactional
     public Donation registerOfflineDonation(Long userId, String locgovCode, BigDecimal amount,

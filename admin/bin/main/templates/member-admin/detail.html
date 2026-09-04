@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>회원 상세 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/members}">회원관리</a></div>
+    <h3>회원 상세</h3>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+    <div th:if="${member != null}">
+        <div class="board_write">
+            <table class="board_write_table" summary="회원 기본정보">
+                <colgroup><col style="width:220px;"><col></colgroup>
+                <tbody>
+                <tr>
+                    <td class="label">아이디</td>
+                    <td th:text="${member.loginId}"></td>
+                </tr>
+                <tr>
+                    <td class="label">이름</td>
+                    <td th:text="${member.userName}"></td>
+                </tr>
+                <tr>
+                    <td class="label">이메일</td>
+                    <td th:text="${member.email}"></td>
+                </tr>
+                <tr>
+                    <td class="label">가입구분</td>
+                    <td th:text="${member.sbscrbSeCode}"></td>
+                </tr>
+                <tr>
+                    <td class="label">상태</td>
+                    <td th:text="${member.statusCode == 'ACTIVE' ? '정상' : (member.statusCode == 'DORMANT' ? '휴면' : (member.statusCode == 'LOCKED' ? '잠금' : (member.statusCode == 'WITHDRAWN' ? '탈퇴' : member.statusCode)))}"></td>
+                </tr>
+                <tr>
+                    <td class="label">권한</td>
+                    <td th:text="${#strings.listJoin(member.roles, ', ')}"></td>
+                </tr>
+                <tr>
+                    <td class="label">가입일시</td>
+                    <td th:text="${member.createdDate != null and #strings.length(member.createdDate) >= 14 ? #strings.substring(member.createdDate,0,4) + '-' + #strings.substring(member.createdDate,4,6) + '-' + #strings.substring(member.createdDate,6,8) + ' ' + #strings.substring(member.createdDate,8,10) + ':' + #strings.substring(member.createdDate,10,12) : ''}"></td>
+                </tr>
+                <tr>
+                    <td class="label">최종로그인</td>
+                    <td th:text="${member.loginDate != null and #strings.length(member.loginDate) >= 14 ? #strings.substring(member.loginDate,0,4) + '-' + #strings.substring(member.loginDate,4,6) + '-' + #strings.substring(member.loginDate,6,8) + ' ' + #strings.substring(member.loginDate,8,10) + ':' + #strings.substring(member.loginDate,10,12) : '-'}"></td>
+                </tr>
+                <tr>
+                    <td class="label">로그인 횟수</td>
+                    <td th:text="${member.loginCount}"></td>
+                </tr>
+                <tr th:if="${member.statusCode == 'WITHDRAWN'}">
+                    <td class="label">탈퇴일시</td>
+                    <td th:text="${member.leaveDate != null and #strings.length(member.leaveDate) >= 8 ? #strings.substring(member.leaveDate,0,4) + '-' + #strings.substring(member.leaveDate,4,6) + '-' + #strings.substring(member.leaveDate,6,8) : '-'}"></td>
+                </tr>
+                <tr th:if="${member.statusCode == 'WITHDRAWN'}">
+                    <td class="label">탈퇴사유</td>
+                    <td th:text="${member.leaveReason} ?: '-'"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 관리자 비밀번호 재확인 게이트 - 전화/주소/생년월일 등 상세 개인정보는 관리자 본인
+             비밀번호를 한 번 더 입력해야 열린다(태스크 지시서가 명시적으로 요구한 간단 게이트). -->
+        <div class="board_write" style="margin-top:24px;">
+            <h5 style="margin-bottom:8px;">상세 개인정보</h5>
+            <table th:if="${revealed}" class="board_write_table" summary="회원 상세 개인정보">
+                <colgroup><col style="width:220px;"><col></colgroup>
+                <tbody>
+                <tr>
+                    <td class="label">휴대폰번호</td>
+                    <td th:text="${member.phoneNumber} ?: '-'"></td>
+                </tr>
+                <tr>
+                    <td class="label">주소</td>
+                    <td th:text="(${member.post} ?: '') + ' ' + (${member.address} ?: '') + ' ' + (${member.addressDetail} ?: '')"></td>
+                </tr>
+                <tr>
+                    <td class="label">생년월일</td>
+                    <td th:text="${member.birthday} ?: '-'"></td>
+                </tr>
+                <tr>
+                    <td class="label">성별</td>
+                    <td th:text="${member.gender} ?: '-'"></td>
+                </tr>
+                <tr>
+                    <td class="label">이메일/SMS/카카오 수신동의</td>
+                    <td th:text="(${member.receiveEmail == 'Y'} ? '이메일 동의 ' : '이메일 미동의 ')
+                                 + (${member.receiveSms == 'Y'} ? '/ SMS 동의 ' : '/ SMS 미동의 ')
+                                 + (${member.receiveKakao == 'Y'} ? '/ 카카오 동의' : '/ 카카오 미동의')"></td>
+                </tr>
+                </tbody>
+            </table>
+            <form th:unless="${revealed}" th:action="@{'/admin/members/' + ${member.userId} + '/reveal'}" method="post"
+                  style="display:flex; gap:8px; align-items:center;">
+                <span>본인(관리자) 비밀번호를 다시 입력하면 상세 개인정보를 조회할 수 있습니다.</span>
+                <input type="password" name="password" required style="width:200px;">
+                <button type="submit" class="small-btn">확인</button>
+            </form>
+        </div>
+
+        <div class="btn_all btn_center" style="margin-top:24px;">
+            <form th:if="${member.statusCode != 'WITHDRAWN'}" th:action="@{'/admin/members/' + ${member.userId} + '/withdraw'}"
+                  method="post" onsubmit="return fillWithdrawReason(this)">
+                <input type="hidden" name="reason">
+                <button type="submit" class="btn btn-small">관리자 강제 탈퇴처리</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script th:inline="none">
+function fillWithdrawReason(form) {
+    var reason = prompt('탈퇴 처리 사유를 입력해 주세요.');
+    if (reason === null) { return false; }
+    form.reason.value = reason;
+    return confirm('이 회원을 관리자 권한으로 탈퇴 처리하시겠습니까?');
+}
+</script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

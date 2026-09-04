@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>1:1 문의 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/mypage-status.css}">
+    <link rel="stylesheet" th:href="@{/css/data_v.css}">
+    <link rel="stylesheet" th:href="@{/css/ct_nov.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<!-- AS-IS mypage/inquiry.html 재현 (data_v.css/ct_nov.css의 실제 클래스 그대로 사용).
+     이 폼으로 등록한 글은 고객센터 > Q&A 공개게시판(qna/board.html)에도 같이 나타난다
+     (AS-IS도 OP_QNA 하나를 두 화면이 공유). "비밀글로 등록"을 체크하면 게시판에서
+     작성자 본인만 상세를 열람할 수 있다(제목은 그대로 노출 - AS-IS와 동일).
+     SFR-010: 로그인 JWT 쿠키로 회원을 식별한다. 목록은 AS-IS처럼 테이블이 아니라 FAQ 아코디언 - 제목을 누르면 그
+     자리에서 질문 전문과(답변이 있으면) 답변이 펼쳐진다(별도 상세페이지 없음). 조회기간도
+     AS-IS처럼 날짜 두 칸이 아니라 "1주일/1개월/3개월/6개월" 프리셋 드롭다운이고, 실제로는
+     선택 즉시 클라이언트에서 시작/종료일을 계산해 숨은 필드에 채워 그대로 재사용한다.
+     캡차는 실제 왜곡문자 이미지를 서버(CaptchaService, java.awt)에서 그려서 내려주고
+     정답은 HttpSession에 저장 → 제출 시 QnaController가 대조한다(1회용). "음성듣기"는
+     세션의 현재 정답 텍스트를 /qna/captcha/audio-text로 받아와 브라우저 내장 Web Speech
+     API(speechSynthesis)로 읽어준다 - 별도 서버 TTS 없이도 실제 음성 재생까지 동작한다. -->
+<script th:inline="none">
+function reloadCaptcha() {
+    document.getElementById('captchaImg').src = '/qna/captcha?t=' + Date.now();
+    document.getElementById('captcha').value = '';
+}
+function listenCaptcha() {
+    fetch('/qna/captcha/audio-text').then(function (r) { return r.text(); }).then(function (text) {
+        if (!text || !window.speechSynthesis) { return; }
+        var utter = new SpeechSynthesisUtterance(text.split('').join(', '));
+        utter.lang = 'ko-KR';
+        utter.rate = 0.8;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utter);
+    });
+}
+function clearForm() {
+    if (!confirm('1:1문의를 취소하시겠습니까?')) { return; }
+    document.getElementById('qnaGroup').value = '';
+    document.getElementById('subject').value = '';
+    document.getElementById('question').value = '';
+    document.getElementById('files').value = '';
+    document.getElementById('secretFlag').checked = false;
+    reloadCaptcha();
+}
+function toggleQna(header) {
+    var li = header.parentElement;
+    li.classList.toggle('show');
+    var body = li.querySelector('.notice-body');
+    if (body) { body.classList.toggle('show'); }
+}
+function toggleQnaKey(e, header) {
+    if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleQna(header);
+    }
+}
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+function toDateInput(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+function setSearchRange(value) {
+    var end = new Date();
+    var start = new Date();
+    if (value === 'week-1') { start.setDate(start.getDate() - 7); }
+    else if (value === 'month-1') { start.setMonth(start.getMonth() - 1); }
+    else if (value === 'month-3') { start.setMonth(start.getMonth() - 3); }
+    else if (value === 'month-6') { start.setMonth(start.getMonth() - 6); }
+    else {
+        document.getElementById('searchStartDate').value = '';
+        document.getElementById('searchEndDate').value = '';
+        return;
+    }
+    document.getElementById('searchStartDate').value = toDateInput(start);
+    document.getElementById('searchEndDate').value = toDateInput(end);
+}
+</script>
+<section>
+    <div class="page-title-box">
+        <span class="ali_breadcrumb">
+            <a th:href="@{'http://localhost:8081/'}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            <a th:href="@{'http://localhost:8081/mypage'}">마이페이지</a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            1:1 문의
+        </span>
+        <h2 class="page-title-txt">1:1 문의</h2>
+    </div>
+</section>
+
+<div class="contents-wrap" id="contents">
+    <div class="center">
+        <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+        <div class="s-contents list-page-wrapper">
+            <div class="list-page-area">
+                <form th:action="@{/qna}" method="post" enctype="multipart/form-data">
+                    <div class="list-page-body qna">
+                        <div class="page-title">
+                            <div class="title-select">
+                                <div class="form-item">
+                                    <label for="qnaGroup" class="sr-only">말머리 선택</label>
+                                    <select id="qnaGroup" name="qnaGroup" required>
+                                        <option value="">말머리선택</option>
+                                        <option th:each="g : ${qnaGroups}" th:value="${g.key}" th:text="${g.value}"></option>
+                                    </select>
+                                </div>
+                                <div class="form-item">
+                                    <label for="subject" class="sr-only">제목을 입력해주세요</label>
+                                    <input id="subject" name="subject" type="text" placeholder="제목을 입력해주세요" maxlength="100" required>
+                                </div>
+                                <div class="form-item secret-check">
+                                    <input type="checkbox" id="secretFlag" name="secretFlag" value="true">
+                                    <label for="secretFlag">비밀글로 등록(작성자 본인만 열람 가능, 고객센터 &gt; Q&amp;A 게시판에 공개됩니다)</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="page-contents">
+                            <label for="question" class="sr-only">내용을 입력해주세요</label>
+                            <textarea id="question" name="question" maxlength="500" required></textarea>
+                        </div>
+                        <div class="page-file-list qna">
+                            <div class="page-file-list-wrap">
+                                <div class="file-list-label">
+                                    <input type="file" id="files" name="files" multiple>
+                                    <label for="files"><img class="icon-img" th:src="@{/images/icon/addfile-search.png}" alt="첨부자료">파일찾기</label>
+                                    <span class="grayTxt">jpg, gif, png, hwp, doc, ppt, pdf 등 이미지/문서파일만 등록 가능합니다.</span>
+                                </div>
+                            </div>
+                            <!-- captcha-area는 일부러 .page-file-list-wrap 밖의 형제로 둔다 - data_v.css의
+                                 ".page-file-list.qna .page-file-list-wrap input{display:none}"가 첨부파일
+                                 input을 숨기려는 규칙인데, 그 안에 넣으면 캡차 텍스트 input까지 같이
+                                 숨어버려서 실제로는 입력 자체가 불가능해지는 버그가 있었다. -->
+                            <div class="captcha-area">
+                                    <img id="captchaImg" class="captcha-img" src="/qna/captcha" alt="자동입력 방지문자">
+                                    <button type="button" class="formBtn" onclick="listenCaptcha()">음성듣기</button>
+                                    <button type="button" class="formBtn" onclick="reloadCaptcha()">새로고침</button>
+                                    <div class="captcha-input-row">
+                                        <label for="captcha" class="sr-only">자동입력 방지문자 입력</label>
+                                        <input type="text" id="captcha" name="captcha" placeholder="자동입력 방지문자를 입력해주세요" required autocomplete="off">
+                                    </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="btn-box inquiry many">
+                        <button type="button" class="blueBtn cancellation" onclick="clearForm()">
+                            취소<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt=""></span>
+                        </button>
+                        <button type="submit" class="blueBtn u-confirm">
+                            등록<span><img th:src="@{/images/icon/cli-icon_btn-hover-arrow.png}" alt=""></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="contents-wrap" id="listContents">
+    <div class="center">
+        <div class="s-contents list-wrapper qna">
+            <div class="list-select-area">
+                <header class="list-page-body inquiry">
+                    <form th:action="@{/qna}" method="get" class="title-select" id="searchForm">
+                        <input type="hidden" name="searchStartDate" id="searchStartDate" th:value="${searchStartDate}">
+                        <input type="hidden" name="searchEndDate" id="searchEndDate" th:value="${searchEndDate}">
+                        <div class="form-item">
+                            <label for="searchDate" class="sr-only">조회기간</label>
+                            <select id="searchDate" class="searchDate" onchange="setSearchRange(this.value)">
+                                <option value="">찾고자 하는 날짜를 설정해 주세요.</option>
+                                <option value="week-1">1주일</option>
+                                <option value="month-1">1개월</option>
+                                <option value="month-3">3개월</option>
+                                <option value="month-6">6개월</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="formBtn">조회</button>
+                    </form>
+                </header>
+
+                <div class="list-search-body inquiry faq">
+                    <ul class="list-search-group">
+                        <li class="list-items dropdown" th:each="row : ${inquiries}">
+                            <div class="notice-header inquiry dropdown-toggle" tabindex="0"
+                                 onclick="toggleQna(this)" onkeydown="toggleQnaKey(event, this)">
+                                <div class="notice-header-txt">
+                                    <img class="faq-icon" th:src="@{/images/icon/cli-icon_faq-q.png}" alt="">
+                                    <div class="notice-txt">
+                                        <button class="subject" type="button" th:text="${row.qna.subject}"></button>
+                                        <div class="q_contents" th:text="${row.qna.question}"></div>
+                                        <div class="q-add_file" th:if="${!#lists.isEmpty(row.files)}">
+                                            <button class="moreView" type="button" th:each="f : ${row.files}" th:text="${f.orgFileName}"></button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="notice-header-status">
+                                    <div class="date-col">
+                                        <span class="pointblue" th:if="${row.answer != null}">답변완료</span>
+                                        <span class="pointRed" th:unless="${row.answer != null}">답변대기</span>
+                                    </div>
+                                    <div class="date-col" th:text="${#strings.substring(row.qna.createdDate, 0, 8)}"></div>
+                                </div>
+                            </div>
+                            <div class="notice-body dropdown-menu" th:if="${row.answer != null}">
+                                <div class="notice-wrap">
+                                    <img class="faq-icon" th:src="@{/images/icon/cli-icon_faq-a.png}" alt="">
+                                    <div class="notice-txt">
+                                        <button class="subject" type="button" th:text="${row.answer.title}"></button>
+                                        <div class="q_contents" th:text="${row.answer.answer}"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                    <div class="list-none" th:if="${#lists.isEmpty(inquiries)}">
+                        <img th:src="@{/images/icon/non-list.png}" alt="게시물이 없음">
+                        1:1문의 정보가 존재하지 않습니다.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+</body>
+</html>

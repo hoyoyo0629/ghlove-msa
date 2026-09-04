@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>검색어 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>검색어 관리</h3>
+    <p><a class="btn" th:href="@{/admin/search-keywords/new}">+ 검색어 등록</a></p>
+
+    <form id="deleteForm" th:action="@{/admin/search-keywords/delete}" method="post">
+        <table class="board_list_table">
+            <thead>
+            <tr><th></th><th>검색어</th><th>PC 링크</th><th>모바일 링크</th><th>노출기간</th><th>등록일</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="k : ${keywords}">
+                <td><input type="checkbox" name="ids" th:value="${k.searchId}" form="deleteForm"></td>
+                <td><a th:href="@{'/admin/search-keywords/' + ${k.searchId} + '/edit'}" th:text="${k.searchContents}"></a></td>
+                <td th:text="${k.searchLink}"></td>
+                <td th:text="${k.searchMobileLink}"></td>
+                <td th:text="${k.searchStartDate} + ' ~ ' + ${k.searchEndDate}"></td>
+                <td th:text="${k.createdDate}"></td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="empty" th:if="${#lists.isEmpty(keywords)}">등록된 검색어가 없습니다.</p>
+        <div class="btn_all btn_center" th:if="${not #lists.isEmpty(keywords)}">
+            <button type="submit" class="btn btn-small" onclick="return confirm('선택한 검색어를 삭제하시겠습니까?')">선택삭제</button>
+        </div>
+    </form>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

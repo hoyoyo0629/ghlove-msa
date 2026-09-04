@@ -8,4 +8,6 @@ import java.util.List;
 
 public interface CommonCodeRepository extends JpaRepository<CommonCode, CommonCodeId> {
     List<CommonCode> findByCodeTypeAndLanguageAndUseYnOrderByOrdering(String codeType, String language, String useYn);
+
+    List<CommonCode> findByCodeTypeAndLanguageOrderByOrdering(String codeType, String language);
 }

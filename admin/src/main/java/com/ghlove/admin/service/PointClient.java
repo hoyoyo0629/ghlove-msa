@@ -76,6 +76,36 @@ public class PointClient {
                                   Long pointAmount, java.time.LocalDateTime createdDate) {
     }
 
+    /** 지자체관리 화면 "포인트 지급률 변경이력" 팝업(AS-IS locgov-point-list.jsp) - 연도별
+     *  행 자체가 이력이다. */
+    public List<LocgovPointRate> locgovPointRateHistory(String locgovCode) {
+        try {
+            List<LocgovPointRate> list = restClient.get()
+                    .uri("/api/admin/locgov-point-rate?locgovCode={locgovCode}", locgovCode)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<LocgovPointRate>>() {
+                    });
+            return list != null ? list : List.of();
+        } catch (RestClientException e) {
+            return List.of();
+        }
+    }
+
+    /** 지자체관리 등록/수정 화면 "포인트 지급률" 등록(AS-IS user/locgov/edit.jsp) - 연도+지자체
+     *  단위 upsert. */
+    public void upsertLocgovPointRate(String stdrYear, String locgovCode, java.math.BigDecimal pointRate,
+                                       String managerName) {
+        restClient.post().uri("/api/admin/locgov-point-rate")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .body(Map.of("stdrYear", stdrYear, "locgovCode", locgovCode, "pointRate", pointRate,
+                        "managerName", managerName == null ? "" : managerName))
+                .retrieve().toBodilessEntity();
+    }
+
+    public record LocgovPointRate(String stdrYear, String locgovCode, java.math.BigDecimal pointRate,
+                                   java.time.LocalDateTime lastUpdtPnttm, String lastUpdusrNm) {
+    }
+
     /** "주문금액-포인트사용 대사"용 - 주문ID당 실제 차감된 포인트 절대값. */
     public Map<String, Long> usedByOrderIds(List<String> orderIds) {
         if (orderIds == null || orderIds.isEmpty()) {

@@ -1,0 +1,135 @@
+/* member 서비스 전용 보정 CSS. 실제 디자인(배경/크기 포함)은 output.css(KRDS)+new.css가
+   전부 담당한다 - GNB 하위메뉴의 .active/.is-open 클래스와 그 스타일도 output.css에 이미
+   있는 그대로이고, 클릭으로 토글하는 JS는 fragments/header.html 안에 있다.
+   여기서는 이 프로젝트 범위에서 아직 안 만든 배너 캐러셀(Swiper) 대신 고정 배너 1장만
+   보여주기 위한 최소한의 보정만 담는다. (li에 position:relative를 주면 .gnb-toggle-wrap의
+   width:100%가 li 너비로 축소되어버려서 - AS-IS처럼 GNB 전체 너비로 펼쳐지려면
+   .krds-main-menu 자체가 positioned ancestor로 남아있어야 한다 - 일부러 넣지 않는다.) */
+
+/* 배너 캐러셀 - AS-IS는 실제 Swiper.js 인스턴스지만, 여기서는 .banner-slide에
+   .active 토글만 하는 순수 JS(home.html 하단 script)로 동일한 결과를 낸다. */
+.main-d-ban-swiper {
+    position: relative;
+    background-size: cover;
+    background-position: center;
+}
+.main-d-ban-swiper img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.banner-slide {
+    display: none;
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+    border-radius: inherit;
+}
+.banner-slide.active { display: block; }
+.swiper-navigation .swiper-button-prev,
+.swiper-navigation .swiper-button-next {
+    background: transparent; border: none; cursor: pointer; padding: 0;
+    height: 100%; display: flex; align-items: center; justify-content: center;
+}
+
+/* 배너 일시정지/재생 토글 - AS-IS 라이브 사이트에는 있지만 프론트 소스에서 정확한
+   마크업/클래스를 찾지 못해 output.css의 ico-swiper-play/stop 아이콘 에셋만 재사용하고
+   버튼 자체는 같은 톤(swiper-navigation 검정 원형 pill)으로 직접 만들었다. */
+.swiper-indicator { display: flex; align-items: center; gap: .8rem; }
+.swiper-autoplay-toggle {
+    width: 3.4rem; height: 3.4rem; border-radius: 50%;
+    background-color: var(--color-black); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.swiper-autoplay-toggle::before {
+    content: "";
+    display: block; width: 1.4rem; height: 1.4rem;
+    background-color: var(--color-white);
+    -webkit-mask-image: url(../images/new/ico_swiper_stop.svg);
+    mask-image: url(../images/new/ico_swiper_stop.svg);
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+    -webkit-mask-position: center; mask-position: center;
+    -webkit-mask-size: contain; mask-size: contain;
+}
+.swiper-autoplay-toggle.paused::before {
+    -webkit-mask-image: url(../images/new/ico_swiper_play.svg);
+    mask-image: url(../images/new/ico_swiper_play.svg);
+}
+
+/* AS-IS login__btn은 <button>이라 자동으로 block인데, 여기서는 <a>(th:href로 바로 이동)를
+   써서 인라인 기본값 때문에 width/height가 무시되던 걸 보정한다. flex로 가운데 정렬까지
+   같이 잡아야 line-height만으로는 세로 중앙이 안 맞는다. */
+.login__btn {
+    box-sizing: border-box; text-decoration: none;
+    display: flex; align-items: center; justify-content: center;
+}
+
+/* AS-IS login-complete.vue의 login__btn--out/login__mark도 <button>/<a>인데, 여기서는
+   둘 다 <a>(th:href로 바로 이동)를 쓰므로 .login__btn과 같은 이유로 보정이 필요하다. */
+.login__btn--out { text-decoration: none; }
+.login__mark { text-decoration: none; }
+
+.gift__items, .prj__items { list-style: none; }
+.search-bar form { position: relative; height: 100%; }
+.search-bar .krds-input { border: 2px solid var(--color-primary); outline: none; }
+.search-bar__btn { position: absolute; right: 1.6rem; top: 50%; transform: translateY(-50%); background: transparent; border: none; cursor: pointer; }
+
+.banner-half__text > span { font: var(--pc-font-small); color: var(--color-white); opacity: .85; white-space: nowrap; }
+
+/* 실사진이 없는 특정사업 카드용 대체 배경 (이미지가 있으면 <img>가 이 위를 덮는다) */
+.prj__img { background-color: var(--bg-secondary); }
+.empty-note { text-align: center; color: var(--color-gray-light); padding: 4rem 0; font: var(--pc-font-medium); }
+
+/* 사이트맵 모달: AS-IS는 JS로 .shown/.in 클래스를 붙였다 떼지만, 이 프로젝트는 JS 없이
+   :target 만으로 동일한 최종 상태(표시+불투명)를 낸다. */
+#modal_sitemap:target {
+    display: block;
+    z-index: 10000;
+    opacity: 1;
+    visibility: visible;
+}
+#modal_sitemap .btn-close { cursor: pointer; }
+
+/* 우측 하단 플로팅 버튼 접기/열기: AS-IS는 Vue data(isExpanded)로 토글하지만,
+   이 프로젝트는 숨김 체크박스(#float-toggle-input)로 동일한 시각 결과를 낸다. */
+.float-toggle-input:checked ~ .float-area .float__item--toggle {
+    display: none;
+}
+.float-toggle-input:checked ~ .float-area .float__btn-toggle .ico_toggle::before {
+    width: 1.6rem;
+    height: 1.6rem;
+    background: url(../images/new/ico_x.svg) no-repeat center;
+    background-size: contain;
+    transform: rotate(45deg);
+}
+
+/* 로그인 화면 - AS-IS는 #wrap 전체에 회색 배경(login-total.css)을 주는데, 이 프로젝트는
+   #wrap이 아니라 #contents 단위라서 같은 배경을 여기로 옮겼다. */
+#contents:has(.login-total) { background-color: var(--gray5); }
+.login-box .success, .login-box .error {
+    max-width: 400px; margin: 0 auto 1.6rem; font-size: 1.3rem;
+}
+.login-box .success { color: #2c5f2d; }
+.login-box .error { color: #c0392b; }
+
+/* 마이페이지 - AS-IS는 카드가 <div @click>이라 링크 밑줄이 없는데, 여기서는 <a>를
+   써서 th:href로 바로 이동하니 기본 링크 스타일(밑줄/파란색)을 지워야 카드 색이 그대로 보인다. */
+.wrap_items, .wrap_items:hover, .wrap_items:visited {
+    text-decoration: none; color: inherit; cursor: pointer;
+}
+.round-illustBtn_s { display: inline-flex; align-items: center; justify-content: center; }
+
+/* 회원가입 등 - default_ali.css의 button.blueBtn/button.formBtn 선택자는 <button>으로
+   한정돼 있어서, th:href로 즉시 이동해야 하는 자리에 쓰는 <a class="blueBtn">에는 안 먹는다.
+   클래스 전체를 대상으로 같은 flex 레이아웃을 다시 걸어 <a>/<button> 모두 동일하게 보이게 한다. */
+.blueBtn, .formBtn {
+    box-sizing: border-box; text-decoration: none;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* 회원가입 3단계(정보입력) - 아이디 중복확인 결과, 비밀번호 규칙 체크 결과 메시지 (AS-IS는
+   ::before 아이콘 스왑이지만 이 프로젝트는 <img class="pw-validation-icon"> 자체를 바꾼다). */
+.id-check-msg { font-size: 1.3rem; margin-top: .4rem; }
+.id-check-msg.ok { color: #2c5f2d; }
+.id-check-msg.fail { color: #c0392b; }
+
+/* 회원가입 2단계 - AS-IS에는 없는, 이 환경 전용 본인인증 우회 링크 (외부 인증 연계가
+   없어 진행이 막히지 않도록 별도로 추가한 것 - 시각적으로 AS-IS 카드와 구분되게 작게 둔다). */
+.dev-bypass { text-align: center; margin-top: 2.4rem; font-size: 1.3rem; color: var(--color-gray-light); }
+.dev-bypass button { background: none; border: none; text-decoration: underline; cursor: pointer; color: var(--color-primary); font-size: 1.3rem; }
+

@@ -1,11 +1,14 @@
 package com.ghlove.admin.web;
 
 import com.ghlove.admin.domain.DonationLedger;
+import com.ghlove.admin.domain.Manager;
 import com.ghlove.admin.repository.DonationLedgerRepository;
 import com.ghlove.admin.service.GiveStateService;
 import com.ghlove.admin.service.LocgovClient;
 import com.ghlove.admin.service.MemberClient;
+import com.ghlove.admin.service.MenuService;
 import com.ghlove.admin.service.PointClient;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -40,7 +43,9 @@ public class GivePointController {
     public String list(@RequestParam(required = false) String cntrYear,
                         @RequestParam(required = false) String upperLocgovCode,
                         @RequestParam(required = false) String locgovCode,
-                        Model model) {
+                        HttpSession session, Model model) {
+        Manager manager = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
+        locgovCode = MenuService.effectiveLocgovCode(manager, locgovCode);
         List<GiveStateService.GiveStateRow> rows = giveStateService.search(cntrYear, upperLocgovCode, locgovCode);
         model.addAttribute("rows", rows);
         model.addAttribute("years", giveStateService.availableYears());
@@ -49,6 +54,7 @@ public class GivePointController {
         model.addAttribute("cntrYear", cntrYear);
         model.addAttribute("upperLocgovCode", upperLocgovCode);
         model.addAttribute("locgovCode", locgovCode);
+        model.addAttribute("locgovScoped", MenuService.isLocgovScoped(manager));
 
         long totalPoint = rows.stream().mapToLong(GiveStateService.GiveStateRow::cntrPoint).sum();
         long totalUsePoint = rows.stream().mapToLong(GiveStateService.GiveStateRow::cntrUsePoint).sum();
@@ -63,7 +69,11 @@ public class GivePointController {
     public String detail(@RequestParam String cntrYear, @RequestParam String upperLocgovCode,
                           @RequestParam String locgovCode,
                           @RequestParam(required = false) String shUserName,
-                          Model model) {
+                          HttpSession session, Model model) {
+        Manager manager = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
+        if (MenuService.isLocgovScoped(manager) && !locgovCode.equals(manager.getLocgovCode())) {
+            return "redirect:/give-point";
+        }
         List<DonationLedger> yearList = completedByLocgov(locgovCode).stream()
                 .filter(d -> d.getEventDate() != null && d.getEventDate().startsWith(cntrYear))
                 .toList();

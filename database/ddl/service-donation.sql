@@ -1,3 +1,11 @@
+-- ===================================================================
+-- TO-BE DB 재구성(2026-09): 물리 2개(gift + 나머지), 논리 6개 스키마 구조로 전환.
+-- 이 파일은 이제 자신의 단독 DB가 아니라 'ghlove_core' DB 안의 'donation' 스키마에 적용한다.
+-- 실행예: psql -U postgres -d ghlove_core -f service-donation.sql
+-- ===================================================================
+CREATE SCHEMA IF NOT EXISTS donation;
+SET search_path TO donation;
+
 -- Service: donation
 -- ===================================================================
 -- AS-IS 운영 DB 원본 스키마 기준 자동 생성 (75개 테이블)
@@ -143,8 +151,9 @@ CREATE TABLE IF NOT EXISTS G_CNTR (
     SETLE_MTH_CODE               VARCHAR(10),
     -- 기부 사용 목적 코드
     CNTR_USE_PURPS_CODE          VARCHAR(10),
-    -- 전자 납부 번호
-    ELCTRN_PAY_NO                VARCHAR(30) NOT NULL,
+    -- 전자 납부 번호 (Donation 엔티티에 매핑 안 됨 - 이 프로젝트엔 전자수납 연계가 없다.
+    -- NOT NULL로 생성돼 있어서 기부 생성 자체가 항상 실패하던 버그를 실제로 발견해 nullable로 수정)
+    ELCTRN_PAY_NO                VARCHAR(30),
     -- 서울시 대상 여부
     SEOUL_TRGET_AT               VARCHAR(1),
     -- 접수은행코드
@@ -161,8 +170,10 @@ CREATE TABLE IF NOT EXISTS G_CNTR (
     INFO_AGRE_AT                 VARCHAR(1),
     -- 최초 등록자 ID
     FRST_REGISTER_ID             BIGINT,
-    -- 최초 등록 시점
-    FRST_REGIST_PNTTM            TIMESTAMP NOT NULL DEFAULT now(),
+    -- 최초 등록 시점 (Donation.frstRegistPnttm은 String 필드 - AS-IS 관행대로
+    -- yyyyMMddHHmmss 포맷 문자열로 저장. 한때 TIMESTAMP로 잘못 선언돼 있었으나
+    -- 실제 라이브 DB/엔티티와 맞춰 VARCHAR로 정정)
+    FRST_REGIST_PNTTM            VARCHAR(14),
     -- 최종 수정자 ID
     LAST_UPDUSR_ID               BIGINT,
     -- 최종 수정 시점
@@ -489,6 +500,9 @@ CREATE TABLE IF NOT EXISTS G_CTBNY_SETUP (
     LAST_UPDUSR_ID               BIGINT,
     -- 최종 수정 시점
     LAST_UPDT_PNTTM              TIMESTAMP,
+    -- 최종 수정자 명 (admin 지자체관리 화면 "포인트 지급률 변경이력" 표시용 - admin의 매니저
+    -- 정보는 별도 서비스라 FK 대신 쓰기 시점 값을 그대로 들고 있는다. AS-IS 대비 추가 컬럼)
+    LAST_UPDUSR_NM                VARCHAR(50),
     PRIMARY KEY (STDR_YEAR, LOCGOV_CODE)
 );
 
@@ -2079,7 +2093,7 @@ INSERT INTO G_LOCGOV (LOCGOV_CODE, LOCGOV_NM, UPPER_LOCGOV_NM, UPPER_LOCGOV_CODE
 ('11230', '강남구', '서울특별시', '11000', 'Y'),
 ('26350', '해운대구', '부산광역시', '26000', 'Y'),
 ('36110', '세종특별자치시', NULL, '36000', 'Y'),
-('50000', '제주특별자치도', NULL, '50000', 'Y'),
+('50000', '제주특별자치도', '제주특별자치도', '50000', 'Y'),
 ('46150', '순천시', '전라남도', '46000', 'Y')
 ON CONFLICT (LOCGOV_CODE) DO NOTHING;
 
@@ -2217,14 +2231,14 @@ ON CONFLICT (LOCGOV_CODE) DO NOTHING;
 -- 실제 발생 기부 아님) - ghlove-msa는 아직 2026년에 시작해 실제 전년도 데이터가 없다.
 INSERT INTO G_CNTR (CNTR_SN, CNTR_DE, USER_ID, PSITN_LOCGOV_CODE, CNTR_LOCGOV_CODE, CNTR_AMT, CNTR_PATH_CODE, CNTR_STTUS_CODE, ELCTRN_PAY_NO, FRST_REGIST_PNTTM)
 VALUES
-('D202501151030001000', '20250115', 1000, '11230', '11230', 1500000.00, 'ONLINE', 'COMPLETED', 'D202501151030001000', to_timestamp('20250115103000','YYYYMMDDHH24MISS')),
-('D202502101030001001', '20250210', 1001, '26350', '26350', 800000.00, 'ONLINE', 'COMPLETED', 'D202502101030001001', to_timestamp('20250210103000','YYYYMMDDHH24MISS')),
-('D202503051030001002', '20250305', 1002, '46150', '46150', 1200000.00, 'ONLINE', 'COMPLETED', 'D202503051030001002', to_timestamp('20250305103000','YYYYMMDDHH24MISS')),
-('D202504201030001000', '20250420', 1000, '50000', '50000', 900000.00, 'ONLINE', 'COMPLETED', 'D202504201030001000', to_timestamp('20250420103000','YYYYMMDDHH24MISS')),
-('D202505121030001001', '20250512', 1001, '11230', '11230', 2000000.00, 'ONLINE', 'COMPLETED', 'D202505121030001001', to_timestamp('20250512103000','YYYYMMDDHH24MISS')),
-('D202506181030001002', '20250618', 1002, '26350', '26350', 1100000.00, 'ONLINE', 'COMPLETED', 'D202506181030001002', to_timestamp('20250618103000','YYYYMMDDHH24MISS')),
-('D202507251030001000', '20250725', 1000, '46150', '46150', 1090000.00, 'ONLINE', 'COMPLETED', 'D202507251030001000', to_timestamp('20250725103000','YYYYMMDDHH24MISS')),
-('D202508031030001001', '20250803', 1001, '11230', '11230', 1100000.00, 'ONLINE', 'COMPLETED', 'D202508031030001001', to_timestamp('20250803103000','YYYYMMDDHH24MISS'))
+('D202501151030001000', '20250115', 1000, '11230', '11230', 1500000.00, 'ONLINE', 'COMPLETED', 'D202501151030001000', '20250115103000'),
+('D202502101030001001', '20250210', 1001, '26350', '26350', 800000.00, 'ONLINE', 'COMPLETED', 'D202502101030001001', '20250210103000'),
+('D202503051030001002', '20250305', 1002, '46150', '46150', 1200000.00, 'ONLINE', 'COMPLETED', 'D202503051030001002', '20250305103000'),
+('D202504201030001000', '20250420', 1000, '50000', '50000', 900000.00, 'ONLINE', 'COMPLETED', 'D202504201030001000', '20250420103000'),
+('D202505121030001001', '20250512', 1001, '11230', '11230', 2000000.00, 'ONLINE', 'COMPLETED', 'D202505121030001001', '20250512103000'),
+('D202506181030001002', '20250618', 1002, '26350', '26350', 1100000.00, 'ONLINE', 'COMPLETED', 'D202506181030001002', '20250618103000'),
+('D202507251030001000', '20250725', 1000, '46150', '46150', 1090000.00, 'ONLINE', 'COMPLETED', 'D202507251030001000', '20250725103000'),
+('D202508031030001001', '20250803', 1001, '11230', '11230', 1100000.00, 'ONLINE', 'COMPLETED', 'D202508031030001001', '20250803103000')
 ON CONFLICT (CNTR_SN) DO NOTHING;
 
 -- =====================================================================
@@ -2888,6 +2902,34 @@ INSERT INTO g_dsgn_dntn_biz_mng (dsgn_dntn_biz_id, dsgn_dntn_biz_ttl, dsgn_dntn_
 ON CONFLICT (dsgn_dntn_biz_id) DO NOTHING;
 
 -- =====================================================================
+-- 기부하기(일반기부) Vue3 전환 라운드 - 지정기부사업 대표이미지 15건 추가(사용자 요청).
+-- 1000번대 사업 상당수는 이 DDL 시드가 아니라 admin 지정기부관리 콘솔로 실제 등록된
+-- 라이브 데이터라(위 INSERT는 200~206 7건만 시드) 이 UPDATE는 그 행이 존재하는 DB에서만
+-- 의미가 있다 - 신규 프로비저닝된 DB에는 200번만 적용되고 나머지는 대상 행 자체가 없어
+-- 조용히 스킵된다(안전, 하지만 재현되진 않는다는 점은 알아둘 것).
+-- =====================================================================
+UPDATE g_dsgn_dntn_biz_mng SET dsgn_dntn_biz_rprs_img = x.img
+FROM (VALUES
+    (1000::BIGINT, '/images/new/20260902154204001_M.jpg'),
+    (1001::BIGINT, '/images/new/20260902154204002_M.jpg'),
+    (1002::BIGINT, '/images/new/20260902154204003_M.jpg'),
+    (1007::BIGINT, '/images/new/20260902154204004_M.jpg'),
+    (1008::BIGINT, '/images/new/20260902154204005_M.jpg'),
+    (1010::BIGINT, '/images/new/20260902154204006_M.jpg'),
+    (1014::BIGINT, '/images/new/20260902154204007_M.jpg'),
+    (1015::BIGINT, '/images/new/20260902154204008_M.jpg'),
+    (1016::BIGINT, '/images/new/20260902154204009_M.jpg'),
+    (1018::BIGINT, '/images/new/20260902154204010_M.jpg'),
+    (1024::BIGINT, '/images/new/20260902154205011_M.jpg'),
+    (1026::BIGINT, '/images/new/20260902154205012_M.jpg'),
+    (1030::BIGINT, '/images/new/20260902154205013_M.jpg'),
+    (1043::BIGINT, '/images/new/20260902154205014_M.jpg'),
+    (200::BIGINT, '/images/new/20260902154205015_M.jpg')
+) AS x(id, img)
+WHERE g_dsgn_dntn_biz_mng.dsgn_dntn_biz_id = x.id
+  AND (g_dsgn_dntn_biz_mng.dsgn_dntn_biz_rprs_img IS NULL OR g_dsgn_dntn_biz_mng.dsgn_dntn_biz_rprs_img = '');
+
+-- =====================================================================
 -- 기부금 지출내역 (AS-IS opmanager/give/give-operation, G_CTBNY_OPRATN/_FILE) - 지자체
 -- 담당자가 고향사랑기부금 사용 내역을 등록한다(고향사랑 기부금법상 공개 의무). 배치
 -- 스캔 당시 PK만 있고 시퀀스가 없던 테이블이라 다른 테이블과 동일 패턴으로 보강한다.
@@ -2976,3 +3018,16 @@ ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
 
 UPDATE G_CNTR SET CNTR_PATH_CODE = '100' WHERE CNTR_PATH_CODE = 'ONLINE';
 UPDATE G_CNTR SET CNTR_PATH_CODE = '200' WHERE CNTR_PATH_CODE = 'OFFLINE';
+
+-- =====================================================================
+-- 기부하기(일반기부) Vue3 전환 라운드 - 실버그: HonorCntrbtr.stdrYear는 Integer로 매핑돼
+-- 있는데 G_HONOR_CNTRBTR.STDR_YEAR는 위 CREATE TABLE에서 AS-IS 그대로 VARCHAR(4)로
+-- 선언돼 있었다(PK의 일부이기도 함). 명예기부자 등급은 completeDonation()이 결제완료
+-- 처리 때마다 자동 산정하는데, 지금까지 결제완료를 실제로 눌러본 적이 없어서(REQUESTED
+-- 상태로만 시드/테스트됨) findByStdrYearAndLocgovCodeAndUserId() 조회가 "character
+-- varying = integer" 타입 불일치로 매번 500을 내는 걸 몰랐다 - 기부하기 화면을 새로
+-- 만들고 실제로 결제완료 처리까지 눌러보다가 발견함. 기존 데이터가 전부 4자리 숫자라
+-- 컬럼을 INTEGER로 바꾼다(다른 서비스의 CREATED_DATE 타입버그와 반대로, 여기는 PK를
+-- 포함해 숫자로 쓰이는 게 자연스러워 엔티티가 아니라 컬럼 쪽을 고쳤다).
+-- =====================================================================
+ALTER TABLE G_HONOR_CNTRBTR ALTER COLUMN STDR_YEAR TYPE INTEGER USING STDR_YEAR::INTEGER;

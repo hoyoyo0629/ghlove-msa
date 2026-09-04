@@ -5,10 +5,13 @@ import com.ghlove.donation.domain.Donation;
 import com.ghlove.donation.repository.CntrReqmngRepository;
 import com.ghlove.donation.repository.DonationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -47,6 +50,37 @@ public class CntrReqmngService {
         return cntrReqmngRepository.findByLocgovCodeOrderByFrstRegistPnttmDesc(locgovCode);
     }
 
+    /** AS-IS list.jsp의 검색조건(지자체/요청분류/승인여부/기간)+페이지네이션 재현.
+     *  startDate/endDate는 "yyyyMMdd" 형식이고, endDate는 자정 기준으로 다음날 0시 미만까지 포함한다. */
+    public Page<CntrReqmng> search(String locgovCode, String cntrReqmngCode, String reqStatusCode,
+                                    String startDate, String endDate, int page, int size) {
+        LocalDateTime start = parseDateStart(startDate);
+        LocalDateTime end = parseDateEndExclusive(endDate);
+        return cntrReqmngRepository.search(blankToNull(locgovCode), blankToNull(cntrReqmngCode),
+                blankToNull(reqStatusCode), start, end, PageRequest.of(page, size));
+    }
+
+    private static String blankToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s;
+    }
+
+    private static final LocalDateTime EPOCH = LocalDateTime.of(1970, 1, 1, 0, 0);
+    private static final LocalDateTime FAR_FUTURE = LocalDateTime.of(2999, 12, 31, 23, 59);
+
+    private static LocalDateTime parseDateStart(String yyyyMMdd) {
+        if (yyyyMMdd == null || yyyyMMdd.isBlank()) {
+            return EPOCH;
+        }
+        return LocalDate.parse(yyyyMMdd, java.time.format.DateTimeFormatter.BASIC_ISO_DATE).atStartOfDay();
+    }
+
+    private static LocalDateTime parseDateEndExclusive(String yyyyMMdd) {
+        if (yyyyMMdd == null || yyyyMMdd.isBlank()) {
+            return FAR_FUTURE;
+        }
+        return LocalDate.parse(yyyyMMdd, java.time.format.DateTimeFormatter.BASIC_ISO_DATE).plusDays(1).atStartOfDay();
+    }
+
     public Donation donationOf(String cntrSn) {
         return donationRepository.findById(cntrSn)
                 .orElseThrow(() -> new DonationException("기부내역을 찾을 수 없습니다."));
@@ -62,8 +96,8 @@ public class CntrReqmngService {
 
     @Transactional
     public CntrReqmng submit(String cntrSn, String cntrReqmngCode, String discription,
-                              LocalDateTime taxSysCancelDe, String relatedDocDptNm, String relatedDocNum,
-                              LocalDateTime relatedDocDe, Long managerId) {
+                              String taxSysCancelDe, String relatedDocDptNm, String relatedDocNum,
+                              String relatedDocDe, Long managerId) {
         Donation donation = donationOf(cntrSn);
         validate(cntrReqmngCode, discription, taxSysCancelDe, relatedDocDptNm, relatedDocNum, relatedDocDe);
         if (hasUsedPoints(cntrSn)) {
@@ -78,10 +112,10 @@ public class CntrReqmngService {
         reqmng.setCntrAmt(donation.getCntrAmt());
         reqmng.setLoginId(member != null ? member.loginId() : null);
         reqmng.setUserName(member != null ? member.userName() : null);
-        reqmng.setSttemntPayDe(parseDate(donation.getCntrDe()));
+        reqmng.setSttemntPayDe(truncate8(donation.getCntrDe()));
         reqmng.setCntrReqmngCode(cntrReqmngCode);
         reqmng.setDiscription(discription);
-        reqmng.setTaxSysCancelDe(taxSysCancelDe);
+        reqmng.setTaxSysCancelDe(truncate8(taxSysCancelDe));
         reqmng.setRelatedDocDptNm(relatedDocDptNm);
         reqmng.setRelatedDocNum(relatedDocNum);
         reqmng.setRelatedDocDe(relatedDocDe);
@@ -138,8 +172,8 @@ public class CntrReqmngService {
                 .orElseThrow(() -> new DonationException("변경신청을 찾을 수 없습니다."));
     }
 
-    private static void validate(String cntrReqmngCode, String discription, LocalDateTime taxSysCancelDe,
-                                  String relatedDocDptNm, String relatedDocNum, LocalDateTime relatedDocDe) {
+    private static void validate(String cntrReqmngCode, String discription, String taxSysCancelDe,
+                                  String relatedDocDptNm, String relatedDocNum, String relatedDocDe) {
         if (!TYPE_CANCEL.equals(cntrReqmngCode) && !TYPE_POINT_CREATE.equals(cntrReqmngCode)) {
             throw new DonationException("요청분류를 선택해 주세요.");
         }
@@ -147,7 +181,7 @@ public class CntrReqmngService {
             throw new DonationException("사유는 10자 이상 작성해 주세요.");
         }
         if (TYPE_CANCEL.equals(cntrReqmngCode)) {
-            if (taxSysCancelDe == null) {
+            if (taxSysCancelDe == null || taxSysCancelDe.isBlank()) {
                 throw new DonationException("세외수입시스템 과오납 결의일자를 입력해 주세요.");
             }
             if (relatedDocDptNm == null || relatedDocDptNm.isBlank()) {
@@ -156,17 +190,19 @@ public class CntrReqmngService {
             if (relatedDocNum == null || relatedDocNum.isBlank()) {
                 throw new DonationException("관련문서 문서번호를 입력해 주세요.");
             }
-            if (relatedDocDe == null) {
+            if (relatedDocDe == null || relatedDocDe.isBlank()) {
                 throw new DonationException("관련문서 시행일을 입력해 주세요.");
             }
         }
     }
 
-    private static LocalDateTime parseDate(String yyyyMMdd) {
-        if (yyyyMMdd == null || yyyyMMdd.length() < 8) {
+    /** sttemnt_pay_de/tax_sys_cancel_de는 DB가 VARCHAR(8)이라 "yyyyMMdd"보다 길면 저장이
+     *  실패한다 - 날짜 입력 위젯이 넘길 수 있는 부가 포맷("yyyy-MM-dd" 등)을 방어적으로 자른다. */
+    private static String truncate8(String yyyyMMdd) {
+        if (yyyyMMdd == null) {
             return null;
         }
-        return java.time.LocalDate.parse(yyyyMMdd.substring(0, 8),
-                java.time.format.DateTimeFormatter.BASIC_ISO_DATE).atStartOfDay();
+        String digitsOnly = yyyyMMdd.replace("-", "");
+        return digitsOnly.length() > 8 ? digitsOnly.substring(0, 8) : digitsOnly;
     }
 }

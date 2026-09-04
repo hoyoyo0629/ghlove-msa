@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>역할 신청 - 고향사랑e음 (member service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="wrap wide">
+    <h1>지자체담당자·제공자 역할 신청<span class="badge">member</span></h1>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+    <form th:action="@{/roles/request}" method="post">
+        <div class="field">
+            <label for="requestedRole">신청할 역할</label>
+            <select id="requestedRole" name="requestedRole" required>
+                <option value="ROLE_LOCALGOV" th:text="${roleLabels.get('ROLE_LOCALGOV')} ?: '지자체 담당자'"></option>
+                <option value="ROLE_PROVIDER" th:text="${roleLabels.get('ROLE_PROVIDER')} ?: '답례품 제공자'"></option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="reason">신청 사유</label>
+            <textarea id="reason" name="reason" rows="3" placeholder="소속 지자체명, 사업자 정보 등을 입력해 주세요"></textarea>
+        </div>
+        <button type="submit">신청하기</button>
+    </form>
+
+    <div style="margin-top:28px;">
+        <div style="font-size:15px; font-weight:bold; color:#1f4e3d; margin-bottom:10px;">내 신청 내역</div>
+        <table>
+            <thead>
+            <tr>
+                <th>역할</th>
+                <th>사유</th>
+                <th>상태</th>
+                <th>신청일</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="r : ${myRequests}">
+                <td th:text="${roleLabels.get(r.requestedRole)} ?: ${r.requestedRole}"></td>
+                <td th:text="${r.reason}"></td>
+                <td th:text="${statusLabels.get(r.status)} ?: ${r.status}"></td>
+                <td th:text="${#temporals.format(r.createdDate, 'yyyy-MM-dd HH:mm')}"></td>
+            </tr>
+            </tbody>
+        </table>
+        <p style="text-align:center; font-size:13px; color:#888;" th:if="${#lists.isEmpty(myRequests)}">신청 내역이 없습니다.</p>
+    </div>
+
+    <div class="links">
+        <a th:href="@{/}">홈으로</a>
+    </div>
+</div>
+</body>
+</html>

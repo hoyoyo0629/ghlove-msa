@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>SEO 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>SEO 관리</h3>
+    <p style="color:#666; margin-bottom:16px;">현재 storefront(Vue3 SPA)는 이 메타데이터를 자동으로 페이지에 반영하는 연동이 없습니다 - 값을 관리해두면 추후 storefront SSR/메타태그 주입 작업 시 바로 쓸 수 있습니다.</p>
+    <p><a class="btn" th:href="@{/admin/seo/new}">+ SEO 등록</a></p>
+
+    <form id="deleteForm" th:action="@{/admin/seo/delete}" method="post">
+        <table class="board_list_table">
+            <thead>
+            <tr><th></th><th>URL 패턴</th><th>title</th><th>keywords</th><th>색인허용</th><th>등록일</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="s : ${seoList}">
+                <td><input type="checkbox" name="ids" th:value="${s.seoId}" form="deleteForm"></td>
+                <td><a th:href="@{'/admin/seo/' + ${s.seoId} + '/edit'}" th:text="${s.seoUrl}"></a></td>
+                <td th:text="${s.title}"></td>
+                <td th:text="${s.keywords}"></td>
+                <td th:text="${s.indexFlag == 'Y'} ? '허용' : '차단'"></td>
+                <td th:text="${s.createdDate}"></td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="empty" th:if="${#lists.isEmpty(seoList)}">등록된 SEO 설정이 없습니다.</p>
+        <div class="btn_all btn_center" th:if="${not #lists.isEmpty(seoList)}">
+            <button type="submit" class="btn btn-small" onclick="return confirm('선택한 항목을 삭제하시겠습니까?')">선택삭제</button>
+        </div>
+    </form>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

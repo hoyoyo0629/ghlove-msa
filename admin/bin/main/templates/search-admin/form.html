@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>검색어 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/search-keywords}">검색어 관리</a></div>
+    <h3><span th:text="${keyword} != null ? '검색어 수정' : '검색어 등록'"></span></h3>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="검색어 등록/수정">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>검색어</td>
+                <td><input type="text" id="searchContents" name="searchContents" th:value="${keyword} != null ? ${keyword.searchContents} : ''" required form="keywordForm"></td>
+            </tr>
+            <tr>
+                <td class="label">PC 링크</td>
+                <td>
+                    <input type="text" id="searchLink" name="searchLink" th:value="${keyword} != null ? ${keyword.searchLink} : ''" form="keywordForm">
+                    <label><input type="checkbox" name="searchLinkTargetFlag" th:checked="${keyword} != null and ${keyword.searchLinkTargetFlag} == 'Y'" form="keywordForm"> 새창으로 열기</label>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">모바일 링크</td>
+                <td>
+                    <input type="text" id="searchMobileLink" name="searchMobileLink" th:value="${keyword} != null ? ${keyword.searchMobileLink} : ''" form="keywordForm">
+                    <label><input type="checkbox" name="searchMobileLinkTargetFlag" th:checked="${keyword} != null and ${keyword.searchMobileLinkTargetFlag} == 'Y'" form="keywordForm"> 새창으로 열기</label>
+                </td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>노출 시작일</td>
+                <td><input type="text" id="searchStartDate" name="searchStartDate" placeholder="20260101000000" th:value="${keyword} != null ? ${keyword.searchStartDate} : ''" required form="keywordForm"></td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>노출 종료일</td>
+                <td><input type="text" id="searchEndDate" name="searchEndDate" placeholder="20261231235959" th:value="${keyword} != null ? ${keyword.searchEndDate} : ''" required form="keywordForm"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <form id="keywordForm" th:action="${keyword} != null ? @{'/admin/search-keywords/' + ${keyword.searchId}} : @{/admin/search-keywords}" method="post"></form>
+    <div class="btn_all btn_center">
+        <button type="submit" form="keywordForm" class="btn btn-dark-gray btn-small">저장</button>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

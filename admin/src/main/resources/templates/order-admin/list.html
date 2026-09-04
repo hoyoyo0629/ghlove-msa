@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>주문관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/order(OrderManagerController) 재현 - 3700줄/70여 엔드포인트 중 핵심인
+     검색/상태변경/엑셀다운로드만 재구현했다. 검색구분 중 "주문자명"/"판매자명"은 order
+     서비스가 이름을 갖고 있지 않아(각각 member/gift 서비스 소유) 주문자ID/판매자ID 정확매칭
+     으로 대체했다 - OrderAdminService 주석 참고. -->
+<div class="contents contents_inner">
+    <h3><span>주문관리</span></h3>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+    <form th:action="@{/admin/orders}" method="get" id="searchForm">
+        <div class="board_write">
+            <table class="board_write_table" summary="주문 검색조건">
+                <colgroup><col style="width:150px;"><col><col style="width:150px;"><col></colgroup>
+                <tbody>
+                <tr>
+                    <td class="label">검색구분</td>
+                    <td>
+                        <div class="flex_box gap-08">
+                            <select name="searchType" style="width:120px;">
+                                <option value="ORDER_ID" th:selected="${searchType == 'ORDER_ID' or searchType == null}">주문번호</option>
+                                <option value="RECEIVER_NAME" th:selected="${searchType == 'RECEIVER_NAME'}">수취인명</option>
+                                <option value="ITEM_NAME" th:selected="${searchType == 'ITEM_NAME'}">답례품명</option>
+                                <option value="SELLER_ID" th:selected="${searchType == 'SELLER_ID'}">판매자ID</option>
+                                <option value="USER_ID" th:selected="${searchType == 'USER_ID'}">주문자ID</option>
+                            </select>
+                            <input type="text" name="keyword" th:value="${keyword}" placeholder="검색어" style="width:200px;">
+                        </div>
+                    </td>
+                    <td class="label">주문상태</td>
+                    <td>
+                        <select name="orderStatus">
+                            <option value="">전체</option>
+                            <option value="PENDING" th:selected="${orderStatus == 'PENDING'}">처리중</option>
+                            <option value="CONFIRMED" th:selected="${orderStatus == 'CONFIRMED'}">주문확정</option>
+                            <option value="CLAIM_REQUESTED" th:selected="${orderStatus == 'CLAIM_REQUESTED'}">반품/교환신청중</option>
+                            <option value="CANCELLED" th:selected="${orderStatus == 'CANCELLED'}">취소</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">주문일자</td>
+                    <td colspan="3">
+                        <div class="flex_box gap-08">
+                            <input type="date" name="startDate" th:value="${startDate}" style="width:160px;">
+                            <span class="wave">~</span>
+                            <input type="date" name="endDate" th:value="${endDate}" style="width:160px;">
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="btn_all btn_right" style="margin-bottom:16px;">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-dark-gray btn-small" onclick="location.href='/admin/orders'">초기화</button>
+                <button type="submit" class="btn btn-dark-gray btn-small">검색</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="count_title mt-40">
+        <h5>총 <span th:text="${totalCount}" th:remove="tag"></span>건</h5>
+        <div class="flex_box gap-08">
+            <a class="small-btn" th:href="@{/admin/claims}">클레임 처리 큐 &rarr;</a>
+            <button type="button" class="small-btn" onclick="downloadExcel()">엑셀다운로드</button>
+        </div>
+    </div>
+
+    <form id="bulkForm" th:action="@{/admin/orders/bulk-delivery-status}" method="post">
+        <input type="hidden" name="returnQuery"
+               th:value="${'searchType=' + searchType + '&amp;keyword=' + keyword + '&amp;orderStatus=' + orderStatus + '&amp;startDate=' + startDate + '&amp;endDate=' + endDate + '&amp;page=' + currentPage}">
+        <div class="flex_box gap-08" style="margin-bottom:8px;">
+            <select name="deliveryStatus" style="width:160px;">
+                <option value="IN_TRANSIT">배송중으로 변경</option>
+                <option value="DELIVERED">배송완료로 변경</option>
+            </select>
+            <button type="submit" class="small-btn" onclick="return confirm('선택한 주문의 배송상태를 일괄 변경하시겠습니까?');">선택 배송상태변경</button>
+        </div>
+
+        <table class="board_list_table" summary="주문관리">
+            <caption>주문목록</caption>
+            <thead>
+            <tr>
+                <th scope="col"><input type="checkbox" onclick="toggleAll(this)"></th>
+                <th scope="col">주문번호</th>
+                <th scope="col">주문자ID</th>
+                <th scope="col">답례품명</th>
+                <th scope="col">판매자ID</th>
+                <th scope="col">수량</th>
+                <th scope="col">결제포인트</th>
+                <th scope="col">주문상태</th>
+                <th scope="col">배송상태</th>
+                <th scope="col">주문일시</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="o : ${orders}">
+                <td><input type="checkbox" name="orderIds" th:value="${o.orderId()}"></td>
+                <td><a th:href="@{'/admin/orders/' + ${o.orderId()}}" th:text="${o.orderId()}"></a></td>
+                <td th:text="${o.userId()}"></td>
+                <td class="tleft" th:text="${o.itemName()}"></td>
+                <td th:text="${o.sellerId()}"></td>
+                <td th:text="${o.quantity()}"></td>
+                <td th:text="${#numbers.formatInteger(o.pointAmount(), 0, 'COMMA')} + 'P'"></td>
+                <td th:text="${o.orderStatus() == 'PENDING'} ? '처리중' : (${o.orderStatus() == 'CONFIRMED'} ? '주문확정' : (${o.orderStatus() == 'CLAIM_REQUESTED'} ? '반품/교환신청중' : '취소'))"></td>
+                <td th:text="${o.deliveryStatus() == null} ? '미발송' : (${o.deliveryStatus() == 'SHIPPED'} ? '발송완료' : (${o.deliveryStatus() == 'IN_TRANSIT'} ? '배송중' : (${o.deliveryStatus() == 'DELIVERED'} ? '배송완료' : '구매확정')))"></td>
+                <td th:text="${o.createdDate() != null ? #strings.substring(o.createdDate(), 0, 16) : '-'}"></td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="empty" th:if="${#lists.isEmpty(orders)}">조회된 주문이 없습니다.</p>
+    </form>
+
+    <div class="pagination-wrap" th:if="${totalPages > 1}">
+        <div class="pagination">
+            <a th:if="${currentPage > 0}" class="prev"
+               th:href="@{/admin/orders(locgovCode=${locgovCode},orderStatus=${orderStatus},searchType=${searchType},keyword=${keyword},startDate=${startDate},endDate=${endDate},page=${currentPage - 1},size=${size})}">이전</a>
+            <span th:each="p : ${#numbers.sequence(0, totalPages - 1)}">
+                <strong th:if="${p == currentPage}" th:text="${p + 1}"></strong>
+                <a th:unless="${p == currentPage}"
+                   th:href="@{/admin/orders(locgovCode=${locgovCode},orderStatus=${orderStatus},searchType=${searchType},keyword=${keyword},startDate=${startDate},endDate=${endDate},page=${p},size=${size})}"
+                   th:text="${p + 1}"></a>
+            </span>
+            <a th:if="${currentPage < totalPages - 1}" class="next"
+               th:href="@{/admin/orders(locgovCode=${locgovCode},orderStatus=${orderStatus},searchType=${searchType},keyword=${keyword},startDate=${startDate},endDate=${endDate},page=${currentPage + 1},size=${size})}">다음</a>
+        </div>
+    </div>
+</div>
+
+<script th:inline="none">
+function toggleAll(source) {
+    document.querySelectorAll('input[name="orderIds"]').forEach(function (cb) { cb.checked = source.checked; });
+}
+function downloadExcel() {
+    var reason = prompt('다운로드 사유를 입력해 주세요 (개인정보가 포함된 파일입니다).');
+    if (!reason) { return; }
+    var params = new URLSearchParams();
+    var searchType = /*[[${searchType}]]*/ '';
+    var keyword = /*[[${keyword}]]*/ '';
+    var orderStatus = /*[[${orderStatus}]]*/ '';
+    var startDate = /*[[${startDate}]]*/ '';
+    var endDate = /*[[${endDate}]]*/ '';
+    if (searchType) { params.set('searchType', searchType); }
+    if (keyword) { params.set('keyword', keyword); }
+    if (orderStatus) { params.set('orderStatus', orderStatus); }
+    if (startDate) { params.set('startDate', startDate); }
+    if (endDate) { params.set('endDate', endDate); }
+    params.set('reason', reason);
+    location.href = '/admin/orders/export?' + params.toString();
+}
+</script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

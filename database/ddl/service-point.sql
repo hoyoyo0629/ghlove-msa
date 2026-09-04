@@ -1,3 +1,11 @@
+-- ===================================================================
+-- TO-BE DB 재구성(2026-09): 물리 2개(gift + 나머지), 논리 6개 스키마 구조로 전환.
+-- 이 파일은 이제 자신의 단독 DB가 아니라 'ghlove_core' DB 안의 'point' 스키마에 적용한다.
+-- 실행예: psql -U postgres -d ghlove_core -f service-point.sql
+-- ===================================================================
+CREATE SCHEMA IF NOT EXISTS point;
+SET search_path TO point;
+
 -- Service: point
 -- ===================================================================
 -- AS-IS 운영 DB 원본 스키마 기준 자동 생성 (10개 테이블)
@@ -299,6 +307,11 @@ CREATE TABLE IF NOT EXISTS PT_LOCGOV_POINT_RATE (
     STDR_YEAR    VARCHAR(4)   NOT NULL,
     LOCGOV_CODE  VARCHAR(50)  NOT NULL,
     POINT_RATE   NUMERIC(5,2) NOT NULL,
+    -- admin 지자체관리 화면의 "포인트 지급률 등록/이력조회"가 쓰는 감사 컬럼 (원래 이 표에는
+    -- 없었으나 admin 쓰기 경로가 생기며 추가 - AS-IS의 포인트 지급률 변경이력 팝업(변경일/작성자)과
+    -- 동등하게 보여주기 위함. 연도별 행 자체가 이력이라 별도 이력 테이블은 두지 않는다.)
+    LAST_UPDT_PNTTM  TIMESTAMP,
+    LAST_UPDUSR_NM   VARCHAR(50),
     PRIMARY KEY (STDR_YEAR, LOCGOV_CODE)
 );
 

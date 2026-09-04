@@ -10,6 +10,7 @@ import com.ghlove.admin.event.GiftLifecycleEvent;
 import com.ghlove.admin.event.OrderCancelledEvent;
 import com.ghlove.admin.event.OrderConfirmedEvent;
 import com.ghlove.admin.event.OrderCreatedEvent;
+import com.ghlove.admin.event.OrderDeliveryUpdatedEvent;
 import com.ghlove.admin.event.PointLedgerEvent;
 import com.ghlove.admin.repository.DonationLedgerRepository;
 import com.ghlove.admin.repository.GiftLedgerStatRepository;
@@ -89,6 +90,7 @@ public class StatsService {
         ledger.setSellerId(event.sellerId());
         ledger.setQuantity(event.quantity());
         ledger.setPointAmount(event.pointAmount());
+        ledger.setLocgovCode(event.locgovCode());
         ledger.setStatus(STATUS_PENDING);
         ledger.setCreatedDate(LocalDateTime.now());
         orderLedgerRepository.save(ledger);
@@ -96,12 +98,35 @@ public class StatsService {
 
     @Transactional
     public void onOrderConfirmed(OrderConfirmedEvent event) {
-        updateOrderStatus(event.orderId(), STATUS_CONFIRMED);
+        OrderLedger ledger = orderLedgerRepository.findById(event.orderId()).orElse(null);
+        if (ledger == null) {
+            log.info("Order {} not in stats ledger yet - ignoring ORDER_CONFIRMED (ORDER_CREATED not seen)", event.orderId());
+            return;
+        }
+        ledger.setStatus(STATUS_CONFIRMED);
+        ledger.setOrderConfirmedAt(event.occurredAt());
+        orderLedgerRepository.save(ledger);
     }
 
     @Transactional
     public void onOrderCancelled(OrderCancelledEvent event) {
         updateOrderStatus(event.orderId(), STATUS_CANCELLED);
+    }
+
+    /** SFR-006 "제공자·지자체별 SLA 지표" - 송장등록/배송중·완료/구매확정마다 도착하는
+     *  배송 리드타임 원본을 그대로 사본에 반영한다(집계는 조회 시점에 {@link #slaStats()}가). */
+    @Transactional
+    public void onOrderDeliveryUpdated(OrderDeliveryUpdatedEvent event) {
+        OrderLedger ledger = orderLedgerRepository.findById(event.orderId()).orElse(null);
+        if (ledger == null) {
+            log.info("Order {} not in stats ledger yet - ignoring ORDER_DELIVERY_UPDATED", event.orderId());
+            return;
+        }
+        ledger.setDeliveryStatus(event.deliveryStatus());
+        ledger.setShippedDate(event.shippedDate());
+        ledger.setDeliveredDate(event.deliveredDate());
+        ledger.setDeliveryConfirmedDate(event.confirmedDate());
+        orderLedgerRepository.save(ledger);
     }
 
     private void updateOrderStatus(String orderId, String status) {
@@ -332,5 +357,57 @@ public class StatsService {
         BigDecimal total() {
             return BigDecimal.valueOf(points);
         }
+    }
+
+    /**
+     * SFR-006 "제공자·지자체별 SLA 지표" - 다른 통계와 동일하게 저장 시점이 아니라 조회
+     * 시점에 라이브 집계한다. 세 구간(확정→발송/발송→배송완료/배송완료→구매확정)의
+     * 평균 소요시간(시간 단위)과 표본 수를 그룹(제공자 또는 지자체)별로 계산한다 - 구간의
+     * 시작/끝 타임스탬프가 둘 다 있는 주문만 그 구간의 표본에 포함된다(아직 발송 전인
+     * 주문이 "발송→배송완료" 평균을 0으로 왜곡하지 않도록).
+     */
+    public record SlaMetric(String groupKey, long orderCount, Double avgConfirmToShipHours,
+                             Double avgShipToDeliverHours, Double avgDeliverToConfirmHours) {
+    }
+
+    public List<SlaMetric> slaStatsBySeller() {
+        return slaStats(l -> l.getSellerId() != null ? String.valueOf(l.getSellerId()) : "(미지정)");
+    }
+
+    public List<SlaMetric> slaStatsByLocgov() {
+        return slaStats(l -> l.getLocgovCode() != null ? l.getLocgovCode() : "(미지정)");
+    }
+
+    private List<SlaMetric> slaStats(java.util.function.Function<OrderLedger, String> groupKeyFn) {
+        Map<String, List<OrderLedger>> grouped = orderLedgerRepository.findAll().stream()
+                .filter(l -> !STATUS_CANCELLED.equals(l.getStatus()))
+                .collect(java.util.stream.Collectors.groupingBy(groupKeyFn, LinkedHashMap::new, java.util.stream.Collectors.toList()));
+
+        List<SlaMetric> result = new java.util.ArrayList<>();
+        for (var entry : grouped.entrySet()) {
+            List<OrderLedger> rows = entry.getValue();
+            result.add(new SlaMetric(entry.getKey(), rows.size(),
+                    avgHoursBetween(rows, OrderLedger::getOrderConfirmedAt, OrderLedger::getShippedDate),
+                    avgHoursBetween(rows, OrderLedger::getShippedDate, OrderLedger::getDeliveredDate),
+                    avgHoursBetween(rows, OrderLedger::getDeliveredDate, OrderLedger::getDeliveryConfirmedDate)));
+        }
+        result.sort(Comparator.comparing(SlaMetric::groupKey));
+        return result;
+    }
+
+    private Double avgHoursBetween(List<OrderLedger> rows, java.util.function.Function<OrderLedger, LocalDateTime> start,
+                                    java.util.function.Function<OrderLedger, LocalDateTime> end) {
+        List<Double> hours = new java.util.ArrayList<>();
+        for (OrderLedger row : rows) {
+            LocalDateTime s = start.apply(row);
+            LocalDateTime e = end.apply(row);
+            if (s != null && e != null) {
+                hours.add(java.time.Duration.between(s, e).toMinutes() / 60.0);
+            }
+        }
+        if (hours.isEmpty()) {
+            return null;
+        }
+        return Math.round(hours.stream().mapToDouble(Double::doubleValue).average().orElse(0) * 10) / 10.0;
     }
 }

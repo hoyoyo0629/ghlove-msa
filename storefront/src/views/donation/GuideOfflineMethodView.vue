@@ -1,0 +1,221 @@
+<script setup>
+import { ref } from 'vue'
+
+// AS-IS donation/guide5.html("오프라인 기부방법") 재현(3탭: 농협 기부안내/고향사랑e음 로그인/
+// 답례품 구매). Thymeleaf 버전은 vanilla JS data-tab 토글이었는데, 이 SPA는 진짜 Vue라
+// 그냥 반응형 tab ref로 대체한다. 하단의 tab_con_sub 보조 이미지 블록은 AS-IS에서도
+// 애매하게 남은 부가 섹션이라(3탭 로직과 매핑이 불명확) 스코프에서 뺐다(Thymeleaf
+// 버전과 동일 경계).
+const tab = ref(0)
+</script>
+
+<template>
+  <section class="center">
+    <div class="page-title-box">
+      <span class="ali_breadcrumb">
+        <router-link to="/"><img class="icon-img" src="/images/icon/cli-icon_home.png" alt="홈으로" /></router-link>
+        <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+        안내사항
+        <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+        오프라인 기부방법
+      </span>
+      <h2 class="page-title-txt">오프라인 기부방법</h2>
+    </div>
+  </section>
+  <section id="contents">
+    <div class="center">
+      <div class="s-contents d-guide first">
+        <div class="tab_menu_wrap" id="tabMenu">
+          <div class="tab_group offline">
+            <button type="button" class="tab_items" :class="{ on: tab === 0 }" @click="tab = 0">농협 기부안내<span class="sr-only">선택됨</span></button>
+            <button type="button" class="tab_items" :class="{ on: tab === 1 }" @click="tab = 1"><span class="liLabel">고향사랑e음</span><span class="liLabel"> 로그인</span></button>
+            <button type="button" class="tab_items" :class="{ on: tab === 2 }" @click="tab = 2">답례품구매</button>
+          </div>
+        </div>
+
+        <!-- 농협 기부안내 -->
+        <div class="tab_con" :class="{ view: tab === 0 }" v-show="tab === 0">
+          <h3 class="guide-tab-tit">농협 기부안내</h3>
+          <div class="details_steps">
+            <img src="/images/guide/PC_GUIDE5/NH_DONATION/1.png" class="pc_img" alt="오프라인 기부 순서 1.농협은행 방문 2.기탁서 수령 3.기탁서, 기부금 은행창구에 제출 4.납부신청서 수령하기 5.고향사랑e음에 로그인하기 6.답례품 신청하기" />
+            <img src="/images/guide/M_GUIDE5/NH_DONATION/1.png" class="mobile_img" alt="오프라인 기부 순서 1.농협은행 방문 2.기탁서 수령 3.기탁서, 기부금 은행창구에 제출 4.납부신청서 수령하기 5.고향사랑e음에 로그인하기 6.답례품 신청하기" />
+            <div class="detailsTxt">
+              <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 01.</strong> 오프라인 기부는 농협은행에서 기부가 가능합니다.</p>
+              <p style="margin-left: 25px">기부는 농협은행 창구에서 접수를 진행하고 있습니다.</p>
+              <p style="margin-left: 25px">기부는 자치단체에 기부하기와 특정사업에 기부하기 두가지 방식이 있습니다.</p>
+            </div>
+          </div>
+          <div class="details_steps">
+            <img src="/images/guide/PC_GUIDE5/NH_DONATION/2.png" class="pc_img" alt="기재요령 - 기탁서에 기부자 성명, 주민등록번호, 주소, 전화번호, 기부금액, 지방자치단체명, 기부종류 선택, 답례품 제공 받음 여부, 기부자 서명을 작성합니다." />
+            <img src="/images/guide/M_GUIDE5/NH_DONATION/2.png" class="mobile_img" alt="기재요령 - 기탁서에 기부자 성명, 주민등록번호, 주소, 전화번호, 기부금액, 지방자치단체명, 기부종류 선택, 답례품 제공 받음 여부, 기부자 서명을 작성합니다." />
+            <div class="detailsTxt">
+              <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 02.</strong> 농협은행에서 제공하는 기탁서를 수령하세요</p>
+            </div>
+          </div>
+          <div class="details_steps">
+            <img src="/images/guide/PC_GUIDE5/NH_DONATION/3.png" class="pc_img" alt="2번째 페이지 내 고향사랑e음 설명, 개인정보 수집·이용·제3자 제공 동의서 확인 내용, 답례품 관련 안내 사항 내용을 확인하신 후 작성 날짜, 신청인 이름과 서명을 작성해주세요." />
+            <img src="/images/guide/M_GUIDE5/NH_DONATION/3.png" class="mobile_img" alt="2번째 페이지 내 고향사랑e음 설명, 개인정보 수집·이용·제3자 제공 동의서 확인 내용, 답례품 관련 안내 사항 내용을 확인하신 후 작성 날짜, 신청인 이름과 서명을 작성해주세요." />
+            <div class="detailsTxt">
+              <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 03.</strong> 기탁서 제출 및 기부금 수납</p>
+              <p style="margin-left: 25px">작성하신 기탁서와 기부금을 제출해주세요</p>
+            </div>
+          </div>
+          <div class="details_steps">
+            <img src="/images/guide/PC_GUIDE5/NH_DONATION/4.png" class="pc_img" alt="기부 후 기부금 납부 신청서를 받으시면 신규 가입 또는 기존 가입된 로그인 아이디가 표시됩니다. 발급받으신 아이디로 고향사랑e음에 로그인하실 수 있습니다." />
+            <img src="/images/guide/M_GUIDE5/NH_DONATION/4.png" class="mobile_img" alt="기부 후 기부금 납부 신청서를 받으시면 신규 가입 또는 기존 가입된 로그인 아이디가 표시됩니다. 발급받으신 아이디로 고향사랑e음에 로그인하실 수 있습니다." />
+            <div class="detailsTxt">
+              <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 04.</strong> 납부신청서 수령</p>
+              <p style="margin-left: 25px">기탁서와 기부금액을 제출 하시면 은행 창구에서 납부신청서(기부자용)를 제공해드립니다.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 고향사랑e음 로그인 -->
+        <div class="tab_con" :class="{ view: tab === 1 }" v-show="tab === 1">
+          <h3 class="guide-tab-tit">고향사랑e음 로그인</h3>
+          <div class="pc_img">
+            <div class="details_steps">
+              <img src="/images/guide/PC_GUIDE5/LOGIN/1.png" class="pc_img" alt="메인페이지에서 화면 상단 로그인 버튼을 눌러 로그인 화면으로 이동합니다." />
+              <div class="detailsTxt"><p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 01.</strong> 고향사랑e음에 접속 합니다. 접속 주소 : https://ilovegohyang.go.kr</p></div>
+            </div>
+            <div class="details_steps">
+              <img src="/images/guide/PC_GUIDE5/LOGIN/2.png" class="pc_img" alt="로그인 화면에서 아이디, 비밀번호 찾기 버튼을 눌러 아이디, 비밀번호 찾기 화면으로 이동합니다." />
+              <div class="detailsTxt"><p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 02.</strong> 아이디ㆍ비밀번호 찾기 버튼을 클릭 해주세요</p></div>
+            </div>
+            <div class="details_steps">
+              <img src="/images/guide/PC_GUIDE5/LOGIN/3.png" class="pc_img" alt="비밀번호 찾기 화면에서 이름과 오프라인 기부시에 받은 납부신청서에 기재된 아이디를 입력하고 본인인증 버튼을 누르면 본인인증 팝업이 제공됩니다." />
+              <div class="detailsTxt">
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 03.</strong> 비밀번호 찾기 버튼을 클릭 해주세요</p>
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 04.</strong> 기부자님 성명과 납부청구서에 기재된 아이디를 입력해주세요</p>
+              </div>
+            </div>
+            <div class="details_steps">
+              <img src="/images/guide/PC_GUIDE5/LOGIN/4.png" class="pc_img" alt="본인인증 팝업에서 금융인증서 인증하기, 휴대폰 인증하기 중 한가지 방법을 선택하면 인증을 위한 팝업이 제공됩니다." />
+              <div class="detailsTxt"><p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 05.</strong> 금융인증서, 휴대폰 중 한가지를 사용하여 인증을 진행해 주세요</p></div>
+            </div>
+            <div class="details_steps">
+              <img src="/images/guide/PC_GUIDE5/LOGIN/5.png" class="pc_img" alt="본인인증이 완료되면 새로운 비밀번호를 설정할 수 있는 화면이 제공됩니다." />
+              <div class="detailsTxt">
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 06.</strong> 인증이 완료 되시면 새로운 비밀번호를 설정 하실 수 있습니다.</p>
+                <p style="margin-left: 25px">입력하기 항목에 새로운 비밀번호를 위아래 동일하게 작성 하시고 확인을 클릭해 주세요</p>
+              </div>
+            </div>
+            <div class="details_steps">
+              <img src="/images/guide/PC_GUIDE5/LOGIN/6.png" class="pc_img" alt="이동한 메인페이지에서 상단에 로그인 버튼을 누르면 로그인화면으로 이동합니다." />
+              <div class="detailsTxt">
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 07.</strong> 비밀번호 설정이 완료 되었습니다.</p>
+                <p style="margin-left: 25px">변경된 비밀번호로 고향사랑e음에 로그인 해주세요</p>
+              </div>
+            </div>
+          </div>
+          <div class="mobile_img">
+            <div class="details_steps">
+              <img src="/images/guide/M_GUIDE5/LOGIN/1.png" class="mobile_img" alt="메인페이지에서 화면 상단 로그인 버튼을 눌러 로그인 화면으로 이동합니다." />
+              <div class="detailsTxt">
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 01.</strong> 고향사랑e음에 접속 합니다.</p>
+                <p>접속 주소 : https://ilovegohyang.go.kr</p>
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 02.</strong> 아이디ㆍ비밀번호 찾기 버튼을 클릭 해주세요</p>
+              </div>
+            </div>
+            <div class="details_steps">
+              <img src="/images/guide/M_GUIDE5/LOGIN/2.png" class="mobile_img" alt="비밀번호 찾기 화면에서 이름과 납부신청서에 기재된 아이디를 입력하고 본인인증 버튼을 누르면 본인인증 팝업이 제공됩니다." />
+              <div class="detailsTxt">
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 03.</strong> 비밀번호 찾기 버튼을 클릭 해주세요</p>
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 04.</strong> 기부자님 성명과 납부청구서에 기재된 아이디를 입력해주세요</p>
+              </div>
+            </div>
+            <div class="details_steps">
+              <img src="/images/guide/M_GUIDE5/LOGIN/3.png" class="mobile_img" alt="본인인증 팝업에서 금융인증서, 휴대폰, 공동인증서 중 한가지 방법을 선택하면 인증을 위한 팝업이 제공됩니다." />
+              <div class="detailsTxt"><p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 05.</strong> 금융인증서, 휴대폰, 공동인증서 중 한가지를 사용하여 인증을 진행해 주세요</p></div>
+            </div>
+            <div class="details_steps">
+              <img src="/images/guide/M_GUIDE5/LOGIN/4.png" class="mobile_img" alt="본인인증이 완료되면 새로운 비밀번호를 설정할 수 있는 화면이 제공됩니다." />
+              <div class="detailsTxt"><p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 06.</strong> 인증이 완료 되시면 새로운 비밀번호를 설정 하실 수 있습니다. 입력하기 항목에 새로운 비밀번호를 위아래 동일하게 작성 하시고 확인을 클릭해 주세요</p></div>
+            </div>
+            <div class="details_steps">
+              <img src="/images/guide/M_GUIDE5/LOGIN/5.png" class="mobile_img" alt="이동한 메인페이지에서 상단에 로그인 버튼을 누르면 로그인화면으로 이동합니다." />
+              <div class="detailsTxt">
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 07.</strong> 비밀번호 설정이 완료 되었습니다.</p>
+                <p>변경된 비밀번호로 고향사랑e음에 로그인 해주세요</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 답례품 구매 -->
+        <div class="tab_con" :class="{ view: tab === 2 }" v-show="tab === 2">
+          <h3 class="guide-tab-tit">답례품 구매</h3>
+          <div class="pc_img">
+            <div class="details_steps">
+              <img src="/images/guide/PC_GUIDE2/GIFT/1.png" class="pc_img" alt="답례품 신청하기 순서: 마이페이지 클릭, 기부포인트 현황, 답례품 신청하기." />
+              <div class="detailsTxt">
+                <p>고향사랑e음에 접속 하신 후 <strong class="pointblack">상단 마이페이지</strong> 버튼을 클릭 하세요</p>
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 01.</strong> 마이페이지에서 기부하신 지자체 목록을 확인 하실 수 있습니다.</p>
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 02.</strong> 기부포인트 현황을 클릭 하시면 지자체의 포인트를 확인 하실 수 있습니다.</p>
+              </div>
+            </div>
+            <div class="details_steps">
+              <img src="/images/guide/PC_GUIDE2/GIFT/2.png" class="pc_img" alt="기부포인트 현황 화면에서 기부한 내역을 확인하시고 답례품 몰 가기 버튼을 클릭하시면 답례품 상점 화면으로 이동합니다." />
+              <div class="detailsTxt">
+                <p>정상 기부내역을 확인 하신 후에 포인트를 확인 하세요</p>
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 03.</strong> 기부하신 지자체의 포인트를 클릭 하시거나 답례품 바로가기 버튼을 클릭 하시면 기부하신 지자체의 답례품을 확인 하실 수 있습니다.</p>
+              </div>
+            </div>
+            <div class="details_steps">
+              <img src="/images/guide/PC_GUIDE2/GIFT/3.png" class="pc_img" alt="지방자치단체 답례품 상점 화면에서 주문할 답례품을 선택하시면 상세화면으로 이동, 옵션 및 수량 선택 후 바로선택 버튼을 누르면 주문 페이지로 이동합니다." />
+              <div class="detailsTxt">
+                <p>기부하신 지역의 답례품을 확인 하시고 마음에 드시는 상품을 선택 하세요</p>
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 04.</strong> 기부하신 지역의 포인트를 확인 하시고 구매 하세요</p>
+                <p style="margin-left: 25px">고향사랑e음에서는 답례품 선택 시 갖고 계신 한도 내에서 답례품 선택이 가능 합니다.</p>
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 05.</strong> 바로선택 버튼을 클릭 하시면 답례품 신청이 진행 됩니다.</p>
+              </div>
+            </div>
+          </div>
+          <div class="mobile_img">
+            <div class="detailsTxt" style="padding-top: 0; padding-bottom: 20px">
+              <p style="text-align: center"><strong class="pointblue">답례품신청하기 순서는 다음과 같습니다.</strong></p>
+            </div>
+            <div class="details_steps">
+              <img src="/images/guide/M_GUIDE2/GIFT/1.png" class="mobile_img" style="width: auto" alt="답례품 신청하기 순서: 마이페이지 클릭, 기부포인트 현황, 답례품 신청하기." />
+            </div>
+            <div class="details_steps">
+              <img src="/images/guide/M_GUIDE2/GIFT/2.png" class="mobile_img" alt="오른쪽 상단 전체메뉴 버튼을 선택해 마이페이지 메뉴에서 기부 포인트 현황 버튼을 누르면 기부 포인트 현황 화면으로 이동합니다." />
+              <div class="detailsTxt">
+                <p>고향사랑e음에 접속 하신 후 상단 마이페이지 버튼을 클릭 하세요</p>
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 01.</strong> 마이페이지에서 기부하신 지자체 목록을 확인 하실 수 있습니다.</p>
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 02.</strong> 기부포인트 현황을 클릭 하시면 지자체의 포인트를 확인 하실 수 있습니다.</p>
+              </div>
+            </div>
+            <div class="details_steps">
+              <img src="/images/guide/M_GUIDE2/GIFT/3.png" class="mobile_img" alt="기부 포인트 현황 화면에서 잔여포인트를 확인 하신 후 답례품 몰 가기 버튼을 클릭하면 답례품 몰로 이동합니다." />
+              <div class="detailsTxt">
+                <p>정상 기부내역을 확인 하신 후에 포인트를 확인 하세요</p>
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 03.</strong> 기부하신 지자체의 포인트를 클릭 하시거나 답례품 바로가기 버튼을 클릭 하시면 기부하신 지자체의 답례품을 확인 하실 수 있습니다.</p>
+              </div>
+            </div>
+            <div class="details_steps">
+              <img src="/images/guide/M_GUIDE2/GIFT/4.png" class="mobile_img" alt="답례품 상세화면에서 옵션 및 수량 등을 입력하신 후 바로선택 버튼을 누르면 주문정보 입력 화면으로 이동합니다." />
+              <div class="detailsTxt">
+                <p>기부하신 지역의 답례품을 확인 하시고 마음에 드시는 상품을 선택하세요</p>
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 04.</strong> 기부하신 지역의 포인트를 확인하시고 구매하세요</p>
+                <p>고향사랑e음에서는 답례품 선택 시 갖고 계신 한도 내에서 답례품 선택이 가능합니다.</p>
+                <p style="margin-left: 25px"><strong class="pointblue" style="margin-left: -25px"> 05.</strong> 바로선택 버튼을 클릭 하시면 답례품 신청이 진행 됩니다.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-box">
+          <button type="button" class="blueBtn cancellation" onclick="location.href='#tabMenu'">
+            맨위로<span><img src="/images/icon/cli-icon_btn-hover-arrow.png" alt="" /></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<style>
+@import '/css/donation_guge.css';
+@import '/css/research-box.css';
+</style>

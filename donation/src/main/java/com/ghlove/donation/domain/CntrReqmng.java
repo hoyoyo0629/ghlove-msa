@@ -33,8 +33,11 @@ public class CntrReqmng {
     @Column(name = "LOCGOV_CODE")
     private String locgovCode;
 
+    /** VARCHAR(8) "yyyyMMdd" - AS-IS 관례(Donation.cntrDe와 동일). LocalDateTime이 아니다 -
+     *  예전엔 잘못 매핑돼 있어서 등록 시도마다 "value too long for type character varying(8)"로
+     *  실패하고 있었다. */
     @Column(name = "STTEMNT_PAY_DE")
-    private LocalDateTime sttemntPayDe;
+    private String sttemntPayDe;
 
     @Column(name = "CNTR_AMT")
     private BigDecimal cntrAmt;
@@ -58,8 +61,9 @@ public class CntrReqmng {
     @Column(name = "CNTR_SN")
     private String cntrSn;
 
+    /** VARCHAR(8) "yyyyMMdd" - 위 sttemntPayDe와 같은 이유로 String. */
     @Column(name = "TAX_SYS_CANCEL_DE")
-    private LocalDateTime taxSysCancelDe;
+    private String taxSysCancelDe;
 
     @Column(name = "RELATED_DOC_DPT_NM")
     private String relatedDocDptNm;
@@ -67,8 +71,9 @@ public class CntrReqmng {
     @Column(name = "RELATED_DOC_NUM")
     private String relatedDocNum;
 
+    /** VARCHAR(300) - DDL 폭은 넉넉하지만 실제 값은 "yyyyMMdd" 문자열이다(위와 동일 이유로 String). */
     @Column(name = "RELATED_DOC_DE")
-    private LocalDateTime relatedDocDe;
+    private String relatedDocDe;
 
     @Column(name = "LAST_UPDUSR_ID")
     private Long lastUpdusrId;
