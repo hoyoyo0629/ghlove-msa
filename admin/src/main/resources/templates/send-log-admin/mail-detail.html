@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>메일 발송 상세 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/send-mail-logs}">메일 발송 이력</a></div>
+    <h3>메일 발송 상세</h3>
+    <table class="board_write_table">
+        <colgroup><col style="width:220px;"><col></colgroup>
+        <tbody>
+        <tr><td class="label">발송일시</td><td th:text="${log.sendDate}"></td></tr>
+        <tr><td class="label">발신</td><td th:text="${log.sendName} + ' (' + ${log.sendEmail} + ')'"></td></tr>
+        <tr><td class="label">수신</td><td th:text="${log.receiveName} + ' (' + ${log.receiveEmail} + ')'"></td></tr>
+        <tr><td class="label">제목</td><td th:text="${log.subject}"></td></tr>
+        <tr><td class="label">유형</td><td th:text="${log.mailType}"></td></tr>
+        <tr><td class="label">성공여부</td><td th:text="${log.sendFlag == 'Y'} ? '성공' : '실패'"></td></tr>
+        <tr><td class="label">본문</td><td><div th:utext="${log.content}"></div></td></tr>
+        </tbody>
+    </table>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

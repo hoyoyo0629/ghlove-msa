@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>SMS 발송 이력 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>SMS 발송 이력</h3>
+    <table class="board_list_table">
+        <thead><tr><th>발송일시</th><th>발신번호</th><th>수신번호</th><th>내용</th><th>유형</th></tr></thead>
+        <tbody>
+        <tr th:each="l : ${logs}">
+            <td th:text="${l.createdDate}"></td>
+            <td th:text="${l.sendTelNumber}"></td>
+            <td th:text="${l.receiveTelNumber}"></td>
+            <td th:text="${l.content}"></td>
+            <td th:text="${l.sendType}"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(logs)}">발송 이력이 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

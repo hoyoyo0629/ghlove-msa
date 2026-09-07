@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>판매자 시스템공지 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/seller-notices}">판매자 시스템공지 관리</a></div>
+    <h3><span th:if="${readonly}">공지 상세</span>
+        <span th:unless="${readonly}" th:text="${notice.noticeId != null ? '공지 수정' : '공지 등록'}"></span></h3>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="공지 등록/수정">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>제목</td>
+                <td>
+                    <input th:unless="${readonly}" type="text" name="subject" th:value="${notice.subject}" required form="noticeForm">
+                    <span th:if="${readonly}" th:text="${notice.subject}"></span>
+                </td>
+            </tr>
+            <tr th:unless="${readonly}">
+                <td class="label">공지 고정</td>
+                <td><input type="checkbox" name="noticeFlag" th:checked="${notice.noticeFlag == 'Y'}" form="noticeForm"></td>
+            </tr>
+            <tr>
+                <td class="label">내용</td>
+                <td>
+                    <textarea th:unless="${readonly}" name="content" rows="10" th:text="${notice.content}" form="noticeForm"></textarea>
+                    <p th:if="${readonly}" th:text="${notice.content}" style="white-space:pre-wrap;"></p>
+                </td>
+            </tr>
+            <tr th:if="${readonly}">
+                <td class="label">조회수</td>
+                <td th:text="${notice.hits}"></td>
+            </tr>
+            <tr th:unless="${readonly}">
+                <td class="label">첨부파일 추가</td>
+                <td><input type="file" name="file" form="noticeForm"></td>
+            </tr>
+            <tr th:if="${notice.noticeId} != null">
+                <td class="label">첨부파일</td>
+                <td>
+                    <ul>
+                        <li th:each="f : ${files}">
+                            <a th:href="@{'/admin/seller-notices/files/' + ${f.fileId} + '/download'}" th:text="${f.orgnlAtchFileNm}"></a>
+                            <form th:unless="${readonly}" th:action="@{'/admin/seller-notices/' + ${notice.noticeId} + '/files/' + ${f.fileId} + '/delete'}"
+                                  method="post" class="inline-form" onsubmit="return confirm('첨부파일을 삭제하시겠습니까?')">
+                                <button type="submit" class="small-btn danger">삭제</button>
+                            </form>
+                        </li>
+                    </ul>
+                    <p th:if="${#lists.isEmpty(files)}">첨부파일 없음</p>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <form th:unless="${readonly}" id="noticeForm" enctype="multipart/form-data"
+          th:action="${notice.noticeId} != null ? @{'/admin/seller-notices/' + ${notice.noticeId}} : @{/admin/seller-notices}" method="post"></form>
+    <div class="btn_all btn_center">
+        <a th:if="${readonly}" class="btn btn-small" th:href="@{'/admin/seller-notices/' + ${notice.noticeId} + '/edit'}">수정</a>
+        <button th:unless="${readonly}" type="submit" form="noticeForm" class="btn btn-dark-gray btn-small">저장</button>
+        <form th:if="${notice.noticeId != null and readonly != true}" th:action="@{'/admin/seller-notices/' + ${notice.noticeId} + '/delete'}"
+              method="post" class="inline-form" onsubmit="return confirm('삭제하시겠습니까?')" style="display:inline;">
+            <button type="submit" class="btn btn-small">삭제</button>
+        </form>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

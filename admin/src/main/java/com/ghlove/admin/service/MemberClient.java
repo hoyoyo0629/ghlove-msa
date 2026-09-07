@@ -88,4 +88,22 @@ public class MemberClient {
     public record UserActionLog(Integer actionLogId, String createdDate, String remoteAddr,
                                  String requestUri, String requestMethod, String loginId) {
     }
+
+    /** "회원 권한/상태변경 이력 관리" 화면용 (SFR-002 "권한 변경, 계정 잠금/해제" 감사로그). */
+    public List<ChangeLog> changeLogs() {
+        try {
+            List<ChangeLog> logs = restClient.get()
+                    .uri("/api/admin/change-log")
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<ChangeLog>>() {
+                    });
+            return logs != null ? logs : List.of();
+        } catch (RestClientException e) {
+            return List.of();
+        }
+    }
+
+    public record ChangeLog(Long changeLogId, Long userId, String loginId, String parameter,
+                             String remoteAddr, String createdDate) {
+    }
 }

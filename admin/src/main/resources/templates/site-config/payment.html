@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>결제수단 설정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3><span>결제수단 설정</span></h3>
+    <div th:replace="~{fragments/site-config-nav :: tabs('payment')}"></div>
+    <p class="success" th:if="${param.message}" th:text="${param.message}"></p>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="결제수단 활성화">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr><td class="label">신용카드</td><td><input type="checkbox" name="paymentCard" value="1" th:checked="${config.paymentCard == '1'}" form="paymentForm"> 사용</td></tr>
+            <tr><td class="label">계좌이체</td><td><input type="checkbox" name="paymentBank" value="1" th:checked="${config.paymentBank == '1'}" form="paymentForm"> 사용</td></tr>
+            <tr><td class="label">무통장입금</td><td><input type="checkbox" name="paymentVbank" value="1" th:checked="${config.paymentVbank == '1'}" form="paymentForm"> 사용</td></tr>
+            <tr><td class="label">에스크로</td><td><input type="checkbox" name="paymentEscrow" value="1" th:checked="${config.paymentEscrow == '1'}" form="paymentForm"> 사용</td></tr>
+            <tr><td class="label">편의점 결제</td><td><input type="checkbox" name="paymentConv" value="1" th:checked="${config.paymentConv == '1'}" form="paymentForm"> 사용</td></tr>
+            <tr><td class="label">배송비 착불</td><td><input type="checkbox" name="paymentDlv" value="1" th:checked="${config.paymentDlv == '1'}" form="paymentForm"> 사용</td></tr>
+            <tr><td class="label">실시간계좌이체</td><td><input type="checkbox" name="paymentRealtime" value="1" th:checked="${config.paymentRealtime == '1'}" form="paymentForm"> 사용</td></tr>
+            <tr><td class="label">휴대폰결제</td><td><input type="checkbox" name="paymentHp" value="1" th:checked="${config.paymentHp == '1'}" form="paymentForm"> 사용</td></tr>
+            <tr><td class="label">최소 결제금액</td><td><input type="number" id="minimumPaymentAmount" name="minimumPaymentAmount" th:value="${config.minimumPaymentAmount}" form="paymentForm"> 원</td></tr>
+            <tr><td class="label">편의점결제 한도 코드</td><td><input type="text" id="paymentConvLimit" name="paymentConvLimit" th:value="${config.paymentConvLimit}" maxlength="1" size="2" form="paymentForm"> <span style="font-size:12px;color:#666;">한 자리 코드값(DB 제약상 1자)</span></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <form id="paymentForm" th:action="@{/site-config/payment}" method="post"></form>
+    <div class="btn_all btn_center">
+        <button type="submit" form="paymentForm" class="btn btn-dark-gray btn-small">저장</button>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

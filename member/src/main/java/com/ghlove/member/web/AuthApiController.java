@@ -10,6 +10,7 @@ import com.ghlove.member.service.GiveStateInfo;
 import com.ghlove.member.service.MemberException;
 import com.ghlove.member.service.MemberService;
 import com.ghlove.member.service.PointClient;
+import com.ghlove.member.service.RefreshTokenService;
 import com.ghlove.member.service.SignupForm;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -40,6 +41,7 @@ public class AuthApiController {
     private final BannerClient bannerClient;
     private final PointClient pointClient;
     private final AuthCookieSupport authCookieSupport;
+    private final RefreshTokenService refreshTokenService;
 
     private static final String SESSION_USER_KEY = AuthController.SESSION_USER_KEY;
     private static final String SESSION_PENDING_MFA_USER_ID = "pendingMfaUserId";
@@ -118,21 +120,41 @@ public class AuthApiController {
     }
 
     @PostMapping("/auth/logout")
-    public Map<String, Object> logout(HttpSession session, HttpServletResponse response) {
+    public Map<String, Object> logout(HttpSession session, HttpServletRequest request, HttpServletResponse response) {
         session.invalidate();
-        authCookieSupport.clear(response);
+        authCookieSupport.clear(request, response);
         return statusBody("OK", null, Map.of());
     }
 
+    /**
+     * SFR-002 "인증토큰/세션 관리(재인증 정책)" - GH_AUTH 액세스 토큰이 만료돼도 GH_REFRESH
+     * 쿠키가 아직 유효하면 재로그인 없이 새 액세스 토큰(+새 refresh 토큰, 회전)을 발급한다.
+     */
+    @PostMapping("/auth/refresh")
+    public Map<String, Object> refresh(HttpServletRequest request, HttpServletResponse response) {
+        String refreshToken = authCookieSupport.readRefreshToken(request);
+        return refreshTokenService.consume(refreshToken)
+                .flatMap(memberService::findById)
+                .map(user -> {
+                    authCookieSupport.issue(response, user);
+                    return statusBody("OK", null, Map.of());
+                })
+                .orElseGet(() -> statusBody("ERROR", "다시 로그인해 주세요.", Map.of()));
+    }
+
+    /** AS-IS join.html submit() - 가입 저장 성공 즉시 자동 로그인 처리(세션+쿠키 발급)한다. */
     @PostMapping("/auth/signup")
-    public Map<String, Object> signup(@Valid @RequestBody SignupForm form, BindingResult bindingResult) {
+    public Map<String, Object> signup(@Valid @RequestBody SignupForm form, BindingResult bindingResult,
+                                       HttpServletResponse response, HttpSession session) {
         if (bindingResult.hasErrors()) {
             String message = bindingResult.getFieldErrors().stream()
                     .findFirst().map(e -> e.getDefaultMessage()).orElse("입력값을 확인해 주세요.");
             return statusBody("ERROR", message, Map.of());
         }
         try {
-            memberService.signup(form);
+            User user = memberService.signup(form);
+            session.setAttribute(SESSION_USER_KEY, user);
+            authCookieSupport.issue(response, user);
             return statusBody("OK", null, Map.of());
         } catch (MemberException e) {
             return statusBody("ERROR", e.getMessage(), Map.of());

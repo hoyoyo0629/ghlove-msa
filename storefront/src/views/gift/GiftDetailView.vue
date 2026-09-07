@@ -18,7 +18,7 @@ const mainImage = ref('')
 const activeTab = ref('nav-detail')
 const errorMessage = ref(route.query.errorMessage ?? '')
 
-const reviewForm = ref({ userName: '', orderCode: '', subject: '', content: '', score: 5, recommend: false, images: null })
+const reviewForm = ref({ userName: '', orderCode: route.query.orderCode ?? '', subject: '', content: '', score: 5, recommend: false, images: null })
 const inquiryForm = ref({ question: '', secret: false })
 
 async function load() {
@@ -28,6 +28,9 @@ async function load() {
     mainImage.value = detail.value.imageUrls[0] ? api.assetUrl('gift', detail.value.imageUrls[0]) : '/images/thumb.png'
   } finally {
     loading.value = false
+  }
+  if (route.query.orderCode) {
+    requestAnimationFrame(() => document.getElementById('review-write')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
 }
 onMounted(load)
@@ -112,6 +115,30 @@ async function submitInquiry() {
   }
 }
 
+async function reportReview(review) {
+  if (!auth.loggedIn) return requireLogin()
+  if (review.reportedByMe) { alert('이미 신고한 리뷰입니다.'); return }
+  if (!confirm('이 리뷰를 신고하시겠습니까?')) return
+  try {
+    await api.post('gift', `/api/gifts/${props.itemId}/reviews/${review.itemReviewId}/report`, {})
+    await load()
+  } catch (e) {
+    alert(e.message)
+  }
+}
+
+async function reportInquiry(inquiry) {
+  if (!auth.loggedIn) return requireLogin()
+  if (inquiry.reportedByMe) { alert('이미 신고한 문의입니다.'); return }
+  if (!confirm('이 문의를 신고하시겠습니까?')) return
+  try {
+    await api.post('gift', `/api/gifts/${props.itemId}/inquiries/${inquiry.inquiryId}/report`, {})
+    await load()
+  } catch (e) {
+    alert(e.message)
+  }
+}
+
 function formatN(n) {
   return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
 }
@@ -163,6 +190,21 @@ function formatN(n) {
               <p class="s-txt">{{ detail.gift.itemSummary }}</p>
             </div>
             <div class="present_price"><strong>{{ formatN(detail.gift.salePrice) }}</strong> P</div>
+          </div>
+
+          <!-- SFR-005 "카탈로그 관리: 옵션" - 카탈로그 정보 표시만(장바구니/주문에는 아직
+               반영 안 됨, admin에서 등록/관리는 완전히 동작). -->
+          <div class="info_row" v-if="detail.options.length">
+            <div class="s-txt" style="width: 100%">
+              <p style="font-weight: bold; margin-bottom: 4px">선택 가능 옵션</p>
+              <ul>
+                <li v-for="o in detail.options" :key="o.itemOptionId">
+                  {{ o.optionName }}
+                  <span v-if="o.optionPrice">(+{{ formatN(o.optionPrice) }}P)</span>
+                  <span v-if="o.soldOut" style="color: #c00">품절</span>
+                </li>
+              </ul>
+            </div>
           </div>
 
           <div class="info_row rev_donation_wrap">
@@ -273,13 +315,16 @@ function formatN(n) {
                           <img v-for="src in r.imageUrls" :key="src" :src="api.assetUrl('gift', src)" style="width: 80px; height: 80px; object-fit: cover; margin-right: 6px" />
                         </div>
                       </div>
+                      <button type="button" class="formBtn" style="margin-top:6px; padding:2px 10px; font-size:12px;" @click="reportReview(r)">
+                        {{ r.reportedByMe ? '신고됨' : '신고' }}
+                      </button>
                     </div>
                   </li>
                 </ul>
                 <p class="empty" v-if="!detail.reviews.length">등록된 리뷰가 없습니다.</p>
               </div>
 
-              <form class="board_write" style="margin-top: 20px" @submit.prevent="submitReview">
+              <form id="review-write" class="board_write" style="margin-top: 20px" @submit.prevent="submitReview">
                 <table class="board_write_table">
                   <colgroup><col style="width: 150px" /><col /></colgroup>
                   <tbody>
@@ -332,6 +377,9 @@ function formatN(n) {
                           <p v-if="q.answer" style="color: #00215a; margin-top: 8px">ㄴ {{ q.answer }}</p>
                         </div>
                       </div>
+                      <button type="button" class="formBtn" style="margin-top:6px; padding:2px 10px; font-size:12px;" @click="reportInquiry(q)">
+                        {{ q.reportedByMe ? '신고됨' : '신고' }}
+                      </button>
                     </div>
                   </li>
                 </ul>

@@ -44,4 +44,10 @@ public class Banner {
      *  배너가 하나도 안 쌓여있던(=슬라이드가 안 보이던) 진짜 원인. */
     @Column(name = "CREATED_DATE")
     private String createdDate;
+
+    /** 노출위치 - AS-IS UserLoginBannerManagerController(loginWeb/loginMobile)가 별도
+     *  화면으로 관리하던 로그인 전용 배너를 이 배너관리 화면에 노출위치 구분 필드로 흡수
+     *  통합했다. MAIN(메인 캐러셀, 기본값)/LOGIN_WEB(로그인 웹)/LOGIN_MOBILE(로그인 모바일). */
+    @Column(name = "BANNER_TYPE")
+    private String bannerType;
 }

@@ -46,7 +46,20 @@
         <a class="btn" style="float:right;" th:href="@{/admin/gift-items/new}">+ 답례품 직접 등록</a>
     </form>
 
-    <form th:action="@{/admin/gift-items/bulk-category}" method="post">
+    <p style="margin-bottom:12px;">
+        <a th:href="@{/admin/gift-items/representative}">대표상품관리</a> ·
+        <a th:href="@{/admin/gift-reviews}">답례품 리뷰 관리</a> ·
+        <a th:href="@{/admin/gift-inquiries}">답례품 문의(Q&amp;A) 관리</a>
+    </p>
+
+    <div class="bulk-bar">
+        <span>엑셀:</span>
+        <a class="small-btn" th:href="@{/admin/gift-items/excel}">대량등록(업로드)</a>
+        <a class="small-btn"
+           th:href="@{/admin/gift-items/export(itemName=${itemName},categoryCode=${categoryCode},sellerId=${sellerId},dataStatusCode=${dataStatusCode})}">현재 목록 다운로드(CSV)</a>
+    </div>
+
+    <form id="bulkForm" th:action="@{/admin/gift-items/bulk-category}" method="post">
         <div class="bulk-bar">
             <span>선택 항목 카테고리 일괄 배정:</span>
             <select name="categoryCode">
@@ -54,10 +67,27 @@
             </select>
             <button type="submit" class="small-btn" onclick="return confirm('선택한 답례품의 카테고리를 일괄 변경하시겠습니까?')">일괄 배정</button>
         </div>
+        <div class="bulk-bar">
+            <span>선택 항목 일괄 처리:</span>
+            <button type="submit" formaction="@{/admin/gift-items/bulk-display}" name="displayFlag" value="Y" class="small-btn"
+                    onclick="return confirm('선택한 답례품을 노출 처리하시겠습니까?')">노출 ON</button>
+            <button type="submit" formaction="@{/admin/gift-items/bulk-display}" name="displayFlag" value="N" class="small-btn"
+                    onclick="return confirm('선택한 답례품을 비노출 처리하시겠습니까?')">노출 OFF</button>
+            <select name="itemLabel">
+                <option value="1">라벨:없음</option>
+                <option value="2">NEW</option>
+                <option value="3">SALE</option>
+                <option value="4">사기</option>
+            </select>
+            <button type="submit" formaction="@{/admin/gift-items/bulk-label}" class="small-btn">라벨 적용</button>
+            <button type="submit" formaction="@{/admin/gift-items/bulk-sales}" formmethod="get" class="small-btn">판매정보 일괄수정</button>
+            <button type="submit" formaction="@{/admin/gift-items/bulk-delete}" class="small-btn" style="color:#c00;"
+                    onclick="return confirm('선택한 답례품을 삭제(폐지) 처리하시겠습니까? 되돌릴 수 없습니다.')">일괄 삭제</button>
+        </div>
 
         <table class="board_list_table">
             <thead>
-            <tr><th></th><th>ID</th><th>답례품명</th><th>카테고리</th><th>판매자</th><th>가격</th><th>재고</th><th>상태</th><th>처리</th></tr>
+            <tr><th></th><th>ID</th><th>답례품명</th><th>카테고리</th><th>판매자</th><th>가격</th><th>재고</th><th>상태</th><th>노출</th><th>라벨</th><th>순서</th><th>처리</th></tr>
             </thead>
             <tbody>
             <tr th:each="it : ${items}">
@@ -76,17 +106,38 @@
                     <span th:case="'DISCONTINUED'">폐지</span>
                     <span th:case="*" th:text="${it.dataStatusCode()}"></span>
                 </td>
+                <td th:text="${it.displayFlag()} == 'Y' ? '노출' : '비노출'"></td>
+                <td th:switch="${it.itemLabel()}">
+                    <span th:case="'2'">NEW</span>
+                    <span th:case="'3'">SALE</span>
+                    <span th:case="'4'">사기</span>
+                    <span th:case="*">-</span>
+                </td>
+                <td><input type="number" name="orderings" style="width:60px;" th:value="${it.adminOrdering()} ?: 0" form="orderingForm">
+                    <input type="hidden" name="itemIds" th:value="${it.itemId()}" form="orderingForm"></td>
                 <td>
                     <a class="small-btn" th:href="@{/admin/gift-items/{id}/edit(id=${it.itemId()})}">수정</a>
                     <form class="inline-form" style="display:inline;" th:action="@{/admin/gift-items/{id}/copy(id=${it.itemId()})}" method="post"
                           onsubmit="return confirm('이 답례품을 복사하시겠습니까? 복사본은 승인대기 상태로 생성됩니다.')">
                         <button type="submit" class="small-btn">복사</button>
                     </form>
+                    <span th:if="${it.dataStatusCode() == 'PENDING'}">
+                        <form class="inline-form" style="display:inline;" th:action="@{/admin/gift-items/{id}/approve(id=${it.itemId()})}" method="post">
+                            <button type="submit" class="small-btn">승인</button>
+                        </form>
+                        <form class="inline-form" style="display:inline;" th:action="@{/admin/gift-items/{id}/reject(id=${it.itemId()})}" method="post"
+                              onsubmit="return confirm('이 답례품을 반려하시겠습니까?')">
+                            <button type="submit" class="small-btn danger">반려</button>
+                        </form>
+                    </span>
                 </td>
             </tr>
             </tbody>
         </table>
         <p class="empty" th:if="${#lists.isEmpty(items)}">검색된 답례품이 없습니다.</p>
+    </form>
+    <form id="orderingForm" th:action="@{/admin/gift-items/bulk-ordering}" method="post">
+        <button type="submit" form="orderingForm" class="small-btn" th:if="${not #lists.isEmpty(items)}">순서 저장</button>
     </form>
 </div>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>

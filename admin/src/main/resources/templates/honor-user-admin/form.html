@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>지자체 명예직원 선정기준 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/honor-users}">지자체 명예직원 관리</a></div>
+    <h3 th:text="${isNew} ? '선정기준 등록' : '선정기준 수정'"></h3>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="지자체 선정기준 등록/수정">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>지자체</td>
+                <td>
+                    <select th:if="${isNew}" name="lclgvCd" required form="hnrForm">
+                        <option value="">선택</option>
+                        <option th:each="l : ${locgovs}" th:value="${l.locgovCode}"
+                                th:text="${l.upperLocgovNm} + ' ' + ${l.locgovNm}"></option>
+                    </select>
+                    <span th:unless="${isNew}" th:text="${row.lclgvCd}"></span>
+                    <input th:unless="${isNew}" type="hidden" name="lclgvCd" th:value="${row.lclgvCd}" form="hnrForm">
+                </td>
+            </tr>
+            <tr>
+                <td class="label">설정 제목</td>
+                <td><input type="text" name="hnrUserStngTtl" th:value="${row.hnrUserStngTtl}" form="hnrForm"></td>
+            </tr>
+            <tr>
+                <td class="label">골드 등급 기준 기부금액</td>
+                <td><input type="number" name="gldGrdDntnAmt" th:value="${row.gldGrdDntnAmt}" form="hnrForm"></td>
+            </tr>
+            <tr>
+                <td class="label">실버 등급 기준 기부금액</td>
+                <td><input type="number" name="slvrGrdDntnAmt" th:value="${row.slvrGrdDntnAmt}" form="hnrForm"></td>
+            </tr>
+            <tr>
+                <td class="label">브론즈 등급 기준 기부금액</td>
+                <td><input type="number" name="brnzGrdDntnAmt" th:value="${row.brnzGrdDntnAmt}" form="hnrForm"></td>
+            </tr>
+            <tr>
+                <td class="label">선정 구분 코드</td>
+                <td>
+                    <select name="hnrUserSlctnSeCd" form="hnrForm">
+                        <option value="">선택</option>
+                        <option value="JEJU_REQ_CRTR" th:selected="${row.hnrUserSlctnSeCd == 'JEJU_REQ_CRTR'}">누적기준(제주형)</option>
+                        <option value="BF_YR_1YR" th:selected="${row.hnrUserSlctnSeCd == 'BF_YR_1YR'}">전년도 1년 기준</option>
+                        <option value="NOW_CRTR_1YR_WTHN" th:selected="${row.hnrUserSlctnSeCd == 'NOW_CRTR_1YR_WTHN'}">최근 1년 이내 기준</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">혜택 내용</td>
+                <td><textarea name="hnrUserRwrd" rows="6" th:text="${row.hnrUserRwrd}" form="hnrForm"></textarea></td>
+            </tr>
+            <tr th:unless="${isNew}">
+                <td class="label">사용여부</td>
+                <td><input type="checkbox" name="useYn" th:checked="${row.useYn == 'Y'}" form="hnrForm"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <form id="hnrForm"
+          th:action="${isNew} ? @{/admin/honor-users} : @{'/admin/honor-users/' + ${row.lclgvCd}}" method="post"></form>
+    <div class="btn_all btn_center">
+        <button type="submit" form="hnrForm" class="btn btn-dark-gray btn-small">저장</button>
+        <form th:unless="${isNew}" th:action="@{'/admin/honor-users/' + ${row.lclgvCd} + '/delete'}"
+              method="post" class="inline-form" onsubmit="return confirm('삭제하시겠습니까?')" style="display:inline;">
+            <button type="submit" class="btn btn-small">삭제</button>
+        </form>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

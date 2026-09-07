@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>PG 결제현황 조회 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/order/payinfo(PayInfoManagerController) - 이 플랫폼은 실제 PG(카드결제
+     등) 연동이 없어 결제수단은 항상 "포인트" 고정값이다. 취소실패건 = SAGA 보상실패로 인한
+     시스템 자동취소(재고/포인트 부족) - 고객이 직접 취소한 건과 구분한다. -->
+<div class="contents contents_inner">
+    <h3><span>PG 결제현황 조회</span></h3>
+    <p style="color:#888; margin-bottom:12px;">이 플랫폼의 답례품 결제는 기부포인트 단일 결제수단이라 실제 PG 연동은 없습니다. 아래는 OD_ORDER의 결제(포인트차감) 이력을 결제현황 관점으로 보여줍니다.</p>
+
+    <form th:action="@{/admin/pay-info}" method="get" id="searchForm">
+        <div class="board_write">
+            <table class="board_write_table" summary="결제현황 검색조건">
+                <colgroup><col style="width:150px;"><col><col style="width:150px;"><col></colgroup>
+                <tbody>
+                <tr th:unless="${locgovScoped}">
+                    <td class="label">지자체코드</td>
+                    <td><input type="text" name="locgovCode" th:value="${locgovCode}" placeholder="전체" style="width:140px;"></td>
+                    <td class="label">주문일자</td>
+                    <td>
+                        <div class="flex_box gap-08">
+                            <input type="date" name="startDate" th:value="${startDate}" style="width:150px;">
+                            <span class="wave">~</span>
+                            <input type="date" name="endDate" th:value="${endDate}" style="width:150px;">
+                        </div>
+                    </td>
+                </tr>
+                <tr th:if="${locgovScoped}">
+                    <td class="label">주문일자</td>
+                    <td colspan="3">
+                        <div class="flex_box gap-08">
+                            <input type="date" name="startDate" th:value="${startDate}" style="width:150px;">
+                            <span class="wave">~</span>
+                            <input type="date" name="endDate" th:value="${endDate}" style="width:150px;">
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">조회범위</td>
+                    <td colspan="3">
+                        <label><input type="checkbox" name="failedOnly" value="true" th:checked="${failedOnly}"> 취소/처리실패건만 보기</label>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="btn_all btn_right" style="margin-bottom:16px;">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-dark-gray btn-small" onclick="location.href='/admin/pay-info'">초기화</button>
+                <button type="submit" class="btn btn-dark-gray btn-small">검색</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="count_title mt-40">
+        <h5>총 <span th:text="${totalCount}" th:remove="tag"></span>건</h5>
+    </div>
+
+    <table class="board_list_table" summary="PG 결제현황">
+        <caption>결제현황목록</caption>
+        <thead>
+        <tr>
+            <th scope="col">주문번호</th>
+            <th scope="col">주문자ID</th>
+            <th scope="col">답례품명</th>
+            <th scope="col">판매자ID</th>
+            <th scope="col">결제수단</th>
+            <th scope="col">결제금액</th>
+            <th scope="col">결제상태</th>
+            <th scope="col">사유</th>
+            <th scope="col">결제일시</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="p : ${payments}">
+            <td><a th:href="@{'/admin/orders/' + ${p.orderId()}}" th:text="${p.orderId()}"></a></td>
+            <td th:text="${p.userId()}"></td>
+            <td class="tleft" th:text="${p.itemName()}"></td>
+            <td th:text="${p.sellerId()}"></td>
+            <td th:text="${p.paymentMethod()}"></td>
+            <td th:text="${#numbers.formatInteger(p.paymentAmount(), 0, 'COMMA')} + 'P'"></td>
+            <td th:text="${p.paymentStatus()}"
+                th:classappend="${#strings.contains(p.paymentStatus(), '실패')} ? 'text-danger' : ''"></td>
+            <td class="tleft" th:text="${p.cancelReason()} ?: '-'"></td>
+            <td th:text="${p.createdDate() != null ? #strings.substring(p.createdDate(), 0, 16) : '-'}"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(payments)}">조회된 결제내역이 없습니다.</p>
+
+    <div class="pagination-wrap" th:if="${totalPages > 1}">
+        <div class="pagination">
+            <a th:if="${currentPage > 0}" class="prev"
+               th:href="@{/admin/pay-info(locgovCode=${locgovCode},failedOnly=${failedOnly},startDate=${startDate},endDate=${endDate},page=${currentPage - 1},size=${size})}">이전</a>
+            <span th:each="p : ${#numbers.sequence(0, totalPages - 1)}">
+                <strong th:if="${p == currentPage}" th:text="${p + 1}"></strong>
+                <a th:unless="${p == currentPage}"
+                   th:href="@{/admin/pay-info(locgovCode=${locgovCode},failedOnly=${failedOnly},startDate=${startDate},endDate=${endDate},page=${p},size=${size})}"
+                   th:text="${p + 1}"></a>
+            </span>
+            <a th:if="${currentPage < totalPages - 1}" class="next"
+               th:href="@{/admin/pay-info(locgovCode=${locgovCode},failedOnly=${failedOnly},startDate=${startDate},endDate=${endDate},page=${currentPage + 1},size=${size})}">다음</a>
+        </div>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

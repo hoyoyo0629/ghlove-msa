@@ -48,4 +48,8 @@ public class Inquiry {
 
     @Column(name = "CREATED_DATE")
     private LocalDateTime createdDate;
+
+    /** 부적절한 문의 블라인드 처리(비노출)/복원 - Review.displayFlag와 동일한 관례. */
+    @Column(name = "DISPLAY_FLAG")
+    private String displayFlag;
 }

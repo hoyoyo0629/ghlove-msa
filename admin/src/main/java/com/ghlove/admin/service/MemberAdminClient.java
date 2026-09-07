@@ -123,6 +123,70 @@ public class MemberAdminClient {
         }
     }
 
+    /** 계정잠금 해제 (SFR-002). */
+    public void unlock(Long userId) {
+        try {
+            restClient.post().uri("/api/admin/members/{id}/unlock", userId).retrieve().toBodilessEntity();
+        } catch (RestClientResponseException e) {
+            throw new ManagerException(extractMessage(e, "잠금 해제에 실패했습니다."));
+        }
+    }
+
+    /** RBAC 권한 회수 (SFR-002). */
+    public void revokeRole(Long userId, String authority) {
+        try {
+            restClient.post().uri("/api/admin/members/{id}/roles/{authority}/revoke", userId, authority)
+                    .retrieve().toBodilessEntity();
+        } catch (RestClientResponseException e) {
+            throw new ManagerException(extractMessage(e, "권한 회수에 실패했습니다."));
+        }
+    }
+
+    /** 휴면전환 배치 수동 트리거 (SFR-002). */
+    public int runDormancyBatch() {
+        try {
+            Map<?, ?> result = restClient.post().uri("/api/admin/batch/dormancy").retrieve().body(Map.class);
+            return result != null && result.get("count") != null ? ((Number) result.get("count")).intValue() : 0;
+        } catch (RestClientException e) {
+            throw new ManagerException("휴면전환 배치 실행에 실패했습니다.");
+        }
+    }
+
+    /** 데이터 파기 절차 1/2: 탈퇴회원 PII 익명화 수동 트리거 (SFR-002). */
+    public int runWithdrawnDestruction() {
+        try {
+            Map<?, ?> result = restClient.post().uri("/api/admin/batch/data-destruction/withdrawn").retrieve().body(Map.class);
+            return result != null && result.get("count") != null ? ((Number) result.get("count")).intValue() : 0;
+        } catch (RestClientException e) {
+            throw new ManagerException("탈퇴회원 데이터 파기 실행에 실패했습니다.");
+        }
+    }
+
+    /** 데이터 파기 절차 2/2: 오래된 로그인 로그 IP 마스킹 수동 트리거 (SFR-002). */
+    public int runLogDestruction() {
+        try {
+            Map<?, ?> result = restClient.post().uri("/api/admin/batch/data-destruction/logs").retrieve().body(Map.class);
+            return result != null && result.get("count") != null ? ((Number) result.get("count")).intValue() : 0;
+        } catch (RestClientException e) {
+            throw new ManagerException("로그 데이터 파기 실행에 실패했습니다.");
+        }
+    }
+
+    public List<DestructionHistoryRow> destructionHistory() {
+        try {
+            List<DestructionHistoryRow> rows = restClient.get().uri("/api/admin/batch/data-destruction/history")
+                    .retrieve().body(new org.springframework.core.ParameterizedTypeReference<List<DestructionHistoryRow>>() {
+                    });
+            return rows != null ? rows : List.of();
+        } catch (RestClientException e) {
+            return List.of();
+        }
+    }
+
+    public record DestructionHistoryRow(Long destructionId, Long userId, String destroyedFields, String reason,
+                                         String destroyedDate) {
+    }
+
     private static Optional<String> opt(String value) {
         return Optional.ofNullable(value == null || value.isBlank() ? null : value);
     }

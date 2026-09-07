@@ -68,7 +68,7 @@ public class OffgiveClient {
 
     public RegisterResult register(Long userId, String walkInName, String walkInPhone, String walkInBirthday,
                                     String walkInAddress, String locgovCode, BigDecimal amount,
-                                    String rceptBankCode, String rceptBankNm) {
+                                    String rceptBankCode, String rceptBankNm, String signatureImage) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         if (userId != null) {
             body.add("userId", String.valueOf(userId));
@@ -93,6 +93,9 @@ public class OffgiveClient {
         if (rceptBankNm != null) {
             body.add("rceptBankNm", rceptBankNm);
         }
+        if (signatureImage != null && !signatureImage.isBlank()) {
+            body.add("signatureImage", signatureImage);
+        }
         try {
             return restClient.post().uri("/api/offgive")
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
@@ -115,7 +118,7 @@ public class OffgiveClient {
 
     public record Donation(String cntrSn, String cntrDe, Long userId, String cntrLocgovCode, BigDecimal cntrAmt,
                             String cntrSttusCode, String cntrPathCode, String rceptBankCode, String rceptBankNm,
-                            String frstRegistPnttm) {
+                            String frstRegistPnttm, String signatureFileNm) {
     }
 
     public record WalkIn(Long userId, String loginId, String tempPassword) {

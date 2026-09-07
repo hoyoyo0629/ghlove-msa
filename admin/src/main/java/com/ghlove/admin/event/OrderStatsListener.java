@@ -30,6 +30,7 @@ public class OrderStatsListener {
             case "ORDER_CONFIRMED" -> statsService.onOrderConfirmed(objectMapper.readValue(payload, OrderConfirmedEvent.class));
             case "ORDER_CANCELLED" -> statsService.onOrderCancelled(objectMapper.readValue(payload, OrderCancelledEvent.class));
             case "ORDER_DELIVERY_UPDATED" -> statsService.onOrderDeliveryUpdated(objectMapper.readValue(payload, OrderDeliveryUpdatedEvent.class));
+            case "ORDER_CLAIM_UPDATED" -> statsService.onClaimUpdated(objectMapper.readValue(payload, OrderClaimUpdatedEvent.class));
             default -> { /* STOCK_/POINT_ events not relevant to stats */ }
         }
     }

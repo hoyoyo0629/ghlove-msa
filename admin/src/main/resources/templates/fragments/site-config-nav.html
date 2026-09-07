@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/* 쇼핑몰 설정 허브 서브 화면 공통 탭 (AS-IS opmanager/config - ConfigManagerController).
+     opmanager.css의 기존 .tabs 클래스(admin_wrap 하위)를 그대로 사용한다. */-->
+<ul class="tabs" th:fragment="tabs(active)" style="margin-bottom:20px;">
+    <li th:classappend="${active == 'basic'} ? 'active'"><a th:href="@{/site-config}">기본 정보</a></li>
+    <li th:classappend="${active == 'deny'} ? 'active'"><a th:href="@{/site-config/deny}">가입거부 블랙리스트</a></li>
+    <li th:classappend="${active == 'payment'} ? 'active'"><a th:href="@{/site-config/payment}">결제수단</a></li>
+    <li th:classappend="${active == 'delivery'} ? 'active'"><a th:href="@{/site-config/delivery}">배송정책</a></li>
+    <li th:classappend="${active == 'pg'} ? 'active'"><a th:href="@{/site-config/pg}">PG사 연동</a></li>
+    <li th:classappend="${active == 'conversion-tag'} ? 'active'"><a th:href="@{/site-config/conversion-tag}">전환추적스크립트</a></li>
+    <li th:classappend="${active == 'ga'} ? 'active'"><a th:href="@{/site-config/google-analytics}">GA 추적ID</a></li>
+    <li th:classappend="${active == 'order-temp'} ? 'active'"><a th:href="@{/site-config/order-temp}">주문임시저장</a></li>
+</ul>
+</body>
+</html>

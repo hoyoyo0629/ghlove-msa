@@ -17,6 +17,10 @@
      노출한다(전화번호는 상세화면에서만 재확인 게이트 대상). -->
 <div class="contents contents_inner">
     <h3>회원관리</h3>
+    <p style="margin-bottom:12px;">
+        <a th:href="@{/admin/members/batch}">회원 배치관리(휴면전환/데이터파기)</a> ·
+        <a th:href="@{/log/user-change}">권한/상태변경 이력 관리</a>
+    </p>
 
     <form th:action="@{/admin/members}" method="get" id="searchForm">
         <div class="board_write">

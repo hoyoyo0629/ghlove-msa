@@ -235,9 +235,10 @@ public class OperationContentController {
     public String createBanner(@RequestParam String title, @RequestParam(required = false) String contents,
                                 @RequestParam(required = false) String linkUrl,
                                 @RequestParam(required = false) String imageUrl,
-                                @RequestParam(required = false) Integer displayOrder, Model model) {
+                                @RequestParam(required = false) Integer displayOrder,
+                                @RequestParam(required = false) String bannerType, Model model) {
         try {
-            operationContentService.createBanner(title, contents, linkUrl, imageUrl, displayOrder);
+            operationContentService.createBanner(title, contents, linkUrl, imageUrl, displayOrder, bannerType);
             return "redirect:/banners";
         } catch (ContentException e) {
             model.addAttribute("errorMessage", e.getMessage());
@@ -262,9 +263,10 @@ public class OperationContentController {
                                 @RequestParam(required = false) String contents,
                                 @RequestParam(required = false) String linkUrl,
                                 @RequestParam(required = false) String imageUrl,
-                                @RequestParam(required = false) Integer displayOrder, Model model) {
+                                @RequestParam(required = false) Integer displayOrder,
+                                @RequestParam(required = false) String bannerType, Model model) {
         try {
-            operationContentService.updateBanner(id, title, contents, linkUrl, imageUrl, displayOrder);
+            operationContentService.updateBanner(id, title, contents, linkUrl, imageUrl, displayOrder, bannerType);
             return "redirect:/banners";
         } catch (ContentException e) {
             model.addAttribute("errorMessage", e.getMessage());

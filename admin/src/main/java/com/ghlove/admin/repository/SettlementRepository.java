@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface SettlementRepository extends JpaRepository<Settlement, Long> {
     List<Settlement> findAllByOrderBySettlementIdDesc();
+
+    List<Settlement> findByStatusOrderBySettlementIdDesc(String status);
 }

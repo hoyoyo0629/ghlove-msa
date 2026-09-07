@@ -50,10 +50,11 @@ public class OffgiveApiController {
                                        @RequestParam(required = false) String walkInAddress,
                                        @RequestParam String locgovCode, @RequestParam BigDecimal amount,
                                        @RequestParam(required = false) String rceptBankCode,
-                                       @RequestParam(required = false) String rceptBankNm) {
+                                       @RequestParam(required = false) String rceptBankNm,
+                                       @RequestParam(required = false) String signatureImage) {
         try {
             OffgiveService.Result result = offgiveService.register(userId, walkInName, walkInPhone, walkInBirthday,
-                    walkInAddress, locgovCode, amount, rceptBankCode, rceptBankNm);
+                    walkInAddress, locgovCode, amount, rceptBankCode, rceptBankNm, signatureImage);
             return ResponseEntity.ok(new RegisterResultDto(DonationDto.of(result.donation()),
                     result.walkIn() != null ? WalkInDto.of(result.walkIn()) : null));
         } catch (DonationException e) {
@@ -63,11 +64,11 @@ public class OffgiveApiController {
 
     public record DonationDto(String cntrSn, String cntrDe, Long userId, String cntrLocgovCode, BigDecimal cntrAmt,
                                String cntrSttusCode, String cntrPathCode, String rceptBankCode, String rceptBankNm,
-                               String frstRegistPnttm) {
+                               String frstRegistPnttm, String signatureFileNm) {
         static DonationDto of(Donation d) {
             return new DonationDto(d.getCntrSn(), d.getCntrDe(), d.getUserId(), d.getCntrLocgovCode(),
                     d.getCntrAmt(), d.getCntrSttusCode(), d.getCntrPathCode(), d.getRceptBankCode(),
-                    d.getRceptBankNm(), d.getFrstRegistPnttm());
+                    d.getRceptBankNm(), d.getFrstRegistPnttm(), d.getSignatureFileNm());
         }
     }
 

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${mode == 'create'} ? '모바일 카테고리 편집 등록 - 고향사랑e음 (admin service)' : '모바일 카테고리 편집 수정 - 고향사랑e음 (admin service)'"></title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
+    <style>.error-box { color:#c00; background:#fdecec; border:1px solid #f5b5b5; padding:8px 12px; border-radius:4px; margin-bottom:12px; }
+    .edit-preview { max-width:200px; display:block; margin-bottom:6px; }</style>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner" th:object="${row}">
+    <h3><span th:text="${mode == 'create'} ? '모바일 카테고리 편집 등록' : '모바일 카테고리 편집 수정'"></span></h3>
+    <div class="error-box" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="모바일 카테고리 편집">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr><td class="label">화면 코드</td><td><input type="text" name="code" th:value="*{code}" form="editForm" required placeholder="예: main"></td></tr>
+            <tr>
+                <td class="label">종류</td>
+                <td>
+                    <select name="editKind" form="editForm">
+                        <option value="1" th:selected="*{editKind == '1' or editKind == null}">HTML 블록</option>
+                        <option value="2" th:selected="*{editKind == '2'}">배너/프로모션 이미지</option>
+                    </select>
+                </td>
+            </tr>
+            <tr><td class="label">노출 위치</td><td><input type="text" name="editPosition" th:value="*{editPosition}" form="editForm" required placeholder="예: top, middle1, bottom"></td></tr>
+            <tr><td class="label">HTML 내용</td><td><textarea name="editContent" rows="8" th:text="*{editContent}" form="editForm" placeholder="HTML블록일 때 입력"></textarea></td></tr>
+            <tr>
+                <td class="label">배너 이미지</td>
+                <td>
+                    <img th:if="*{editImage != null}" class="edit-preview" th:src="${giftBaseUrl + '/uploads/' + row.editImage}" alt="">
+                    <input type="file" name="editImage" form="editForm" accept="image/*">
+                </td>
+            </tr>
+            <tr><td class="label">연결 URL</td><td><input type="text" name="editUrl" th:value="*{editUrl}" form="editForm" placeholder="배너 클릭 시 이동할 URL"></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <form id="editForm" method="post" enctype="multipart/form-data"
+          th:action="${mode == 'create'} ? @{/admin/mobile-category-edit} : @{/admin/mobile-category-edit/{id}(id=${row.categoryEditId})}"></form>
+    <div class="btn_all btn_center">
+        <button type="submit" form="editForm" class="btn btn-dark-gray btn-small">저장</button>
+        <a class="btn btn-small" th:href="@{/admin/mobile-category-edit}">목록</a>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

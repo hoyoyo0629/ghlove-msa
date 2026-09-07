@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>매뉴얼 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/manuals}">매뉴얼 관리</a></div>
+    <h3><span th:text="${manual.mnlSn} != null ? '매뉴얼 수정' : '매뉴얼 등록'"></span></h3>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="매뉴얼 등록/수정">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>제목</td>
+                <td><input type="text" name="title" th:value="${manual.title}" required form="manualForm"></td>
+            </tr>
+            <tr>
+                <td class="label">연결 화면(메뉴URL)</td>
+                <td><input type="text" name="menuUrlCode" th:value="${manual.menuUrlCode}" placeholder="예: /admin/maintenance" form="manualForm"></td>
+            </tr>
+            <tr>
+                <td class="label">내용</td>
+                <td><textarea name="content" rows="10" th:text="${manual.content}" form="manualForm"></textarea></td>
+            </tr>
+            <tr>
+                <td class="label">첨부파일</td>
+                <td>
+                    <input type="file" name="file" form="manualForm">
+                    <p th:if="${manual.fileSrc != null and !#strings.isEmpty(manual.fileSrc)}">
+                        현재 파일: <a th:href="@{'/admin/manuals/' + ${manual.mnlSn} + '/download'}" th:text="${manual.orgnlFileNm}"></a>
+                    </p>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <form id="manualForm" enctype="multipart/form-data"
+          th:action="${manual.mnlSn} != null ? @{'/admin/manuals/' + ${manual.mnlSn}} : @{/admin/manuals}" method="post"></form>
+    <div class="btn_all btn_center">
+        <button type="submit" form="manualForm" class="btn btn-dark-gray btn-small">저장</button>
+        <form th:if="${manual.mnlSn} != null" th:action="@{'/admin/manuals/' + ${manual.mnlSn} + '/delete'}"
+              method="post" class="inline-form" onsubmit="return confirm('삭제하시겠습니까?')" style="display:inline;">
+            <button type="submit" class="btn btn-small">삭제</button>
+        </form>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

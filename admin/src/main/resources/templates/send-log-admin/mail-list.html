@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>메일 발송 이력 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>메일 발송 이력</h3>
+    <table class="board_list_table">
+        <thead><tr><th>발송일시</th><th>수신자</th><th>수신이메일</th><th>제목</th><th>유형</th><th>성공여부</th></tr></thead>
+        <tbody>
+        <tr th:each="l : ${logs}">
+            <td th:text="${l.sendDate}"></td>
+            <td th:text="${l.receiveName}"></td>
+            <td th:text="${l.receiveEmail}"></td>
+            <td><a th:href="@{'/admin/send-mail-logs/' + ${l.sendMailLogId}}" th:text="${l.subject}"></a></td>
+            <td th:text="${l.mailType}"></td>
+            <td th:text="${l.sendFlag == 'Y'} ? '성공' : '실패'"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(logs)}">발송 이력이 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

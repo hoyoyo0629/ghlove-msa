@@ -14,6 +14,7 @@ import com.ghlove.point.repository.PointLedgerRepository;
 import com.ghlove.point.repository.PointReservationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +42,8 @@ public class PointService {
     private static final String RESV_CONFIRMED = "CONFIRMED";
     private static final String RESV_RELEASED = "RELEASED";
     private static final BigDecimal DEFAULT_RATE_FALLBACK = BigDecimal.valueOf(30);
+    /** 고향사랑 기부금법 제8조 답례품(포인트) 제공한도 - SYSTEM_CONFIG/MAX_POINT_RATE 미설정 시 기본값. */
+    private static final BigDecimal MAX_RATE_FALLBACK = BigDecimal.valueOf(30);
     private static final int DEFAULT_VALID_DAYS_FALLBACK = 1825;
     private static final int DEFAULT_EXPIRY_NOTICE_DAYS_FALLBACK = 30;
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -298,6 +301,18 @@ public class PointService {
     /**
      * 포인트 예약(hold) - SFR-004. 원장/잔액은 건드리지 않고 예약 행만 남긴다 (결제
      * 확정 전 "일단 잡아두기" 단계). 예약 가능 여부는 가용잔액 기준으로 판단한다.
+     *
+     * <p><b>실제 주문결제 SAGA({@link #deductForOrder})와는 의도적으로 분리된 별개
+     * 기능이다</b> - 마이페이지 "포인트 예약 관리" 화면에서 회원이 직접 호출하는 수동
+     * 기능일 뿐, order 체크아웃이 이 경로를 타지 않는다. 이 메서드와 {@link
+     * #confirmReservation}은 (userId, amount) 전역 잔액만 보고 {@code locgovCode}를
+     * 전혀 모른다(이 프로젝트의 다른 모든 포인트 사용 경로 - {@link #deductForOrder},
+     * 장바구니/체크아웃 - 은 전부 지자체별로 분리 관리되는 것과 다름) - 그래서 그대로
+     * 실제 결제 SAGA에 연결하면 "다른 지자체가 적립한 포인트로 이 지자체 답례품을
+     * 사는" 규칙 위반이 발생한다(SFR-004 재검토 라운드에서 발견, 통합하지 않기로
+     * 결정). 나중에 통합이 필요해지면 {@link com.ghlove.point.domain.PointReservation}에
+     * locgovCode를 추가하고 {@link #confirmReservation}이 3-인자
+     * {@code consumeLots(userId, amount, locgovCode)}를 쓰도록 먼저 고쳐야 한다.
      */
     @Transactional
     public PointReservation reserve(Long userId, long amount, String refKey, String reason) {
@@ -385,12 +400,17 @@ public class PointService {
     }
 
     /**
-     * 소멸 처리 배치 (SFR-004 "소멸 처리"). 실시간 스케줄러가 없어 수동으로 트리거하는
-     * 실행 엔드포인트를 통해 호출된다. 만료일이 지났는데 아직 안 쓰인 lot(EARN/RESTORE
-     * 잔여분)을 모두 찾아 EXPIRE 원장 행으로 소멸시키고 잔액에서 차감한다.
+     * 소멸 처리 배치 (SFR-004 "소멸 처리"). 매일 자동 실행(donation의
+     * {@code DesignatedAdminService.closeExpiredProjects()}와 동일한 "기간이 그냥
+     * 흘러서 발생하는 전환이라 어떤 이벤트에도 안 걸린다" 성격 - SFR-004 재검토
+     * 라운드에서 수동 트리거뿐이던 걸 자동화로 전환) - 운영자가 즉시 실행해보고 싶을
+     * 때를 위한 수동 실행 엔드포인트(`/batch/expire`)도 그대로 남겨둔다. 만료일이
+     * 지났는데 아직 안 쓰인 lot(EARN/RESTORE 잔여분)을 모두 찾아 EXPIRE 원장 행으로
+     * 소멸시키고 잔액에서 차감한다.
      *
      * @return 소멸 처리된 lot 개수
      */
+    @Scheduled(cron = "0 30 1 * * *")
     @Transactional
     public int runExpirationBatch() {
         String today = DATE_FORMAT.format(LocalDate.now());
@@ -440,12 +460,31 @@ public class PointService {
                 .orElse(DEFAULT_RATE_FALLBACK);
     }
 
+    private BigDecimal maxPointRate() {
+        return commonCodeRepository.findById(new CommonCodeId("SYSTEM_CONFIG", "ko", "MAX_POINT_RATE"))
+                .map(com.ghlove.point.domain.CommonCode::getCodeValue)
+                .filter(v -> v != null && !v.isBlank())
+                .map(BigDecimal::new)
+                .orElse(MAX_RATE_FALLBACK);
+    }
+
     /** admin 지자체관리 화면 "포인트 지급률 등록/수정"(AS-IS user/locgov/edit.jsp "포인트
      *  지급률") - 연도+지자체 단위로 upsert한다. 이 값이 바로 {@link #currentPointRateOf}가
-     *  읽는 실제 적립률이다. */
+     *  읽는 실제 적립률이다. 고향사랑 기부금법 제8조상 답례품(포인트) 제공한도인 기부금액의
+     *  30%를 넘게 저장할 수 없다(SFR-003 재검토 라운드에서 발견한 gap - 지금까지는 관리자가
+     *  얼마든 자유 입력해도 그대로 저장됐다). 한도 자체는 법 개정 가능성을 고려해
+     *  SYSTEM_CONFIG(MAX_POINT_RATE)로 관리하고 하드코딩하지 않는다. */
     @org.springframework.transaction.annotation.Transactional
     public com.ghlove.point.domain.LocgovPointRate upsertLocgovPointRate(String stdrYear, String locgovCode,
                                                                            BigDecimal pointRate, String managerName) {
+        BigDecimal maxRate = maxPointRate();
+        if (pointRate.compareTo(maxRate) > 0) {
+            throw new PointException("포인트 지급률은 " + maxRate.stripTrailingZeros().toPlainString()
+                    + "%를 초과할 수 없습니다(고향사랑 기부금법 제8조 답례품 제공한도).");
+        }
+        if (pointRate.compareTo(BigDecimal.ZERO) < 0) {
+            throw new PointException("포인트 지급률은 0% 이상이어야 합니다.");
+        }
         com.ghlove.point.domain.LocgovPointRate entity = locgovPointRateRepository
                 .findByStdrYearAndLocgovCode(stdrYear, locgovCode)
                 .orElseGet(() -> {

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>매뉴얼 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>매뉴얼 관리</h3>
+    <p><a class="btn" th:href="@{/admin/manuals/new}">+ 매뉴얼 등록</a></p>
+
+    <table class="board_list_table">
+        <thead>
+        <tr><th>제목</th><th>연결 화면</th><th>첨부파일</th><th>등록일</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="m : ${manuals}">
+            <td><a th:href="@{'/admin/manuals/' + ${m.mnlSn} + '/edit'}" th:text="${m.title}"></a></td>
+            <td th:text="${m.menuUrlCode}"></td>
+            <td>
+                <a th:if="${m.fileSrc != null and !#strings.isEmpty(m.fileSrc)}"
+                   th:href="@{'/admin/manuals/' + ${m.mnlSn} + '/download'}" th:text="${m.orgnlFileNm}"></a>
+                <span th:unless="${m.fileSrc != null and !#strings.isEmpty(m.fileSrc)}">-</span>
+            </td>
+            <td th:text="${#temporals.format(m.createdDate, 'yyyy-MM-dd HH:mm')}"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(manuals)}">등록된 매뉴얼이 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

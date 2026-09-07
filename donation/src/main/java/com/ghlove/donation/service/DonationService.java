@@ -247,7 +247,10 @@ public class DonationService {
      * 기부하기 화면(AS-IS donation-main.html)에서 들어오는 일반기부 - 거주지 확인 결과
      * (psitnLocgovCode)와 답례품 제공 여부(presentType)까지 함께 받는다. 본인 주소지
      * 지자체 기부 차단은 화면에서도 막지만, 화면을 우회한 요청도 막아야 하므로 여기서
-     * 다시 검증한다.
+     * 다시 검증한다 - 단, 클라이언트가 보낸 psitnLocgovCode를 그대로 믿지 않고
+     * {@link #requireNotSelfResidence}가 회원 주소로 서버측에서 다시 산출해 검증한다
+     * (psitnLocgovCode를 비워서 보내면 검증을 건너뛸 수 있었던 실제 우회 경로를 SFR-003
+     * 재검토 라운드에서 발견해 막았다).
      */
     @Transactional
     public Donation createGeneralDonation(Long userId, String locgovCode, BigDecimal amount,
@@ -258,9 +261,7 @@ public class DonationService {
                 .filter(l -> "Y".equals(l.getUseAt()))
                 .orElseThrow(() -> new DonationException("선택한 지자체를 찾을 수 없습니다."));
 
-        if (isSelfResidence(locgov.getLocgovCode(), psitnLocgovCode)) {
-            throw new DonationException("자신의 주민등록주소지의 지자체에는 기부를 하실 수 없습니다. 다른 지자체를 선택해 주세요.");
-        }
+        requireNotSelfResidence(userId, locgov.getLocgovCode());
 
         validateAnnualLimit(userId, locgov.getLocgovCode(), amount);
         Donation donation = saveRequested(userId, locgov.getLocgovCode(), amount, null);
@@ -270,6 +271,24 @@ public class DonationService {
         donation.setRtnpsntReqstCode(presentType);
         donation.setInfoAgreAt("Y");
         return donationRepository.save(donation);
+    }
+
+    /**
+     * 본인 주민등록주소지 지자체 기부 차단 (고향사랑 기부금법 제8조 등) - 회원 주소를
+     * 서버측에서 직접 조회해 검증하므로 클라이언트가 무엇을 보내든 우회할 수 없다. 주소가
+     * 없거나 주소로 지자체를 특정할 수 없으면(예: 해외주소, 회원정보 미등록) 판단 불가로
+     * 보고 통과시킨다 - {@link #isSelfResidence}의 null-safety와 동일한 원칙.
+     */
+    private void requireNotSelfResidence(Long userId, String targetLocgovCode) {
+        MemberInfo member = memberClient.fetchOrNull(userId);
+        if (member == null || member.address() == null || member.address().isBlank()) {
+            return;
+        }
+        residenceLocgovOf(member.address()).ifPresent(residence -> {
+            if (isSelfResidence(targetLocgovCode, residence.getLocgovCode())) {
+                throw new DonationException("자신의 주민등록주소지의 지자체에는 기부를 하실 수 없습니다. 다른 지자체를 선택해 주세요.");
+            }
+        });
     }
 
     /** 지정기부. 사업이 진행중(OPEN)이고 공개(RLS_YN=Y)이며 신청 기간 내인 경우만 허용. */
@@ -294,6 +313,11 @@ public class DonationService {
                 || project.getDsgnDntnBizEndYmd() != null && today.compareTo(project.getDsgnDntnBizEndYmd()) > 0) {
             throw new DonationException("기부 신청 기간이 아닙니다.");
         }
+
+        // SFR-003 재검토 라운드에서 발견한 gap: 일반기부는 거주지 검증이 있었는데 지정기부
+        // (특정사업 기부)엔 이 검증 자체가 없었다 - 본인 주민등록주소지 사업에도 지정기부가
+        // 그대로 통과됐다.
+        requireNotSelfResidence(userId, project.getLclgvCd());
 
         validateAnnualLimit(userId, project.getLclgvCd(), amount);
         Donation donation = saveRequested(userId, project.getLclgvCd(), amount, project.getDsgnDntnBizId());
@@ -709,21 +733,10 @@ public class DonationService {
         return new GiveState(nowYearTotal, prevYearTotal, dDay, nowDayPercent);
     }
 
+    /** 지자체별 기부혜택 안내문구 조회 - 등록/수정은 관리자 전용이라 {@link LocgovAdminService}로
+     *  옮겼다(원래 여기 있던 무인증 쓰기 엔드포인트 보안결함 수정, SFR-003 재검토 라운드). */
     public String honorBenefitOf(String locgovCode) {
         return honorBenefitRepository.findById(locgovCode).map(HonorBenefit::getBenefitDesc).orElse(null);
-    }
-
-    /** 지자체별 기부혜택 안내문구 관리 (SFR-003 "지자체별 기부혜택 관리"). */
-    @Transactional
-    public void updateHonorBenefit(String locgovCode, String benefitDesc) {
-        if (!locgovRepository.existsById(locgovCode)) {
-            throw new DonationException("존재하지 않는 지자체입니다.");
-        }
-        HonorBenefit benefit = honorBenefitRepository.findById(locgovCode).orElseGet(HonorBenefit::new);
-        benefit.setLocgovCode(locgovCode);
-        benefit.setBenefitDesc(benefitDesc);
-        benefit.setUpdatedDate(LocalDateTime.now());
-        honorBenefitRepository.save(benefit);
     }
 
     /** 연간 기부한도 검증: 전체 지자체 합산 한도(SYSTEM_CONFIG) + 지자체별 한도(G_CTBNY_SETUP). */

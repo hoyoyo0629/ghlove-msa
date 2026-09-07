@@ -105,6 +105,32 @@ public class MemberAdminController {
         return "redirect:/admin/members/" + userId;
     }
 
+    /** 계정잠금 해제 (SFR-002). */
+    @PostMapping("/{userId}/unlock")
+    public String unlock(@PathVariable Long userId, Model model) {
+        try {
+            memberAdminClient.unlock(userId);
+        } catch (ManagerException e) {
+            model.addAttribute("member", memberAdminClient.detail(userId));
+            model.addAttribute("errorMessage", e.getMessage());
+            return "member-admin/detail";
+        }
+        return "redirect:/admin/members/" + userId;
+    }
+
+    /** RBAC 권한 회수 (SFR-002). */
+    @PostMapping("/{userId}/roles/{authority}/revoke")
+    public String revokeRole(@PathVariable Long userId, @PathVariable String authority, Model model) {
+        try {
+            memberAdminClient.revokeRole(userId, authority);
+        } catch (ManagerException e) {
+            model.addAttribute("member", memberAdminClient.detail(userId));
+            model.addAttribute("errorMessage", e.getMessage());
+            return "member-admin/detail";
+        }
+        return "redirect:/admin/members/" + userId;
+    }
+
     @SuppressWarnings("unchecked")
     private static Set<Long> revealedIds(HttpSession session) {
         Set<Long> ids = (Set<Long>) session.getAttribute(SESSION_REVEALED_KEY);

@@ -11,6 +11,8 @@ public record OrderCreatedEvent(
         Integer unitPrice,
         Long pointAmount,
         String locgovCode,
+        String itemName,
+        String receiverName,
         LocalDateTime occurredAt
 ) {
 }

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>카테고리 팀 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/category-teams}">카테고리 팀/그룹 관리</a></div>
+    <h3><span th:text="${team.id()} != null ? '팀 수정' : '팀 등록'"></span></h3>
+    <p style="color:#c00;" th:if="${errorMessage}" th:text="${errorMessage}"></p>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="카테고리 팀 등록/수정">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>팀명</td>
+                <td><input type="text" name="name" th:value="${team.name()}" required form="teamForm"></td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>코드</td>
+                <td>
+                    <input type="text" name="code" th:value="${team.code()}" th:readonly="${team.id()} != null" required form="teamForm">
+                    <span style="color:#999; font-size:12px;" th:if="${team.id()} != null">등록 후에는 코드를 바꿀 수 없습니다.</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">노출순서</td>
+                <td><input type="number" name="ordering" th:value="${team.ordering()}" style="width:100px;" form="teamForm"></td>
+            </tr>
+            <tr th:if="${team.id()} != null">
+                <td class="label">노출여부</td>
+                <td><input type="checkbox" name="flag" value="Y" th:checked="${team.flag()} == 'Y'" form="teamForm"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <form id="teamForm"
+          th:action="${team.id()} != null ? @{/admin/category-teams/{id}(id=${team.id()})} : @{/admin/category-teams}"
+          method="post"></form>
+    <div class="btn_all btn_center">
+        <button type="submit" form="teamForm" class="btn btn-dark-gray btn-small">저장</button>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

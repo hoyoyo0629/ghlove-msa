@@ -39,8 +39,10 @@ export const useAuthStore = defineStore('auth', () => {
     me.value = null
   }
 
-  function signup(form) {
-    return api.post('member', '/api/auth/signup', form)
+  async function signup(form) {
+    const data = await api.post('member', '/api/auth/signup', form)
+    if (data.status === 'OK') await fetchMe()
+    return data
   }
 
   return { loggedIn, loading, me, fetchMe, login, verifyMfa, logout, signup }

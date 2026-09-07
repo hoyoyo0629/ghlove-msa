@@ -24,6 +24,7 @@
             <th>이미지</th>
             <th>제목</th>
             <th>링크</th>
+            <th>노출위치</th>
             <th>순서</th>
             <th>상태</th>
             <th>처리</th>
@@ -35,6 +36,7 @@
             <td><img th:if="${b.imageUrl}" th:src="${b.imageUrl}" alt="" style="height:32px;"></td>
             <td th:text="${b.title}"></td>
             <td th:text="${b.linkUrl}"></td>
+            <td th:text="${b.bannerType == 'LOGIN_WEB' ? '로그인(웹)' : (b.bannerType == 'LOGIN_MOBILE' ? '로그인(모바일)' : '메인')}"></td>
             <td th:text="${b.displayOrder}"></td>
             <td>
                 <span class="pill" th:classappend="${b.displayFlag == 'Y'} ? 'on' : 'off'"

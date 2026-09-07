@@ -33,6 +33,7 @@ ghlove:
   jwt:
     secret: "ghlove-msa-local-dev-shared-jwt-secret-key-32bytes-min!!"
     expiration-minutes: 120
+    refresh-expiration-days: 14
   # 메인 화면("특정사업에 기부하기")에서 진행중인 지정기부사업을 보여주기 위한
   # 읽기 전용 동기 조회 - order의 gift-service 조회와 동일한 패턴의 의도적인 예외.
   donation-service:

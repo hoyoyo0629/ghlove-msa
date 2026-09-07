@@ -117,9 +117,12 @@ public class OrderService {
         if (couponIssueId != null) {
             discount = couponService.applyToOrder(userId, couponIssueId, order.getOrderId(), itemId, lineTotal, quantity);
         }
+        long deliveryFee = calculateDeliveryFee(gift, quantity, lineTotal,
+                deliveryInfo != null ? deliveryInfo.address() : null);
         order.setDiscountAmount(discount);
         order.setCouponIssueId(couponIssueId);
-        order.setPointAmount(lineTotal - discount);
+        order.setDeliveryFee(deliveryFee);
+        order.setPointAmount(lineTotal - discount + deliveryFee);
         order.setLocgovCode(gift.locgovCode());
         order.setOrderStatus(STATUS_PENDING);
         order.setCreatedDate(LocalDateTime.now());
@@ -139,6 +142,46 @@ public class OrderService {
 
     public record DeliveryInfo(String receiverName, String receiverPhone, String address,
                                 String addressDetail, String requestNote) {
+    }
+
+    /**
+     * SFR-005 "배송비·택배사 설정, 배송정책" (재검토 라운드) - gift가 답례품별로 관리하는
+     * 배송정책(GIFT_SHIPPING_TYPE 1~6)을 읽어 주문 시점 배송비를 계산한다. 출고지/반송지/
+     * 묶음배송 등 AS-IS의 세부 정책까지는 재현하지 않고, order가 실제로 참조할 수 있는
+     * 핵심(무료/조건부무료/개당/고정 + 제주·도서산간 추가배송비)만 다룬다.
+     */
+    private long calculateDeliveryFee(GiftItemInfo gift, int quantity, long lineTotal, String address) {
+        String shippingType = gift.shippingType();
+        long base = gift.shipping() != null ? gift.shipping() : 0;
+        long fee;
+        if (shippingType == null || "1".equals(shippingType)) {
+            fee = 0;
+        } else if ("5".equals(shippingType)) {
+            fee = base * quantity;
+        } else if ("2".equals(shippingType) || "3".equals(shippingType) || "4".equals(shippingType)) {
+            Integer freeAmount = gift.shippingFreeAmount();
+            fee = (freeAmount != null && lineTotal >= freeAmount) ? 0 : base;
+        } else {
+            fee = base;
+        }
+
+        if (address != null) {
+            if (address.contains("제주") && gift.shippingExtraCharge1() != null) {
+                fee += gift.shippingExtraCharge1();
+            } else if (isRemoteIsland(address) && gift.shippingExtraCharge2() != null) {
+                fee += gift.shippingExtraCharge2();
+            }
+        }
+        return fee;
+    }
+
+    /** 도서산간 간이 판정 - 전국 완전한 도서지역 목록이 이 프로젝트 어디에도 없어(우편번호
+     *  기반 판정표 부재), 주소 문자열에 흔한 도서지역명이 포함되는지만 본다(제주 전용
+     *  {@link #calculateDeliveryFee}의 별도 분기와 동일한 느슨한 문자열 매칭 - donation의
+     *  residenceLocgovOf()와 같은 관행). */
+    private boolean isRemoteIsland(String address) {
+        return address.contains("울릉") || address.contains("백령") || address.contains("연평")
+                || address.contains("흑산") || address.contains("추자");
     }
 
     @Transactional

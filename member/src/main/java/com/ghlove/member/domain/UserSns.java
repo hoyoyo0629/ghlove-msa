@@ -5,8 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
-
 /** 카카오/네이버 SNS 로그인 연동 (AS-IS OP_USER_SNS). */
 @Entity
 @Table(name = "OP_USER_SNS")
@@ -37,9 +35,10 @@ public class UserSns {
     @Column(name = "EMAIL")
     private String email;
 
+    /** yyyyMMddHHmmss (이 프로젝트의 날짜 컬럼 관례 - DB가 VARCHAR(14)). */
     @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
+    private String createdDate;
 
     @Column(name = "CERTIFIED_DATE")
-    private LocalDateTime certifiedDate;
+    private String certifiedDate;
 }

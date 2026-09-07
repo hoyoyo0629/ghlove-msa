@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 // 실제로 어긋난 걸 아무도 못 알아챈 사례). 이번에 locgovCode를 추가해 실제 계약과 맞췄다.
 public record OrderCreatedEvent(
         String orderId, Long userId, Long itemId, Long sellerId, Integer quantity,
-        Integer unitPrice, Long pointAmount, String locgovCode, LocalDateTime occurredAt
+        Integer unitPrice, Long pointAmount, String locgovCode, String itemName, String receiverName,
+        LocalDateTime occurredAt
 ) {
 }

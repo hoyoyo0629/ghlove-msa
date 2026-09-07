@@ -1,8 +1,10 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
 
 // AS-IS mypage/orderList.html을 단순화 재현한 Thymeleaf 버전 order/my.html과 동일 출처.
+const router = useRouter()
 const orders = ref([])
 const searchStartDate = ref('')
 const searchEndDate = ref('')
@@ -43,6 +45,10 @@ function reset() {
 
 function formatN(n) {
   return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
+}
+
+function writeReview(o) {
+  router.push(`/gifts/${o.itemId}?orderCode=${o.orderId}`)
 }
 </script>
 
@@ -115,7 +121,10 @@ function formatN(n) {
                   </td>
                   <td class="date-col">{{ o.quantity }}</td>
                   <td class="date-col">{{ formatN(o.pointAmount) }}P</td>
-                  <td class="date-col">{{ o.orderStatusLabel }}</td>
+                  <td class="date-col">
+                    {{ o.orderStatusLabel }}
+                    <button v-if="o.orderStatus === 'CONFIRMED'" type="button" class="formBtn" style="display:block; margin-top:4px; padding:2px 8px; font-size:12px;" @click="writeReview(o)">후기작성</button>
+                  </td>
                 </tr>
               </tbody>
             </table>

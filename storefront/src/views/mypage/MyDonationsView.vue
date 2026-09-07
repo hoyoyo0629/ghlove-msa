@@ -1,6 +1,9 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
+
+const router = useRouter()
 
 // AS-IS mypage/cntrList.html(및 Thymeleaf 버전 my.html) 재현. 결제완료 처리/취소 버튼은
 // AS-IS에는 없지만(실 PG 연동이라 결제창에서 바로 완료됨) 이 MSA는 completeDonation()을
@@ -48,9 +51,15 @@ function reset() {
   search()
 }
 
+// SFR-003 "기부금 납부 시 답례품 선택 기능 추가" - 답례품을 받기로 한(presentType '100') 기부는
+// 결제완료 직후 답례품 선택 화면으로 안내한다.
 async function complete(cntrSn) {
   try {
-    await api.post('donation', `/api/my/donations/${cntrSn}/complete`)
+    const res = await api.post('donation', `/api/my/donations/${cntrSn}/complete`)
+    if (res.presentType === '100') {
+      router.push({ name: 'donate-gift-select', query: { locgovCode: res.locgovCode } })
+      return
+    }
     await search()
   } catch (e) {
     errorMessage.value = e.message

@@ -5,6 +5,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.List;
 import java.util.Map;
@@ -95,11 +96,25 @@ public class PointClient {
      *  단위 upsert. */
     public void upsertLocgovPointRate(String stdrYear, String locgovCode, java.math.BigDecimal pointRate,
                                        String managerName) {
-        restClient.post().uri("/api/admin/locgov-point-rate")
-                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
-                .body(Map.of("stdrYear", stdrYear, "locgovCode", locgovCode, "pointRate", pointRate,
-                        "managerName", managerName == null ? "" : managerName))
-                .retrieve().toBodilessEntity();
+        try {
+            restClient.post().uri("/api/admin/locgov-point-rate")
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .body(Map.of("stdrYear", stdrYear, "locgovCode", locgovCode, "pointRate", pointRate,
+                            "managerName", managerName == null ? "" : managerName))
+                    .retrieve().toBodilessEntity();
+        } catch (RestClientResponseException e) {
+            throw new ManagerException(extractMessage(e, "포인트 지급률 저장에 실패했습니다."));
+        }
+    }
+
+    private static String extractMessage(RestClientResponseException e, String fallback) {
+        try {
+            var body = e.getResponseBodyAs(Map.class);
+            Object msg = body != null ? body.get("message") : null;
+            return msg != null ? msg.toString() : fallback;
+        } catch (RuntimeException ex) {
+            return fallback;
+        }
     }
 
     public record LocgovPointRate(String stdrYear, String locgovCode, java.math.BigDecimal pointRate,

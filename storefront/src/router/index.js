@@ -34,6 +34,7 @@ import QnaView from '../views/mypage/QnaView.vue'
 import GiftListView from '../views/gift/GiftListView.vue'
 import GiftDetailView from '../views/gift/GiftDetailView.vue'
 import DonateView from '../views/donation/DonateView.vue'
+import DonateGiftSelectView from '../views/donation/DonateGiftSelectView.vue'
 import DesignatedListView from '../views/donation/DesignatedListView.vue'
 import DesignatedDetailView from '../views/donation/DesignatedDetailView.vue'
 import CartView from '../views/order/CartView.vue'
@@ -65,6 +66,7 @@ export const router = createRouter({
     { path: '/gifts/community-business', name: 'gift-community-business', component: GiftListView },
     { path: '/gifts/:itemId', name: 'gift-detail', component: GiftDetailView, props: true },
     { path: '/donate', name: 'donate', component: DonateView, meta: { requiresAuth: true } },
+    { path: '/donate/gift-select', name: 'donate-gift-select', component: DonateGiftSelectView, meta: { requiresAuth: true } },
     { path: '/designated-donation', name: 'designated-list', component: DesignatedListView },
     { path: '/designated-donation/:id', name: 'designated-detail', component: DesignatedDetailView, props: true },
     { path: '/login', name: 'login', component: LoginView },

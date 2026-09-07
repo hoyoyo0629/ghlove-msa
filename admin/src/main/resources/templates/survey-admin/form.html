@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>설문 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/surveys}">설문조사 관리</a></div>
+    <h3><span th:text="${survey.qustnrSn} != null ? '설문 수정' : '설문 등록'"></span></h3>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="설문 등록/수정">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>제목</td>
+                <td><input type="text" name="qustnrSj" th:value="${survey.qustnrSj}" required form="surveyForm"></td>
+            </tr>
+            <tr>
+                <td class="label">시작일(yyyyMMdd)</td>
+                <td><input type="text" name="qustnrBgnDe" th:value="${survey.qustnrBgnDe}" placeholder="yyyyMMdd" form="surveyForm"></td>
+            </tr>
+            <tr>
+                <td class="label">종료일(yyyyMMdd)</td>
+                <td><input type="text" name="qustnrEndDe" th:value="${survey.qustnrEndDe}" placeholder="yyyyMMdd" form="surveyForm"></td>
+            </tr>
+            <tr>
+                <td class="label">노출여부</td>
+                <td>
+                    <select name="isShow" form="surveyForm">
+                        <option value="Y" th:selected="${survey.isShow == 'Y' or survey.isShow == null}">노출</option>
+                        <option value="N" th:selected="${survey.isShow == 'N'}">비노출</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">설문 문항</td>
+                <td>
+                    <div id="questionList">
+                        <div class="question-row" th:each="q : ${questions}">
+                            <textarea name="questions" rows="2" th:text="${q.qestnCn}" form="surveyForm"></textarea>
+                            <button type="button" class="small-btn" onclick="this.parentElement.remove()">삭제</button>
+                        </div>
+                        <div class="question-row" th:if="${#lists.isEmpty(questions)}">
+                            <textarea name="questions" rows="2" form="surveyForm"></textarea>
+                            <button type="button" class="small-btn" onclick="this.parentElement.remove()">삭제</button>
+                        </div>
+                    </div>
+                    <button type="button" class="small-btn" onclick="addQuestionRow()">+ 문항 추가</button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <form id="surveyForm"
+          th:action="${survey.qustnrSn} != null ? @{'/admin/surveys/' + ${survey.qustnrSn}} : @{/admin/surveys}" method="post"></form>
+    <div class="btn_all btn_center">
+        <button type="submit" form="surveyForm" class="btn btn-dark-gray btn-small">저장</button>
+        <form th:if="${survey.qustnrSn} != null" th:action="@{'/admin/surveys/' + ${survey.qustnrSn} + '/delete'}"
+              method="post" class="inline-form" onsubmit="return confirm('삭제하시겠습니까?')" style="display:inline;">
+            <button type="submit" class="btn btn-small">삭제</button>
+        </form>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+<script th:inline="javascript">
+    function addQuestionRow() {
+        var list = document.getElementById('questionList');
+        var row = document.createElement('div');
+        row.className = 'question-row';
+        row.innerHTML = '<textarea name="questions" rows="2" form="surveyForm"></textarea>' +
+            '<button type="button" class="small-btn" onclick="this.parentElement.remove()">삭제</button>';
+        list.appendChild(row);
+    }
+</script>
+</body>
+</html>

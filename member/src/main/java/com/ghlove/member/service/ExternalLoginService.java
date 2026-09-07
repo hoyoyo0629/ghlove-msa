@@ -33,7 +33,8 @@ public class ExternalLoginService {
     private static final SecureRandom RANDOM = new SecureRandom();
     /** AS-IS 공통코드 LOGIN_PATH 실제값(09.공통코드 목록.xlsx) - provider별 매핑. */
     private static final java.util.Map<String, String> LOGIN_PATH_BY_PROVIDER =
-            java.util.Map.of("ONEPASS", "300", "KAKAO", "500", "NAVER", "600");
+            java.util.Map.of("ONEPASS", "300", "KAKAO", "500", "NAVER", "600",
+                    "FINANCE_CERT", "400", "ANYID", "200");
     private static final java.time.format.DateTimeFormatter DATE_FORMAT = java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final UserRepository userRepository;
@@ -88,8 +89,8 @@ public class ExternalLoginService {
             sns.setUserId(saved.getUserId());
             sns.setSnsName(identity.name());
             sns.setEmail(identity.email());
-            sns.setCreatedDate(LocalDateTime.now());
-            sns.setCertifiedDate(LocalDateTime.now());
+            sns.setCreatedDate(DATE_FORMAT.format(LocalDateTime.now()));
+            sns.setCertifiedDate(DATE_FORMAT.format(LocalDateTime.now()));
             userSnsRepository.save(sns);
         }
 

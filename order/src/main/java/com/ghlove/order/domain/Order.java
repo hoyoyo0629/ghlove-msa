@@ -50,6 +50,12 @@ public class Order {
     @Column(name = "POINT_AMOUNT")
     private Long pointAmount;
 
+    /** SFR-005 "배송비·택배사 설정" (재검토 라운드) - gift의 배송정책으로 계산한 배송비.
+     *  POINT_AMOUNT(실제 차감액)에 이미 포함돼 있고, 여기는 화면에 내역을 보여주기 위한
+     *  분리 표시용이다. */
+    @Column(name = "DELIVERY_FEE")
+    private Long deliveryFee = 0L;
+
     @Column(name = "ORDER_STATUS")
     private String orderStatus;
 
@@ -114,4 +120,23 @@ public class Order {
     /** admin 주문관리 콘솔 전용 - 운영자가 남기는 처리 메모(고객에게 노출되지 않음). */
     @Column(name = "ADMIN_MEMO")
     private String adminMemo;
+
+    /** 보류주문 처리 (AS-IS opmanager/order/temp - TempProcessManagerController). 배송 전
+     *  주문을 일시적으로 SAGA 흐름과 별개로 "보류" 표시해두는 운영 플래그 - 실제 ORDER_STATUS
+     *  전이는 건드리지 않는다(보류 중에도 주문은 여전히 PENDING/CONFIRMED로 정상 진행 가능,
+     *  다만 목록에서 별도 큐로 걸러내 운영자가 배송 등 후속처리를 잠시 미루는 용도). */
+    @Column(name = "HOLD_YN")
+    private String holdYn = "N";
+
+    @Column(name = "HOLD_REASON")
+    private String holdReason;
+
+    @Column(name = "HOLD_MANAGER_ID")
+    private Long holdManagerId;
+
+    @Column(name = "HOLD_DATE")
+    private LocalDateTime holdDate;
+
+    @Column(name = "RELEASE_DATE")
+    private LocalDateTime releaseDate;
 }

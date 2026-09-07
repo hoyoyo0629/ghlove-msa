@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>답례품 1:1 상담문의 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>답례품 1:1 상담문의 (구버전)</h3>
+    <p style="color:#666; margin-bottom:16px;">신규 문의는 통합 QnA(1:1문의관리)로 접수되고 있어 이 화면은 과거 데이터 조회용입니다.</p>
+    <table class="board_list_table">
+        <thead><tr><th>등록일</th><th>답례품명</th><th>문의자</th><th>제목</th><th>답변여부</th></tr></thead>
+        <tbody>
+        <tr th:each="i : ${inquiries}">
+            <td th:text="${i.createdDate}"></td>
+            <td th:text="${i.itemName}"></td>
+            <td th:text="${i.userName}"></td>
+            <td><a th:href="@{'/admin/shop-inquiries/' + ${i.inquiryId}}" th:text="${i.inquirySubject}"></a></td>
+            <td th:text="${i.answerFlag} != null and ${i.answerFlag} == 1 ? '답변완료' : '미답변'"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(inquiries)}">문의 내역이 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

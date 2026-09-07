@@ -53,4 +53,16 @@ public class AuditLogController {
         model.addAttribute("loginId", loginId);
         return "log/user-action-list";
     }
+
+    /** SFR-002 "권한 변경, 계정 잠금/해제" 감사로그 조회 (member의 OP_USER_CHANGE_LOG). */
+    @GetMapping("/log/user-change")
+    public String userChangeLog(@RequestParam(required = false) String loginId, Model model) {
+        var logs = memberClient.changeLogs();
+        if (loginId != null && !loginId.isBlank()) {
+            logs = logs.stream().filter(l -> loginId.equals(l.loginId())).toList();
+        }
+        model.addAttribute("logs", logs);
+        model.addAttribute("loginId", loginId);
+        return "log/user-change-list";
+    }
 }

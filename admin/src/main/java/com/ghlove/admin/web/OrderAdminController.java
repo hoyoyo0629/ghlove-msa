@@ -4,6 +4,7 @@ import com.ghlove.admin.domain.Manager;
 import com.ghlove.admin.service.ManagerException;
 import com.ghlove.admin.service.MenuService;
 import com.ghlove.admin.service.OrderAdminClient;
+import com.ghlove.admin.service.OrderReadModelService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,7 @@ import java.util.stream.Collectors;
 public class OrderAdminController {
 
     private final OrderAdminClient orderAdminClient;
+    private final OrderReadModelService orderReadModelService;
 
     @GetMapping("/admin/orders")
     public String list(@RequestParam(required = false) String locgovCode,
@@ -53,7 +55,7 @@ public class OrderAdminController {
                         HttpSession session, Model model) {
         Manager manager = manager(session);
         String effectiveLocgov = MenuService.effectiveLocgovCode(manager, locgovCode);
-        OrderAdminClient.SearchResult result = orderAdminClient.search(manager, effectiveLocgov, orderStatus,
+        OrderReadModelService.SearchResult result = orderReadModelService.search(effectiveLocgov, orderStatus,
                 searchType, keyword, startDate, endDate, page, size);
 
         model.addAttribute("orders", result.content());
@@ -177,7 +179,8 @@ public class OrderAdminController {
     @GetMapping("/admin/claims")
     public String claimQueue(@RequestParam(required = false) String status, HttpSession session, Model model) {
         Manager manager = manager(session);
-        List<OrderAdminClient.ClaimQueueRow> rows = orderAdminClient.claimQueue(manager, status);
+        String effectiveLocgov = MenuService.effectiveLocgovCode(manager, null);
+        List<OrderAdminClient.ClaimQueueRow> rows = orderReadModelService.claimQueue(effectiveLocgov, status);
         Map<Long, List<OrderAdminClient.ClaimMemoInfo>> memos = rows.stream()
                 .collect(Collectors.toMap(OrderAdminClient.ClaimQueueRow::claimId,
                         r -> orderAdminClient.claimMemos(manager, r.claimId()), (a, b) -> a));

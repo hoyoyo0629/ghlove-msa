@@ -71,6 +71,10 @@ public class OrderAdminService {
                     case "ITEM_NAME" -> predicates.add(cb.like(root.get("itemName"), "%" + keyword + "%"));
                     case "SELLER_ID" -> predicates.add(cb.equal(root.get("sellerId"), parseLongOrImpossible(keyword)));
                     case "USER_ID" -> predicates.add(cb.equal(root.get("userId"), parseLongOrImpossible(keyword)));
+                    // 주문대행 조회(콜센터) 전용 검색구분 - 상담원이 전화번호로 바로 찾는 게
+                    // 실제 상담 흐름이라 여기 추가한다(기존 5종 검색구분과 동일한 자리에 얹는
+                    // additive 확장이라 /admin/orders 화면도 자연스럽게 같이 쓸 수 있다).
+                    case "RECEIVER_PHONE" -> predicates.add(cb.like(root.get("receiverPhone"), "%" + keyword + "%"));
                     default -> {
                         // 알 수 없는 검색구분은 무시 - 신규 검색구분을 추가할 때 기존 화면을
                         // 막지 않기 위한 fail-open (MenuService의 동일 원칙).
@@ -270,5 +274,88 @@ public class OrderAdminService {
         }
         String escaped = value.replace("\"", "\"\"");
         return "\"" + escaped + "\"";
+    }
+
+    // ==================== 보류주문 처리 (AS-IS opmanager/order/temp) ====================
+
+    private static final String HOLD_YES = "Y";
+    private static final String HOLD_NO = "N";
+
+    /** 배송 시작 전 주문만 보류할 수 있다 - 이미 발송된 주문을 보류로 걸어봐야 실제로는
+     *  아무 효과가 없어(택배는 이미 나갔다) 운영자가 착각하지 않도록 막는다. 취소된 주문도
+     *  이미 종결 상태라 보류 대상이 아니다. */
+    @Transactional
+    public Order hold(String orderId, String reason, String managerLocgovCode, Long managerId) {
+        Order order = orderService.detail(orderId);
+        assertLocgovAllowed(order, managerLocgovCode);
+        if (order.getShippedDate() != null) {
+            throw new OrderException("이미 발송된 주문은 보류 처리할 수 없습니다.");
+        }
+        if (STATUS_CANCELLED_CONST.equals(order.getOrderStatus())) {
+            throw new OrderException("취소된 주문은 보류 처리할 수 없습니다.");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new OrderException("보류 사유를 입력해 주세요.");
+        }
+        order.setHoldYn(HOLD_YES);
+        order.setHoldReason(reason);
+        order.setHoldManagerId(managerId);
+        order.setHoldDate(LocalDateTime.now());
+        order.setReleaseDate(null);
+        order.setUpdatedDate(LocalDateTime.now());
+        return orderRepository.save(order);
+    }
+
+    @Transactional
+    public Order release(String orderId, String managerLocgovCode) {
+        Order order = orderService.detail(orderId);
+        assertLocgovAllowed(order, managerLocgovCode);
+        order.setHoldYn(HOLD_NO);
+        order.setReleaseDate(LocalDateTime.now());
+        order.setUpdatedDate(LocalDateTime.now());
+        return orderRepository.save(order);
+    }
+
+    private static final String STATUS_CANCELLED_CONST = "CANCELLED";
+
+    public Page<Order> heldOrders(String locgovCode, int page, int size) {
+        Specification<Order> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("holdYn"), HOLD_YES));
+            if (notBlank(locgovCode)) {
+                predicates.add(cb.equal(root.get("locgovCode"), locgovCode));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        return orderRepository.findAll(spec, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "holdDate")));
+    }
+
+    // ==================== PG 결제현황 조회 (AS-IS opmanager/order/payinfo) ====================
+    // 이 플랫폼은 실제 PG(신용카드 등) 연동이 없다 - 답례품 결제수단은 기부포인트(POINT_AMOUNT)
+    // 단일종이라 "결제수단"은 항상 고정값으로 표시한다. "취소실패건"에 대응하는 개념은 SAGA
+    // 보상실패로 인한 시스템 자동취소(OrderService.appendCancelReason이 "재고 부족"/"포인트
+    // 부족"으로 남기는 케이스)로 매핑했다 - 고객이 직접 취소한 "고객 요청 취소"와는 구분된다.
+
+    public Page<Order> payInfoSearch(String locgovCode, boolean failedOnly, LocalDate startDate, LocalDate endDate,
+                                      int page, int size) {
+        Specification<Order> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (notBlank(locgovCode)) {
+                predicates.add(cb.equal(root.get("locgovCode"), locgovCode));
+            }
+            if (failedOnly) {
+                predicates.add(cb.equal(root.get("orderStatus"), STATUS_CANCELLED_CONST));
+                predicates.add(cb.isNotNull(root.get("cancelReason")));
+                predicates.add(cb.notLike(root.get("cancelReason"), "고객 요청%"));
+            }
+            if (startDate != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("createdDate"), startDate.atStartOfDay()));
+            }
+            if (endDate != null) {
+                predicates.add(cb.lessThan(root.get("createdDate"), endDate.plusDays(1).atStartOfDay()));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        return orderRepository.findAll(spec, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdDate")));
     }
 }

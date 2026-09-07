@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>답례품 리뷰 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <style>
+        .search-form { background:#f7f7f7; border:1px solid #ddd; border-radius:4px; padding:10px 12px; margin-bottom:12px; }
+        .search-form select, .search-form input[type=text] { margin-right:6px; }
+        .error-box { color:#c00; background:#fdecec; border:1px solid #f5b5b5; padding:8px 12px; border-radius:4px; margin-bottom:12px; }
+        .review-content { max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>답례품 리뷰 관리</h3>
+    <div class="error-box" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <form class="search-form" method="get" th:action="@{/admin/gift-reviews}">
+        <input type="text" name="itemId" th:value="${itemId}" placeholder="답례품ID">
+        <input type="text" name="keyword" th:value="${keyword}" placeholder="제목/내용 검색">
+        <select name="recommendFlag">
+            <option value="">전체(추천여부)</option>
+            <option value="Y" th:selected="${recommendFlag == 'Y'}">추천됨</option>
+            <option value="N" th:selected="${recommendFlag == 'N'}">추천안됨</option>
+        </select>
+        <select name="displayFlag">
+            <option value="">전체(노출여부)</option>
+            <option value="Y" th:selected="${displayFlag == 'Y'}">노출</option>
+            <option value="N" th:selected="${displayFlag == 'N'}">블라인드</option>
+        </select>
+        <button type="submit" class="small-btn">검색</button>
+        <a class="small-btn" style="float:right;"
+           th:href="@{/admin/gift-reviews/export(itemId=${itemId},keyword=${keyword},recommendFlag=${recommendFlag},displayFlag=${displayFlag})}">CSV 다운로드</a>
+    </form>
+
+    <table class="board_list_table">
+        <thead>
+        <tr><th>ID</th><th>답례품</th><th>작성자</th><th>평점</th><th>제목</th><th>내용</th><th>추천</th><th>노출</th><th>신고</th><th>작성일</th><th>처리</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${reviews}">
+            <td th:text="${r.itemReviewId()}"></td>
+            <td th:text="${itemNames.get(r.itemId())} ?: ('#' + ${r.itemId()})"></td>
+            <td th:text="${r.userName()}"></td>
+            <td th:text="${r.score()}"></td>
+            <td th:text="${r.subject()}"></td>
+            <td class="review-content" th:text="${r.content()}"></td>
+            <td th:text="${r.recommendFlag()} == 'Y' ? '추천됨' : '-'"></td>
+            <td th:text="${r.displayFlag()} == 'Y' ? '노출' : '블라인드'"></td>
+            <td th:text="${reportCounts.get(r.itemReviewId())} ?: 0"
+                th:style="${(reportCounts.get(r.itemReviewId()) ?: 0) > 0} ? 'color:#c00;font-weight:bold;' : ''"></td>
+            <td th:text="${r.createdDate()}"></td>
+            <td>
+                <form style="display:inline;" method="post" th:action="@{/admin/gift-reviews/{id}/recommend(id=${r.itemReviewId()})}">
+                    <input type="hidden" name="recommend" th:value="${r.recommendFlag()} == 'Y' ? 'false' : 'true'">
+                    <button type="submit" class="small-btn" th:text="${r.recommendFlag()} == 'Y' ? '추천취소' : '추천'"></button>
+                </form>
+                <form style="display:inline;" method="post" th:action="@{/admin/gift-reviews/{id}/display(id=${r.itemReviewId()})}">
+                    <input type="hidden" name="display" th:value="${r.displayFlag()} == 'Y' ? 'false' : 'true'">
+                    <button type="submit" class="small-btn" th:text="${r.displayFlag()} == 'Y' ? '블라인드' : '노출복원'"></button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(reviews)}">검색된 리뷰가 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

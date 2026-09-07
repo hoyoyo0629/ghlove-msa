@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>회원 권한/상태변경 이력 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
+
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>회원 권한/상태변경 이력 관리</h3>
+    <p style="color:#666; margin-bottom:12px;">
+        비밀번호 변경, 회원정보 수정, 권한 부여/회수, 휴면 전환/해제, 계정잠금 해제, 탈퇴 등 회원 계정에 대한 주요 변경 이력입니다. 최근 200건까지 표시합니다.
+    </p>
+    <p th:if="${loginId}">
+        <strong th:text="${loginId}"></strong> 님의 이력만 표시 중 - <a th:href="@{/log/user-change}">전체 보기</a>
+    </p>
+
+    <table class="board_list_table">
+        <thead>
+        <tr><th>ID</th><th>아이디</th><th>변경 내용</th><th>IP</th><th>일시</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="l : ${logs}">
+            <td th:text="${l.changeLogId()}"></td>
+            <td th:text="${l.loginId()} ?: ('#' + ${l.userId()})"></td>
+            <td th:text="${l.parameter()}"></td>
+            <td th:text="${l.remoteAddr()} ?: '-'"></td>
+            <td th:text="${l.createdDate()}"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(logs)}">변경 이력이 존재하지 않습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

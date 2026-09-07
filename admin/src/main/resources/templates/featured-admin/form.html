@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${mode == 'create'} ? '기획전 등록 - 고향사랑e음 (admin service)' : '기획전 수정 - 고향사랑e음 (admin service)'"></title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
+    <style>.error-box { color:#c00; background:#fdecec; border:1px solid #f5b5b5; padding:8px 12px; border-radius:4px; margin-bottom:12px; }
+    .feat-preview { max-width:160px; display:block; margin-bottom:6px; }</style>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3><span th:text="${mode == 'create'} ? '기획전 등록' : '기획전 수정'"></span></h3>
+    <div class="error-box" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="기획전 정보">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr>
+                <td class="label">구분</td>
+                <td>
+                    <select name="featuredClass" form="featuredForm">
+                        <option value="1" th:selected="${featured.featuredClass == 1 or featured.featuredClass == null}">기획전</option>
+                        <option value="2" th:selected="${featured.featuredClass == 2}">이벤트</option>
+                    </select>
+                    <select name="featuredType" form="featuredForm">
+                        <option value="1" th:selected="${featured.featuredType == '1' or featured.featuredType == null}">PC</option>
+                        <option value="2" th:selected="${featured.featuredType == '2'}">모바일</option>
+                    </select>
+                </td>
+            </tr>
+            <tr><td class="label">기획전 코드</td><td><input type="text" name="featuredCode" th:value="${featured.featuredCode}" form="featuredForm" required></td></tr>
+            <tr><td class="label">URL</td><td><input type="text" name="featuredUrl" th:value="${featured.featuredUrl}" form="featuredForm" required placeholder="예: summer-2026"></td></tr>
+            <tr><td class="label">기획전명</td><td><input type="text" name="featuredName" th:value="${featured.featuredName}" form="featuredForm" required></td></tr>
+            <tr><td class="label">요약 설명</td><td><input type="text" name="featuredSimpleContent" th:value="${featured.featuredSimpleContent}" form="featuredForm" required></td></tr>
+            <tr><td class="label">본문 내용</td><td><textarea name="featuredContent" rows="8" th:text="${featured.featuredContent}" form="featuredForm" required></textarea></td></tr>
+            <tr><td class="label">연결 링크</td><td><input type="text" name="link" th:value="${featured.link}" form="featuredForm" placeholder="예: /gifts/123"></td></tr>
+            <tr>
+                <td class="label">대표 이미지</td>
+                <td>
+                    <img th:if="${featured.featuredImage != null}" class="feat-preview" th:src="${giftBaseUrl + '/uploads/' + featured.featuredImage}" alt="">
+                    <input type="file" name="image" form="featuredForm" accept="image/*">
+                </td>
+            </tr>
+            <tr>
+                <td class="label">썸네일 이미지</td>
+                <td>
+                    <img th:if="${featured.thumbnailImage != null}" class="feat-preview" th:src="${giftBaseUrl + '/uploads/' + featured.thumbnailImage}" alt="">
+                    <input type="file" name="thumbnailImage" form="featuredForm" accept="image/*">
+                </td>
+            </tr>
+            <tr><td class="label">노출여부</td><td><input type="checkbox" name="featuredFlag" value="Y" th:checked="${featured.featuredFlag == 'Y' or featured.featuredFlag == null}" form="featuredForm"> 노출</td></tr>
+            <tr><td class="label">목록 노출</td><td><input type="checkbox" name="displayListFlag" value="Y" th:checked="${featured.displayListFlag == 'Y' or featured.displayListFlag == null}" form="featuredForm"> 목록에 표시</td></tr>
+            <tr><td class="label">정렬순서</td><td><input type="number" name="ordering" th:value="${featured.ordering ?: 0}" form="featuredForm"></td></tr>
+            <tr>
+                <td class="label">진행기간</td>
+                <td>
+                    <input type="text" name="startDate" th:value="${featured.startDate}" form="featuredForm" placeholder="YYYYMMDD"> ~
+                    <input type="text" name="endDate" th:value="${featured.endDate}" form="featuredForm" placeholder="YYYYMMDD">
+                </td>
+            </tr>
+            <tr><td class="label">지자체 코드</td><td><input type="text" name="locgovCode" th:value="${featured.locgovCode}" form="featuredForm" placeholder="전체는 비워두세요"></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <form id="featuredForm" method="post" enctype="multipart/form-data"
+          th:action="${mode == 'create'} ? @{/admin/featured} : @{/admin/featured/{id}(id=${featured.featuredId})}"></form>
+    <div class="btn_all btn_center">
+        <button type="submit" form="featuredForm" class="btn btn-dark-gray btn-small">저장</button>
+        <a class="btn btn-small" th:href="@{/admin/featured}">목록</a>
+    </div>
+
+    <div th:if="${mode == 'edit'}">
+        <h4 style="margin-top:24px;">소속 답례품</h4>
+        <table class="board_list_table">
+            <thead><tr><th>순서</th><th>상품ID</th><th>상품명</th></tr></thead>
+            <tbody>
+            <tr th:each="it : ${items}">
+                <td th:text="${it.displayOrder}"></td>
+                <td th:text="${it.itemId}"></td>
+                <td th:text="${it.itemName}"></td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="empty" th:if="${#lists.isEmpty(items)}">구성된 답례품이 없습니다.</p>
+
+        <form th:action="@{/admin/featured/{id}/items(id=${featured.featuredId})}" method="post">
+            <p style="font-size:12px;color:#666;">답례품 ID를 콤마(,)로 구분해 입력하면 입력한 순서대로 전체 교체됩니다.
+                <a th:href="@{/admin/gift-items}" target="_blank">답례품 ID 조회 &gt;</a></p>
+            <textarea name="itemIdsCsv" rows="2" style="width:100%;"
+                      th:text="${#lists.isEmpty(items) ? '' : #strings.listJoin(items.![itemId], ', ')}"></textarea>
+            <div class="btn_all btn_center">
+                <button type="submit" class="btn btn-dark-gray btn-small">답례품 구성 저장</button>
+            </div>
+        </form>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

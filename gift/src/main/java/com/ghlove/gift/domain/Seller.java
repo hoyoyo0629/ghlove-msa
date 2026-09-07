@@ -99,4 +99,13 @@ public class Seller {
 
     @Column(name = "UPDATED_USER_ID")
     private Long updatedUserId;
+
+    /** 판매자 셀프포털(SellerPortalController) 전용 - member 서비스의 ROLE_PROVIDER 회원
+     *  계정(GH_AUTH JWT의 userId)과 이 판매자 레코드를 잇는 신규 컬럼(AS-IS OP_SELLER에는
+     *  없음, LOGIN_ID/PASSWORD는 실제로 검증하는 로직이 없는 죽은 컬럼이라 대신 이 컬럼으로
+     *  본인 확인을 한다). NULL이면 아직 어떤 회원 계정과도 연결되지 않은 판매자 - 셀프포털
+     *  로그인이 불가능하다(admin이 입점업체관리에서 연결해줘야 함, 이 라운드는 연결 자체를
+     *  admin CRUD 화면에 노출하지 않고 DB로만 시딩했다 - 범위 밖). */
+    @Column(name = "MEMBER_USER_ID")
+    private Long memberUserId;
 }

@@ -108,7 +108,10 @@ public class MaintenanceAdminController {
         Manager manager = manager(session);
         GSrMaintenance entity = maintenanceRepository.findById(id).orElseThrow();
         entity.setKiType(form.getKiType());
-        entity.setReqCrtDate(form.getReqCrtDate());
+        if (form.getReqCrtDate() != null && !form.getReqCrtDate().isBlank()) {
+            // REQ_CRT_DATE is NOT NULL - keep the existing value if the form field was left blank.
+            entity.setReqCrtDate(form.getReqCrtDate());
+        }
         entity.setReqUserPhoneNumber(form.getReqUserPhoneNumber());
         entity.setReqChannel(form.getReqChannel());
         entity.setReqType(form.getReqType());

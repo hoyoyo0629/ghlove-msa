@@ -1571,6 +1571,12 @@ CREATE TABLE IF NOT EXISTS OP_ITEM_OPTION (
     CREATED_DATE                 VARCHAR(14),
     PRIMARY KEY (ITEM_OPTION_ID)
 );
+-- SFR-005 재검토 라운드 - 배치스캔 원본엔 시퀀스가 안 붙어있어(다른 유사 테이블과 동일한
+-- 관례, OP_ITEM_ORDERING 참고) 직접 추가한다. 답례품 옵션(사이즈/색상 등 다중옵션) 카탈로그
+-- 관리 기능이 이 테이블 하나만 실제 코드로 매핑돼 있었던 gap을 닫는다.
+CREATE SEQUENCE IF NOT EXISTS op_item_option_item_option_id_seq START WITH 1000;
+ALTER TABLE OP_ITEM_OPTION ALTER COLUMN ITEM_OPTION_ID SET DEFAULT nextval('op_item_option_item_option_id_seq');
+ALTER SEQUENCE op_item_option_item_option_id_seq OWNED BY OP_ITEM_OPTION.ITEM_OPTION_ID;
 
 -- 상품옵션이미지
 CREATE TABLE IF NOT EXISTS OP_ITEM_OPTION_IMAGE (
@@ -2680,13 +2686,35 @@ CREATE TABLE IF NOT EXISTS G_ITEM_INQUIRY (
     ANSWER           TEXT,
     ANSWERED_DATE    TIMESTAMP,
     STATUS           VARCHAR(20) NOT NULL,
-    CREATED_DATE     TIMESTAMP   NOT NULL DEFAULT now()
+    CREATED_DATE     TIMESTAMP   NOT NULL DEFAULT now(),
+    DISPLAY_FLAG     VARCHAR(1)  NOT NULL DEFAULT 'Y'
 );
 
 INSERT INTO OP_COMMON_CODE (CODE_TYPE, CODE_LANGUAGE, ID, LABEL, ORDERING, USE_YN) VALUES
 ('GIFT_INQUIRY_STATUS', 'ko', 'WAITING',  '답변대기', 1, 'Y'),
 ('GIFT_INQUIRY_STATUS', 'ko', 'ANSWERED', '답변완료', 2, 'Y')
 ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
+
+-- SFR-005 "고객 후기/문의 관리(후기/문의/답변/신고)" - AS-IS에 없던 신규 요구사항이라
+-- OP_/G_ 접두사 없이 이 프로젝트의 "신규 테이블" 관례(USER_DATA_DESTRUCTION_LOG 등)를 따른다.
+-- 회원 1인당 리뷰/문의 1건당 중복신고를 막기 위해 (대상ID, USER_ID) 유니크 인덱스를 둔다.
+CREATE TABLE IF NOT EXISTS ITEM_REVIEW_REPORT (
+    REPORT_ID       BIGSERIAL PRIMARY KEY,
+    ITEM_REVIEW_ID  BIGINT      NOT NULL,
+    USER_ID         BIGINT      NOT NULL,
+    REASON          VARCHAR(500),
+    CREATED_DATE    TIMESTAMP   NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_item_review_report_unique ON ITEM_REVIEW_REPORT (ITEM_REVIEW_ID, USER_ID);
+
+CREATE TABLE IF NOT EXISTS ITEM_INQUIRY_REPORT (
+    REPORT_ID    BIGSERIAL PRIMARY KEY,
+    INQUIRY_ID   BIGINT      NOT NULL,
+    USER_ID      BIGINT      NOT NULL,
+    REASON       VARCHAR(500),
+    CREATED_DATE TIMESTAMP   NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_item_inquiry_report_unique ON ITEM_INQUIRY_REPORT (INQUIRY_ID, USER_ID);
 
 -- =====================================================================
 -- Round 4 (SFR-005 gap fill): 답례품 수정/노출정책/썸네일 자동생성.
@@ -2704,6 +2732,18 @@ ALTER TABLE OP_ITEM ADD COLUMN IF NOT EXISTS MIN_DONATION_AMOUNT INTEGER;
 INSERT INTO OP_COMMON_CODE (CODE_TYPE, CODE_LANGUAGE, ID, LABEL, ORDERING, USE_YN) VALUES
 ('GIFT_DISPLAY_TYPE', 'ko', 'ALWAYS',  '상시노출', 1, 'Y'),
 ('GIFT_DISPLAY_TYPE', 'ko', 'LIMITED', '한시노출', 2, 'Y')
+ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
+
+-- SFR-005 재검토 라운드 - "배송비·택배사 설정, 배송정책" gap을 닫는다. DELIVERY_COMPANY_NAME/
+-- SHIPPING*/ITEM_RETURN_FLAG 컬럼은 OP_ITEM에 이미 있었으나(배치스캔 원본) 지금까지 코드가
+-- 전혀 매핑하지 않고 있었다 - 새 컬럼 추가가 아니라 Gift.java에 매핑만 추가하면 된다.
+INSERT INTO OP_COMMON_CODE (CODE_TYPE, CODE_LANGUAGE, ID, LABEL, ORDERING, USE_YN) VALUES
+('GIFT_SHIPPING_TYPE', 'ko', '1', '무료배송',       1, 'Y'),
+('GIFT_SHIPPING_TYPE', 'ko', '2', '판매자조건부',   2, 'Y'),
+('GIFT_SHIPPING_TYPE', 'ko', '3', '출고지조건부',   3, 'Y'),
+('GIFT_SHIPPING_TYPE', 'ko', '4', '상품조건부',     4, 'Y'),
+('GIFT_SHIPPING_TYPE', 'ko', '5', '개당배송비',     5, 'Y'),
+('GIFT_SHIPPING_TYPE', 'ko', '6', '고정배송비',     6, 'Y')
 ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
 
 -- 폐지(영구 종료) - 판매중지(STOPPED, 재개 가능)와 구분되는 별도 상태.

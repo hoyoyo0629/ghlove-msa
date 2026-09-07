@@ -1,9 +1,11 @@
 package com.ghlove.member.web;
 
 import com.ghlove.member.domain.User;
+import com.ghlove.member.domain.UserChangeLog;
 import com.ghlove.member.domain.UserDetail;
 import com.ghlove.member.repository.LoginLogRepository;
 import com.ghlove.member.repository.UserActionLogRepository;
+import com.ghlove.member.repository.UserChangeLogRepository;
 import com.ghlove.member.repository.UserDetailRepository;
 import com.ghlove.member.repository.UserRepository;
 import com.ghlove.member.service.MemberException;
@@ -37,6 +39,7 @@ public class UserApiController {
     private final MemberService memberService;
     private final LoginLogRepository loginLogRepository;
     private final UserActionLogRepository userActionLogRepository;
+    private final UserChangeLogRepository userChangeLogRepository;
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     @GetMapping("/api/users/{userId}")
@@ -112,5 +115,23 @@ public class UserApiController {
 
     public record UserActionLogDto(Integer actionLogId, String createdDate, String remoteAddr,
                                     String requestUri, String requestMethod, String loginId) {
+    }
+
+    /** admin "회원 권한/상태변경 이력 관리" 화면용 (SFR-002 "권한 변경, 계정 잠금/해제" 감사로그 -
+     *  로그는 이미 OP_USER_CHANGE_LOG에 쌓이고 있었으나 조회할 admin 화면이 없던 gap을 닫는다). */
+    @GetMapping("/api/admin/change-log")
+    public List<ChangeLogDto> changeLog() {
+        List<UserChangeLog> logs = userChangeLogRepository.findTop200ByOrderByChangeLogIdDesc();
+        Map<Long, String> loginIdByUserId = userRepository.findAllById(
+                        logs.stream().map(UserChangeLog::getUserId).distinct().toList()).stream()
+                .collect(java.util.stream.Collectors.toMap(User::getUserId, User::getLoginId));
+        return logs.stream()
+                .map(l -> new ChangeLogDto(l.getChangeLogId(), l.getUserId(), loginIdByUserId.get(l.getUserId()),
+                        l.getParameter(), l.getRemoteAddr(), l.getCreatedDate()))
+                .toList();
+    }
+
+    public record ChangeLogDto(Long changeLogId, Long userId, String loginId, String parameter,
+                                String remoteAddr, String createdDate) {
     }
 }

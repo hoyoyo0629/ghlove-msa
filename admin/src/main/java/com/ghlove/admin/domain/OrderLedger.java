@@ -31,6 +31,15 @@ public class OrderLedger {
     @Column(name = "SELLER_ID")
     private Long sellerId;
 
+    /** SFR-006 재검토 라운드 "주문상세/이력뷰" ReadModel gap fill - admin 주문목록 검색이
+     *  더 이상 order 서비스에 매 요청 REST 호출을 하지 않고 이 사본으로 조회할 수 있도록
+     *  검색/표시에 필요한 최소 필드만 추가했다(상세보기·쓰기는 여전히 OrderAdminClient). */
+    @Column(name = "ITEM_NAME")
+    private String itemName;
+
+    @Column(name = "RECEIVER_NAME")
+    private String receiverName;
+
     @Column(name = "QUANTITY")
     private Integer quantity;
 

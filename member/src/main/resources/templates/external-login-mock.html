@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${providerName} + ' 로그인 - 고향사랑e음 (member service)'"></title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="wrap">
+    <h1 th:text="${providerName} + ' 로그인'"><span class="badge">member</span></h1>
+    <p class="result-box">
+        <span th:text="${providerName}"></span> 연계는 코드 구현이 완료되었지만, 아직 방화벽/실제 연계 기관 승인이
+        열리지 않아 이 환경에서는 비활성화(<code>enabled: false</code>) 상태입니다.<br>
+        연계가 열리면 이 화면 대신 실제 <span th:text="${providerName}"></span> 인증 화면으로 연결됩니다.
+        지금은 아래 버튼으로 모의 인증을 통과해 로그인 흐름을 계속 테스트할 수 있습니다.
+    </p>
+    <form th:action="@{'/login/mock/' + ${providerCode}}" method="post">
+        <div class="links">
+            <button type="submit" class="login">[테스트용] 모의 인증으로 로그인</button>
+        </div>
+    </form>
+    <div class="links">
+        <a th:href="@{/login}">로그인으로 돌아가기</a>
+    </div>
+</div>
+</body>
+</html>

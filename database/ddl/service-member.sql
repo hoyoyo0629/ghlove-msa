@@ -900,3 +900,16 @@ INSERT INTO OP_COMMON_CODE (CODE_TYPE, CODE_LANGUAGE, ID, LABEL, CODE_VALUE, ORD
 ('SYSTEM_CONFIG', 'ko', 'WITHDRAWN_DATA_RETENTION_DAYS', '탈퇴회원 개인정보 보관기간(일)', '30', 90, 'Y'),
 ('SYSTEM_CONFIG', 'ko', 'LOGIN_LOG_RETENTION_DAYS', '로그인 로그 익명화 보관기간(일)', '365', 91, 'Y')
 ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
+
+-- SFR-002 "인증토큰/세션 관리(만료, 재인증 정책)" - AS-IS에 없던 신규 테이블(그래서 OP_
+-- 접두사 없이 USER_DATA_DESTRUCTION_LOG와 동일한 관례). GH_AUTH 액세스 JWT(기본 120분)가
+-- 만료돼도 재로그인 없이 새 액세스 토큰을 받을 수 있도록, 별도의 장기(기본 14일) 불투명
+-- 토큰을 회전(rotate) 방식으로 발급/폐기한다.
+CREATE TABLE IF NOT EXISTS USER_REFRESH_TOKEN (
+    TOKEN_ID     BIGSERIAL    PRIMARY KEY,
+    USER_ID      BIGINT       NOT NULL,
+    TOKEN        VARCHAR(64)  NOT NULL,
+    EXPIRES_AT   VARCHAR(14)  NOT NULL,
+    CREATED_DATE VARCHAR(14)  NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_refresh_token_token ON USER_REFRESH_TOKEN (TOKEN);

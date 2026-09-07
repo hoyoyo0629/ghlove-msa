@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>기획전 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <style>
+        .search-form { background:#f7f7f7; border:1px solid #ddd; border-radius:4px; padding:10px 12px; margin-bottom:12px; }
+        .search-form select, .search-form input[type=text] { margin-right:6px; }
+        .error-box { color:#c00; background:#fdecec; border:1px solid #f5b5b5; padding:8px 12px; border-radius:4px; margin-bottom:12px; }
+        .feat-thumb { width:60px; height:40px; object-fit:cover; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>기획전 관리</h3>
+    <p style="color:#666; margin-bottom:12px;">상품을 묶어 기획전/이벤트 페이지로 노출합니다(AS-IS opmanager/featured, featured-mobile).</p>
+    <div class="error-box" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <form class="search-form" method="get" th:action="@{/admin/featured}">
+        <select name="featuredType">
+            <option value="1" th:selected="${featuredType == '1'}">PC</option>
+            <option value="2" th:selected="${featuredType == '2'}">모바일</option>
+        </select>
+        <input type="text" name="featuredName" th:value="${featuredName}" placeholder="기획전명 검색">
+        <button type="submit" class="small-btn">검색</button>
+        <a class="btn" style="float:right;" th:href="@{/admin/featured/new}">+ 기획전 등록</a>
+    </form>
+
+    <table class="board_list_table">
+        <thead>
+        <tr><th>이미지</th><th>ID</th><th>구분</th><th>기획전명</th><th>코드</th><th>노출</th><th>순서</th><th>기간</th><th>처리</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="f : ${featuredList}">
+            <td><img th:if="${f.thumbnailImage != null}" class="feat-thumb" th:src="${giftBaseUrl + '/uploads/' + f.thumbnailImage}" alt=""></td>
+            <td th:text="${f.featuredId}"></td>
+            <td th:text="${f.featuredClass == 1 ? '기획전' : '이벤트'}"></td>
+            <td><a th:href="@{/admin/featured/{id}/edit(id=${f.featuredId})}" th:text="${f.featuredName}"></a></td>
+            <td th:text="${f.featuredCode}"></td>
+            <td th:text="${f.featuredFlag == 'Y' ? '노출' : '숨김'}"></td>
+            <td th:text="${f.ordering}"></td>
+            <td th:text="${(f.startDate ?: '') + ' ~ ' + (f.endDate ?: '')}"></td>
+            <td>
+                <a class="small-btn" th:href="@{/admin/featured/{id}/edit(id=${f.featuredId})}">수정</a>
+                <form style="display:inline;" th:action="@{/admin/featured/{id}/delete(id=${f.featuredId})}" method="post"
+                      onsubmit="return confirm('이 기획전을 삭제하시겠습니까?')">
+                    <input type="hidden" name="featuredType" th:value="${featuredType}">
+                    <button type="submit" class="small-btn">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(featuredList)}">등록된 기획전이 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

@@ -177,6 +177,31 @@ public class LocgovAdminClient {
         }
     }
 
+    /** 지자체별 기부혜택 안내문구 (SFR-003) - 원래 donation 자체 무인증 화면이었던 것을 이관. */
+    public String honorBenefit(String locgovCode) {
+        try {
+            Map<?, ?> result = restClient.get().uri("/api/locgov-admin/{code}/honor-benefit", locgovCode)
+                    .retrieve().body(Map.class);
+            Object desc = result != null ? result.get("benefitDesc") : null;
+            return desc != null ? desc.toString() : "";
+        } catch (RestClientException e) {
+            return "";
+        }
+    }
+
+    public void updateHonorBenefit(String locgovCode, String benefitDesc) {
+        try {
+            restClient.post()
+                    .uri("/api/locgov-admin/{code}/honor-benefit", locgovCode)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body("benefitDesc=" + java.net.URLEncoder.encode(
+                            benefitDesc == null ? "" : benefitDesc, java.nio.charset.StandardCharsets.UTF_8))
+                    .retrieve().toBodilessEntity();
+        } catch (RestClientResponseException e) {
+            throw new ManagerException(extractMessage(e, "기부혜택 안내문구 저장에 실패했습니다."));
+        }
+    }
+
     private byte[] fetchBytes(String uri, Object... vars) {
         try {
             return restClient.get().uri(uri, vars).retrieve().body(byte[].class);

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>PG사 연동 설정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3><span>PG사(결제대행사) 연동 설정</span></h3>
+    <div th:replace="~{fragments/site-config-nav :: tabs('pg')}"></div>
+    <p class="success" th:if="${param.message}" th:text="${param.message}"></p>
+
+    <h4>기본 정보</h4>
+    <div class="board_write">
+        <table class="board_write_table" summary="PG 기본 정보">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr><td class="label">PG사 구분</td><td><input type="text" id="pgType" name="pgType" th:value="${config.pgType}" form="pgForm"></td></tr>
+            <tr><td class="label">가맹점 ID(MID)</td><td><input type="text" id="mid" name="mid" th:value="${config.mid}" form="pgForm"></td></tr>
+            <tr><td class="label">인증키(KEY)</td><td><input type="text" id="key" name="key" th:value="${config.key}" form="pgForm"></td></tr>
+            <tr><td class="label">서명키(SIGN)</td><td><input type="text" id="sign" name="sign" th:value="${config.sign}" form="pgForm"></td></tr>
+            <tr><td class="label">취소 비밀번호</td><td><input type="password" id="cancelPassword" name="cancelPassword" th:value="${config.cancelPassword}" form="pgForm"></td></tr>
+            <tr><td class="label">카드코드</td><td><input type="text" id="cardCode" name="cardCode" th:value="${config.cardCode}" form="pgForm"></td></tr>
+            <tr><td class="label">통화(Currency)</td><td><input type="text" id="currency" name="currency" th:value="${config.currency}" form="pgForm"></td></tr>
+            <tr><td class="label">할부(Instalment)</td><td><input type="text" id="instalment" name="instalment" th:value="${config.instalment}" form="pgForm"></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h4 style="margin-top:24px;">모바일 결제</h4>
+    <div class="board_write">
+        <table class="board_write_table" summary="모바일 결제">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr><td class="label">모바일 MID</td><td><input type="text" id="mobileMid" name="mobileMid" th:value="${config.mobileMid}" form="pgForm"></td></tr>
+            <tr><td class="label">모바일 KEY</td><td><input type="text" id="mobileKey" name="mobileKey" th:value="${config.mobileKey}" form="pgForm"></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h4 style="margin-top:24px;">에스크로</h4>
+    <div class="board_write">
+        <table class="board_write_table" summary="에스크로">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr><td class="label">에스크로 사용</td><td><input type="checkbox" name="useEscroow" value="Y" th:checked="${config.useEscroow == 'Y'}" form="pgForm"> 사용</td></tr>
+            <tr><td class="label">에스크로 MID</td><td><input type="text" id="escroowMid" name="escroowMid" th:value="${config.escroowMid}" form="pgForm"></td></tr>
+            <tr><td class="label">에스크로 KEY</td><td><input type="text" id="escroowKey" name="escroowKey" th:value="${config.escroowKey}" form="pgForm"></td></tr>
+            <tr><td class="label">모바일 에스크로 MID</td><td><input type="text" id="mobileEscroowMid" name="mobileEscroowMid" th:value="${config.mobileEscroowMid}" form="pgForm"></td></tr>
+            <tr><td class="label">모바일 에스크로 KEY</td><td><input type="text" id="mobileEscroowKey" name="mobileEscroowKey" th:value="${config.mobileEscroowKey}" form="pgForm"></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h4 style="margin-top:24px;">현금영수증 / 환불 / 부분취소</h4>
+    <div class="board_write">
+        <table class="board_write_table" summary="현금영수증 및 기타">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr><td class="label">자동 현금영수증 발급</td><td><input type="checkbox" name="useAutoCashReceipt" value="Y" th:checked="${config.useAutoCashReceipt == 'Y'}" form="pgForm"> 사용</td></tr>
+            <tr><td class="label">현금영수증 서비스 구분</td><td><input type="text" id="cashbillServiceType" name="cashbillServiceType" th:value="${config.cashbillServiceType}" form="pgForm"></td></tr>
+            <tr><td class="label">가상계좌 환불 서비스</td><td><input type="checkbox" name="useVbackRefundService" value="Y" th:checked="${config.useVbackRefundService == 'Y'}" form="pgForm"> 사용</td></tr>
+            <tr><td class="label">실시간 부분취소</td><td><input type="checkbox" name="realtimePartcancelFlag" value="Y" th:checked="${config.realtimePartcancelFlag == 'Y'}" form="pgForm"> 사용</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h4 style="margin-top:24px;">네이버페이</h4>
+    <div class="board_write">
+        <table class="board_write_table" summary="네이버페이">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr><td class="label">네이버페이 주문 사용</td><td><input type="checkbox" name="useNpayOrder" value="Y" th:checked="${config.useNpayOrder == 'Y'}" form="pgForm"> 사용</td></tr>
+            <tr><td class="label">네이버페이 결제 사용</td><td><input type="checkbox" name="useNpayPayment" value="Y" th:checked="${config.useNpayPayment == 'Y'}" form="pgForm"> 사용</td></tr>
+            <tr><td class="label">네이버페이 MID</td><td><input type="text" id="npayMid" name="npayMid" th:value="${config.npayMid}" form="pgForm"></td></tr>
+            <tr><td class="label">네이버페이 KEY</td><td><input type="text" id="npayKey" name="npayKey" th:value="${config.npayKey}" form="pgForm"></td></tr>
+            <tr><td class="label">네이버페이 로그KEY</td><td><input type="text" id="npayLogKey" name="npayLogKey" th:value="${config.npayLogKey}" form="pgForm"></td></tr>
+            <tr><td class="label">네이버페이 Client ID</td><td><input type="text" id="npayClientId" name="npayClientId" th:value="${config.npayClientId}" form="pgForm"></td></tr>
+            <tr><td class="label">네이버페이 Client Secret</td><td><input type="text" id="npayClientSecret" name="npayClientSecret" th:value="${config.npayClientSecret}" form="pgForm"></td></tr>
+            <tr><td class="label">네이버페이 Partner ID</td><td><input type="text" id="npayPartnerId" name="npayPartnerId" th:value="${config.npayPartnerId}" form="pgForm"></td></tr>
+            <tr><td class="label">네이버페이 버튼KEY</td><td><input type="text" id="npayButtonKey" name="npayButtonKey" th:value="${config.npayButtonKey}" form="pgForm"></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <form id="pgForm" th:action="@{/site-config/pg}" method="post"></form>
+    <div class="btn_all btn_center">
+        <button type="submit" form="pgForm" class="btn btn-dark-gray btn-small">저장</button>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

@@ -6,6 +6,7 @@ import com.ghlove.gift.domain.Review;
 import com.ghlove.gift.domain.ReviewImage;
 import com.ghlove.gift.domain.Seller;
 import com.ghlove.gift.service.GiftException;
+import com.ghlove.gift.service.GiftOptionService;
 import com.ghlove.gift.service.GiftService;
 import com.ghlove.gift.service.InquiryService;
 import com.ghlove.gift.service.JwtVerifier;
@@ -42,6 +43,7 @@ public class GiftPublicApiController {
     private final GiftService giftService;
     private final ReviewService reviewService;
     private final InquiryService inquiryService;
+    private final GiftOptionService giftOptionService;
     private final WishlistService wishlistService;
     private final LocgovClient locgovClient;
     private final JwtVerifier jwtVerifier;
@@ -99,19 +101,25 @@ public class GiftPublicApiController {
     }
 
     public record ReviewDto(Long itemReviewId, Long userId, String userName, String createdDate,
-                             Integer score, String subject, String content, List<String> imageUrls) {
+                             Integer score, String subject, String content, List<String> imageUrls,
+                             boolean reportedByMe) {
     }
 
     public record InquiryDto(Long inquiryId, String status, String statusLabel, String secretYn,
-                              String question, String answer) {
+                              String question, String answer, boolean reportedByMe) {
     }
 
     public record SellerDto(String companyName, String telephoneNumber) {
     }
 
+    /** SFR-005 "카탈로그 관리: 옵션" - 카탈로그 정보 표시용(장바구니/주문에는 아직 반영 안 됨,
+     *  {@link com.ghlove.gift.domain.GiftOption} 클래스 주석 참고). */
+    public record OptionDto(Long itemOptionId, String optionName, Integer optionPrice, boolean soldOut) {
+    }
+
     public record DetailResponse(Gift gift, List<String> imageUrls, String locgovName, String categoryLabel,
                                   SellerDto seller, boolean wishlisted, List<ReviewDto> reviews,
-                                  double averageScore, List<InquiryDto> inquiries) {
+                                  double averageScore, List<InquiryDto> inquiries, List<OptionDto> options) {
     }
 
     @GetMapping("/api/gifts/{itemId}/detail")
@@ -137,14 +145,21 @@ public class GiftPublicApiController {
                         r.getUserName() != null ? r.getUserName() : ("회원#" + r.getUserId()),
                         REVIEW_DATE_FORMAT.format(r.getCreatedDate()), r.getScore(), r.getSubject(), r.getContent(),
                         reviewImages.getOrDefault(r.getItemReviewId(), List.of()).stream()
-                                .map(ri -> "/uploads/" + ri.getReviewImage()).toList()))
+                                .map(ri -> "/uploads/" + ri.getReviewImage()).toList(),
+                        authUserId.isPresent() && reviewService.reportedBy(r.getItemReviewId(), authUserId.get())))
                 .toList();
 
         Map<String, String> inquiryStatusLabels = giftService.codesOf("GIFT_INQUIRY_STATUS");
         List<InquiryDto> inquiryDtos = inquiryService.inquiriesOf(itemId).stream()
                 .map(q -> new InquiryDto(q.getInquiryId(), q.getStatus(),
                         inquiryStatusLabels.getOrDefault(q.getStatus(), q.getStatus()), q.getSecretYn(),
-                        q.getQuestion(), q.getAnswer()))
+                        q.getQuestion(), q.getAnswer(),
+                        authUserId.isPresent() && inquiryService.reportedBy(q.getInquiryId(), authUserId.get())))
+                .toList();
+
+        List<OptionDto> optionDtos = giftOptionService.optionsOf(itemId).stream()
+                .map(o -> new OptionDto(o.getItemOptionId(), o.getOptionName1(), o.getOptionPrice(),
+                        "Y".equals(o.getOptionSoldOutFlag())))
                 .toList();
 
         DetailResponse response = new DetailResponse(gift,
@@ -152,7 +167,7 @@ public class GiftPublicApiController {
                 locgovClient.namesByCode().get(gift.getLocgovCode()),
                 giftService.codesOf("GIFT_CATEGORY").get(gift.getCategoryCode()),
                 seller != null ? new SellerDto(seller.getCompanyName(), seller.getTelephoneNumber()) : null,
-                wishlisted, reviewDtos, averageScore, inquiryDtos);
+                wishlisted, reviewDtos, averageScore, inquiryDtos, optionDtos);
         return ResponseEntity.ok(response);
     }
 
@@ -191,6 +206,41 @@ public class GiftPublicApiController {
         }
         try {
             inquiryService.ask(itemId, authUserId.get(), req.question(), req.secret());
+            return ResponseEntity.noContent().build();
+        } catch (GiftException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    public record ReportRequest(String reason) {
+    }
+
+    /** 리뷰 신고 (SFR-005). */
+    @PostMapping("/api/gifts/{itemId}/reviews/{reviewId}/report")
+    public ResponseEntity<?> reportReview(@PathVariable Long itemId, @PathVariable Long reviewId,
+                                           @RequestBody(required = false) ReportRequest req, HttpServletRequest request) {
+        var authUserId = jwtVerifier.currentUserId(request);
+        if (authUserId.isEmpty()) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            reviewService.report(reviewId, authUserId.get(), req != null ? req.reason() : null);
+            return ResponseEntity.noContent().build();
+        } catch (GiftException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    /** 문의 신고 (SFR-005). */
+    @PostMapping("/api/gifts/{itemId}/inquiries/{inquiryId}/report")
+    public ResponseEntity<?> reportInquiry(@PathVariable Long itemId, @PathVariable Long inquiryId,
+                                            @RequestBody(required = false) ReportRequest req, HttpServletRequest request) {
+        var authUserId = jwtVerifier.currentUserId(request);
+        if (authUserId.isEmpty()) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            inquiryService.report(inquiryId, authUserId.get(), req != null ? req.reason() : null);
             return ResponseEntity.noContent().build();
         } catch (GiftException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));

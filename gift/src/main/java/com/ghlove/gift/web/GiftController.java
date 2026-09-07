@@ -430,42 +430,4 @@ public class GiftController {
         return "redirect:/wishlist";
     }
 
-    @GetMapping("/admin")
-    public String adminQueue(Model model) {
-        model.addAttribute("gifts", giftService.pendingGifts());
-        model.addAttribute("categories", giftService.codesOf("GIFT_CATEGORY"));
-        return "admin";
-    }
-
-    @PostMapping("/gifts/{itemId}/approve")
-    public String approve(@PathVariable Long itemId) {
-        giftService.approve(itemId);
-        return "redirect:/admin";
-    }
-
-    @PostMapping("/gifts/{itemId}/reject")
-    public String reject(@PathVariable Long itemId) {
-        giftService.reject(itemId);
-        return "redirect:/admin";
-    }
-
-    /** 대표상품관리 (AS-IS opmanager/item/representative-item). */
-    @GetMapping("/admin/representative-items")
-    public String representativeItems(Model model) {
-        model.addAttribute("gifts", giftService.representativeGifts());
-        model.addAttribute("candidates", giftService.publicGifts(null, null));
-        return "representative-items";
-    }
-
-    @PostMapping("/gifts/{itemId}/representative/register")
-    public String registerRepresentative(@PathVariable Long itemId) {
-        giftService.registerRepresentative(itemId);
-        return "redirect:/admin/representative-items";
-    }
-
-    @PostMapping("/gifts/{itemId}/representative/delete")
-    public String deleteRepresentative(@PathVariable Long itemId) {
-        giftService.unregisterRepresentative(itemId);
-        return "redirect:/admin/representative-items";
-    }
 }

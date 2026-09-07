@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>판매자 시스템공지 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>판매자(답례품제공자) 시스템공지 관리</h3>
+
+    <form method="get" th:action="@{/admin/seller-notices}" class="search_form">
+        <label>등록일 시작 <input type="date" name="startDate" th:value="${startDate}"></label>
+        <label>등록일 종료 <input type="date" name="endDate" th:value="${endDate}"></label>
+        <label>제목/내용검색 <input type="text" name="keyword" th:value="${keyword}"></label>
+        <button type="submit" class="btn">검색</button>
+    </form>
+
+    <p><a class="btn" th:href="@{/admin/seller-notices/new}">+ 공지 등록</a></p>
+
+    <form id="bulkForm" th:action="@{/admin/seller-notices/bulk-delete}" method="post"
+          onsubmit="return confirm('선택한 공지를 삭제하시겠습니까?')">
+        <table class="board_list_table">
+            <thead>
+            <tr><th></th><th>제목</th><th>공지여부</th><th>조회수</th><th>등록일</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="n : ${notices}">
+                <td><input type="checkbox" name="ids" th:value="${n.noticeId}" form="bulkForm"></td>
+                <td><a th:href="@{'/admin/seller-notices/' + ${n.noticeId}}" th:text="${n.subject}"></a></td>
+                <td th:text="${n.noticeFlag == 'Y' ? '공지' : ''}"></td>
+                <td th:text="${n.hits}"></td>
+                <td th:text="${n.frstCrtDt != null ? #temporals.format(n.frstCrtDt, 'yyyy-MM-dd HH:mm') : ''}"></td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="empty" th:if="${#lists.isEmpty(notices)}">등록된 공지가 없습니다.</p>
+        <div class="btn_all" th:if="${not #lists.isEmpty(notices)}">
+            <button type="submit" class="btn btn-small">선택 삭제</button>
+        </div>
+    </form>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

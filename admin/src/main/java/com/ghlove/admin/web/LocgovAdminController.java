@@ -98,10 +98,24 @@ public class LocgovAdminController {
             model.addAttribute("pointRateHistory", pointClient.locgovPointRateHistory(locgovCode));
             model.addAttribute("currentYear", String.valueOf(LocalDate.now().getYear()));
             model.addAttribute("locgovScoped", MenuService.isLocgovScoped(viewer));
+            model.addAttribute("honorBenefit", locgovAdminClient.honorBenefit(locgovCode));
         } catch (ManagerException e) {
             model.addAttribute("errorMessage", e.getMessage());
         }
         return "locgov-admin/form";
+    }
+
+    /** 지자체별 기부혜택 안내문구 (SFR-003 "지자체별 기부혜택 관리") - donation 자체에 무인증으로
+     *  노출돼 있던 /honor/benefit를 여기 지자체관리 화면으로 흡수했다. */
+    @PostMapping("/{locgovCode}/honor-benefit")
+    public String updateHonorBenefit(@PathVariable String locgovCode, @RequestParam String benefitDesc,
+                                      HttpSession session) {
+        Manager viewer = manager(session);
+        if (MenuService.isLocgovScoped(viewer) && !locgovCode.equals(viewer.getLocgovCode())) {
+            return "redirect:/admin/locgovs/" + viewer.getLocgovCode();
+        }
+        locgovAdminClient.updateHonorBenefit(locgovCode, benefitDesc);
+        return "redirect:/admin/locgovs/" + locgovCode;
     }
 
     @PostMapping("/{locgovCode}/register")
@@ -146,6 +160,7 @@ public class LocgovAdminController {
             model.addAttribute("pointRateHistory", pointClient.locgovPointRateHistory(locgovCode));
             model.addAttribute("currentYear", String.valueOf(LocalDate.now().getYear()));
             model.addAttribute("locgovScoped", MenuService.isLocgovScoped(viewer));
+            model.addAttribute("honorBenefit", locgovAdminClient.honorBenefit(locgovCode));
             return "locgov-admin/form";
         }
     }
@@ -162,9 +177,22 @@ public class LocgovAdminController {
     /** 포인트 지급률 등록/수정 - AS-IS user/locgov/edit.jsp "포인트 지급률" 항목. */
     @PostMapping("/{locgovCode}/point-rate")
     public String upsertPointRate(@PathVariable String locgovCode, @RequestParam String stdrYear,
-                                   @RequestParam BigDecimal pointRate, HttpSession session) {
+                                   @RequestParam BigDecimal pointRate, HttpSession session, Model model) {
         Manager viewer = manager(session);
-        pointClient.upsertLocgovPointRate(stdrYear, locgovCode, pointRate, viewer.getUserName());
+        try {
+            pointClient.upsertLocgovPointRate(stdrYear, locgovCode, pointRate, viewer.getUserName());
+        } catch (ManagerException e) {
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("mode", "edit");
+            model.addAttribute("detail", locgovAdminClient.get(locgovCode));
+            model.addAttribute("deptHist", locgovAdminClient.deptHist(locgovCode));
+            model.addAttribute("lmttList", locgovAdminClient.lmttList(locgovCode));
+            model.addAttribute("pointRateHistory", pointClient.locgovPointRateHistory(locgovCode));
+            model.addAttribute("currentYear", String.valueOf(LocalDate.now().getYear()));
+            model.addAttribute("locgovScoped", MenuService.isLocgovScoped(viewer));
+            model.addAttribute("honorBenefit", locgovAdminClient.honorBenefit(locgovCode));
+            return "locgov-admin/form";
+        }
         return "redirect:/admin/locgovs/" + locgovCode;
     }
 

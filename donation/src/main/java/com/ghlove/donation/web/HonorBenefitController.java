@@ -2,7 +2,6 @@ package com.ghlove.donation.web;
 
 import com.ghlove.donation.domain.Donation;
 import com.ghlove.donation.domain.Locgov;
-import com.ghlove.donation.service.DonationException;
 import com.ghlove.donation.service.DonationService;
 import com.ghlove.donation.service.JwtVerifier;
 import com.ghlove.donation.service.MemberClient;
@@ -11,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDate;
@@ -20,9 +18,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 기부혜택(소득공제) 발급/관리 (SFR-003 "기부혜택 관리 및 발급 기능, 지자체별 기부혜택 관리").
- * SFR-010: userId는 로그인 JWT 쿠키에서만 가져온다. /honor/benefit(지자체별 혜택 문구 등록)은
- * 운영자용 화면이라 이 라운드의 "본인 확인" 범위 밖 - 아직 이 MSA에 운영자 로그인 모델이 없다.
+ * 기부혜택(소득공제) 조회 (SFR-003 "기부혜택 관리 및 발급 기능"). SFR-010: userId는 로그인
+ * JWT 쿠키에서만 가져온다. 지자체별 혜택 문구 "등록/수정"은 관리자 전용 기능이라
+ * admin 콘솔의 지자체관리 화면(LocgovAdminApiController)으로 옮겼다 - 원래 여기 무인증으로
+ * 노출돼 있던 /honor/benefit 쓰기 엔드포인트는 보안결함이라 제거했다(SFR-003 재검토 라운드).
  */
 @Controller
 @RequiredArgsConstructor
@@ -99,26 +98,4 @@ public class HonorBenefitController {
         return "honor-certificates";
     }
 
-    @GetMapping("/honor/benefit")
-    public String benefitForm(@RequestParam(required = false) String locgovCode,
-                               @RequestParam(required = false) String errorMessage, Model model) {
-        model.addAttribute("locgovs", donationService.activeLocgovs());
-        model.addAttribute("locgovCode", locgovCode);
-        model.addAttribute("errorMessage", errorMessage);
-        if (locgovCode != null && !locgovCode.isBlank()) {
-            model.addAttribute("currentBenefit", donationService.honorBenefitOf(locgovCode));
-        }
-        return "honor-benefit";
-    }
-
-    @PostMapping("/honor/benefit")
-    public String updateBenefit(@RequestParam String locgovCode, @RequestParam(required = false) String benefitDesc) {
-        try {
-            donationService.updateHonorBenefit(locgovCode, benefitDesc);
-        } catch (DonationException e) {
-            return "redirect:/honor/benefit?locgovCode=" + locgovCode + "&errorMessage="
-                    + java.net.URLEncoder.encode(e.getMessage(), java.nio.charset.StandardCharsets.UTF_8);
-        }
-        return "redirect:/honor/benefit?locgovCode=" + locgovCode;
-    }
 }

@@ -57,6 +57,27 @@ public class FileStorageService {
         return storedName;
     }
 
+    /** base64 인코딩된 바이트(예: 서명패드 캡처 PNG)를 직접 저장한다 - MultipartFile 업로드가
+     *  아니라 브라우저 canvas에서 캡처한 데이터를 그대로 받는 경로(OffgiveService 참고). */
+    public String storeBytes(byte[] data, String ext, String subDir) {
+        if (data == null || data.length == 0) {
+            throw new DonationException("빈 파일은 업로드할 수 없습니다.");
+        }
+        if (data.length > MAX_SIZE) {
+            throw new DonationException("파일 크기는 20MB를 초과할 수 없습니다.");
+        }
+        String storedName = UUID.randomUUID() + ext;
+        try {
+            Path dir = Paths.get(uploadDir, subDir);
+            Files.createDirectories(dir);
+            Files.write(dir.resolve(storedName), data);
+        } catch (IOException e) {
+            log.error("Failed to store uploaded bytes", e);
+            throw new DonationException("파일 저장에 실패했습니다.");
+        }
+        return storedName;
+    }
+
     public Path resolve(String storedName) {
         return resolve(storedName, "ctbny-opratn");
     }

@@ -77,14 +77,19 @@ public class GiftApiController {
                     String thumbnailPath = imageName != null ? "/uploads/" + imageName : null;
                     return ResponseEntity.ok(new GiftItemInfoDto(g.getItemId(), g.getItemName(), g.getSellerId(),
                             g.getSalePrice(), g.getStockQuantity(), g.getSoldOut(), g.getDataStatusCode(),
-                            g.getLocgovCode(), thumbnailPath));
+                            g.getLocgovCode(), thumbnailPath, g.getDeliveryCompanyName(), g.getShippingType(),
+                            g.getShipping(), g.getShippingFreeAmount(), g.getShippingExtraCharge1(),
+                            g.getShippingExtraCharge2()));
                 })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /** SFR-005 재검토 라운드 - shipping* 필드는 order가 주문 시점 배송비를 계산하는 데 쓴다. */
     public record GiftItemInfoDto(Long itemId, String itemName, Long sellerId, Integer salePrice,
                                    Integer stockQuantity, String soldOut, String dataStatusCode,
-                                   String locgovCode, String thumbnailPath) {
+                                   String locgovCode, String thumbnailPath, String deliveryCompanyName,
+                                   String shippingType, Integer shipping, Integer shippingFreeAmount,
+                                   Integer shippingExtraCharge1, Integer shippingExtraCharge2) {
     }
 
     /** admin "정산" 상세화면의 입금계좌 표시용 - AS-IS remittance가 확정 시점에 제공자

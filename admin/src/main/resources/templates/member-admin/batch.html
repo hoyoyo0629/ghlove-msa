@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>회원 배치관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/members}">회원관리</a></div>
+    <h3>회원 배치관리</h3>
+    <p style="color:#666; margin-bottom:16px;">
+        실시간 스케줄러 없이 운영자가 수동으로 트리거하는 회원 배치 작업입니다 (SFR-002 휴면 전환 / 데이터 파기 절차).
+    </p>
+
+    <div class="board_write">
+        <h5 style="margin-bottom:8px;">휴면 전환</h5>
+        <p style="color:#666; margin-bottom:8px;">
+            최근 로그인일이 기준일(기본 365일)보다 오래된 정상 회원을 휴면 상태로 전환합니다.
+        </p>
+        <p th:if="${resultCount != null}" style="color:#1a6b3c; margin-bottom:8px;">
+            <strong th:text="${resultCount}"></strong>건이 휴면 전환되었습니다.
+        </p>
+        <form th:action="@{/admin/members/batch/dormancy}" method="post"
+              onsubmit="return confirm('휴면 전환 배치를 실행하시겠습니까?')">
+            <button type="submit" class="btn btn-small">휴면 전환 배치 실행</button>
+        </form>
+    </div>
+
+    <div class="board_write" style="margin-top:24px;">
+        <h5 style="margin-bottom:8px;">데이터 파기 절차</h5>
+        <p style="color:#666; margin-bottom:8px;">
+            탈퇴 후 보관기간(기본 30일)이 지난 회원의 개인식별정보를 익명화하거나, 보관기간(기본 1년)이
+            지난 로그인 로그의 접속 IP를 마스킹합니다. 행 자체는 지우지 않고 식별정보만 제거합니다.
+        </p>
+        <p th:if="${logResultCount != null}" style="color:#1a6b3c; margin-bottom:8px;">
+            로그 <strong th:text="${logResultCount}"></strong>건의 IP가 마스킹되었습니다.
+        </p>
+        <div class="flex_box gap-08">
+            <form th:action="@{/admin/members/batch/data-destruction/withdrawn}" method="post"
+                  onsubmit="return confirm('탈퇴회원 개인정보를 파기(익명화)하시겠습니까?')">
+                <button type="submit" class="btn btn-small">탈퇴회원 개인정보 파기</button>
+            </form>
+            <form th:action="@{/admin/members/batch/data-destruction/logs}" method="post"
+                  onsubmit="return confirm('오래된 로그인 로그의 IP를 마스킹하시겠습니까?')">
+                <button type="submit" class="btn btn-small">로그인 로그 IP 마스킹</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="count_title mt-40">
+        <h5>파기 이력 (최근 <span th:text="${#lists.size(history)}" th:remove="tag"></span>건)</h5>
+    </div>
+    <table class="board_list_table" summary="데이터 파기 이력">
+        <thead>
+        <tr><th>ID</th><th>회원ID</th><th>파기 항목</th><th>사유</th><th>일시</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="h : ${history}">
+            <td th:text="${h.destructionId}"></td>
+            <td th:text="${h.userId}"></td>
+            <td th:text="${h.destroyedFields}"></td>
+            <td th:text="${h.reason}"></td>
+            <td th:text="${h.destroyedDate}"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(history)}">파기 이력이 존재하지 않습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

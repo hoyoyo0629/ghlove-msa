@@ -29,6 +29,7 @@
             <th>건수</th>
             <th>포인트 합계</th>
             <th>상태</th>
+            <th>조정</th>
         </tr>
         </thead>
         <tbody>
@@ -38,6 +39,7 @@
             <td th:text="${s.orderCount} + '건'"></td>
             <td th:text="${#numbers.formatInteger(s.totalPointAmount, 0, 'COMMA')} + 'P'"></td>
             <td th:text="${statusLabels.get(s.status)} ?: ${s.status}"></td>
+            <td><span th:if="${s.pendingAdjustmentYn == 'Y'}" class="pill off">조정대기</span></td>
         </tr>
         </tbody>
     </table>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>답례품 엑셀 대량등록 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <style>
+        .error-box { color:#c00; background:#fdecec; border:1px solid #f5b5b5; padding:8px 12px; border-radius:4px; margin-bottom:12px; }
+        .result-box { background:#f0f6ff; border:1px solid #cfe0ff; border-radius:4px; padding:10px 12px; margin-bottom:12px; }
+        .result-box .err-line { color:#c00; }
+        .guide-box { background:#f7f7f7; border:1px solid #ddd; border-radius:4px; padding:10px 12px; margin-bottom:12px; font-size:13px; line-height:1.6; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/gift-items}">답례품 상품관리(관리자)</a></div>
+    <h3>답례품 엑셀 대량등록</h3>
+    <div class="error-box" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <div class="result-box" th:if="${uploadCreated != null}">
+        <p><strong th:text="${uploadCreated}"></strong>건 등록 완료.
+           <span th:if="${uploadErrors != null and not #lists.isEmpty(uploadErrors)}" th:text="${#lists.size(uploadErrors)} + '건 실패'"></span>
+        </p>
+        <p class="err-line" th:each="e : ${uploadErrors}" th:text="${e}"></p>
+    </div>
+
+    <div class="guide-box">
+        <p><strong>CSV 파일 형식</strong> (엑셀에서 "CSV UTF-8"로 저장): 헤더행 1줄 + 데이터행, 콤마(,)로 구분</p>
+        <p>판매자ID, 답례품명, 요약설명, 상세설명, 카테고리코드, 지자체코드, 판매가격, 재고수량, 노출유형(ALWAYS/LIMITED), 노출시작일(yyyyMMdd), 노출종료일(yyyyMMdd), 최소기부금액, 브랜드ID</p>
+        <p>필수: 판매자ID/답례품명/카테고리코드/판매가격/재고수량. 값이 콤마나 따옴표를 포함하는 경우는 지원하지 않습니다.</p>
+        <p>예시: <code>1,감귤 세트,제주 감귤 5kg,상세설명 내용,GIFT01,,30000,100,ALWAYS,,,10000,</code></p>
+    </div>
+
+    <form th:action="@{/admin/gift-items/excel/upload}" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".csv,text/csv" required>
+        <button type="submit" class="btn btn-dark-gray btn-small">업로드</button>
+    </form>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

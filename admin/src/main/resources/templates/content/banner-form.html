@@ -52,7 +52,19 @@
                 <td>
                     <input type="number" id="displayOrder" name="displayOrder" step="1"
                            th:value="${banner != null} ? ${banner.displayOrder} : 0" form="bannerForm">
-                    <p style="font-size:12px; color:#666; margin-top:4px;">캐러셀은 최대 6개까지만 노출됩니다.</p>
+                    <p style="font-size:12px; color:#666; margin-top:4px;">노출위치별로 최대 6개까지만 노출됩니다.</p>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">노출위치</td>
+                <td>
+                    <!-- AS-IS UserLoginBannerManagerController(loginWeb/loginMobile)가 별도 화면으로
+                         관리하던 로그인 전용 배너를 이 배너관리 화면에 노출위치 구분으로 흡수했다. -->
+                    <select id="bannerType" name="bannerType" form="bannerForm">
+                        <option value="MAIN" th:selected="${banner == null or banner.bannerType == null or banner.bannerType == 'MAIN'}">메인 (캐러셀)</option>
+                        <option value="LOGIN_WEB" th:selected="${banner != null and banner.bannerType == 'LOGIN_WEB'}">로그인 화면 (웹)</option>
+                        <option value="LOGIN_MOBILE" th:selected="${banner != null and banner.bannerType == 'LOGIN_MOBILE'}">로그인 화면 (모바일)</option>
+                    </select>
                 </td>
             </tr>
             </tbody>

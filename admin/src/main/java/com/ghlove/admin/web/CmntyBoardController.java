@@ -6,6 +6,7 @@ import com.ghlove.admin.service.CommonCodeService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,6 +35,7 @@ public class CmntyBoardController {
     private final CmntyOffSrBbsRepository offSrBbsRepository;
     private final CmntyFaqBbsRepository faqBbsRepository;
     private final CommonCodeService commonCodeService;
+    private final CmntyCommentRepository commentRepository;
 
     @GetMapping
     public String list(@PathVariable String boardType, Model model) {
@@ -79,6 +81,7 @@ public class CmntyBoardController {
         model.addAttribute("boardTitle", TITLES.get(boardType));
         model.addAttribute("isFaq", "faq-bbs".equals(boardType));
         model.addAttribute("post", findOrThrow(boardType, id));
+        model.addAttribute("comments", commentRepository.findByBoardTypeAndBbsIdOrderByFrstCrtDtAsc(boardType, id));
         if ("faq-bbs".equals(boardType)) {
             model.addAttribute("faqTypes", commonCodeService.labelsOf("FAQ_TYPE"));
         }
@@ -132,8 +135,10 @@ public class CmntyBoardController {
     }
 
     @PostMapping("/{id}/delete")
+    @Transactional
     public String delete(@PathVariable String boardType, @PathVariable Long id) {
         requireKnownType(boardType);
+        commentRepository.deleteByBoardTypeAndBbsId(boardType, id);
         switch (boardType) {
             case "bbs" -> bbsRepository.deleteById(id);
             case "sr-bbs" -> srBbsRepository.deleteById(id);
@@ -142,6 +147,45 @@ public class CmntyBoardController {
             default -> throw new IllegalArgumentException("알 수 없는 게시판입니다: " + boardType);
         }
         return "redirect:/community/" + boardType;
+    }
+
+    /** 댓글 등록 (AS-IS opmanager/community/comment/create/{id} - CommentManagerController).
+     *  게시글 종류를 가리지 않는 전역 댓글 엔드포인트를 boardType 서브리소스로 재현한다. */
+    @PostMapping("/{id}/comments")
+    public String createComment(@PathVariable String boardType, @PathVariable Long id,
+                                 @RequestParam String cmntCn, HttpSession session) {
+        requireKnownType(boardType);
+        findOrThrow(boardType, id);
+        Manager manager = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
+        CmntyComment comment = new CmntyComment();
+        comment.setBoardType(boardType);
+        comment.setBbsId(id);
+        comment.setCmntCn(cmntCn);
+        comment.setFrstCrtId(manager.getUserId());
+        comment.setFrstCrtNm(manager.getUserName());
+        comment.setFrstCrtDt(LocalDateTime.now());
+        commentRepository.save(comment);
+        return "redirect:/community/" + boardType + "/" + id + "/edit";
+    }
+
+    @PostMapping("/{id}/comments/{commentId}")
+    public String updateComment(@PathVariable String boardType, @PathVariable Long id, @PathVariable Long commentId,
+                                 @RequestParam String cmntCn, HttpSession session) {
+        requireKnownType(boardType);
+        Manager manager = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
+        CmntyComment comment = commentRepository.findById(commentId).orElseThrow();
+        comment.setCmntCn(cmntCn);
+        comment.setLastMdfcnId(manager.getUserId());
+        comment.setLastMdfcnDt(LocalDateTime.now());
+        commentRepository.save(comment);
+        return "redirect:/community/" + boardType + "/" + id + "/edit";
+    }
+
+    @PostMapping("/{id}/comments/{commentId}/delete")
+    public String deleteComment(@PathVariable String boardType, @PathVariable Long id, @PathVariable Long commentId) {
+        requireKnownType(boardType);
+        commentRepository.deleteById(commentId);
+        return "redirect:/community/" + boardType + "/" + id + "/edit";
     }
 
     private CmntyBoard newInstance(String boardType) {

@@ -373,6 +373,32 @@ public class GiftService {
         return giftRepository.save(gift);
     }
 
+    /**
+     * 배송비/택배사 설정 (SFR-005 재검토 라운드 - "지자체 정책 관리"/운영 성격이라 등록·수정
+     * 폼과는 별개의 독립 액션으로 뒀다, {@link com.ghlove.gift.domain.Gift}의 배송 필드
+     * 주석 참고). order 서비스가 이 값을 읽어 주문 시점에 배송비를 계산한다.
+     */
+    @Transactional
+    public Gift updateShippingPolicy(Long itemId, String deliveryCompanyName, String shippingType, Integer shipping,
+                                      Integer shippingFreeAmount, Integer shippingExtraCharge1,
+                                      Integer shippingExtraCharge2, boolean itemReturnAllowed) {
+        Gift gift = detail(itemId);
+        if (shippingType == null || shippingType.isBlank() || !codesOf("GIFT_SHIPPING_TYPE").containsKey(shippingType)) {
+            throw new GiftException("올바른 배송비 구분을 선택해 주세요.");
+        }
+        if (shipping != null && shipping < 0) {
+            throw new GiftException("배송비는 0원 이상이어야 합니다.");
+        }
+        gift.setDeliveryCompanyName(deliveryCompanyName);
+        gift.setShippingType(shippingType);
+        gift.setShipping(shipping != null ? shipping : 0);
+        gift.setShippingFreeAmount(shippingFreeAmount);
+        gift.setShippingExtraCharge1(shippingExtraCharge1);
+        gift.setShippingExtraCharge2(shippingExtraCharge2);
+        gift.setItemReturnFlag(itemReturnAllowed ? "Y" : "N");
+        return giftRepository.save(gift);
+    }
+
     /** 폐지 - 판매중지(STOPPED, 재개 가능)와 달리 되돌릴 수 없는 영구 종료. */
     @Transactional
     public Gift discontinue(Long itemId, Long sellerId) {
@@ -657,5 +683,214 @@ public class GiftService {
         });
         reservation.setStatus(RESERVATION_RESTORED);
         giftOrderStockRepository.save(reservation);
+    }
+
+    // ---- 답례품 상품관리 2단계 (엑셀 대량처리/일괄작업 - admin-console-item-mgmt-round #2).
+    // 셀러별 개별 등록/수정만 있던 1단계를 대량 작업으로 확장한다. ----
+
+    private static final java.util.Set<String> VALID_ITEM_LABELS = java.util.Set.of("1", "2", "3", "4");
+
+    /** 엑셀 대량등록 - POI 등 엑셀 라이브러리가 프로젝트에 없어 CSV로 실행한다(OrderAdminService
+     *  #exportCsv와 동일한 관행, 엑셀에서 그대로 열리는 실질적으로 동등한 결과물). 헤더행 1줄 +
+     *  데이터행(판매자ID,답례품명,요약설명,상세설명,카테고리코드,지자체코드,판매가격,재고수량
+     *  [,노출유형,노출시작일,노출종료일,최소기부금액,브랜드ID]) - 단순 콤마 분리라 값 안에
+     *  콤마/따옴표가 있는 경우는 지원하지 않는다(관리자 내부 대량등록 도구로 범위를 좁힘).
+     *  행 단위로 실패해도 나머지 행은 계속 처리하고, 실패한 행 번호+사유를 모아서 돌려준다. */
+    @Transactional
+    public BulkUploadResult bulkUploadCsv(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new GiftException("업로드할 CSV 파일을 선택해 주세요.");
+        }
+        List<String> errors = new ArrayList<>();
+        int created = 0;
+        int lineNo = 0;
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                lineNo++;
+                if (lineNo == 1 || line.isBlank()) {
+                    continue; // 헤더행/빈행 건너뜀
+                }
+                String[] c = line.split(",", -1);
+                try {
+                    if (c.length < 8) {
+                        throw new GiftException("컬럼 수가 부족합니다(최소 8개: 판매자ID,답례품명,요약설명,상세설명,카테고리코드,지자체코드,판매가격,재고수량).");
+                    }
+                    Long sellerId = parseLong(c[0], "판매자ID");
+                    String itemName = c[1].trim();
+                    String itemSummary = blankToNull(c[2]);
+                    String detailContent = blankToNull(c[3]);
+                    String categoryCode = c[4].trim();
+                    String locgovCode = blankToNull(c[5]);
+                    Integer salePrice = parseInt(c[6], "판매가격");
+                    Integer stockQuantity = parseInt(c[7], "재고수량");
+                    String displayType = c.length > 8 ? blankToNull(c[8]) : null;
+                    String displayStartDate = c.length > 9 ? blankToNull(c[9]) : null;
+                    String displayEndDate = c.length > 10 ? blankToNull(c[10]) : null;
+                    Integer minDonationAmount = c.length > 11 ? parseIntOrNull(c[11]) : null;
+                    Integer brandId = c.length > 12 ? parseIntOrNull(c[12]) : null;
+                    adminCreate(sellerId, itemName, itemSummary, detailContent, categoryCode, locgovCode,
+                            salePrice, stockQuantity, displayType, displayStartDate, displayEndDate,
+                            minDonationAmount, brandId, null);
+                    created++;
+                } catch (GiftException e) {
+                    errors.add(lineNo + "행: " + e.getMessage());
+                } catch (RuntimeException e) {
+                    errors.add(lineNo + "행: 처리 중 오류가 발생했습니다(" + e.getMessage() + ")");
+                }
+            }
+        } catch (IOException e) {
+            throw new GiftException("CSV 파일을 읽는 중 오류가 발생했습니다.");
+        }
+        return new BulkUploadResult(created, errors);
+    }
+
+    private Long parseLong(String s, String field) {
+        try {
+            return Long.parseLong(s.trim());
+        } catch (RuntimeException e) {
+            throw new GiftException(field + " 형식이 올바르지 않습니다: " + s);
+        }
+    }
+
+    private Integer parseInt(String s, String field) {
+        try {
+            return Integer.parseInt(s.trim());
+        } catch (RuntimeException e) {
+            throw new GiftException(field + " 형식이 올바르지 않습니다: " + s);
+        }
+    }
+
+    private Integer parseIntOrNull(String s) {
+        if (s == null || s.isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(s.trim());
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    private String blankToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s.trim();
+    }
+
+    /** 엑셀 다운로드(CSV) - 현재 검색조건의 상품 목록을 그대로 내려받는다. */
+    public String exportCsv(String itemName, String categoryCode, Long sellerId, String dataStatusCode) {
+        List<Gift> items = adminSearch(itemName, categoryCode, sellerId, dataStatusCode);
+        StringBuilder sb = new StringBuilder("﻿");
+        sb.append("ID,답례품명,카테고리,판매자ID,지자체코드,판매가격,재고수량,상태,노출,라벨,브랜드ID,등록일\n");
+        for (Gift g : items) {
+            sb.append(csvCell(String.valueOf(g.getItemId()))).append(',')
+                    .append(csvCell(g.getItemName())).append(',')
+                    .append(csvCell(g.getCategoryCode())).append(',')
+                    .append(csvCell(String.valueOf(g.getSellerId()))).append(',')
+                    .append(csvCell(g.getLocgovCode())).append(',')
+                    .append(csvCell(String.valueOf(g.getSalePrice()))).append(',')
+                    .append(csvCell(String.valueOf(g.getStockQuantity()))).append(',')
+                    .append(csvCell(g.getDataStatusCode())).append(',')
+                    .append(csvCell(g.getDisplayFlag())).append(',')
+                    .append(csvCell(g.getItemLabel())).append(',')
+                    .append(csvCell(g.getBrandId() == null ? "" : String.valueOf(g.getBrandId()))).append(',')
+                    .append(csvCell(g.getCreatedDate()))
+                    .append('\n');
+        }
+        return sb.toString();
+    }
+
+    private String csvCell(String value) {
+        if (value == null) {
+            return "";
+        }
+        return "\"" + value.replace("\"", "\"\"") + "\"";
+    }
+
+    /** 노출 on/off 일괄변경. */
+    @Transactional
+    public int bulkSetDisplay(List<Long> itemIds, String displayFlag) {
+        if (!DISPLAY_ON.equals(displayFlag) && !DISPLAY_OFF.equals(displayFlag)) {
+            throw new GiftException("노출값은 Y 또는 N이어야 합니다.");
+        }
+        List<Gift> gifts = giftRepository.findAllById(itemIds);
+        gifts.forEach(g -> g.setDisplayFlag(displayFlag));
+        giftRepository.saveAll(gifts);
+        return gifts.size();
+    }
+
+    /** 상품라벨(1:없음,2:NEW,3:SALE,4:사기) 일괄변경 - AS-IS OP_ITEM.ITEM_LABEL. */
+    @Transactional
+    public int bulkSetLabel(List<Long> itemIds, String itemLabel) {
+        if (!VALID_ITEM_LABELS.contains(itemLabel)) {
+            throw new GiftException("올바른 라벨값이 아닙니다(1:없음,2:NEW,3:SALE,4:사기).");
+        }
+        List<Gift> gifts = giftRepository.findAllById(itemIds);
+        gifts.forEach(g -> g.setItemLabel(itemLabel));
+        giftRepository.saveAll(gifts);
+        return gifts.size();
+    }
+
+    /** 일괄 삭제 - AS-IS의 물리적 DELETE 대신 폐지(DISCONTINUED) 처리한다. OP_ITEM을 참조하는
+     *  레거시 FK 14개 테이블(OP_ITEM_INFO 등)과 이 서비스 자체의 OP_ITEM_IMAGE/GIFT_ORDER_STOCK이
+     *  있어 물리적 삭제는 위험하고, 셀러 self-service의 discontinue()와 같은 "영구 종료" 의미로
+     *  충분히 "삭제"를 대체한다(관리자 대량작업이라 소유권 검증은 하지 않는다). */
+    @Transactional
+    public int bulkDelete(List<Long> itemIds) {
+        List<Gift> gifts = giftRepository.findAllById(itemIds);
+        gifts.forEach(g -> {
+            g.setDataStatusCode(STATUS_DISCONTINUED);
+            g.setDisplayFlag(DISPLAY_OFF);
+        });
+        giftRepository.saveAll(gifts);
+        gifts.forEach(giftLifecyclePublisher::publish);
+        return gifts.size();
+    }
+
+    /** 순서변경 - 목록 노출순서(ADMIN_ORDERING, 값이 작을수록 상단)를 한 번에 여러 건 저장한다
+     *  (up/down 스왑 대신 직접 값 입력 - 초기값이 전부 0이라 스왑만으로는 정렬을 벗어날 수
+     *  없어 이 방식을 택함). */
+    @Transactional
+    public int bulkUpdateOrdering(Map<Long, Integer> orderingByItemId) {
+        List<Gift> gifts = giftRepository.findAllById(orderingByItemId.keySet());
+        gifts.forEach(g -> g.setAdminOrdering(orderingByItemId.get(g.getItemId())));
+        giftRepository.saveAll(gifts);
+        return gifts.size();
+    }
+
+    /** 판매정보(가격/재고) 일괄수정 - 선택한 여러 상품의 값을 한 번에 저장한다. */
+    @Transactional
+    public int bulkUpdateSales(List<SalesUpdate> updates) {
+        int count = 0;
+        for (SalesUpdate u : updates) {
+            if (u.itemId() == null) {
+                continue;
+            }
+            Gift gift = giftRepository.findById(u.itemId()).orElse(null);
+            if (gift == null) {
+                continue;
+            }
+            if (u.salePrice() != null) {
+                if (u.salePrice() <= 0) {
+                    throw new GiftException("가격은 0보다 커야 합니다(itemId=" + u.itemId() + ").");
+                }
+                gift.setSalePrice(u.salePrice());
+            }
+            if (u.stockQuantity() != null) {
+                if (u.stockQuantity() < 0) {
+                    throw new GiftException("재고 수량은 0 이상이어야 합니다(itemId=" + u.itemId() + ").");
+                }
+                gift.setStockQuantity(u.stockQuantity());
+                gift.setSoldOut(u.stockQuantity() <= 0 ? SOLD_OUT : IN_STOCK);
+            }
+            giftRepository.save(gift);
+            count++;
+        }
+        return count;
+    }
+
+    public record BulkUploadResult(int created, List<String> errors) {
+    }
+
+    public record SalesUpdate(Long itemId, Integer salePrice, Integer stockQuantity) {
     }
 }

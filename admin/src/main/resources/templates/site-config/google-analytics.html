@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>GA 추적ID 설정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3><span>GA 추적ID 설정</span></h3>
+    <div th:replace="~{fragments/site-config-nav :: tabs('ga')}"></div>
+    <p class="success" th:if="${param.message}" th:text="${param.message}"></p>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="GA 추적ID 설정">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr><td class="label">GA4 측정 ID</td><td><input type="text" id="measurementId" name="measurementId" th:value="${config.measurementId}" placeholder="G-XXXXXXXXXX" form="gaForm"></td></tr>
+            <tr><td class="label">공통 트래킹</td><td><input type="checkbox" name="commonTrackingFlag" value="Y" th:checked="${config.commonTrackingFlag == 'Y'}" form="gaForm"> 사용</td></tr>
+            <tr><td class="label">이커머스 트래킹</td><td><input type="checkbox" name="ecommerceTrackingFlag" value="Y" th:checked="${config.ecommerceTrackingFlag == 'Y'}" form="gaForm"> 사용</td></tr>
+            <tr><td class="label">통계 연동</td><td><input type="checkbox" name="statisticsFlag" value="Y" th:checked="${config.statisticsFlag == 'Y'}" form="gaForm"> 사용</td></tr>
+            <tr><td class="label">통화(Currency)</td><td><input type="text" id="currency" name="currency" th:value="${config.currency}" form="gaForm"></td></tr>
+            <tr><td class="label">프로필</td><td><input type="text" id="profile" name="profile" th:value="${config.profile}" form="gaForm"></td></tr>
+            <tr><td class="label">인증파일</td><td><input type="text" id="authFile" name="authFile" th:value="${config.authFile}" form="gaForm"></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <form id="gaForm" th:action="@{/site-config/google-analytics}" method="post"></form>
+    <div class="btn_all btn_center">
+        <button type="submit" form="gaForm" class="btn btn-dark-gray btn-small">저장</button>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>카테고리 팀/그룹 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <style>
+        .cat-major { border:1px solid #ddd; border-radius:6px; padding:14px; margin-bottom:16px; background:#fff; }
+        .cat-major-head { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+        .cat-major-head h4 { margin:0; }
+        .cat-code { color:#999; font-size:12px; margin-left:6px; }
+        .cat-off { color:#c00; font-size:12px; margin-left:6px; }
+        .cat-actions form { display:inline; }
+        .cat-actions .small-btn { margin-left:4px; }
+        .cat-sub { margin:10px 0 0 20px; padding:10px 12px; background:#f7f7f7; border-radius:4px; }
+        .cat-sub-head { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+        .cat-item-table { width:100%; margin-top:8px; border-collapse:collapse; }
+        .cat-item-table td { padding:3px 4px; border-bottom:1px solid #e8e8e8; font-size:13px; }
+        .cat-item-new { margin-top:6px; }
+        .error-box { color:#c00; background:#fdecec; border:1px solid #f5b5b5; padding:8px 12px; border-radius:4px; margin-bottom:12px; }
+        .items-box { margin-top:8px; font-size:12px; }
+        .items-box span.tag { display:inline-block; background:#fff; border:1px solid #ccc; border-radius:12px; padding:2px 8px; margin:2px; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>카테고리 팀/그룹 관리</h3>
+    <p style="color:#666; margin-bottom:12px;">
+        "팀"(대분류 상위그룹)과 "그룹"(팀 하위, 프로모션 묶음) - GNB 카테고리 트리와는 별개로 기획전 성격의 답례품 묶음을 관리합니다.
+        <a th:href="@{/admin/gift-categories}">GNB 카테고리 관리로 이동</a>
+    </p>
+    <div class="error-box" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+    <p><a class="btn" th:href="@{/admin/category-teams/new}">+ 팀 등록</a></p>
+
+    <div class="cat-major" th:each="t,tStat : ${teams}">
+        <div class="cat-major-head">
+            <h4>
+                <span th:text="${t.name()}"></span>
+                <span class="cat-code" th:text="'[' + ${t.code()} + ']'"></span>
+                <span class="cat-off" th:if="${t.flag()} != 'Y'">비노출</span>
+            </h4>
+            <div class="cat-actions">
+                <a class="small-btn" th:href="@{/admin/category-teams/groups/new(teamId=${t.id()})}">+ 그룹 추가</a>
+                <a class="small-btn" th:href="@{/admin/category-teams/{id}/edit(id=${t.id()})}">수정</a>
+                <form th:action="@{/admin/category-teams/{id}/move(id=${t.id()},direction='up')}" method="post">
+                    <button type="submit" class="small-btn" th:disabled="${tStat.first}">▲</button>
+                </form>
+                <form th:action="@{/admin/category-teams/{id}/move(id=${t.id()},direction='down')}" method="post">
+                    <button type="submit" class="small-btn" th:disabled="${tStat.last}">▼</button>
+                </form>
+                <form th:action="@{/admin/category-teams/{id}/delete(id=${t.id()})}" method="post"
+                      onsubmit="return confirm('삭제하시겠습니까? 하위 그룹이 남아있으면 삭제할 수 없습니다.')">
+                    <button type="submit" class="small-btn danger">삭제</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="cat-sub" th:each="g,gStat : ${t.groups()}">
+            <div class="cat-sub-head">
+                <strong th:text="${g.name()}"></strong>
+                <span class="cat-code" th:if="${g.code()}" th:text="'[' + ${g.code()} + ']'"></span>
+                <div class="cat-actions">
+                    <a class="small-btn" th:href="@{/admin/category-teams/groups/{id}/edit(id=${g.id()})}">수정</a>
+                    <form th:action="@{/admin/category-teams/groups/{id}/move(id=${g.id()},direction='up')}" method="post">
+                        <button type="submit" class="small-btn" th:disabled="${gStat.first}">▲</button>
+                    </form>
+                    <form th:action="@{/admin/category-teams/groups/{id}/move(id=${g.id()},direction='down')}" method="post">
+                        <button type="submit" class="small-btn" th:disabled="${gStat.last}">▼</button>
+                    </form>
+                    <form th:action="@{/admin/category-teams/groups/{id}/delete(id=${g.id()})}" method="post"
+                          onsubmit="return confirm('삭제하시겠습니까? 하위 배너도 함께 삭제됩니다.')">
+                        <button type="submit" class="small-btn danger">삭제</button>
+                    </form>
+                </div>
+            </div>
+
+            <table class="cat-item-table">
+                <tr th:each="b : ${g.banners()}">
+                    <td th:text="${b.title()}"></td>
+                    <td style="color:#999;" th:text="${b.fileName()}"></td>
+                    <td th:text="${b.linkUrl()}"></td>
+                    <td>
+                        <form th:action="@{/admin/category-teams/banners/{id}/move(id=${b.id()},direction='up')}" method="post" style="display:inline;">
+                            <button type="submit">▲</button>
+                        </form>
+                        <form th:action="@{/admin/category-teams/banners/{id}/move(id=${b.id()},direction='down')}" method="post" style="display:inline;">
+                            <button type="submit">▼</button>
+                        </form>
+                        <form th:action="@{/admin/category-teams/banners/{id}/delete(id=${b.id()})}" method="post" style="display:inline;"
+                              onsubmit="return confirm('삭제하시겠습니까?')">
+                            <button type="submit" class="small-btn danger">삭제</button>
+                        </form>
+                    </td>
+                </tr>
+            </table>
+            <p class="empty" th:if="${#lists.isEmpty(g.banners())}" style="font-size:12px; color:#999;">등록된 배너가 없습니다.</p>
+            <form class="cat-item-new" th:action="@{/admin/category-teams/groups/{id}/banners(id=${g.id()})}" method="post" enctype="multipart/form-data">
+                <input type="text" name="title" placeholder="배너 제목" required>
+                <input type="text" name="linkUrl" placeholder="연결 URL">
+                <input type="file" name="image" accept="image/*" required>
+                <button type="submit" class="small-btn">+ 배너 추가</button>
+            </form>
+        </div>
+        <p th:if="${#lists.isEmpty(t.groups())}" class="empty" style="margin-left:20px; color:#999;">등록된 그룹이 없습니다.</p>
+
+        <div class="items-box">
+            <strong>배정된 답례품:</strong>
+            <span class="tag" th:each="i : ${teamItems.get(t.id())}">
+                <span th:text="${i.itemName()} ?: ('#' + ${i.itemId()})"></span>
+                <form style="display:inline;" method="post" th:action="@{/admin/category-teams/{id}/items/{itemId}/delete(id=${t.id()},itemId=${i.itemId()})}">
+                    <button type="submit" style="border:none; background:none; color:#c00; cursor:pointer;" title="제거">×</button>
+                </form>
+            </span>
+            <form th:action="@{/admin/category-teams/{id}/items(id=${t.id()})}" method="post" style="margin-top:6px;">
+                <input type="text" name="itemIds" placeholder="답례품ID (콤마/공백 구분)" style="width:220px;">
+                <button type="submit" class="small-btn">배정</button>
+            </form>
+        </div>
+    </div>
+    <p class="empty" th:if="${#lists.isEmpty(teams)}">등록된 팀이 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

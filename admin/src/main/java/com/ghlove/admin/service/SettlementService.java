@@ -37,6 +37,16 @@ public class SettlementService {
         return settlementRepository.findAllByOrderBySettlementIdDesc();
     }
 
+    /** 정산/판매자 확인 큐 (AS-IS opmanager/settlement/seller-confirm - SellerconfirmManagerController).
+     *  판매자에게 세금계산서 발행을 아직 요청하지 않은(=GENERATED) 정산건을 "판매자 확인 대기"로
+     *  본다 - AS-IS는 판매자가 정산내역에 별도로 "확인" 버튼을 눌러야 다음 단계(세금계산서
+     *  발행)로 넘어가는데, 이 MVP는 판매자 자기서비스 포털이 세금계산서 발행 이전 단계까지는
+     *  없어(SellerPortalController는 조회 전용) 운영자가 이 큐를 보고 세금계산서 발행 전에
+     *  판매자에게 먼저 연락해 확인시키는 용도로 쓴다. */
+    public List<Settlement> pendingConfirmation() {
+        return settlementRepository.findByStatusOrderBySettlementIdDesc(STATUS_GENERATED);
+    }
+
     public Settlement get(Long id) {
         return settlementRepository.findById(id).orElseThrow(() -> new SettlementException("정산 내역을 찾을 수 없습니다."));
     }
@@ -117,6 +127,60 @@ public class SettlementService {
         settlement.setStatus(STATUS_CLOSED);
         settlement.setUpdatedDate(LocalDateTime.now());
         return settlementRepository.save(settlement);
+    }
+
+    /** SFR-007 재검토 라운드 "정산 데이터 생성·조정" gap fill - 이미 정산에 묶인 주문이
+     *  클레임(반품/교환) 처리완료로 취소되면 호출된다(StatsService.onOrderCancelled).
+     *  GENERATED/INVOICED는 남은 CONFIRMED 주문 기준으로 금액/건수를 자동 재계산하고,
+     *  DEPOSITED/CLOSED는 이미 입금·마감된 확정치라 건드리지 않고 조정대기 플래그만 세운다 -
+     *  둘 다 이력을 ADJUSTMENT_NOTE에 남긴다. */
+    @Transactional
+    public void adjustForCancelledOrder(OrderLedger cancelledOrder) {
+        Long settlementId = cancelledOrder.getSettlementId();
+        if (settlementId == null) {
+            return;
+        }
+        Settlement settlement = settlementRepository.findById(settlementId).orElse(null);
+        if (settlement == null) {
+            return;
+        }
+
+        String prefix = "[" + LocalDateTime.now() + "] 주문 " + cancelledOrder.getOrderId() + " 취소(포인트 "
+                + cancelledOrder.getPointAmount() + ")";
+
+        if (STATUS_GENERATED.equals(settlement.getStatus()) || STATUS_INVOICED.equals(settlement.getStatus())) {
+            List<OrderLedger> ordersInSettlement = orderLedgerRepository.findBySettlementId(settlementId);
+            long recalculatedTotal = ordersInSettlement.stream()
+                    .filter(o -> ORDER_STATUS_CONFIRMED.equals(o.getStatus()))
+                    .mapToLong(o -> o.getPointAmount() != null ? o.getPointAmount() : 0L)
+                    .sum();
+            int recalculatedCount = (int) ordersInSettlement.stream()
+                    .filter(o -> ORDER_STATUS_CONFIRMED.equals(o.getStatus()))
+                    .count();
+            settlement.setTotalPointAmount(recalculatedTotal);
+            settlement.setOrderCount(recalculatedCount);
+            settlement.setAdjustmentNote(appendNote(settlement.getAdjustmentNote(),
+                    prefix + " - 자동 재계산 완료 (재계산 후 " + recalculatedCount + "건 / " + recalculatedTotal + "P)"));
+        } else {
+            settlement.setPendingAdjustmentYn("Y");
+            settlement.setAdjustmentNote(appendNote(settlement.getAdjustmentNote(),
+                    prefix + " - 이미 " + settlement.getStatus() + " 상태라 자동 재계산하지 않음, 수동 조정 필요"));
+        }
+        settlement.setUpdatedDate(LocalDateTime.now());
+        settlementRepository.save(settlement);
+    }
+
+    /** 운영자가 DEPOSITED/CLOSED 정산의 조정대기 건을 수동 검토 후 해제. */
+    @Transactional
+    public Settlement resolveAdjustment(Long id) {
+        Settlement settlement = get(id);
+        settlement.setPendingAdjustmentYn("N");
+        settlement.setUpdatedDate(LocalDateTime.now());
+        return settlementRepository.save(settlement);
+    }
+
+    private static String appendNote(String existing, String line) {
+        return existing == null || existing.isBlank() ? line : existing + "\n" + line;
     }
 
     private Settlement requireStatus(Long id, String requiredStatus, String errorMessage) {

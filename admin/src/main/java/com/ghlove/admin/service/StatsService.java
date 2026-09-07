@@ -1,5 +1,6 @@
 package com.ghlove.admin.service;
 
+import com.ghlove.admin.domain.ClaimLedger;
 import com.ghlove.admin.domain.DonationLedger;
 import com.ghlove.admin.domain.GiftLedgerStat;
 import com.ghlove.admin.domain.OrderLedger;
@@ -8,10 +9,12 @@ import com.ghlove.admin.event.DonationCancelledEvent;
 import com.ghlove.admin.event.DonationCompletedEvent;
 import com.ghlove.admin.event.GiftLifecycleEvent;
 import com.ghlove.admin.event.OrderCancelledEvent;
+import com.ghlove.admin.event.OrderClaimUpdatedEvent;
 import com.ghlove.admin.event.OrderConfirmedEvent;
 import com.ghlove.admin.event.OrderCreatedEvent;
 import com.ghlove.admin.event.OrderDeliveryUpdatedEvent;
 import com.ghlove.admin.event.PointLedgerEvent;
+import com.ghlove.admin.repository.ClaimLedgerRepository;
 import com.ghlove.admin.repository.DonationLedgerRepository;
 import com.ghlove.admin.repository.GiftLedgerStatRepository;
 import com.ghlove.admin.repository.OrderLedgerRepository;
@@ -47,6 +50,8 @@ public class StatsService {
     private final OrderLedgerRepository orderLedgerRepository;
     private final PointLedgerStatRepository pointLedgerStatRepository;
     private final GiftLedgerStatRepository giftLedgerStatRepository;
+    private final ClaimLedgerRepository claimLedgerRepository;
+    private final SettlementService settlementService;
 
     // ---- donation.lifecycle 반영 ----
 
@@ -91,6 +96,8 @@ public class StatsService {
         ledger.setQuantity(event.quantity());
         ledger.setPointAmount(event.pointAmount());
         ledger.setLocgovCode(event.locgovCode());
+        ledger.setItemName(event.itemName());
+        ledger.setReceiverName(event.receiverName());
         ledger.setStatus(STATUS_PENDING);
         ledger.setCreatedDate(LocalDateTime.now());
         orderLedgerRepository.save(ledger);
@@ -110,7 +117,10 @@ public class StatsService {
 
     @Transactional
     public void onOrderCancelled(OrderCancelledEvent event) {
-        updateOrderStatus(event.orderId(), STATUS_CANCELLED);
+        OrderLedger ledger = updateOrderStatus(event.orderId(), STATUS_CANCELLED);
+        if (ledger != null) {
+            settlementService.adjustForCancelledOrder(ledger);
+        }
     }
 
     /** SFR-006 "제공자·지자체별 SLA 지표" - 송장등록/배송중·완료/구매확정마다 도착하는
@@ -129,14 +139,33 @@ public class StatsService {
         orderLedgerRepository.save(ledger);
     }
 
-    private void updateOrderStatus(String orderId, String status) {
+    /** ISP p.161 "클레임사건/상태뷰" ReadModel gap fill - upsert(요청/승인/거절/완료 매번 같은
+     *  claimId로 갱신되므로 단순 save로 충분). */
+    @Transactional
+    public void onClaimUpdated(OrderClaimUpdatedEvent event) {
+        ClaimLedger ledger = claimLedgerRepository.findById(event.claimId()).orElseGet(ClaimLedger::new);
+        ledger.setClaimId(event.claimId());
+        ledger.setOrderId(event.orderId());
+        ledger.setClaimType(event.claimType());
+        ledger.setReason(event.reason());
+        ledger.setStatus(event.status());
+        ledger.setCreatedDate(event.createdDate());
+        ledger.setProcessedDate(event.processedDate());
+        ledger.setItemName(event.itemName());
+        ledger.setLocgovCode(event.locgovCode());
+        ledger.setUserId(event.userId());
+        ledger.setReceiverName(event.receiverName());
+        claimLedgerRepository.save(ledger);
+    }
+
+    private OrderLedger updateOrderStatus(String orderId, String status) {
         OrderLedger ledger = orderLedgerRepository.findById(orderId).orElse(null);
         if (ledger == null) {
             log.info("Order {} not in stats ledger yet - ignoring {} (ORDER_CREATED not seen)", orderId, status);
-            return;
+            return null;
         }
         ledger.setStatus(status);
-        orderLedgerRepository.save(ledger);
+        return orderLedgerRepository.save(ledger);
     }
 
     // ---- point.ledger 반영 (SFR-007/009 gap fill) ----

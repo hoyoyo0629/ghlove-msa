@@ -2095,6 +2095,11 @@ ALTER TABLE OD_ORDER ADD COLUMN IF NOT EXISTS DISCOUNT_AMOUNT BIGINT NOT NULL DE
 -- =====================================================================
 ALTER TABLE OD_ORDER ADD COLUMN IF NOT EXISTS ADMIN_MEMO VARCHAR(1000);
 
+-- SFR-005 재검토 라운드 - "배송비·택배사 설정, 배송정책"을 gift의 답례품별 설정을 참조해
+-- 주문 시점에 계산한 배송비. POINT_AMOUNT(실제 차감액)엔 이미 합산돼 있고, 이 컬럼은
+-- 화면에 상품금액/배송비 내역을 분리해서 보여주기 위한 표시용이다.
+ALTER TABLE OD_ORDER ADD COLUMN IF NOT EXISTS DELIVERY_FEE BIGINT NOT NULL DEFAULT 0;
+
 CREATE TABLE IF NOT EXISTS OD_CLAIM_MEMO (
     CLAIM_MEMO_ID    BIGSERIAL PRIMARY KEY,
     CLAIM_ID         BIGINT        NOT NULL,

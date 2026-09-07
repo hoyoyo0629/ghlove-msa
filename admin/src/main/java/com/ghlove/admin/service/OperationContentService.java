@@ -22,6 +22,8 @@ public class OperationContentService {
 
     private static final String USE_Y = "Y";
     private static final String USE_N = "N";
+    private static final String BANNER_TYPE_MAIN = "MAIN";
+    private static final java.util.Set<String> BANNER_TYPES = java.util.Set.of("MAIN", "LOGIN_WEB", "LOGIN_MOBILE");
     private static final DateTimeFormatter NOTICE_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final NoticeRepository noticeRepository;
@@ -87,7 +89,8 @@ public class OperationContentService {
     }
 
     @Transactional
-    public Banner createBanner(String title, String contents, String linkUrl, String imageUrl, Integer displayOrder) {
+    public Banner createBanner(String title, String contents, String linkUrl, String imageUrl, Integer displayOrder,
+                                String bannerType) {
         if (title == null || title.isBlank()) {
             throw new ContentException("제목을 입력해 주세요.");
         }
@@ -98,6 +101,7 @@ public class OperationContentService {
         banner.setImageUrl(imageUrl);
         banner.setDisplayOrder(displayOrder != null ? displayOrder : 0);
         banner.setDisplayFlag(USE_Y);
+        banner.setBannerType(normalizeBannerType(bannerType));
         banner.setCreatedDate(NOTICE_DATE_FORMAT.format(LocalDateTime.now()));
         return bannerRepository.save(banner);
     }
@@ -107,7 +111,8 @@ public class OperationContentService {
     }
 
     @Transactional
-    public Banner updateBanner(Integer id, String title, String contents, String linkUrl, String imageUrl, Integer displayOrder) {
+    public Banner updateBanner(Integer id, String title, String contents, String linkUrl, String imageUrl,
+                                Integer displayOrder, String bannerType) {
         if (title == null || title.isBlank()) {
             throw new ContentException("제목을 입력해 주세요.");
         }
@@ -117,14 +122,31 @@ public class OperationContentService {
         banner.setLinkUrl(linkUrl);
         banner.setImageUrl(imageUrl);
         banner.setDisplayOrder(displayOrder != null ? displayOrder : 0);
+        banner.setBannerType(normalizeBannerType(bannerType));
         return bannerRepository.save(banner);
+    }
+
+    /** AS-IS UserLoginBannerManagerController가 별도 화면으로 관리하던 로그인(웹/모바일)
+     *  전용 배너를 이 배너관리 화면의 노출위치 필드로 흡수했다 - 값이 없거나 허용 범위를
+     *  벗어나면 기본값(MAIN)으로 취급한다. */
+    private static String normalizeBannerType(String bannerType) {
+        if (bannerType == null || !BANNER_TYPES.contains(bannerType)) {
+            return BANNER_TYPE_MAIN;
+        }
+        return bannerType;
     }
 
     private static final int MAIN_BANNER_MAX = 6;
 
     /** 메인화면 배너 캐러셀 - AS-IS와 동일하게 최대 6개까지만 노출한다(노출순서 오름차순). */
     public List<Banner> activeBanners() {
-        return bannerRepository.findByDisplayFlagOrderByDisplayOrderAsc(USE_Y).stream()
+        return activeBanners(BANNER_TYPE_MAIN);
+    }
+
+    /** 노출위치별 배너 - 로그인 화면(웹/모바일)은 AS-IS도 캐러셀이 아니라 소수의 고정 배너라
+     *  같은 최대개수(6) 제한을 재사용한다. */
+    public List<Banner> activeBanners(String bannerType) {
+        return bannerRepository.findByDisplayFlagAndBannerTypeOrderByDisplayOrderAsc(USE_Y, normalizeBannerType(bannerType)).stream()
                 .limit(MAIN_BANNER_MAX)
                 .toList();
     }

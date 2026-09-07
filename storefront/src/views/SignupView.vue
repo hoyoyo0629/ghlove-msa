@@ -127,8 +127,12 @@ async function onSubmit() {
     email: `${emailFirst.value}@${domain}`,
   }
   try {
-    await auth.signup(payload)
-    router.push('/login?signup=success')
+    const data = await auth.signup(payload)
+    if (data.status !== 'OK') {
+      errorMessage.value = data.message
+      return
+    }
+    router.push('/')
   } catch (e) {
     errorMessage.value = e.message
   }

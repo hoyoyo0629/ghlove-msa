@@ -40,4 +40,14 @@ public class Settlement {
 
     @Column(name = "UPDATED_DATE")
     private LocalDateTime updatedDate;
+
+    /** SFR-007 재검토 라운드 "정산 데이터 생성·조정" gap fill - 정산 생성 이후 그 정산에 속한
+     *  주문이 클레임(반품/교환)으로 취소되는 경우의 사후 처리. GENERATED/INVOICED 상태는
+     *  자동으로 금액/건수를 재계산하지만, DEPOSITED/CLOSED는 이미 입금·마감된 확정치라
+     *  자동으로 건드리지 않고 이 플래그만 세워 운영자가 수동으로 검토하게 한다. */
+    @Column(name = "PENDING_ADJUSTMENT_YN")
+    private String pendingAdjustmentYn = "N";
+
+    @Column(name = "ADJUSTMENT_NOTE", columnDefinition = "TEXT")
+    private String adjustmentNote;
 }

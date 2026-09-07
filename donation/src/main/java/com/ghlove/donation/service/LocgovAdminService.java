@@ -1,9 +1,11 @@
 package com.ghlove.donation.service;
 
+import com.ghlove.donation.domain.HonorBenefit;
 import com.ghlove.donation.domain.Locgov;
 import com.ghlove.donation.domain.LocgovDeptHist;
 import com.ghlove.donation.domain.LocgovImage;
 import com.ghlove.donation.domain.LocgovLmtt;
+import com.ghlove.donation.repository.HonorBenefitRepository;
 import com.ghlove.donation.repository.LocgovDeptHistRepository;
 import com.ghlove.donation.repository.LocgovImageRepository;
 import com.ghlove.donation.repository.LocgovLmttRepository;
@@ -43,6 +45,7 @@ public class LocgovAdminService {
     private final LocgovLmttRepository locgovLmttRepository;
     private final LocgovSealService locgovSealService;
     private final FileStorageService fileStorageService;
+    private final HonorBenefitRepository honorBenefitRepository;
 
     private static final String IMAGE_SUBDIR = "locgov-image";
 
@@ -189,6 +192,22 @@ public class LocgovAdminService {
     @Transactional
     public void deleteLmtt(String locgovCode, String lmttBgnDe, String lmttEndDe) {
         locgovLmttRepository.deleteById(new com.ghlove.donation.domain.LocgovLmttId(lmttBgnDe, lmttEndDe, locgovCode));
+    }
+
+    /** 지자체별 기부혜택 안내문구 (SFR-003 "지자체별 기부혜택 관리") - 원래 donation 자체에
+     *  무인증 화면(HonorBenefitController)으로 노출돼 있던 것을 이 관리자 전용 API로 옮겼다. */
+    public String honorBenefitOf(String locgovCode) {
+        return honorBenefitRepository.findById(locgovCode).map(HonorBenefit::getBenefitDesc).orElse(null);
+    }
+
+    @Transactional
+    public void updateHonorBenefit(String locgovCode, String benefitDesc) {
+        findOrThrow(locgovCode);
+        HonorBenefit benefit = honorBenefitRepository.findById(locgovCode).orElseGet(HonorBenefit::new);
+        benefit.setLocgovCode(locgovCode);
+        benefit.setBenefitDesc(benefitDesc);
+        benefit.setUpdatedDate(LocalDateTime.now());
+        honorBenefitRepository.save(benefit);
     }
 
     /** 직인/PC·모바일 배경이미지 관리자 미리보기용 - LocgovSealAdminController(폐기 대상)가

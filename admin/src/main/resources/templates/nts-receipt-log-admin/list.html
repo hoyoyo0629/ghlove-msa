@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>기부금영수증 국세청연계 로그 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>기부금영수증 국세청연계 로그</h3>
+    <p style="color:#666; margin-bottom:16px;">국세청 연계가 아직 연결되지 않아 현재는 빈 목록입니다 - 실제 연동이 붙으면 이 화면 그대로 이력이 표시됩니다.</p>
+
+    <div class="category-nav">
+        <a th:each="t : ${typeLabels}" th:href="@{/admin/nts-receipt-logs(logType=${t.key})}"
+           th:classappend="${selectedType == t.key} ? 'active'" th:text="${t.value}"></a>
+    </div>
+
+    <table class="board_list_table">
+        <thead><tr><th>기부일련번호</th><th>요청일시</th><th>응답코드</th><th>응답메시지</th><th>처리상태</th></tr></thead>
+        <tbody>
+        <tr th:each="l : ${logs}">
+            <td th:text="${l.cntrSn}"></td>
+            <td th:text="${l.requestDate}"></td>
+            <td th:text="${l.responseCode}"></td>
+            <td th:text="${l.responseMessage}"></td>
+            <td th:text="${l.processStatus == 'SUCCESS'} ? '성공' : (${l.processStatus == 'FAIL'} ? '실패' : ${l.processStatus})"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(logs)}">연계 로그가 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

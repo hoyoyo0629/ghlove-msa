@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>답례품 판매정보 일괄수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/gift-items}">답례품 상품관리(관리자)</a></div>
+    <h3>답례품 판매정보 일괄수정</h3>
+    <p style="color:#666; margin-bottom:12px;">선택한 답례품들의 판매가격/재고수량을 한 번에 수정합니다.</p>
+
+    <form th:action="@{/admin/gift-items/bulk-sales}" method="post">
+        <table class="board_list_table">
+            <thead>
+            <tr><th>ID</th><th>답례품명</th><th>판매가격</th><th>재고수량</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="it : ${items}">
+                <td th:text="${it.itemId()}"></td>
+                <td th:text="${it.itemName()}"></td>
+                <td>
+                    <input type="hidden" name="itemIds" th:value="${it.itemId()}">
+                    <input type="number" name="salePrices" min="1" th:value="${it.salePrice()}" style="width:120px;"> 원
+                </td>
+                <td><input type="number" name="stockQuantities" min="0" th:value="${it.stockQuantity()}" style="width:100px;"></td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="empty" th:if="${#lists.isEmpty(items)}">선택된 답례품이 없습니다.</p>
+        <div class="btn_all btn_center">
+            <button type="submit" class="btn btn-dark-gray btn-small" th:if="${not #lists.isEmpty(items)}">일괄 저장</button>
+        </div>
+    </form>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

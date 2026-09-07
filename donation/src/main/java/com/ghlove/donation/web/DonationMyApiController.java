@@ -80,9 +80,10 @@ public class DonationMyApiController {
 
     // ---- 기부내역 조회 ----
 
-    public record DonationRowDto(String cntrSn, String locgovName, BigDecimal cntrAmt, String cntrDe,
+    public record DonationRowDto(String cntrSn, String locgovCode, String locgovName, BigDecimal cntrAmt, String cntrDe,
                                   Long earnedPoints, String bugaNo, String sunapDate, String projectTitle,
-                                  String statusCode, String statusLabel, boolean canComplete, boolean canCancel) {
+                                  String statusCode, String statusLabel, boolean canComplete, boolean canCancel,
+                                  String presentType) {
     }
 
     public record MyDonationsResponse(List<DonationRowDto> donations, BigDecimal totalCntrAmt, List<Integer> years,
@@ -137,11 +138,12 @@ public class DonationMyApiController {
             String projectTitle = d.getDsgnDntnBizId() != null ? projectTitles.get(d.getDsgnDntnBizId()) : null;
             boolean completed = "COMPLETED".equals(d.getCntrSttusCode());
             boolean requested = "REQUESTED".equals(d.getCntrSttusCode());
-            return new DonationRowDto(d.getCntrSn(), locgovName, d.getCntrAmt(), d.getCntrDe(),
+            return new DonationRowDto(d.getCntrSn(), d.getCntrLocgovCode(), locgovName, d.getCntrAmt(), d.getCntrDe(),
                     earnedPoints.get(d.getCntrSn()), levy != null ? levy.getBugaNo() : null,
                     levy != null && levy.getSunapDate() != null ? levy.getSunapDate().toString() : null,
                     projectTitle != null ? projectTitle : "자치단체기부", d.getCntrSttusCode(),
-                    statusLabels.get(d.getCntrSttusCode()), requested, requested || completed);
+                    statusLabels.get(d.getCntrSttusCode()), requested, requested || completed,
+                    d.getRtnpsntReqstCode());
         }).toList();
 
         BigDecimal totalCntrAmt = filtered.stream().map(Donation::getCntrAmt).filter(java.util.Objects::nonNull)
@@ -153,6 +155,8 @@ public class DonationMyApiController {
         return ResponseEntity.ok(new MyDonationsResponse(rows, totalCntrAmt, years, locgovOptions));
     }
 
+    /** "100"(답례품을 제공 받음)이면 프론트가 결제완료 직후 답례품 선택 화면으로 안내한다
+     *  (SFR-003 "기부금 납부 시 답례품 선택 기능 추가" - 재검토 라운드에서 신규 통합). */
     @PostMapping("/api/my/donations/{cntrSn}/complete")
     public ResponseEntity<Map<String, Object>> complete(@PathVariable String cntrSn, HttpServletRequest request) {
         var authUserId = authUserId(request);
@@ -160,8 +164,9 @@ public class DonationMyApiController {
             return ResponseEntity.status(401).build();
         }
         try {
-            donationService.completeDonation(cntrSn);
-            return ResponseEntity.ok(Map.of("status", "OK"));
+            Donation completed = donationService.completeDonation(cntrSn);
+            return ResponseEntity.ok(Map.of("status", "OK", "locgovCode", completed.getCntrLocgovCode(),
+                    "presentType", completed.getRtnpsntReqstCode() != null ? completed.getRtnpsntReqstCode() : ""));
         } catch (DonationException e) {
             return ResponseEntity.badRequest().body(Map.of("status", "ERROR", "message", e.getMessage()));
         }

@@ -141,12 +141,16 @@ public class PointApiController {
     }
 
     /** admin 지자체관리 화면 "포인트 지급률 등록/수정"(AS-IS user/locgov/edit.jsp) - 연도+지자체
-     *  단위 upsert. */
+     *  단위 upsert. 법정 상한(30%) 초과 요청은 PointService가 거부한다. */
     @PostMapping("/api/admin/locgov-point-rate")
-    public LocgovPointRateDto upsertLocgovPointRate(@RequestBody LocgovPointRateUpsertRequest req) {
-        var saved = pointService.upsertLocgovPointRate(req.stdrYear(), req.locgovCode(), req.pointRate(), req.managerName());
-        return new LocgovPointRateDto(saved.getStdrYear(), saved.getLocgovCode(), saved.getPointRate(),
-                saved.getLastUpdtPnttm(), saved.getLastUpdusrNm());
+    public org.springframework.http.ResponseEntity<?> upsertLocgovPointRate(@RequestBody LocgovPointRateUpsertRequest req) {
+        try {
+            var saved = pointService.upsertLocgovPointRate(req.stdrYear(), req.locgovCode(), req.pointRate(), req.managerName());
+            return org.springframework.http.ResponseEntity.ok(new LocgovPointRateDto(saved.getStdrYear(),
+                    saved.getLocgovCode(), saved.getPointRate(), saved.getLastUpdtPnttm(), saved.getLastUpdusrNm()));
+        } catch (com.ghlove.point.service.PointException e) {
+            return org.springframework.http.ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     public record LocgovPointRateDto(String stdrYear, String locgovCode, BigDecimal pointRate,

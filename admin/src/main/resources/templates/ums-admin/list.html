@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>통합알림(UMS) 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>통합알림(UMS) 관리</h3>
+    <p style="color:#666; margin-bottom:16px;">알림 이벤트(템플릿코드)별로 SMS/알림톡/PUSH 3채널을 한 번에 설정합니다.</p>
+    <p>
+        <a class="btn" th:href="@{/admin/ums/new}">+ 템플릿 등록</a>
+        <a class="btn" th:href="@{/admin/ums/send-logs}">발송이력 조회</a>
+    </p>
+
+    <table class="board_list_table">
+        <thead><tr><th>템플릿코드</th><th>템플릿명</th><th>야간발송</th><th>사용여부</th><th>처리</th></tr></thead>
+        <tbody>
+        <tr th:each="t : ${templates}">
+            <td th:text="${t.templateCode}"></td>
+            <td><a th:href="@{'/admin/ums/' + ${t.id} + '/edit'}" th:text="${t.templateName}"></a></td>
+            <td th:text="${t.nightSendFlag == 'Y'} ? '허용' : '차단'"></td>
+            <td th:text="${t.usedFlag == 'Y'} ? '사용' : '중지'"></td>
+            <td>
+                <a class="small-btn" th:href="@{'/admin/ums/' + ${t.id} + '/edit'}">수정</a>
+                <form th:action="@{'/admin/ums/' + ${t.id} + '/delete'}" method="post" class="inline-form"
+                      onsubmit="return confirm('삭제하시겠습니까?')">
+                    <button type="submit" class="small-btn danger">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(templates)}">등록된 템플릿이 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

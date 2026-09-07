@@ -3,10 +3,12 @@ package com.ghlove.donation.service;
 import com.ghlove.donation.domain.Donation;
 import com.ghlove.donation.repository.DonationRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Base64;
 import java.util.List;
 
 /**
@@ -19,11 +21,15 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OffgiveService {
 
     private final DonationService donationService;
     private final DonationRepository donationRepository;
     private final MemberClient memberClient;
+    private final FileStorageService fileStorageService;
+
+    private static final String SIGNATURE_SUBDIR = "offgive-signature";
 
     /** AS-IS 공통코드 CNTR_PATH 실제값(09.공통코드 목록.xlsx) - 200:오프라인. */
     private static final String PATH_OFFLINE = "200";
@@ -58,7 +64,7 @@ public class OffgiveService {
     @Transactional
     public Result register(Long userId, String walkInName, String walkInPhone, String walkInBirthday,
                             String walkInAddress, String locgovCode, BigDecimal amount,
-                            String rceptBankCode, String rceptBankNm) {
+                            String rceptBankCode, String rceptBankNm, String signatureImage) {
         MemberClient.WalkInResult walkIn = null;
         Long targetUserId = userId;
         if (targetUserId == null) {
@@ -68,7 +74,35 @@ public class OffgiveService {
 
         Donation donation = donationService.registerOfflineDonation(targetUserId, locgovCode, amount, rceptBankCode, rceptBankNm);
         Donation completed = donationService.completeDonation(donation.getCntrSn());
+
+        String signatureFileNm = storeSignature(signatureImage);
+        if (signatureFileNm != null) {
+            completed.setSignatureFileNm(signatureFileNm);
+            completed = donationRepository.save(completed);
+        }
         return new Result(completed, walkIn);
+    }
+
+    /** AS-IS MagicLineController(매직라인 전자서명 연계)를 대체하는 순수 프론트 canvas 서명패드
+     *  캡처본 - "data:image/png;base64,...." 형태의 data URL로 받아 PNG 바이트만 디코드해
+     *  저장한다. 서명은 법적 필수 요소가 아니므로(단순 UX 증빙) 실패해도 접수 자체는 막지
+     *  않고 경고만 남긴다. */
+    private String storeSignature(String signatureImage) {
+        if (signatureImage == null || signatureImage.isBlank()) {
+            return null;
+        }
+        try {
+            String base64 = signatureImage;
+            int comma = signatureImage.indexOf(',');
+            if (signatureImage.startsWith("data:") && comma >= 0) {
+                base64 = signatureImage.substring(comma + 1);
+            }
+            byte[] data = Base64.getDecoder().decode(base64);
+            return fileStorageService.storeBytes(data, ".png", SIGNATURE_SUBDIR);
+        } catch (RuntimeException e) {
+            log.warn("Failed to store offgive signature capture - registration proceeds without it", e);
+            return null;
+        }
     }
 
     public record Result(Donation donation, MemberClient.WalkInResult walkIn) {

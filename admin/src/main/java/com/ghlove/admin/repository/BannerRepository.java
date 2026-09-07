@@ -9,4 +9,6 @@ public interface BannerRepository extends JpaRepository<Banner, Integer> {
     List<Banner> findAllByOrderByDisplayOrderAsc();
 
     List<Banner> findByDisplayFlagOrderByDisplayOrderAsc(String displayFlag);
+
+    List<Banner> findByDisplayFlagAndBannerTypeOrderByDisplayOrderAsc(String displayFlag, String bannerType);
 }

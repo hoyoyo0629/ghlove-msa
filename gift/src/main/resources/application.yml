@@ -22,6 +22,13 @@ ghlove:
     secret: "ghlove-msa-local-dev-shared-jwt-secret-key-32bytes-min!!"
   donation-service:
     base-url: http://localhost:8082
+  # 판매자 셀프포털(SellerPortalController)이 "주문현황" 조회를 위해 order 서비스의 관리자
+  # 전용 API(/api/admin/orders)를 호출할 때 쓴다 - order의 application.yml과 반드시 동일해야
+  # 한다 (order의 AdminApiAuthInterceptor 참고, admin 서비스가 쓰는 것과 같은 시크릿을 재사용).
+  internal:
+    admin-secret: "ghlove-msa-local-dev-internal-admin-secret-do-not-expose!!"
+  order-service:
+    base-url: http://localhost:8085
 
 spring:
   application:

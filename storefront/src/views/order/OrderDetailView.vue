@@ -103,6 +103,10 @@ async function confirmReceipt() {
   }
 }
 
+function writeReview() {
+  router.push(`/gifts/${order.value.itemId}?orderCode=${order.value.orderId}`)
+}
+
 function formatN(n) {
   return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
 }
@@ -139,6 +143,7 @@ function formatN(n) {
             <li class="list_items"><span class="label">답례품</span><span class="data_val">{{ order.itemName }}</span></li>
             <li class="list_items"><span class="label">수량</span><span class="data_val">{{ order.quantity }}</span></li>
             <li class="list_items"><span class="label">단가</span><span class="data_val">{{ formatN(order.unitPrice) }}원</span></li>
+            <li class="list_items" v-if="order.deliveryFee"><span class="label">배송비</span><span class="data_val">{{ formatN(order.deliveryFee) }}P</span></li>
             <li class="list_items"><span class="label">사용 포인트</span><span class="data_val">{{ formatN(order.pointAmount) }}P</span></li>
           </ul>
         </div>
@@ -146,6 +151,7 @@ function formatN(n) {
 
       <div class="s-contents" v-if="order.orderStatus === 'CONFIRMED'" style="margin-top: 16px">
         <button type="button" class="blueBtn cancellation" @click="cancelOrder">주문 취소</button>
+        <button type="button" class="formBtn" style="margin-left: 8px" @click="writeReview">후기 작성</button>
       </div>
 
       <div class="s-contents" v-if="order.orderStatus === 'CONFIRMED'" style="margin-top: 16px">

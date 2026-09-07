@@ -131,7 +131,7 @@ public class ProfileApiController {
             memberService.changePassword(user.getUserId(), req.currentPassword(), req.newPassword(),
                     req.newPasswordConfirm(), request.getRemoteAddr());
             session.invalidate();
-            authCookieSupport.clear(response);
+            authCookieSupport.clear(request, response);
             return ResponseEntity.ok(Map.of("status", "OK"));
         } catch (MemberException e) {
             return ResponseEntity.badRequest().body(Map.of("status", "ERROR", "message", e.getMessage()));
@@ -172,7 +172,7 @@ public class ProfileApiController {
         try {
             memberService.withdraw(user.getUserId(), req.password(), req.leaveCode(), req.reason(), request.getRemoteAddr());
             session.invalidate();
-            authCookieSupport.clear(response);
+            authCookieSupport.clear(request, response);
             return ResponseEntity.ok(Map.of("status", "OK"));
         } catch (MemberException e) {
             return ResponseEntity.badRequest().body(Map.of("status", "ERROR", "message", e.getMessage()));

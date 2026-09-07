@@ -30,7 +30,7 @@ public class OrderMyApiController {
         return jwtVerifier.currentUserId(request).orElse(null);
     }
 
-    public record OrderRowDto(String orderId, String itemName, Integer quantity, Long pointAmount,
+    public record OrderRowDto(String orderId, Long itemId, String itemName, Integer quantity, Long pointAmount,
                                String orderStatus, String orderStatusLabel, java.time.LocalDateTime createdDate) {
     }
 
@@ -51,7 +51,7 @@ public class OrderMyApiController {
                 .filter(o -> end == null || !o.getCreatedDate().toLocalDate().isAfter(end))
                 .filter(o -> itemName == null || itemName.isBlank()
                         || (o.getItemName() != null && o.getItemName().contains(itemName)))
-                .map(o -> new OrderRowDto(o.getOrderId(), o.getItemName(), o.getQuantity(), o.getPointAmount(),
+                .map(o -> new OrderRowDto(o.getOrderId(), o.getItemId(), o.getItemName(), o.getQuantity(), o.getPointAmount(),
                         o.getOrderStatus(), labels.getOrDefault(o.getOrderStatus(), o.getOrderStatus()), o.getCreatedDate()))
                 .toList();
         return ResponseEntity.ok(rows);
@@ -60,10 +60,10 @@ public class OrderMyApiController {
     public record CodeOption(String key, String label) {
     }
 
-    public record OrderDetailDto(String orderId, String itemName, Integer quantity, Integer unitPrice,
-                                  Long pointAmount, String orderStatus, String orderStatusLabel, String cancelReason,
-                                  String deliveryStatus, String deliveryStatusLabel, String carrierCode,
-                                  String carrierLabel, String invoiceNo, String deliveryAddress,
+    public record OrderDetailDto(String orderId, Long itemId, String itemName, Integer quantity, Integer unitPrice,
+                                  Long pointAmount, Long deliveryFee, String orderStatus, String orderStatusLabel,
+                                  String cancelReason, String deliveryStatus, String deliveryStatusLabel,
+                                  String carrierCode, String carrierLabel, String invoiceNo, String deliveryAddress,
                                   String deliveryAddressDetail, List<CodeOption> claimTypes, List<CodeOption> carriers) {
     }
 
@@ -88,8 +88,8 @@ public class OrderMyApiController {
         List<CodeOption> claimTypes = toOptions(orderService.codesOf("CLAIM_TYPE"));
         List<CodeOption> carriers = toOptions(carrierLabels);
 
-        return ResponseEntity.ok(new OrderDetailDto(order.getOrderId(), order.getItemName(), order.getQuantity(),
-                order.getUnitPrice(), order.getPointAmount(), order.getOrderStatus(),
+        return ResponseEntity.ok(new OrderDetailDto(order.getOrderId(), order.getItemId(), order.getItemName(), order.getQuantity(),
+                order.getUnitPrice(), order.getPointAmount(), order.getDeliveryFee(), order.getOrderStatus(),
                 statusLabels.getOrDefault(order.getOrderStatus(), order.getOrderStatus()), order.getCancelReason(),
                 order.getDeliveryStatus(),
                 order.getDeliveryStatus() == null ? null : deliveryStatusLabels.getOrDefault(order.getDeliveryStatus(), order.getDeliveryStatus()),

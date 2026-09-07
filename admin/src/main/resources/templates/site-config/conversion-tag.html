@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>전환추적스크립트 설정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3><span>전환추적스크립트 설정</span></h3>
+    <div th:replace="~{fragments/site-config-nav :: tabs('conversion-tag')}"></div>
+    <p class="success" th:if="${param.message}" th:text="${param.message}"></p>
+    <p style="font-size:12px;color:#666;">주문 완료 페이지 등에 삽입될 광고 매체(오버추어/애드워즈 등) 전환추적 스크립트를 입력합니다.</p>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="전환추적스크립트">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr><td class="label">오버추어(Overture) 태그</td><td><textarea id="tagOverture" name="tagOverture" rows="6" th:text="${config.tagOverture}" form="conversionTagForm"></textarea></td></tr>
+            <tr><td class="label">애드워즈(AdWords) 태그</td><td><textarea id="tagAdwords" name="tagAdwords" rows="6" th:text="${config.tagAdwords}" form="conversionTagForm"></textarea></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <form id="conversionTagForm" th:action="@{/site-config/conversion-tag}" method="post"></form>
+    <div class="btn_all btn_center">
+        <button type="submit" form="conversionTagForm" class="btn btn-dark-gray btn-small">저장</button>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

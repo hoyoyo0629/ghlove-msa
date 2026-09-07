@@ -138,6 +138,72 @@ public class OrderAdminApiController {
         }
     }
 
+    // ==================== 주문대행 조회 (콜센터 - 지자체 스코프 우회 전용) ====================
+    // AdminApiAuthInterceptor의 공유시크릿 게이트는 그대로 적용된다. locgovCode 스코프 강제는
+    // admin 쪽 컨트롤러(시스템관리자만 접근 가능하도록 RBAC)가 담당하고, 여기는 search()와
+    // 동일한 조회로직을 의미상 별도 엔드포인트로 노출한다(전체조회 전용이라는 것을 API
+    // 경로 자체로 드러내 향후 실수로 지자체스코프를 강제로 붙이는 회귀를 막기 위함).
+
+    @GetMapping("/agency-search")
+    public PageResponse<OrderAdminDto> agencySearch(@RequestParam(required = false) String locgovCode,
+                                                      @RequestParam(required = false) String orderStatus,
+                                                      @RequestParam(required = false) String searchType,
+                                                      @RequestParam(required = false) String keyword,
+                                                      @RequestParam(required = false) String startDate,
+                                                      @RequestParam(required = false) String endDate,
+                                                      @RequestParam(defaultValue = "0") int page,
+                                                      @RequestParam(defaultValue = "20") int size) {
+        return search(locgovCode, orderStatus, searchType, keyword, startDate, endDate, page, size);
+    }
+
+    // ==================== PG 결제현황 조회 ====================
+
+    @GetMapping("/pay-info")
+    public PageResponse<PayInfoDto> payInfo(@RequestParam(required = false) String locgovCode,
+                                             @RequestParam(defaultValue = "false") boolean failedOnly,
+                                             @RequestParam(required = false) String startDate,
+                                             @RequestParam(required = false) String endDate,
+                                             @RequestParam(defaultValue = "0") int page,
+                                             @RequestParam(defaultValue = "20") int size) {
+        Page<Order> result = orderAdminService.payInfoSearch(locgovCode, failedOnly, parseDate(startDate), parseDate(endDate), page, size);
+        return new PageResponse<>(result.map(PayInfoDto::from).getContent(),
+                result.getTotalElements(), result.getTotalPages(), page, size);
+    }
+
+    // ==================== 보류주문 처리 ====================
+
+    @GetMapping("/held")
+    public PageResponse<OrderAdminDto> held(@RequestParam(required = false) String locgovCode,
+                                             @RequestParam(defaultValue = "0") int page,
+                                             @RequestParam(defaultValue = "20") int size) {
+        Page<Order> result = orderAdminService.heldOrders(locgovCode, page, size);
+        return new PageResponse<>(result.map(OrderAdminDto::from).getContent(),
+                result.getTotalElements(), result.getTotalPages(), page, size);
+    }
+
+    @PostMapping("/{orderId}/hold")
+    public ResponseEntity<?> hold(@PathVariable String orderId, @RequestParam String reason,
+                                   @RequestHeader(value = AdminApiAuthInterceptor.HEADER_MANAGER_LOCGOV, required = false) String managerLocgovCode,
+                                   @RequestHeader(value = AdminApiAuthInterceptor.HEADER_MANAGER_ID, required = false) Long managerId) {
+        try {
+            orderAdminService.hold(orderId, reason, managerLocgovCode, managerId);
+            return ResponseEntity.noContent().build();
+        } catch (OrderException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{orderId}/release")
+    public ResponseEntity<?> release(@PathVariable String orderId,
+                                      @RequestHeader(value = AdminApiAuthInterceptor.HEADER_MANAGER_LOCGOV, required = false) String managerLocgovCode) {
+        try {
+            orderAdminService.release(orderId, managerLocgovCode);
+            return ResponseEntity.noContent().build();
+        } catch (OrderException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
     private String decode(String value) {
         if (value == null || value.isBlank()) {
             return null;
@@ -168,13 +234,39 @@ public class OrderAdminApiController {
                                  String orderStatus, String cancelReason, String createdDate, String updatedDate,
                                  String carrierCode, String invoiceNo, String deliveryStatus, String receiverName,
                                  String receiverPhone, String deliveryAddress, String deliveryAddressDetail,
-                                 String requestNote, String adminMemo) {
+                                 String requestNote, String adminMemo, String holdYn, String holdReason,
+                                 String holdDate) {
         static OrderAdminDto from(Order o) {
             return new OrderAdminDto(o.getOrderId(), o.getUserId(), o.getItemId(), o.getSellerId(), o.getItemName(),
                     o.getLocgovCode(), o.getQuantity(), o.getUnitPrice(), o.getPointAmount(), o.getOrderStatus(),
                     o.getCancelReason(), str(o.getCreatedDate()), str(o.getUpdatedDate()), o.getCarrierCode(),
                     o.getInvoiceNo(), o.getDeliveryStatus(), o.getReceiverName(), o.getReceiverPhone(),
-                    o.getDeliveryAddress(), o.getDeliveryAddressDetail(), o.getRequestNote(), o.getAdminMemo());
+                    o.getDeliveryAddress(), o.getDeliveryAddressDetail(), o.getRequestNote(), o.getAdminMemo(),
+                    o.getHoldYn(), o.getHoldReason(), str(o.getHoldDate()));
+        }
+
+        private static String str(Object o) {
+            return o == null ? null : o.toString();
+        }
+    }
+
+    /** PG 결제현황 조회용 DTO - 이 플랫폼엔 실제 PG 연동이 없어(신용카드 등) 결제수단은 항상
+     *  "포인트" 고정값이다. paymentStatus는 orderStatus를 사람이 읽는 결제 관점 라벨로 옮긴 것. */
+    public record PayInfoDto(String orderId, Long userId, String itemName, Long sellerId, String paymentMethod,
+                              Long paymentAmount, String paymentStatus, String orderStatus, String cancelReason,
+                              String createdDate, String updatedDate) {
+        static PayInfoDto from(Order o) {
+            long amount = (o.getPointAmount() == null ? 0L : o.getPointAmount());
+            String status = switch (o.getOrderStatus()) {
+                case "PENDING" -> "결제대기";
+                case "CONFIRMED" -> "결제완료";
+                case "CANCELLED" -> (o.getCancelReason() != null && o.getCancelReason().startsWith("고객 요청"))
+                        ? "결제취소(고객요청)" : "결제취소(처리실패)";
+                default -> o.getOrderStatus();
+            };
+            return new PayInfoDto(o.getOrderId(), o.getUserId(), o.getItemName(), o.getSellerId(), "포인트",
+                    amount, status, o.getOrderStatus(), o.getCancelReason(),
+                    str(o.getCreatedDate()), str(o.getUpdatedDate()));
         }
 
         private static String str(Object o) {

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>보류주문 처리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/order/temp(TempProcessManagerController) - 배송 시작 전 주문을 운영자가
+     일시 보류 처리하는 큐. 주문상태 자체는 그대로 두고(SAGA와 무관) 별도 플래그만 켠다. -->
+<div class="contents contents_inner">
+    <h3><span>보류주문 처리</span></h3>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+    <div class="board_write" style="margin-bottom:24px;">
+        <h5>주문번호로 보류 처리</h5>
+        <form th:action="@{/admin/orders/hold}" method="get" class="flex_box gap-08" style="margin:8px 0;">
+            <input type="text" name="orderId" th:value="${orderId}" placeholder="주문번호" style="width:260px;">
+            <button type="submit" class="small-btn">조회</button>
+        </form>
+
+        <p class="error" th:if="${lookupError}" th:text="${lookupError}" style="color:#c0392b;"></p>
+
+        <div th:if="${lookupOrder}" style="margin-top:12px;">
+            <table class="board_write_table" summary="조회된 주문">
+                <colgroup><col style="width:150px;"><col><col style="width:150px;"><col></colgroup>
+                <tbody>
+                <tr>
+                    <td class="label">주문번호</td>
+                    <td th:text="${lookupOrder.orderId()}"></td>
+                    <td class="label">주문상태</td>
+                    <td th:text="${lookupOrder.orderStatus()}"></td>
+                </tr>
+                <tr>
+                    <td class="label">답례품명</td>
+                    <td th:text="${lookupOrder.itemName()}"></td>
+                    <td class="label">보류상태</td>
+                    <td th:text="${lookupOrder.holdYn() == 'Y'} ? '보류중' : '정상'"></td>
+                </tr>
+                </tbody>
+            </table>
+            <form th:if="${lookupOrder.holdYn() != 'Y'}" th:action="@{'/admin/orders/hold/' + ${lookupOrder.orderId()}}" method="post" class="flex_box gap-08" style="margin-top:12px;">
+                <input type="text" name="reason" placeholder="보류 사유" style="width:300px;" required>
+                <button type="submit" class="small-btn" onclick="return confirm('이 주문을 보류 처리하시겠습니까?');">보류처리</button>
+            </form>
+            <form th:if="${lookupOrder.holdYn() == 'Y'}" th:action="@{'/admin/orders/hold/' + ${lookupOrder.orderId()} + '/release'}" method="post" style="margin-top:12px;">
+                <button type="submit" class="small-btn danger" onclick="return confirm('보류를 해제하시겠습니까?');">보류해제</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="count_title mt-40">
+        <h5>보류중인 주문 총 <span th:text="${totalCount}" th:remove="tag"></span>건</h5>
+    </div>
+
+    <table class="board_list_table" summary="보류주문 목록">
+        <caption>보류주문목록</caption>
+        <thead>
+        <tr>
+            <th scope="col">주문번호</th>
+            <th scope="col">주문자ID</th>
+            <th scope="col">답례품명</th>
+            <th scope="col">지자체</th>
+            <th scope="col">보류사유</th>
+            <th scope="col">보류일시</th>
+            <th scope="col">처리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="o : ${orders}">
+            <td><a th:href="@{'/admin/orders/' + ${o.orderId()}}" th:text="${o.orderId()}"></a></td>
+            <td th:text="${o.userId()}"></td>
+            <td class="tleft" th:text="${o.itemName()}"></td>
+            <td th:text="${o.locgovCode()}"></td>
+            <td class="tleft" th:text="${o.holdReason()}"></td>
+            <td th:text="${o.holdDate() != null ? #strings.substring(o.holdDate(), 0, 16) : '-'}"></td>
+            <td>
+                <form th:action="@{'/admin/orders/hold/' + ${o.orderId()} + '/release'}" method="post">
+                    <button type="submit" class="small-btn danger" onclick="return confirm('보류를 해제하시겠습니까?');">해제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(orders)}">보류중인 주문이 없습니다.</p>
+
+    <div class="pagination-wrap" th:if="${totalPages > 1}">
+        <div class="pagination">
+            <a th:if="${currentPage > 0}" class="prev"
+               th:href="@{/admin/orders/hold(locgovCode=${locgovCode},page=${currentPage - 1},size=${size})}">이전</a>
+            <span th:each="p : ${#numbers.sequence(0, totalPages - 1)}">
+                <strong th:if="${p == currentPage}" th:text="${p + 1}"></strong>
+                <a th:unless="${p == currentPage}"
+                   th:href="@{/admin/orders/hold(locgovCode=${locgovCode},page=${p},size=${size})}"
+                   th:text="${p + 1}"></a>
+            </span>
+            <a th:if="${currentPage < totalPages - 1}" class="next"
+               th:href="@{/admin/orders/hold(locgovCode=${locgovCode},page=${currentPage + 1},size=${size})}">다음</a>
+        </div>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

@@ -115,6 +115,102 @@
     <div class="btn_all btn_center">
         <button type="submit" form="itemForm" class="btn btn-dark-gray btn-small">저장</button>
     </div>
+
+    <!-- 배송비/택배사 설정 (SFR-005 재검토 라운드 - 원래 코드가 전혀 없던 gap) - order가
+         이 값을 읽어 주문 시점 배송비를 계산한다. -->
+    <div th:if="${item.itemId()} != null" style="margin-top:32px;">
+        <h4>배송비/택배사 설정</h4>
+        <form th:action="@{'/admin/gift-items/' + ${item.itemId()} + '/shipping'}" method="post">
+            <table class="board_write_table">
+                <colgroup><col style="width:220px;"><col></colgroup>
+                <tbody>
+                <tr>
+                    <td class="label">택배사</td>
+                    <td><input type="text" name="deliveryCompanyName" th:value="${item.deliveryCompanyName()}" placeholder="예: CJ대한통운" style="width:200px;"></td>
+                </tr>
+                <tr>
+                    <td class="label">배송비 구분</td>
+                    <td>
+                        <select name="shippingType">
+                            <option value="1" th:selected="${item.shippingType()} == '1'">무료배송</option>
+                            <option value="2" th:selected="${item.shippingType()} == '2'">판매자조건부</option>
+                            <option value="3" th:selected="${item.shippingType()} == '3'">출고지조건부</option>
+                            <option value="4" th:selected="${item.shippingType()} == '4'">상품조건부</option>
+                            <option value="5" th:selected="${item.shippingType()} == '5'">개당배송비</option>
+                            <option value="6" th:selected="${item.shippingType()} == null or ${item.shippingType()} == '6'">고정배송비</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">기본 배송비</td>
+                    <td><input type="number" name="shipping" th:value="${item.shipping()}" min="0" style="width:150px;"> 원</td>
+                </tr>
+                <tr>
+                    <td class="label">조건부 무료배송 기준금액</td>
+                    <td><input type="number" name="shippingFreeAmount" th:value="${item.shippingFreeAmount()}" min="0" style="width:150px;"> 원 이상 구매 시 무료(구분이 2~4일 때만 적용)</td>
+                </tr>
+                <tr>
+                    <td class="label">제주 추가배송비</td>
+                    <td><input type="number" name="shippingExtraCharge1" th:value="${item.shippingExtraCharge1()}" min="0" style="width:150px;"> 원</td>
+                </tr>
+                <tr>
+                    <td class="label">도서산간 추가배송비</td>
+                    <td><input type="number" name="shippingExtraCharge2" th:value="${item.shippingExtraCharge2()}" min="0" style="width:150px;"> 원</td>
+                </tr>
+                <tr>
+                    <td class="label">반품 가능여부</td>
+                    <td><label><input type="checkbox" name="itemReturnAllowed" value="true" th:checked="${item.itemReturnFlag()} == null or ${item.itemReturnFlag()} == 'Y'"> 반품 가능</label></td>
+                </tr>
+                </tbody>
+            </table>
+            <div class="btn_all btn_right" style="margin-top:8px;">
+                <button type="submit" class="btn btn-dark-gray btn-mini">배송설정 저장</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 답례품 옵션 관리 (SFR-005 재검토 라운드 - 원래 코드가 전혀 없던 gap) - 카탈로그
+         관리만 다룬다(장바구니/주문에는 아직 반영 안 됨). 신규 등록 화면에서는 답례품ID가
+         아직 없어 옵션을 붙일 수 없다. -->
+    <div th:if="${item.itemId()} != null" style="margin-top:32px;">
+        <h4>답례품 옵션</h4>
+        <table class="board_list_table">
+            <thead><tr><th>옵션명</th><th>추가금액</th><th>재고연동</th><th>재고수량</th><th>품절</th><th>노출</th><th>처리</th></tr></thead>
+            <tbody>
+            <tr th:each="o : ${options}">
+                <td th:text="${o.optionName1()}"></td>
+                <td th:text="${#numbers.formatInteger(o.optionPrice() ?: 0, 0, 'COMMA')} + '원'"></td>
+                <td th:text="${o.optionStockFlag()} == 'Y' ? '연동' : '미연동'"></td>
+                <td th:text="${o.optionStockFlag()} == 'Y' ? ${o.optionStockQuantity()} : '-'"></td>
+                <td th:text="${o.optionSoldOutFlag()} == 'Y' ? '품절' : '-'"></td>
+                <td th:text="${o.optionDisplayFlag()} == 'N' ? '숨김' : '노출'"></td>
+                <td>
+                    <form class="inline-form" style="display:inline;" method="post"
+                          th:action="@{'/admin/gift-items/' + ${item.itemId()} + '/options/' + ${o.itemOptionId()} + '/display'}">
+                        <input type="hidden" name="display" th:value="${o.optionDisplayFlag()} == 'N' ? 'true' : 'false'">
+                        <button type="submit" class="small-btn" th:text="${o.optionDisplayFlag()} == 'N' ? '노출복원' : '숨김'"></button>
+                    </form>
+                    <form class="inline-form" style="display:inline;" method="post"
+                          th:action="@{'/admin/gift-items/' + ${item.itemId()} + '/options/' + ${o.itemOptionId()} + '/delete'}"
+                          onsubmit="return confirm('이 옵션을 삭제하시겠습니까?')">
+                        <button type="submit" class="small-btn danger">삭제</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="empty" th:if="${#lists.isEmpty(options)}">등록된 옵션이 없습니다.</p>
+
+        <form th:action="@{'/admin/gift-items/' + ${item.itemId()} + '/options'}" method="post" style="margin-top:12px;">
+            <div class="flex_box gap-08 item-center">
+                <input type="text" name="optionName" placeholder="옵션명(예: 빨강, L 사이즈)" required style="width:200px;">
+                <input type="number" name="optionPrice" placeholder="추가금액" min="0" style="width:120px;"> 원
+                <label><input type="checkbox" name="stockTracked" value="true"> 재고연동</label>
+                <input type="number" name="stockQuantity" placeholder="재고수량" min="0" style="width:100px;">
+                <button type="submit" class="btn btn-dark-gray btn-mini">옵션 추가</button>
+            </div>
+        </form>
+    </div>
 </div>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>

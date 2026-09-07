@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>답례품 문의(Q&amp;A) 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <style>
+        .search-form { background:#f7f7f7; border:1px solid #ddd; border-radius:4px; padding:10px 12px; margin-bottom:12px; }
+        .search-form select, .search-form input[type=text] { margin-right:6px; }
+        .error-box { color:#c00; background:#fdecec; border:1px solid #f5b5b5; padding:8px 12px; border-radius:4px; margin-bottom:12px; }
+        .q-content { max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>답례품 문의(Q&amp;A) 관리</h3>
+    <p style="color:#666; margin-bottom:12px;">답례품 상세화면에 등록된 구매자 문의를 조회하고 답변합니다.</p>
+    <div class="error-box" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <form class="search-form" method="get" th:action="@{/admin/gift-inquiries}">
+        <input type="text" name="itemId" th:value="${itemId}" placeholder="답례품ID">
+        <input type="text" name="keyword" th:value="${keyword}" placeholder="문의내용 검색">
+        <select name="status">
+            <option value="">전체(답변상태)</option>
+            <option value="WAITING" th:selected="${status == 'WAITING'}">답변대기</option>
+            <option value="ANSWERED" th:selected="${status == 'ANSWERED'}">답변완료</option>
+        </select>
+        <select name="displayFlag">
+            <option value="">전체(노출여부)</option>
+            <option value="Y" th:selected="${displayFlag == 'Y'}">노출</option>
+            <option value="N" th:selected="${displayFlag == 'N'}">블라인드</option>
+        </select>
+        <button type="submit" class="small-btn">검색</button>
+    </form>
+
+    <table class="board_list_table">
+        <thead>
+        <tr><th>ID</th><th>답례품</th><th>작성자</th><th>비밀글</th><th>질문</th><th>답변</th><th>상태</th><th>노출</th><th>신고</th><th>등록일</th><th>처리</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="q : ${inquiries}">
+            <td th:text="${q.inquiryId()}"></td>
+            <td th:text="${itemNames.get(q.itemId())} ?: ('#' + ${q.itemId()})"></td>
+            <td th:text="'#' + ${q.userId()}"></td>
+            <td th:text="${q.secretYn()} == 'Y' ? '비밀글' : '-'"></td>
+            <td class="q-content" th:text="${q.question()}"></td>
+            <td class="q-content" th:text="${q.answer()} ?: '-'"></td>
+            <td th:text="${q.status() == 'ANSWERED'} ? '답변완료' : '답변대기'"></td>
+            <td th:text="${q.displayFlag()} == 'N' ? '블라인드' : '노출'"></td>
+            <td th:text="${reportCounts.get(q.inquiryId())} ?: 0"
+                th:style="${(reportCounts.get(q.inquiryId()) ?: 0) > 0} ? 'color:#c00;font-weight:bold;' : ''"></td>
+            <td th:text="${q.createdDate()}"></td>
+            <td>
+                <form th:if="${q.status() != 'ANSWERED'}" style="display:inline-flex; gap:4px;" method="post"
+                      th:action="@{/admin/gift-inquiries/{id}/answer(id=${q.inquiryId()})}">
+                    <input type="text" name="answer" placeholder="답변 입력" required style="width:160px;">
+                    <button type="submit" class="small-btn">답변등록</button>
+                </form>
+                <form style="display:inline;" method="post" th:action="@{/admin/gift-inquiries/{id}/display(id=${q.inquiryId()})}">
+                    <input type="hidden" name="display" th:value="${q.displayFlag()} == 'N' ? 'true' : 'false'">
+                    <button type="submit" class="small-btn" th:text="${q.displayFlag()} == 'N' ? '노출복원' : '블라인드'"></button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(inquiries)}">검색된 문의가 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

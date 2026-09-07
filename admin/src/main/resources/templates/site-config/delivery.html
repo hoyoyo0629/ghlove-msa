@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>배송정책 설정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3><span>배송정책 설정</span></h3>
+    <div th:replace="~{fragments/site-config-nav :: tabs('delivery')}"></div>
+    <p class="success" th:if="${param.message}" th:text="${param.message}"></p>
+
+    <h4>배송 기본정책</h4>
+    <div class="board_write">
+        <table class="board_write_table" summary="배송 기본정책">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr><td class="label">배송 안내 문구</td><td><textarea id="deliveryInfo" name="deliveryInfo" rows="5" th:text="${config.deliveryInfo}" form="deliveryForm"></textarea></td></tr>
+            <tr><td class="label">무통장 입금 마감(일)</td><td><input type="number" id="bankDepositDueDay" name="bankDepositDueDay" th:value="${config.bankDepositDueDay}" form="deliveryForm"></td></tr>
+            <tr><td class="label">배송완료 처리 기준(일)</td><td><input type="text" id="shippingCompleteDate" name="shippingCompleteDate" th:value="${config.shippingCompleteDate}" form="deliveryForm"></td></tr>
+            <tr><td class="label">SmartDelivery 연동 기준(일)</td><td><input type="text" id="smartDeliveryCriteriaDate" name="smartDeliveryCriteriaDate" th:value="${config.smartDeliveryCriteriaDate}" form="deliveryForm"></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h4 style="margin-top:24px;">희망배송일 설정</h4>
+    <div class="board_write">
+        <table class="board_write_table" summary="희망배송일 설정">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr><td class="label">희망배송일 사용</td><td><input type="checkbox" name="deliveryHopeFlag" value="Y" th:checked="${config.deliveryHopeFlag == 'Y'}" form="deliveryForm"> 사용</td></tr>
+            <tr><td class="label">희망배송 시작(일 이후)</td><td><input type="text" id="deliveryHopeStartDate" name="deliveryHopeStartDate" th:value="${config.deliveryHopeStartDate}" form="deliveryForm"></td></tr>
+            <tr><td class="label">희망배송 종료(일 이내)</td><td><input type="text" id="deliveryHopeEndDate" name="deliveryHopeEndDate" th:value="${config.deliveryHopeEndDate}" form="deliveryForm"></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <form id="deliveryForm" th:action="@{/site-config/delivery}" method="post"></form>
+    <div class="btn_all btn_center">
+        <button type="submit" form="deliveryForm" class="btn btn-dark-gray btn-small">저장</button>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

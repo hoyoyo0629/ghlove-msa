@@ -14,10 +14,15 @@ import java.util.List;
 @Component
 public class OrderClient {
 
-    private final RestClient restClient;
+    private static final String HEADER_SECRET = "X-Internal-Secret";
 
-    public OrderClient(@Value("${ghlove.order-service.base-url}") String orderServiceBaseUrl) {
+    private final RestClient restClient;
+    private final String adminSecret;
+
+    public OrderClient(@Value("${ghlove.order-service.base-url}") String orderServiceBaseUrl,
+                        @Value("${ghlove.internal.admin-secret}") String adminSecret) {
         this.restClient = RestClient.create(orderServiceBaseUrl);
+        this.adminSecret = adminSecret;
     }
 
     public List<PointDeductedOrder> pointDeductedOrders() {
@@ -37,11 +42,15 @@ public class OrderClient {
                                       String orderStatus, LocalDateTime createdDate) {
     }
 
-    /** StatsService ReadModel 재동기화용 - 주문 전체 현재 상태 스냅샷. */
+    /** StatsService ReadModel 재동기화용 - 주문 전체 현재 상태 스냅샷.
+     *  SFR-006 재검토 라운드 - 이 경로가 시크릿 헤더 없이 무인증으로 남아있던 잔존
+     *  gap(admin_gap_fill_round2 메모 참고)을 이번에 닫는다: 다른 관리자 호출과 동일하게
+     *  공유시크릿을 싣고, order 쪽 WebConfig 예외처리도 함께 제거한다. */
     public List<OrderSnapshot> allForResync() {
         try {
             List<OrderSnapshot> orders = restClient.get()
                     .uri("/api/admin/orders/all")
+                    .header(HEADER_SECRET, adminSecret)
                     .retrieve()
                     .body(new ParameterizedTypeReference<List<OrderSnapshot>>() {
                     });

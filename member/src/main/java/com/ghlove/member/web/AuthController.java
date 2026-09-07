@@ -80,18 +80,24 @@ public class AuthController {
         return "signup";
     }
 
+    /** AS-IS join.html submit() - 가입 저장 성공 즉시 자동 로그인 후 메인 화면으로 보낸다
+     *  (로그인 화면을 다시 거치게 하지 않는다). */
     @PostMapping("/signup")
-    public String signup(@Valid @ModelAttribute("signupForm") SignupForm form, BindingResult bindingResult, Model model) {
+    public String signup(@Valid @ModelAttribute("signupForm") SignupForm form, BindingResult bindingResult, Model model,
+                          HttpSession session, HttpServletResponse response) {
         if (bindingResult.hasErrors()) {
             return "signup";
         }
+        User user;
         try {
-            memberService.signup(form);
+            user = memberService.signup(form);
         } catch (MemberException e) {
             model.addAttribute("errorMessage", e.getMessage());
             return "signup";
         }
-        return "redirect:/login?signup=success";
+        session.setAttribute(SESSION_USER_KEY, user);
+        authCookieSupport.issue(response, user);
+        return "redirect:/";
     }
 
     @GetMapping("/login")
@@ -164,9 +170,9 @@ public class AuthController {
     }
 
     @GetMapping("/logout")
-    public String logout(HttpSession session, HttpServletResponse response) {
+    public String logout(HttpSession session, HttpServletRequest request, HttpServletResponse response) {
         session.invalidate();
-        authCookieSupport.clear(response);
+        authCookieSupport.clear(request, response);
         return "redirect:/";
     }
 
@@ -333,7 +339,7 @@ public class AuthController {
             memberService.changePassword(loginUser.getUserId(), currentPassword, newPassword, newPasswordConfirm,
                     request.getRemoteAddr());
             session.invalidate();
-            authCookieSupport.clear(response);
+            authCookieSupport.clear(request, response);
             return "redirect:/login?passwordChanged=success";
         } catch (MemberException e) {
             model.addAttribute("errorMessage", e.getMessage());
@@ -372,7 +378,7 @@ public class AuthController {
         try {
             memberService.withdraw(loginUser.getUserId(), password, leaveCode, reason, request.getRemoteAddr());
             session.invalidate();
-            authCookieSupport.clear(response);
+            authCookieSupport.clear(request, response);
             return "redirect:/login?withdrawn=success";
         } catch (MemberException e) {
             return withdrawFormWithError(loginUser, e.getMessage(), model);

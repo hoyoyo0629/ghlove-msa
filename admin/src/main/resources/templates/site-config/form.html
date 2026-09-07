@@ -15,6 +15,7 @@
 
 <div class="contents contents_inner" th:object="${config}">
     <h3><span>사이트 설정</span></h3>
+    <div th:replace="~{fragments/site-config-nav :: tabs('basic')}"></div>
     <p class="success" th:if="${param.message}" th:text="${param.message}"></p>
 
     <h4>기본 정보</h4>

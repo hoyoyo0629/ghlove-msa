@@ -85,6 +85,7 @@ public class ClaimService {
         order.setOrderStatus(ORDER_STATUS_CLAIM_REQUESTED);
         order.setUpdatedDate(LocalDateTime.now());
         orderRepository.save(order);
+        orderSagaPublisher.publishClaimUpdated(saved, order);
 
         return saved;
     }
@@ -93,7 +94,11 @@ public class ClaimService {
     public Claim approve(Long claimId) {
         Claim claim = requireStatus(claimId, CLAIM_STATUS_REQUESTED, "접수 상태인 클레임만 승인할 수 있습니다.");
         claim.setStatus(CLAIM_STATUS_APPROVED);
-        return claimRepository.save(claim);
+        Claim saved = claimRepository.save(claim);
+
+        Order order = orderRepository.findById(claim.getOrderId()).orElseThrow();
+        orderSagaPublisher.publishClaimUpdated(saved, order);
+        return saved;
     }
 
     @Transactional
@@ -107,6 +112,7 @@ public class ClaimService {
         order.setOrderStatus(ORDER_STATUS_CONFIRMED);
         order.setUpdatedDate(LocalDateTime.now());
         orderRepository.save(order);
+        orderSagaPublisher.publishClaimUpdated(saved, order);
 
         return saved;
     }
@@ -125,6 +131,7 @@ public class ClaimService {
         order.setUpdatedDate(LocalDateTime.now());
         Order savedOrder = orderRepository.save(order);
         orderSagaPublisher.publishCancelled(savedOrder);
+        orderSagaPublisher.publishClaimUpdated(savedClaim, savedOrder);
 
         return savedClaim;
     }

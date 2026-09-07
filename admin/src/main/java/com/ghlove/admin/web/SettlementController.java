@@ -48,6 +48,17 @@ public class SettlementController {
         return map;
     }
 
+    /** 정산/판매자 확인 큐 - 세금계산서 발행 전(=GENERATED) 상태로 판매자 확인을 기다리는
+     *  정산건만 걸러 보여준다 (SettlementService.pendingConfirmation 참고). */
+    @GetMapping("/pending")
+    public String pending(Model model) {
+        List<Settlement> settlements = settlementService.pendingConfirmation();
+        model.addAttribute("settlements", settlements);
+        model.addAttribute("statusLabels", commonCodeService.labelsOf("SETTLEMENT_STATUS"));
+        model.addAttribute("sellersById", sellersOf(settlements));
+        return "settlements/pending";
+    }
+
     @PostMapping("/generate")
     public String generate() {
         try {
@@ -96,6 +107,14 @@ public class SettlementController {
         } catch (SettlementException e) {
             return "redirect:/settlements/" + id + "?errorMessage=" + encode(e.getMessage());
         }
+        return "redirect:/settlements/" + id;
+    }
+
+    /** SFR-007 재검토 라운드 - 이미 입금·마감된(DEPOSITED/CLOSED) 정산에 클레임 취소가
+     *  걸려 조정대기(PENDING_ADJUSTMENT_YN='Y')로 표시된 건을 운영자가 수동 검토 후 해제. */
+    @PostMapping("/{id}/resolve-adjustment")
+    public String resolveAdjustment(@PathVariable Long id) {
+        settlementService.resolveAdjustment(id);
         return "redirect:/settlements/" + id;
     }
 

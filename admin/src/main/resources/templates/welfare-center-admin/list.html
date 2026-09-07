@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>행정복지센터 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>행정복지센터 관리</h3>
+    <p style="color:#666; margin-bottom:16px;">오프라인 기부접수 거점(주민센터)을 관리합니다.</p>
+    <p><a class="btn" th:href="@{/admin/welfare-centers/new}">+ 센터 등록</a></p>
+
+    <table class="board_list_table">
+        <thead><tr><th>지자체코드</th><th>센터명</th><th>센터코드</th><th>사용여부</th><th>등록일</th><th>처리</th></tr></thead>
+        <tbody>
+        <tr th:each="c : ${centers}">
+            <td th:text="${c.lclgvCd}"></td>
+            <td><a th:href="@{'/admin/welfare-centers/' + ${c.id} + '/edit'}" th:text="${c.name}"></a></td>
+            <td th:text="${c.code}"></td>
+            <td th:text="${c.useYn == 'Y'} ? '사용' : '중지'"></td>
+            <td th:text="${c.frstRegDt}"></td>
+            <td>
+                <a class="small-btn" th:href="@{'/admin/welfare-centers/' + ${c.id} + '/edit'}">수정</a>
+                <form th:action="@{'/admin/welfare-centers/' + ${c.id} + '/delete'}" method="post" class="inline-form"
+                      onsubmit="return confirm('삭제하시겠습니까?')">
+                    <button type="submit" class="small-btn danger">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(centers)}">등록된 센터가 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

@@ -41,6 +41,15 @@
             <tr><td class="label">접수은행</td><td th:text="${donation.rceptBankNm()}"></td></tr>
             <tr><td class="label">상태</td><td th:text="${donation.cntrSttusCode()}"></td></tr>
             <tr><td class="label">접수경로</td><td th:text="${donation.cntrPathCode() == '100' ? '온라인' : (donation.cntrPathCode() == '200' ? '오프라인' : donation.cntrPathCode())}"></td></tr>
+            <tr>
+                <td class="label">서명</td>
+                <td>
+                    <img th:if="${donation.signatureFileNm() != null}"
+                         th:src="@{'http://localhost:8082/uploads/donation/offgive-signature/' + ${donation.signatureFileNm()}}"
+                         alt="서명" style="max-height:120px; border:1px solid #ddd; background:#fff;">
+                    <span th:if="${donation.signatureFileNm() == null}">-</span>
+                </td>
+            </tr>
             </tbody>
         </table>
     </div>

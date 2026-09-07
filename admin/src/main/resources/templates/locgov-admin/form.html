@@ -248,6 +248,21 @@
             </div>
         </form>
     </div>
+
+    <!-- 지자체별 기부혜택 안내문구 (SFR-003 "지자체별 기부혜택 관리") - 원래 donation 자체에
+         무인증으로 노출돼 있던 /honor/benefit 화면을 여기로 흡수(보안결함 수정). -->
+    <div th:if="${mode == 'edit' or mode == 'create-existing'}" style="margin-top:32px;">
+        <h4>기부혜택 안내문구</h4>
+        <p style="color:#666; margin-bottom:8px;">
+            법정 세액공제 계산과 별개로, 이 지자체가 자체적으로 제공하는 추가 기부혜택을 안내하는 문구입니다(회원 마이페이지 "기부혜택" 화면에 노출).
+        </p>
+        <form th:action="@{'/admin/locgovs/' + ${detail.locgovCode} + '/honor-benefit'}" method="post">
+            <textarea name="benefitDesc" rows="3" style="width:100%;" th:text="${honorBenefit}"></textarea>
+            <div class="btn_all btn_right" style="margin-top:8px;">
+                <button type="submit" class="btn btn-dark-gray btn-mini">저장</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <script th:inline="none">

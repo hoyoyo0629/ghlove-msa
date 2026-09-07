@@ -147,6 +147,23 @@ public class LocgovAdminApiController {
         locgovAdminService.deleteImage(locgovCode, "pc".equalsIgnoreCase(type), managerId);
     }
 
+    /** 지자체별 기부혜택 안내문구 (SFR-003) - 원래 donation 자체 무인증 화면이었던 것을 이관. */
+    @GetMapping("/{locgovCode}/honor-benefit")
+    public Map<String, String> honorBenefit(@PathVariable String locgovCode) {
+        return Map.of("benefitDesc", java.util.Objects.requireNonNullElse(
+                locgovAdminService.honorBenefitOf(locgovCode), ""));
+    }
+
+    @PostMapping("/{locgovCode}/honor-benefit")
+    public ResponseEntity<?> updateHonorBenefit(@PathVariable String locgovCode, @RequestParam String benefitDesc) {
+        try {
+            locgovAdminService.updateHonorBenefit(locgovCode, benefitDesc);
+            return ResponseEntity.noContent().build();
+        } catch (DonationException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
     private static LocalDateTime parseStart(String isoDate) {
         return (isoDate == null || isoDate.isBlank()) ? null : LocalDate.parse(isoDate).atStartOfDay();
     }

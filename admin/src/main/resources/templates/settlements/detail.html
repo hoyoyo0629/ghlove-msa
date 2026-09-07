@@ -26,6 +26,21 @@
         <div th:if="${settlement.invoiceNo}">세금계산서 번호: <span th:text="${settlement.invoiceNo}"></span></div>
     </div>
 
+    <!-- SFR-007 재검토 라운드 "정산 데이터 생성·조정" - 정산 생성 이후 그 정산에 속한 주문이
+         클레임(반품/교환)으로 취소된 이력. GENERATED/INVOICED는 이미 자동 재계산됐고(위 금액이
+         재계산 후 값), DEPOSITED/CLOSED는 이미 확정치라 조정대기로만 표시하고 운영자 수동검토를
+         기다린다. -->
+    <div class="card" style="margin-bottom:24px; max-width:500px;" th:if="${settlement.adjustmentNote}">
+        <div style="font-weight:bold; margin-bottom:6px;">
+            조정 이력
+            <span th:if="${settlement.pendingAdjustmentYn == 'Y'}" class="pill off">조정대기</span>
+        </div>
+        <pre style="white-space:pre-wrap; font-size:13px; margin:0;" th:text="${settlement.adjustmentNote}"></pre>
+        <form th:if="${settlement.pendingAdjustmentYn == 'Y'}" th:action="@{'/settlements/' + ${settlement.settlementId} + '/resolve-adjustment'}" method="post" style="margin-top:8px;">
+            <button type="submit">검토 완료 (조정대기 해제)</button>
+        </form>
+    </div>
+
     <!-- AS-IS remittance가 확정 시점에 스냅샷하던 입금계좌 정보 - 입금확인 처리 전에
          어디로 송금해야 하는지 화면에서 바로 보여준다(gift 서비스 실시간 조회). -->
     <div class="card" style="margin-bottom:24px; max-width:400px;" th:if="${seller != null}">
@@ -57,6 +72,7 @@
             <th>품목ID</th>
             <th>수량</th>
             <th>포인트</th>
+            <th>상태</th>
         </tr>
         </thead>
         <tbody>
@@ -65,6 +81,7 @@
             <td th:text="${o.itemId}"></td>
             <td th:text="${o.quantity}"></td>
             <td th:text="${#numbers.formatInteger(o.pointAmount, 0, 'COMMA')} + 'P'"></td>
+            <td><span th:text="${o.status}" th:class="${o.status == 'CANCELLED'} ? 'pointRed' : ''"></span></td>
         </tr>
         </tbody>
     </table>

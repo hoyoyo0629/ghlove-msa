@@ -24,11 +24,11 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns(
                         "/api/admin/orders", "/api/admin/orders/**",
                         "/api/admin/claims", "/api/admin/claims/**",
+                        "/api/admin/excel-download-logs", "/api/admin/excel-download-logs/**",
                         "/claims", "/claims/*/approve", "/claims/*/reject", "/claims/*/complete",
-                        "/orders/*/invoice", "/orders/*/delivery-status")
-                // 이미 있던 /api/admin/orders/all(SFR-009 StatsService ReadModel 재동기화용,
-                // OrderApiController.allForResync)은 이번 라운드 범위 밖 - 새 시크릿 헤더를
-                // 안 보내는 기존 ResyncService 호출을 깨뜨리지 않기 위해 그대로 둔다.
-                .excludePathPatterns("/api/admin/orders/all");
+                        "/orders/*/invoice", "/orders/*/delivery-status");
+        // SFR-006 재검토 라운드 - /api/admin/orders/all(SFR-009 StatsService ReadModel
+        // 재동기화용)이 시크릿 헤더 없이 무인증으로 남아있던 잔존 gap을 닫았다(admin의
+        // OrderClient.allForResync()가 이제 시크릿을 보내므로 더 이상 예외처리가 필요 없다).
     }
 }

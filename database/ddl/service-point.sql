@@ -297,7 +297,8 @@ ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
 -- 기본 적립률/유효기간 (지자체별 설정이 없을 때의 기본값 - 하드코딩 금지 원칙에 따라 DB 보관)
 INSERT INTO OP_COMMON_CODE (CODE_TYPE, CODE_LANGUAGE, ID, LABEL, CODE_VALUE, ORDERING, USE_YN) VALUES
 ('SYSTEM_CONFIG', 'ko', 'DEFAULT_POINT_RATE', '기본 포인트 적립률(%, 지자체 설정 없을 때)', '30', 1, 'Y'),
-('SYSTEM_CONFIG', 'ko', 'POINT_VALID_DAYS', '포인트 유효기간(일)', '1825', 2, 'Y')
+('SYSTEM_CONFIG', 'ko', 'POINT_VALID_DAYS', '포인트 유효기간(일)', '1825', 2, 'Y'),
+('SYSTEM_CONFIG', 'ko', 'MAX_POINT_RATE', '포인트 지급률 상한(%, 고향사랑 기부금법 제8조 답례품 제공한도)', '30', 3, 'Y')
 ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
 
 -- 지자체별 기부포인트 적립률 (연도별). point 서비스는 donation 서비스의 DB를 직접 읽을 수

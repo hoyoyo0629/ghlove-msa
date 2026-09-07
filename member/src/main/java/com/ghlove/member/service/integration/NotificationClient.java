@@ -18,6 +18,11 @@ import java.util.Map;
 @Slf4j
 public class NotificationClient {
 
+    /** SFR-007 재검토 라운드 - RFP "재시도 로직" gap fill(admin의 동명 클라이언트와 동일하게
+     *  맞춤). 발송이력 적재는 admin의 OP_UMS_SEND_LOG(관리자 UMS 발송이력 화면)에서만
+     *  이뤄진다 - member는 자기 DB에 그런 이력 테이블이 없어(서비스별 DB 원칙) 재시도만 맞춘다. */
+    private static final int MAX_RETRIES = 2;
+
     public final boolean enabled;
     private final RestClient restClient;
     private final String clientId;
@@ -37,12 +42,21 @@ public class NotificationClient {
             log.info("[ums] disabled - mock 알림톡 발송 to={} template={} vars={}", phoneOrUserKey, templateCode, variables);
             return;
         }
-        try {
-            restClient.post().uri("/api/kakao")
-                    .body(Map.of("clientId", clientId, "to", phoneOrUserKey, "templateCode", templateCode, "variables", variables))
-                    .retrieve().toBodilessEntity();
-        } catch (RestClientException e) {
-            log.warn("알림톡 발송 실패 to={} template={}", phoneOrUserKey, templateCode, e);
+        int attempt = 0;
+        while (true) {
+            try {
+                restClient.post().uri("/api/kakao")
+                        .body(Map.of("clientId", clientId, "to", phoneOrUserKey, "templateCode", templateCode, "variables", variables))
+                        .retrieve().toBodilessEntity();
+                return;
+            } catch (RestClientException e) {
+                if (attempt >= MAX_RETRIES) {
+                    log.warn("알림톡 발송 실패(재시도 {}회 소진) to={} template={}", attempt, phoneOrUserKey, templateCode, e);
+                    return;
+                }
+                log.warn("알림톡 발송 실패, 재시도 {}/{} to={} template={}", attempt + 1, MAX_RETRIES, phoneOrUserKey, templateCode, e);
+                attempt++;
+            }
         }
     }
 }

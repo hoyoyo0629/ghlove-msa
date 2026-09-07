@@ -14,6 +14,9 @@
 <div class="contents contents_inner">
     <div class="location"><a th:href="@{/admin/members}">회원관리</a></div>
     <h3>회원 상세</h3>
+    <p th:if="${member != null}" style="margin-bottom:12px;">
+        <a th:href="@{/log/user-change(loginId=${member.loginId})}">권한/상태변경 이력 보기</a>
+    </p>
 
     <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
 
@@ -44,7 +47,18 @@
                 </tr>
                 <tr>
                     <td class="label">권한</td>
-                    <td th:text="${#strings.listJoin(member.roles, ', ')}"></td>
+                    <td>
+                        <span class="empty" th:if="${#lists.isEmpty(member.roles)}">-</span>
+                        <span th:each="role, iter : ${member.roles}" style="display:inline-flex; align-items:center; gap:4px; margin-right:12px;">
+                            <span th:text="${role}"></span>
+                            <form th:if="${role != 'ROLE_USER'}"
+                                  th:action="@{'/admin/members/' + ${member.userId} + '/roles/' + ${role} + '/revoke'}"
+                                  method="post" style="display:inline;" onsubmit="return confirmRevoke(this)">
+                                <input type="hidden" name="roleLabel" th:value="${role}">
+                                <button type="submit" class="small-btn" style="color:#c0392b;">회수</button>
+                            </form>
+                        </span>
+                    </td>
                 </tr>
                 <tr>
                     <td class="label">가입일시</td>
@@ -110,6 +124,10 @@
         </div>
 
         <div class="btn_all btn_center" style="margin-top:24px;">
+            <form th:if="${member.statusCode == 'LOCKED'}" th:action="@{'/admin/members/' + ${member.userId} + '/unlock'}"
+                  method="post" onsubmit="return confirm('이 계정의 잠금을 해제하시겠습니까?')">
+                <button type="submit" class="btn btn-small">계정잠금 해제</button>
+            </form>
             <form th:if="${member.statusCode != 'WITHDRAWN'}" th:action="@{'/admin/members/' + ${member.userId} + '/withdraw'}"
                   method="post" onsubmit="return fillWithdrawReason(this)">
                 <input type="hidden" name="reason">
@@ -125,6 +143,9 @@ function fillWithdrawReason(form) {
     if (reason === null) { return false; }
     form.reason.value = reason;
     return confirm('이 회원을 관리자 권한으로 탈퇴 처리하시겠습니까?');
+}
+function confirmRevoke(form) {
+    return confirm(form.roleLabel.value + ' 권한을 회수하시겠습니까?');
 }
 </script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>

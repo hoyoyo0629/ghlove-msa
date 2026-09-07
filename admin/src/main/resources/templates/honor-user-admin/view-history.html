@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>명예직원 열람이력 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>지자체 명예직원(명예시도민증) 관리</h3>
+    <div class="tab_menu">
+        <a th:href="@{/admin/honor-users}">선정기준 관리</a>
+        <a class="on" th:href="@{/admin/honor-users/view-history}">열람이력 조회</a>
+    </div>
+
+    <p><a class="btn" th:href="@{/admin/honor-users/view-history/export}">CSV 다운로드</a></p>
+
+    <table class="board_list_table">
+        <thead>
+        <tr><th>열람일시</th><th>회원ID</th><th>지자체</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="h : ${histories}">
+            <td th:text="${h.viewDt != null ? #temporals.format(h.viewDt, 'yyyy-MM-dd HH:mm:ss') : ''}"></td>
+            <td th:text="${h.userId}"></td>
+            <td th:text="${locgovNames.get(h.lclgvCd) ?: h.lclgvCd}"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(histories)}">열람이력이 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

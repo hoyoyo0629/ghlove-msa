@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>지자체 명예직원 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <h3>지자체 명예직원(명예시도민증) 관리</h3>
+    <div class="tab_menu">
+        <a class="on" th:href="@{/admin/honor-users}">선정기준 관리</a>
+        <a th:href="@{/admin/honor-users/view-history}">열람이력 조회</a>
+    </div>
+
+    <p><a class="btn" th:href="@{/admin/honor-users/new}">+ 지자체 선정기준 등록</a></p>
+
+    <table class="board_list_table">
+        <thead>
+        <tr><th>지자체</th><th>제목</th><th>골드기준액</th><th>실버기준액</th><th>브론즈기준액</th><th>사용여부</th><th>최종수정일</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${rows}">
+            <td><a th:href="@{'/admin/honor-users/' + ${r.lclgvCd} + '/edit'}"
+                   th:text="${locgovNames.get(r.lclgvCd) ?: r.lclgvCd}"></a></td>
+            <td th:text="${r.hnrUserStngTtl}"></td>
+            <td th:text="${#numbers.formatInteger(r.gldGrdDntnAmt ?: 0, 0, 'COMMA')}"></td>
+            <td th:text="${#numbers.formatInteger(r.slvrGrdDntnAmt ?: 0, 0, 'COMMA')}"></td>
+            <td th:text="${#numbers.formatInteger(r.brnzGrdDntnAmt ?: 0, 0, 'COMMA')}"></td>
+            <td th:text="${r.useYn == 'Y' ? '사용' : '미사용'}"></td>
+            <td th:text="${r.lastRegDt != null ? #temporals.format(r.lastRegDt, 'yyyy-MM-dd HH:mm') : ''}"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(rows)}">등록된 지자체 선정기준이 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

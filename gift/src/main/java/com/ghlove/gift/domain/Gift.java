@@ -79,6 +79,35 @@ public class Gift {
     @Column(name = "MIN_DONATION_AMOUNT")
     private Integer minDonationAmount;
 
+    /**
+     * 배송비/택배사 설정 (SFR-005 "배송비·택배사 설정, 배송정책" - 재검토 라운드에서 신규
+     * 매핑, AS-IS OP_ITEM엔 원래 있던 컬럼이었으나 지금까지 코드가 아예 매핑하지 않고
+     * 있었다). AS-IS의 배송정책 전체(출고지/반송지/묶음배송/개당배송비 등)를 다 재현하지
+     * 않고 order가 실제로 참조할 수 있는 핵심만 다룬다: 택배사명, 배송비구분(GIFT_SHIPPING_TYPE
+     * 공통코드 1~6), 기본배송비, 조건부무료배송 기준금액, 제주/도서산간 추가배송비, 반품가능여부.
+     */
+    @Column(name = "DELIVERY_COMPANY_NAME")
+    private String deliveryCompanyName;
+
+    /** 1:무료배송 2:판매자조건부 3:출고지조건부 4:상품조건부 5:개당배송비 6:고정배송비 (GIFT_SHIPPING_TYPE). */
+    @Column(name = "SHIPPING_TYPE")
+    private String shippingType;
+
+    @Column(name = "SHIPPING")
+    private Integer shipping;
+
+    @Column(name = "SHIPPING_FREE_AMOUNT")
+    private Integer shippingFreeAmount;
+
+    @Column(name = "SHIPPING_EXTRA_CHARGE1")
+    private Integer shippingExtraCharge1;
+
+    @Column(name = "SHIPPING_EXTRA_CHARGE2")
+    private Integer shippingExtraCharge2;
+
+    @Column(name = "ITEM_RETURN_FLAG")
+    private String itemReturnFlag;
+
     /** 대표상품 여부 (AS-IS opmanager/item/representative-item - 실제 운영사이트에 살아있는
      *  기능, view_search_spcl_item과는 무관). 'Y'면 대표상품 목록에 노출된다. */
     @Column(name = "REPRESENTATIVE_ITEM_YN")

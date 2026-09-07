@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Map;
@@ -24,6 +26,11 @@ import java.util.UUID;
  */
 @Controller
 public class ExternalLoginController {
+
+    /** enabled=false일 때 표시할 화면용 라벨 - /login/mock/{provider}가 실제로 처리 가능한 값만. */
+    private static final Map<String, String> MOCK_PROVIDER_LABELS = Map.of(
+            "ONEPASS", "디지털원패스", "KAKAO", "카카오", "NAVER", "네이버",
+            "FINANCE_CERT", "금융인증서", "ANYID", "간편인증");
 
     private final OnePassClient onePassClient;
     private final OAuth2LoginClient kakaoLoginClient;
@@ -46,8 +53,7 @@ public class ExternalLoginController {
     @GetMapping("/onepass-login")
     public String onePassLogin(Model model) {
         if (!onePassClient.isEnabled()) {
-            model.addAttribute("providerName", "디지털원패스");
-            return "external-login-disabled";
+            return mockScreen(model, "ONEPASS");
         }
         return "redirect:" + onePassClient.buildLoginRedirectUrl();
     }
@@ -66,7 +72,7 @@ public class ExternalLoginController {
 
     @GetMapping("/login/kakao")
     public String kakaoLogin(HttpSession session, Model model) {
-        return oauthLogin(kakaoLoginClient, "카카오", session, model);
+        return oauthLogin(kakaoLoginClient, "KAKAO", session, model);
     }
 
     @GetMapping("/login/kakao/callback")
@@ -77,7 +83,7 @@ public class ExternalLoginController {
 
     @GetMapping("/login/naver")
     public String naverLogin(HttpSession session, Model model) {
-        return oauthLogin(naverLoginClient, "네이버", session, model);
+        return oauthLogin(naverLoginClient, "NAVER", session, model);
     }
 
     @GetMapping("/login/naver/callback")
@@ -91,18 +97,45 @@ public class ExternalLoginController {
      * 뜨는 인증창) / 간편인증 로그인 (AS-IS openSimpeAuth() - AnyID 통합인증 팝업창).
      * 둘 다 카카오/네이버 SNS 로그인과 달리 우리 도메인이 아닌 외부 인증기관 화면을 직접
      * 띄우는 방식이라(SDK 스크립트 주입/팝업창) 리다이렉트형 OAuth 클라이언트로 흉내낼
-     * 대상 자체가 없다 - 화면/버튼까지만 동일하게 만들고 준비중 안내로 대체한다.
+     * 대상 자체가 없다 - 화면/버튼은 동일하게 두고 {@link #mockLogin}으로 모의 통과시킨다
+     * ([[feedback-mock-integration-same-screen]]).
      */
     @GetMapping("/login/finance-cert")
     public String financeCertLogin(Model model) {
-        model.addAttribute("providerName", "금융인증서");
-        return "external-login-disabled";
+        return mockScreen(model, "FINANCE_CERT");
     }
 
     @GetMapping("/login/simple-auth")
     public String simpleAuthLogin(Model model) {
-        model.addAttribute("providerName", "간편인증");
-        return "external-login-disabled";
+        return mockScreen(model, "ANYID");
+    }
+
+    /** 5개 외부인증수단 공용 모의 통과 - 실제 연계가 열려(enabled=true) 진짜 프로토콜을 타야
+     *  하는 provider는 여기서 막는다(모의 로그인이 실연계를 우회하지 못하게 하는 방어). */
+    @PostMapping("/login/mock/{provider}")
+    public String mockLogin(@PathVariable String provider, HttpSession session, HttpServletResponse response, Model model) {
+        String label = MOCK_PROVIDER_LABELS.get(provider);
+        if (label == null || isRealClientEnabled(provider)) {
+            model.addAttribute("errorMessage", "모의 로그인을 사용할 수 없는 연계 수단입니다.");
+            return "login";
+        }
+        ExternalIdentity identity = new ExternalIdentity(provider, "MOCK", label + " 모의회원", null, null);
+        return completeLogin(identity, session, response);
+    }
+
+    private boolean isRealClientEnabled(String provider) {
+        return switch (provider) {
+            case "ONEPASS" -> onePassClient.isEnabled();
+            case "KAKAO" -> kakaoLoginClient.isEnabled();
+            case "NAVER" -> naverLoginClient.isEnabled();
+            default -> false; // FINANCE_CERT/ANYID는 진짜 클라이언트 자체가 없다
+        };
+    }
+
+    private String mockScreen(Model model, String providerCode) {
+        model.addAttribute("providerCode", providerCode);
+        model.addAttribute("providerName", MOCK_PROVIDER_LABELS.get(providerCode));
+        return "external-login-mock";
     }
 
     /**
@@ -128,10 +161,9 @@ public class ExternalLoginController {
         return "external-login-disabled";
     }
 
-    private String oauthLogin(OAuth2LoginClient client, String providerName, HttpSession session, Model model) {
+    private String oauthLogin(OAuth2LoginClient client, String providerCode, HttpSession session, Model model) {
         if (!client.isEnabled()) {
-            model.addAttribute("providerName", providerName);
-            return "external-login-disabled";
+            return mockScreen(model, providerCode);
         }
         String state = UUID.randomUUID().toString();
         session.setAttribute("oauthState", state);

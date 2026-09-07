@@ -19215,6 +19215,22 @@ INSERT INTO OP_MENU_RIGHT (MENU_ID, AUTHORITY) VALUES
 (29, 'ROLE_ADMIN')
 ON CONFLICT DO NOTHING;
 
+-- =====================================================================
+-- 시스템 인프라: 회원 권한/상태변경 이력 관리 + 회원 배치관리 (SFR-002 재검토 라운드) -
+-- 전자는 이미 쌓이고 있던 OP_USER_CHANGE_LOG를 조회할 admin 화면이 없던 gap을 닫고,
+-- 후자는 member 자체에 무인증으로 노출돼 있던 휴면전환/데이터파기 배치 트리거를
+-- admin 콘솔(OP_MANAGER 로그인 게이트)로 옮긴 보안 수정이다. MENU_ID는 26~29(초기
+-- system-infra-log-round)와 떨어진 후속 라운드들의 관례(1400~1900번대)를 따른다.
+-- =====================================================================
+INSERT INTO OP_MENU (MENU_ID, MENU_PARENT_ID, MENU_NAME, MENU_URL, MENU_SEQ, DISPLAY_FLAG, STATUS_CODE) VALUES
+(1901, 106, '회원 권한/상태변경 이력 관리', '/log/user-change', 7, 'Y', '1'),
+(1902, 106, '회원 배치관리', '/admin/members/batch', 8, 'Y', '1')
+ON CONFLICT (MENU_ID) DO NOTHING;
+
+INSERT INTO OP_MENU_RIGHT (MENU_ID, AUTHORITY) VALUES
+(1901, 'ROLE_ADMIN'), (1902, 'ROLE_ADMIN')
+ON CONFLICT DO NOTHING;
+
 
 -- =====================================================================
 -- 공통코드 마스터데이터 (원본: '09. 공통코드 목록.xlsx', 71개 코드유형 1088행)
@@ -20656,3 +20672,47 @@ INSERT INTO OP_MENU_RIGHT (MENU_ID, AUTHORITY) VALUES
 (501, 'ROLE_ADMIN_5'), (501, 'ROLE_ADMIN_6'),
 (502, 'ROLE_ADMIN_5'), (502, 'ROLE_ADMIN_6')
 ON CONFLICT DO NOTHING;
+
+-- =====================================================================
+-- SFR-006 재검토 라운드 (ISP p.161 "주문상세/이력뷰"·"클레임사건/상태뷰" ReadModel gap
+-- fill). admin의 주문목록/클레임큐 화면이 매 요청 order 서비스에 REST로 묻던 것(live
+-- pass-through)을 그만두고 이 사본(OrderLedger 확장 + 신규 ClaimLedger)을 조회하도록
+-- 전환했다 - SLA뷰는 이미 이 방식이었는데 나머지 두 ISP 명시 뷰는 아니었던 것을 여기서
+-- 맞췄다. 상세보기/쓰기(메모·상태변경·클레임승인)는 여전히 원장(OrderAdminClient) REST.
+-- =====================================================================
+ALTER TABLE STAT_ORDER_LEDGER ADD COLUMN IF NOT EXISTS ITEM_NAME VARCHAR(200);
+ALTER TABLE STAT_ORDER_LEDGER ADD COLUMN IF NOT EXISTS RECEIVER_NAME VARCHAR(100);
+
+CREATE TABLE IF NOT EXISTS STAT_CLAIM_LEDGER (
+    CLAIM_ID BIGINT PRIMARY KEY,
+    ORDER_ID VARCHAR(30),
+    CLAIM_TYPE VARCHAR(20),
+    REASON VARCHAR(500),
+    STATUS VARCHAR(20),
+    CREATED_DATE TIMESTAMP,
+    PROCESSED_DATE TIMESTAMP,
+    ITEM_NAME VARCHAR(200),
+    LOCGOV_CODE VARCHAR(20),
+    USER_ID BIGINT,
+    RECEIVER_NAME VARCHAR(100)
+);
+CREATE INDEX IF NOT EXISTS idx_stat_claim_ledger_status ON STAT_CLAIM_LEDGER (STATUS);
+CREATE INDEX IF NOT EXISTS idx_stat_claim_ledger_locgov ON STAT_CLAIM_LEDGER (LOCGOV_CODE);
+
+-- =====================================================================
+-- SFR-007 재검토 라운드: "정산 데이터 생성·조정" gap fill. 정산 생성 이후 그 정산에 속한
+-- 주문이 클레임으로 취소되는 경우 - GENERATED/INVOICED는 자동 재계산, DEPOSITED/CLOSED는
+-- 조정대기 플래그만(SettlementService.adjustForCancelledOrder 참고).
+-- =====================================================================
+ALTER TABLE SETTLEMENT ADD COLUMN IF NOT EXISTS PENDING_ADJUSTMENT_YN VARCHAR(1) DEFAULT 'N';
+ALTER TABLE SETTLEMENT ADD COLUMN IF NOT EXISTS ADJUSTMENT_NOTE TEXT;
+
+-- =====================================================================
+-- SFR-007 재검토 라운드: "카카오 알림톡 - 대량 발송 안정성·성능, 재시도 로직·발송 제한,
+-- 모니터링·통계" gap fill. NotificationClient가 실제 발송(성공/실패/재시도횟수)마다
+-- OP_UMS_SEND_LOG에 직접 기록하도록 연결 - 이전엔 이 테이블이 UMS 템플릿 관리화면과만
+-- 연결돼 있었고 실제 발송경로와는 완전히 분리돼 있었다.
+-- =====================================================================
+ALTER TABLE OP_UMS_SEND_LOG ADD COLUMN IF NOT EXISTS SUCCESS_YN VARCHAR(1);
+ALTER TABLE OP_UMS_SEND_LOG ADD COLUMN IF NOT EXISTS RETRY_COUNT INTEGER DEFAULT 0;
+ALTER TABLE OP_UMS_SEND_LOG ADD COLUMN IF NOT EXISTS TARGET_KEY VARCHAR(100);

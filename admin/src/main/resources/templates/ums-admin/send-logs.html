@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>UMS 발송이력 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/ums}">통합알림(UMS) 관리</a></div>
+    <h3>UMS 발송이력</h3>
+
+    <!-- SFR-007 재검토 라운드 - RFP "대량 발송 안정성·성능, 재시도 로직·발송 제한, 모니터링·
+         통계" gap fill. 이전엔 이 화면이 실제 발송경로와 연결돼 있지 않아 항상 빈 화면이었다. -->
+    <div class="card" style="margin-bottom:20px; max-width:400px;">
+        <div>성공: <strong th:text="${successCount}"></strong>건</div>
+        <div>실패: <strong th:text="${failureCount}"></strong>건</div>
+        <div>재시도 발생: <strong th:text="${retriedCount}"></strong>건</div>
+    </div>
+
+    <table class="board_list_table">
+        <thead><tr><th>발송일시</th><th>템플릿코드</th><th>채널</th><th>제목</th><th>대상</th><th>결과</th><th>재시도횟수</th></tr></thead>
+        <tbody>
+        <tr th:each="l : ${logs}">
+            <td th:text="${l.created}"></td>
+            <td th:text="${l.templateCode}"></td>
+            <td th:text="${l.umsType}"></td>
+            <td th:text="${l.title}"></td>
+            <td th:text="${l.targetKey} ?: ${l.targetUserId}"></td>
+            <td>
+                <span th:if="${l.successYn == 'Y'}" class="pill on">성공</span>
+                <span th:if="${l.successYn == 'N'}" class="pill off">실패</span>
+            </td>
+            <td th:text="${l.retryCount}"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(logs)}">발송 이력이 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

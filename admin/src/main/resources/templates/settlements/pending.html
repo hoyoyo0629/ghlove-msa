@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>정산/판매자 확인 큐 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<!-- AS-IS opmanager/settlement/seller-confirm(SellerconfirmManagerController) - 세금계산서
+     발행 전(GENERATED) 상태로 판매자 확인을 기다리는 정산건만 걸러 보여준다. -->
+<div class="contents contents_inner">
+    <h3><span>정산/판매자 확인 큐</span></h3>
+    <p style="color:#888; margin-bottom:12px;">아직 세금계산서가 발행되지 않아(생성 상태) 판매자 확인이 필요한 정산건입니다. 상세에서 세금계산서를 발행하면 이 큐에서 빠집니다.</p>
+    <p><a th:href="@{/settlements}">&larr; 전체 정산 목록으로</a></p>
+
+    <div class="count_title mt-40">
+        <h5>총 <span th:text="${#lists.size(settlements)}" th:remove="tag"></span>건</h5>
+    </div>
+
+    <table class="board_list_table">
+        <thead>
+        <tr>
+            <th>정산ID</th>
+            <th>제공자</th>
+            <th>건수</th>
+            <th>포인트 합계</th>
+            <th>상태</th>
+            <th>처리</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="s : ${settlements}">
+            <td th:text="${s.settlementId}"></td>
+            <td th:text="${sellersById.get(s.sellerId) != null ? sellersById.get(s.sellerId).sellerName() : ('ID ' + s.sellerId)}"></td>
+            <td th:text="${s.orderCount} + '건'"></td>
+            <td th:text="${#numbers.formatInteger(s.totalPointAmount, 0, 'COMMA')} + 'P'"></td>
+            <td th:text="${statusLabels.get(s.status)} ?: ${s.status}"></td>
+            <td><a class="small-btn" th:href="@{'/settlements/' + ${s.settlementId}}">확인/세금계산서 발행</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(settlements)}">판매자 확인을 기다리는 정산건이 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

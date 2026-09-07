@@ -1,5 +1,6 @@
 package com.ghlove.order.event;
 
+import com.ghlove.order.domain.Claim;
 import com.ghlove.order.domain.Order;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +35,7 @@ public class OrderSagaPublisher {
         OrderCreatedEvent event = new OrderCreatedEvent(
                 order.getOrderId(), order.getUserId(), order.getItemId(), order.getSellerId(),
                 order.getQuantity(), order.getUnitPrice(), order.getPointAmount(), order.getLocgovCode(),
-                LocalDateTime.now());
+                order.getItemName(), order.getReceiverName(), LocalDateTime.now());
         send(order.getOrderId(), event, "ORDER_CREATED");
     }
 
@@ -52,6 +53,15 @@ public class OrderSagaPublisher {
         OrderDeliveryUpdatedEvent event = new OrderDeliveryUpdatedEvent(order.getOrderId(), order.getDeliveryStatus(),
                 order.getShippedDate(), order.getDeliveredDate(), order.getConfirmedDate(), LocalDateTime.now());
         send(order.getOrderId(), event, "ORDER_DELIVERY_UPDATED");
+    }
+
+    /** SFR-006 재검토 라운드 - 클레임사건/상태뷰 ReadModel gap fill. */
+    public void publishClaimUpdated(Claim claim, Order order) {
+        OrderClaimUpdatedEvent event = new OrderClaimUpdatedEvent(claim.getClaimId(), claim.getOrderId(),
+                claim.getClaimType(), claim.getReason(), claim.getStatus(), claim.getCreatedDate(),
+                claim.getProcessedDate(), order.getItemName(), order.getLocgovCode(), order.getUserId(),
+                order.getReceiverName());
+        send(claim.getOrderId(), event, "ORDER_CLAIM_UPDATED");
     }
 
     private void send(String key, Object event, String eventType) {

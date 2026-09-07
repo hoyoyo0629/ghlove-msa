@@ -114,10 +114,12 @@ public class OffgiveController {
                             @RequestParam String locgovCode, @RequestParam BigDecimal amount,
                             @RequestParam(required = false) String rceptBankCode,
                             @RequestParam(required = false) String rceptBankNm,
+                            @RequestParam(required = false) String signatureImage,
                             Model model) {
         try {
             OffgiveClient.RegisterResult result = offgiveClient.register(userId, walkInName, walkInPhone,
-                    stripDashes(walkInBirthday), walkInAddress, locgovCode, amount, rceptBankCode, rceptBankNm);
+                    stripDashes(walkInBirthday), walkInAddress, locgovCode, amount, rceptBankCode, rceptBankNm,
+                    signatureImage);
             model.addAttribute("result", result);
             return "offgive/complete";
         } catch (ManagerException e) {

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>1:1 상담문의 상세 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/shop-inquiries}">답례품 1:1 상담문의</a></div>
+    <h3>문의 상세</h3>
+    <table class="board_write_table">
+        <colgroup><col style="width:220px;"><col></colgroup>
+        <tbody>
+        <tr><td class="label">등록일</td><td th:text="${inquiry.createdDate}"></td></tr>
+        <tr><td class="label">답례품</td><td th:text="${inquiry.itemName} + ' (' + ${inquiry.itemCode} + ')'"></td></tr>
+        <tr><td class="label">문의자</td><td th:text="${inquiry.userName} + ' / ' + ${inquiry.userEmail} + ' / ' + ${inquiry.telNumber}"></td></tr>
+        <tr><td class="label">제목</td><td th:text="${inquiry.inquirySubject}"></td></tr>
+        <tr><td class="label">내용</td><td><div th:utext="${inquiry.inquiryContent}"></div></td></tr>
+        </tbody>
+    </table>
+
+    <h4 style="margin-top:24px;">답변 발송 이력 (SMS)</h4>
+    <table class="board_list_table">
+        <thead><tr><th>발송일시</th><th>수신번호</th><th>내용</th></tr></thead>
+        <tbody>
+        <tr th:each="s : ${smsHistory}">
+            <td th:text="${s.createdDate}"></td>
+            <td th:text="${s.receiveTelNumber}"></td>
+            <td th:text="${s.content}"></td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(smsHistory)}">발송된 답변이 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

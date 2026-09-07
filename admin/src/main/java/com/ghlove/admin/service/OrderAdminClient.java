@@ -185,6 +185,21 @@ public class OrderAdminClient {
         }
     }
 
+    /** admin의 "엑셀다운로드 로그"(/admin/excel-download-logs) 화면이 order 서비스가
+     *  자체 적재한 이력(주문목록 CSV 다운로드, OD_EXCEL_DOWNLOAD_LOG)을 읽어오는 용도.
+     *  관리자 신원 헤더는 필요 없는 단순 조회라 시크릿만 싣는다. */
+    public List<ExcelDownloadLogRow> excelDownloadLogs() {
+        try {
+            List<ExcelDownloadLogRow> list = restClient.get().uri("/api/admin/excel-download-logs")
+                    .headers(h -> applyHeaders(h, null)).retrieve()
+                    .body(new ParameterizedTypeReference<List<ExcelDownloadLogRow>>() {
+                    });
+            return list != null ? list : List.of();
+        } catch (RestClientResponseException e) {
+            return List.of();
+        }
+    }
+
     // ---- 클레임 처리 큐 ----
 
     public List<ClaimQueueRow> claimQueue(Manager manager, String status) {
@@ -258,6 +273,102 @@ public class OrderAdminClient {
         }
     }
 
+    // ==================== 주문대행 조회 (콜센터) ====================
+
+    public SearchResult agencySearch(Manager manager, String locgovCode, String orderStatus, String searchType,
+                                      String keyword, String startDate, String endDate, int page, int size) {
+        try {
+            PageResponse<OrderDetail> result = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/orders/agency-search")
+                            .queryParamIfPresent("locgovCode", java.util.Optional.ofNullable(blankToNull(locgovCode)))
+                            .queryParamIfPresent("orderStatus", java.util.Optional.ofNullable(blankToNull(orderStatus)))
+                            .queryParamIfPresent("searchType", java.util.Optional.ofNullable(blankToNull(searchType)))
+                            .queryParamIfPresent("keyword", java.util.Optional.ofNullable(blankToNull(keyword)))
+                            .queryParamIfPresent("startDate", java.util.Optional.ofNullable(blankToNull(startDate)))
+                            .queryParamIfPresent("endDate", java.util.Optional.ofNullable(blankToNull(endDate)))
+                            .queryParam("page", page)
+                            .queryParam("size", size)
+                            .build())
+                    .headers(h -> applyHeaders(h, manager))
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<PageResponse<OrderDetail>>() {
+                    });
+            return result != null
+                    ? new SearchResult(result.content(), result.totalElements(), result.totalPages(), result.page(), result.size())
+                    : new SearchResult(List.of(), 0, 0, page, size);
+        } catch (RestClientResponseException e) {
+            return new SearchResult(List.of(), 0, 0, page, size);
+        }
+    }
+
+    // ==================== PG 결제현황 조회 ====================
+
+    public PayInfoResult payInfo(Manager manager, String locgovCode, boolean failedOnly, String startDate,
+                                  String endDate, int page, int size) {
+        try {
+            PageResponse<PayInfo> result = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/orders/pay-info")
+                            .queryParamIfPresent("locgovCode", java.util.Optional.ofNullable(blankToNull(locgovCode)))
+                            .queryParam("failedOnly", failedOnly)
+                            .queryParamIfPresent("startDate", java.util.Optional.ofNullable(blankToNull(startDate)))
+                            .queryParamIfPresent("endDate", java.util.Optional.ofNullable(blankToNull(endDate)))
+                            .queryParam("page", page)
+                            .queryParam("size", size)
+                            .build())
+                    .headers(h -> applyHeaders(h, manager))
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<PageResponse<PayInfo>>() {
+                    });
+            return result != null
+                    ? new PayInfoResult(result.content(), result.totalElements(), result.totalPages(), result.page(), result.size())
+                    : new PayInfoResult(List.of(), 0, 0, page, size);
+        } catch (RestClientResponseException e) {
+            return new PayInfoResult(List.of(), 0, 0, page, size);
+        }
+    }
+
+    // ==================== 보류주문 처리 ====================
+
+    public SearchResult heldOrders(Manager manager, String locgovCode, int page, int size) {
+        try {
+            PageResponse<OrderDetail> result = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/orders/held")
+                            .queryParamIfPresent("locgovCode", java.util.Optional.ofNullable(blankToNull(locgovCode)))
+                            .queryParam("page", page)
+                            .queryParam("size", size)
+                            .build())
+                    .headers(h -> applyHeaders(h, manager))
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<PageResponse<OrderDetail>>() {
+                    });
+            return result != null
+                    ? new SearchResult(result.content(), result.totalElements(), result.totalPages(), result.page(), result.size())
+                    : new SearchResult(List.of(), 0, 0, page, size);
+        } catch (RestClientResponseException e) {
+            return new SearchResult(List.of(), 0, 0, page, size);
+        }
+    }
+
+    public void hold(Manager manager, String orderId, String reason) {
+        try {
+            restClient.post()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/orders/{id}/hold")
+                            .queryParam("reason", reason == null ? "" : reason).build(orderId))
+                    .headers(h -> applyHeaders(h, manager)).retrieve().toBodilessEntity();
+        } catch (RestClientResponseException e) {
+            throw new ManagerException(extractMessage(e, "보류 처리에 실패했습니다."));
+        }
+    }
+
+    public void release(Manager manager, String orderId) {
+        try {
+            restClient.post().uri("/api/admin/orders/{id}/release", orderId)
+                    .headers(h -> applyHeaders(h, manager)).retrieve().toBodilessEntity();
+        } catch (RestClientResponseException e) {
+            throw new ManagerException(extractMessage(e, "보류 해제에 실패했습니다."));
+        }
+    }
+
     private static String extractMessage(RestClientResponseException e, String fallback) {
         try {
             var body = e.getResponseBodyAs(Map.class);
@@ -273,7 +384,8 @@ public class OrderAdminClient {
                                String orderStatus, String cancelReason, String createdDate, String updatedDate,
                                String carrierCode, String invoiceNo, String deliveryStatus, String receiverName,
                                String receiverPhone, String deliveryAddress, String deliveryAddressDetail,
-                               String requestNote, String adminMemo) {
+                               String requestNote, String adminMemo, String holdYn, String holdReason,
+                               String holdDate) {
     }
 
     public record ClaimInfo(Long claimId, String orderId, String claimType, String reason, String status,
@@ -288,7 +400,19 @@ public class OrderAdminClient {
     public record ClaimMemoInfo(Long claimMemoId, Long managerId, String managerName, String memo, String createdDate) {
     }
 
+    public record ExcelDownloadLogRow(Long downloadLogId, Long managerId, String managerName, String downloadReason,
+                                       String searchCondition, Integer rowCount, String createdDate) {
+    }
+
     public record SearchResult(List<OrderDetail> content, long totalElements, int totalPages, int page, int size) {
+    }
+
+    public record PayInfo(String orderId, Long userId, String itemName, Long sellerId, String paymentMethod,
+                           Long paymentAmount, String paymentStatus, String orderStatus, String cancelReason,
+                           String createdDate, String updatedDate) {
+    }
+
+    public record PayInfoResult(List<PayInfo> content, long totalElements, int totalPages, int page, int size) {
     }
 
     private record PageResponse<T>(List<T> content, long totalElements, int totalPages, int page, int size) {

@@ -4,6 +4,7 @@ import com.ghlove.member.domain.User;
 import com.ghlove.member.domain.UserChangeLog;
 import com.ghlove.member.domain.UserDetail;
 import com.ghlove.member.domain.UserRole;
+import com.ghlove.member.domain.UserRoleId;
 import com.ghlove.member.repository.UserChangeLogRepository;
 import com.ghlove.member.repository.UserDetailRepository;
 import com.ghlove.member.repository.UserRepository;
@@ -36,6 +37,8 @@ public class AdminMemberService {
     private static final String STATUS_WITHDRAWN = "WITHDRAWN";
     private static final String STATUS_DORMANT = "DORMANT";
     private static final String STATUS_ACTIVE = "ACTIVE";
+    private static final String STATUS_LOCKED = "LOCKED";
+    private static final String ROLE_USER = "ROLE_USER";
 
     private final UserRepository userRepository;
     private final UserDetailRepository userDetailRepository;
@@ -190,6 +193,37 @@ public class AdminMemberService {
             }
         }
         return count;
+    }
+
+    /** 계정잠금 관리자 해제 (SFR-002 "계정 잠금... 해제") - 본인 경유(find-idpw)와 달리 비밀번호
+     *  확인 없이 운영자가 즉시 해제한다. */
+    @Transactional
+    public void unlock(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new MemberException("회원 정보를 찾을 수 없습니다."));
+        if (!STATUS_LOCKED.equals(user.getStatusCode())) {
+            throw new MemberException("잠금 상태인 계정만 해제할 수 있습니다.");
+        }
+        user.setStatusCode(STATUS_ACTIVE);
+        user.setLoginFailCount(0);
+        user.setUpdatedDate(now());
+        userRepository.save(user);
+        recordChangeLog(userId, "ACCOUNT_UNLOCKED_BY_ADMIN");
+    }
+
+    /** RBAC 권한 회수 (SFR-002 "권한 부여·회수 절차 표준화") - ROLE_LOCALGOV/ROLE_PROVIDER처럼
+     *  승인을 거쳐 부여된 권한을 운영자가 다시 거둬들인다. */
+    @Transactional
+    public void revokeRole(Long userId, String authority) {
+        if (ROLE_USER.equals(authority)) {
+            throw new MemberException("기본 회원 권한(ROLE_USER)은 회수할 수 없습니다.");
+        }
+        UserRoleId id = new UserRoleId(userId, authority);
+        if (!userRoleRepository.existsById(id)) {
+            throw new MemberException("보유하지 않은 권한입니다.");
+        }
+        userRoleRepository.deleteById(id);
+        recordChangeLog(userId, "ROLE_REVOKED: " + authority);
     }
 
     private Map<Long, UserDetail> detailsFor(List<User> users) {
