@@ -49,6 +49,12 @@ ghlove:
   # 마이페이지 요약 카드(답례품 후기/답례품Q&A)용.
   gift-service:
     base-url: http://localhost:8084
+  # SFR-002: /api/admin/**(회원 검색·강제탈퇴·권한회수·개인정보 파기 배치·감사로그)와
+  # /api/users/*(회원정보 조회·현장가입)는 서비스간 내부 호출 전용이다. 호출측(admin/donation/
+  # point)이 이 공유 시크릿을 X-Internal-Secret 헤더로 실어야 통과한다 - order의 동일 시크릿을
+  # 재사용한다(AdminApiAuthInterceptor 참고). 브라우저/외부에 노출되면 안 된다.
+  internal:
+    admin-secret: "ghlove-msa-local-dev-internal-admin-secret-do-not-expose!!"
   # D11 회원등급 관리(/api/admin/user-levels) 아이콘 업로드 저장 경로 - PopupImageStorageService
   # (admin)와 동일한 로컬 디스크 저장 패턴.
   upload:

@@ -53,21 +53,42 @@ public class RoleRequestController {
     }
 
     @GetMapping("/roles/queue")
-    public String queue(Model model) {
+    public String queue(HttpSession session, Model model) {
+        User loginUser = (User) session.getAttribute(AuthController.SESSION_USER_KEY);
+        if (loginUser == null) {
+            return AuthController.loginRedirect("/roles/queue");
+        }
+        if (!isApprover(loginUser)) {
+            return "redirect:/?error=" + java.net.URLEncoder.encode("역할 신청 승인 권한이 없습니다.",
+                    java.nio.charset.StandardCharsets.UTF_8);
+        }
         model.addAttribute("requests", roleRequestService.pendingRequests());
         model.addAttribute("roleLabels", memberService.codesOf("ROLE"));
         return "roles/queue";
     }
 
     @PostMapping("/roles/{requestId}/approve")
-    public String approve(@PathVariable Long requestId) {
-        roleRequestService.approve(requestId);
+    public String approve(@PathVariable Long requestId, HttpSession session) {
+        User loginUser = (User) session.getAttribute(AuthController.SESSION_USER_KEY);
+        if (loginUser == null || !isApprover(loginUser)) {
+            return "redirect:/roles/queue";
+        }
+        roleRequestService.approve(requestId, loginUser.getUserId());
         return "redirect:/roles/queue";
     }
 
     @PostMapping("/roles/{requestId}/reject")
-    public String reject(@PathVariable Long requestId) {
-        roleRequestService.reject(requestId);
+    public String reject(@PathVariable Long requestId, HttpSession session) {
+        User loginUser = (User) session.getAttribute(AuthController.SESSION_USER_KEY);
+        if (loginUser == null || !isApprover(loginUser)) {
+            return "redirect:/roles/queue";
+        }
+        roleRequestService.reject(requestId, loginUser.getUserId());
         return "redirect:/roles/queue";
+    }
+
+    /** 역할신청 승인은 시스템 운영자(ROLE_ADMIN)만 - RoleRequestApiController와 동일 정책. */
+    private boolean isApprover(User user) {
+        return user != null && memberService.rolesOf(user.getUserId()).contains("ROLE_ADMIN");
     }
 }

@@ -15,8 +15,10 @@ public class WelfareCenterAdminClient {
 
     private final RestClient restClient;
 
-    public WelfareCenterAdminClient(@Value("${ghlove.donation-service.base-url}") String donationServiceBaseUrl) {
-        this.restClient = RestClient.create(donationServiceBaseUrl);
+    public WelfareCenterAdminClient(@Value("${ghlove.donation-service.base-url}") String donationServiceBaseUrl,
+            @Value("${ghlove.internal.admin-secret}") String adminSecret) {
+        this.restClient = RestClient.builder().baseUrl(donationServiceBaseUrl)
+                .defaultHeader("X-Internal-Secret", adminSecret).build();
     }
 
     public record Row(Long id, String lclgvCd, String name, String code, String useYn, String frstRegDt) {

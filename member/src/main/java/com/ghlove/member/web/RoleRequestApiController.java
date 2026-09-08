@@ -72,11 +72,20 @@ public class RoleRequestApiController {
                                String reason, LocalDateTime createdDate) {
     }
 
+    /** 역할신청 승인함은 시스템 운영자(ROLE_ADMIN)만 조회/처리할 수 있다 - SFR-002 RBAC.
+     *  로그인만 하면 누구나 타인의 신청을 보고 자신의 상승을 자가승인할 수 있던 취약점 차단. */
+    private boolean isApprover(User user) {
+        return user != null && memberService.rolesOf(user.getUserId()).contains("ROLE_ADMIN");
+    }
+
     @GetMapping("/api/roles/queue")
     public ResponseEntity<List<QueueRowDto>> queue(HttpSession session) {
         User user = requireLogin(session);
         if (user == null) {
             return ResponseEntity.status(401).build();
+        }
+        if (!isApprover(user)) {
+            return ResponseEntity.status(403).build();
         }
         Map<String, String> roleLabels = memberService.codesOf("ROLE");
         List<QueueRowDto> rows = roleRequestService.pendingRequests().stream()
@@ -88,20 +97,36 @@ public class RoleRequestApiController {
     }
 
     @PostMapping("/api/roles/{requestId}/approve")
-    public ResponseEntity<Void> approve(HttpSession session, @PathVariable Long requestId) {
-        if (requireLogin(session) == null) {
+    public ResponseEntity<?> approve(HttpSession session, @PathVariable Long requestId) {
+        User user = requireLogin(session);
+        if (user == null) {
             return ResponseEntity.status(401).build();
         }
-        roleRequestService.approve(requestId);
+        if (!isApprover(user)) {
+            return ResponseEntity.status(403).body(Map.of("message", "역할 신청을 승인할 권한이 없습니다."));
+        }
+        try {
+            roleRequestService.approve(requestId, user.getUserId());
+        } catch (MemberException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/api/roles/{requestId}/reject")
-    public ResponseEntity<Void> reject(HttpSession session, @PathVariable Long requestId) {
-        if (requireLogin(session) == null) {
+    public ResponseEntity<?> reject(HttpSession session, @PathVariable Long requestId) {
+        User user = requireLogin(session);
+        if (user == null) {
             return ResponseEntity.status(401).build();
         }
-        roleRequestService.reject(requestId);
+        if (!isApprover(user)) {
+            return ResponseEntity.status(403).body(Map.of("message", "역할 신청을 반려할 권한이 없습니다."));
+        }
+        try {
+            roleRequestService.reject(requestId, user.getUserId());
+        } catch (MemberException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
         return ResponseEntity.noContent().build();
     }
 

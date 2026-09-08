@@ -51,7 +51,7 @@ public class CtbnyOpratnService {
 
     @Transactional
     public CtbnyOpratn create(String locgovCode, String bsnsPurpsCode, String bsnsNm, String bsnsCn,
-                               LocalDateTime expndtrDe, BigDecimal expndtrAmt, String rm, Long managerId,
+                               String expndtrDe, BigDecimal expndtrAmt, String rm, Long managerId,
                                List<MultipartFile> files) {
         validate(bsnsNm, bsnsCn, expndtrDe, expndtrAmt);
         CtbnyOpratn entity = new CtbnyOpratn();
@@ -73,7 +73,7 @@ public class CtbnyOpratnService {
 
     @Transactional
     public CtbnyOpratn update(Long registSn, String bsnsPurpsCode, String bsnsNm, String bsnsCn,
-                               LocalDateTime expndtrDe, BigDecimal expndtrAmt, String rm, Long managerId,
+                               String expndtrDe, BigDecimal expndtrAmt, String rm, Long managerId,
                                List<MultipartFile> files) {
         validate(bsnsNm, bsnsCn, expndtrDe, expndtrAmt);
         CtbnyOpratn entity = findOrThrow(registSn);
@@ -120,14 +120,14 @@ public class CtbnyOpratnService {
         }
     }
 
-    private static void validate(String bsnsNm, String bsnsCn, LocalDateTime expndtrDe, BigDecimal expndtrAmt) {
+    private static void validate(String bsnsNm, String bsnsCn, String expndtrDe, BigDecimal expndtrAmt) {
         if (bsnsNm == null || bsnsNm.isBlank()) {
             throw new DonationException("사업명을 입력해 주세요.");
         }
         if (bsnsCn == null || bsnsCn.isBlank()) {
             throw new DonationException("사용내용을 입력해 주세요.");
         }
-        if (expndtrDe == null) {
+        if (expndtrDe == null || expndtrDe.isBlank()) {
             throw new DonationException("지출일자를 입력해 주세요.");
         }
         if (expndtrAmt == null || expndtrAmt.signum() < 0) {

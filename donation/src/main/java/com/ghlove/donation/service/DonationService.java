@@ -342,6 +342,10 @@ public class DonationService {
         if (!STATUS_REQUESTED.equals(donation.getCntrSttusCode())) {
             throw new DonationException("결제 대기중인 기부만 완료 처리할 수 있습니다.");
         }
+        // 연간 한도를 완료 시점에도 재검증한다 - 신청 시점에만 검증하면 결제대기(REQUESTED) 건이
+        // 누적에 안 잡혀, 한도 이하 신청을 여러 건 만든 뒤 순차 완료해 한도를 우회할 수 있다.
+        // 이미 완료된 금액(existing)에 이 건을 더한 값이 한도를 넘으면 완료를 막는다.
+        validateAnnualLimit(donation.getUserId(), donation.getCntrLocgovCode(), donation.getCntrAmt());
         Locgov locgov = locgovRepository.findById(donation.getCntrLocgovCode()).orElse(null);
 
         LevyResult levy = localTaxClient.registerLevy(donation, locgov);
@@ -801,17 +805,39 @@ public class DonationService {
             return Optional.empty();
         }
         String normalized = address.replaceAll("\\s+", "");
-        // "서울특별시 강남구 ..." 처럼 시도명+시군구명이 주소 앞부분에 그대로 들어있는지로 찾는다.
-        // 더 긴(구체적인) 이름이 먼저 걸리도록 시군구명 길이 내림차순으로 본다
-        // (예: "성남시 분당구"가 "성남시"보다 먼저 매칭돼야 함).
+        // 주소의 시/도가 지자체의 시/도와 일치하는 경우에만, 그 안에서 시군구명을 매칭한다.
+        // (예전 버그: 시/도를 무시하고 시군구명만 contains로 봐서 "서울시 중구" 거주자를
+        //  "울산광역시 중구"로 오판 → 본인 주민등록지 기부가 통과됐다. 시/도 일치를 필수로
+        //  두어 이 오판을 막는다.) 더 긴(구체적인) 시군구명이 먼저 걸리도록 길이 내림차순.
         return activeLocgovs().stream()
                 .filter(l -> l.getLocgovNm() != null && !l.getLocgovNm().isBlank())
                 .filter(l -> {
-                    String upper = l.getUpperLocgovNm() != null ? l.getUpperLocgovNm().replaceAll("\\s+", "") : "";
                     String name = l.getLocgovNm().replaceAll("\\s+", "");
-                    return normalized.startsWith(upper + name) || normalized.contains(name);
+                    return addressMatchesSido(normalized, l.getUpperLocgovNm()) && normalized.contains(name);
                 })
                 .max(Comparator.comparingInt(l -> l.getLocgovNm().replaceAll("\\s+", "").length()));
+    }
+
+    /** 주소 앞부분이 해당 시/도인지 판정한다. "서울특별시"와 "서울시"/"서울"처럼 축약형도
+     *  받아들이도록 시/도명에서 행정 접미사(특별시/광역시/특별자치시·도/도)를 떼어낸 어간으로 비교. */
+    private boolean addressMatchesSido(String normalizedAddress, String upperLocgovNm) {
+        if (upperLocgovNm == null || upperLocgovNm.isBlank()) {
+            return false;
+        }
+        String stem = sidoStem(upperLocgovNm.replaceAll("\\s+", ""));
+        return !stem.isBlank() && normalizedAddress.startsWith(stem);
+    }
+
+    private static String sidoStem(String sido) {
+        for (String suffix : java.util.List.of("특별자치도", "특별자치시", "특별시", "광역시", "자치도")) {
+            if (sido.endsWith(suffix)) {
+                return sido.substring(0, sido.length() - suffix.length());
+            }
+        }
+        if (sido.length() > 1 && (sido.endsWith("도") || sido.endsWith("시"))) {
+            return sido.substring(0, sido.length() - 1);
+        }
+        return sido;
     }
 
     /**

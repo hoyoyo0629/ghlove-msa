@@ -39,8 +39,10 @@ public class CtbnyOpratn {
     @Column(name = "BSNS_CN")
     private String bsnsCn;
 
+    // DB 컬럼이 VARCHAR(8) 지출일자(yyyyMMdd) 라서 LocalDateTime으로 매핑하면 조회 자체가
+    // 깨진다(Bad value for type timestamp). 다른 날짜성 컬럼들처럼 yyyyMMdd 문자열로 다룬다.
     @Column(name = "EXPNDTR_DE")
-    private LocalDateTime expndtrDe;
+    private String expndtrDe;
 
     @Column(name = "EXPNDTR_AMT")
     private BigDecimal expndtrAmt;

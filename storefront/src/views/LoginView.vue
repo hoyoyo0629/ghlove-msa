@@ -130,11 +130,11 @@ async function onMfaSubmit() {
             </div>
           </form>
 
-          <a href="http://localhost:8081/login/kakao" class="btn-simple btn-simple--kakao">
+          <a href="/member/login/kakao" class="btn-simple btn-simple--kakao">
             <span class="btn-simple__logo"><img src="/images/kakao/kakaotalk_symbol_screen.png" class="btn-simple__img" alt="" aria-hidden="true" /></span>
             <span class="btn-simple__txt">카카오톡 인증 로그인</span>
           </a>
-          <a href="http://localhost:8081/login/naver" class="btn-simple btn-simple--naver">
+          <a href="/member/login/naver" class="btn-simple btn-simple--naver">
             <span class="btn-simple__logo"><img src="/images/new/naver_logo_2.png" class="btn-simple__img" alt="" aria-hidden="true" /></span>
             <span class="btn-simple__txt">네이버 인증 로그인</span>
           </a>
@@ -166,7 +166,7 @@ async function onMfaSubmit() {
             <h2 class="login-title">금융/간편 <strong>인증</strong></h2>
           </div>
           <div class="auth_wrap pt-0">
-            <form action="http://localhost:8081/login/finance-cert">
+            <form action="/member/login/finance-cert">
               <div class="simple-login">
                 <div class="financ-login-wrap">
                   <div class="finance-img"><img src="/images/icon/financ.png" alt="금융인증서" /></div>
@@ -177,7 +177,7 @@ async function onMfaSubmit() {
                 <button id="finAuthBtn" class="login logins" type="submit" title="새 창 열림"><span>금융인증서 로그인</span></button>
               </div>
             </form>
-            <form action="http://localhost:8081/login/simple-auth">
+            <form action="/member/login/simple-auth">
               <div class="simple-login" id="authBtn">
                 <div class="simple-login-wrap">
                   <span class="sim_auth"><img src="/images/icon/sim_auth/kakao.png" alt="카카오톡" /></span>

@@ -185,7 +185,7 @@ async function removeInterestLocgov(locgovCode) {
               <div class="info-field-items member">
                 <label class="flied-title"><span class="essential">&nbsp;</span></label>
                 <div class="form-field">
-                  <span class="form-field"><button type="button" class="formBtn" @click="location.href = 'http://localhost:8081/profile/personal-info'">개인정보 수정</button></span>
+                  <span class="form-field"><button type="button" class="formBtn" @click="location.href = '/member/profile/personal-info'">개인정보 수정</button></span>
                   <span class="form-field" style="font-size: 10px; color: red">개인정보수정은 인증기관에서 변경된 데이터를 반영합니다.</span>
                 </div>
               </div>

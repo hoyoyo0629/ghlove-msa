@@ -17,8 +17,10 @@ public class RankingAdminClient {
 
     private final RestClient restClient;
 
-    public RankingAdminClient(@Value("${ghlove.gift-service.base-url}") String giftServiceBaseUrl) {
-        this.restClient = RestClient.create(giftServiceBaseUrl);
+    public RankingAdminClient(@Value("${ghlove.gift-service.base-url}") String giftServiceBaseUrl,
+            @Value("${ghlove.internal.admin-secret}") String adminSecret) {
+        this.restClient = RestClient.builder().baseUrl(giftServiceBaseUrl)
+                .defaultHeader("X-Internal-Secret", adminSecret).build();
     }
 
     public List<String> groups() {

@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -25,6 +26,7 @@ import java.util.Set;
  * 두지 않고 재사용했다. 조회(GET)는 제외.
  */
 @Component
+@Slf4j
 @RequiredArgsConstructor
 public class SessionRehydrateInterceptor implements HandlerInterceptor {
 
@@ -46,7 +48,13 @@ public class SessionRehydrateInterceptor implements HandlerInterceptor {
         if (MUTATING_METHODS.contains(request.getMethod())) {
             User user = (User) session.getAttribute(AuthController.SESSION_USER_KEY);
             if (user != null) {
-                auditLogService.recordAction(user.getLoginId(), request.getRemoteAddr(), request.getRequestURI(), request.getMethod());
+                // 감사 로그 적재 실패는 본 요청(배송지 삭제 등)을 절대 막으면 안 된다 - 로그는
+                // best-effort이고 가용성의 단일 실패점이 되어선 안 되므로 삼켜서 격리한다.
+                try {
+                    auditLogService.recordAction(user.getLoginId(), request.getRemoteAddr(), request.getRequestURI(), request.getMethod());
+                } catch (RuntimeException e) {
+                    log.warn("회원 액션 감사로그 적재 실패 (요청은 계속 진행): {} {}", request.getMethod(), request.getRequestURI(), e);
+                }
             }
         }
         return true;

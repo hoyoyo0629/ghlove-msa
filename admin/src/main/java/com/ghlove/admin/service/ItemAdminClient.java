@@ -24,8 +24,10 @@ public class ItemAdminClient {
 
     private final RestClient restClient;
 
-    public ItemAdminClient(@Value("${ghlove.gift-service.base-url}") String giftServiceBaseUrl) {
-        this.restClient = RestClient.create(giftServiceBaseUrl);
+    public ItemAdminClient(@Value("${ghlove.gift-service.base-url}") String giftServiceBaseUrl,
+            @Value("${ghlove.internal.admin-secret}") String adminSecret) {
+        this.restClient = RestClient.builder().baseUrl(giftServiceBaseUrl)
+                .defaultHeader("X-Internal-Secret", adminSecret).build();
     }
 
     public List<ItemDto> search(String itemName, String categoryCode, Long sellerId, String dataStatusCode) {

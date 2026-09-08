@@ -66,26 +66,31 @@ public class RoleRequestService {
     }
 
     @Transactional
-    public UserRoleRequest approve(Long requestId) {
+    public UserRoleRequest approve(Long requestId, Long approverUserId) {
         UserRoleRequest request = getOrThrow(requestId);
         if (!STATUS_REQUESTED.equals(request.getStatus())) {
             throw new MemberException("심사중인 신청만 승인할 수 있습니다.");
         }
+        // 자가승인 금지 - 신청자 본인이 자신의 역할 상승을 승인할 수 없다(권한 상승 취약점 차단).
+        if (approverUserId != null && approverUserId.equals(request.getUserId())) {
+            throw new MemberException("본인이 신청한 역할은 본인이 승인할 수 없습니다.");
+        }
         userRoleRepository.save(new UserRole(request.getUserId(), request.getRequestedRole()));
         request.setStatus(STATUS_APPROVED);
         request.setProcessedDate(LocalDateTime.now());
-        recordChangeLog(request.getUserId(), "ROLE_GRANTED: " + request.getRequestedRole());
+        recordChangeLog(request.getUserId(), "ROLE_GRANTED: " + request.getRequestedRole(), approverUserId);
         return userRoleRequestRepository.save(request);
     }
 
     @Transactional
-    public UserRoleRequest reject(Long requestId) {
+    public UserRoleRequest reject(Long requestId, Long approverUserId) {
         UserRoleRequest request = getOrThrow(requestId);
         if (!STATUS_REQUESTED.equals(request.getStatus())) {
             throw new MemberException("심사중인 신청만 반려할 수 있습니다.");
         }
         request.setStatus(STATUS_REJECTED);
         request.setProcessedDate(LocalDateTime.now());
+        recordChangeLog(request.getUserId(), "ROLE_REJECTED: " + request.getRequestedRole(), approverUserId);
         return userRoleRequestRepository.save(request);
     }
 
@@ -94,12 +99,13 @@ public class RoleRequestService {
                 .orElseThrow(() -> new MemberException("역할 신청을 찾을 수 없습니다."));
     }
 
-    /** SFR-002 "주요 행위 기록 감사 로그(...권한 변경...)" - OP_USER_CHANGE_LOG 재사용. */
-    private void recordChangeLog(Long userId, String parameter) {
+    /** SFR-002 "주요 행위 기록 감사 로그(...권한 변경...)" - OP_USER_CHANGE_LOG 재사용.
+     *  managerId에는 대상 회원이 아니라 실제 처리한 승인권자를 기록한다(감사 추적). */
+    private void recordChangeLog(Long userId, String parameter, Long approverUserId) {
         UserChangeLog log = new UserChangeLog();
         log.setUserId(userId);
         log.setParameter(parameter);
-        log.setManagerId(userId);
+        log.setManagerId(approverUserId != null ? approverUserId : userId);
         log.setCreatedDate(CHANGE_LOG_DATE_FORMAT.format(LocalDateTime.now()));
         userChangeLogRepository.save(log);
     }

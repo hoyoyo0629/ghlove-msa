@@ -48,6 +48,10 @@ ghlove:
     base-url: http://localhost:8082
   member-service:
     base-url: http://localhost:8081
+  # member의 내부 전용 API(/api/users/{id})를 호출할 때 싣는 공유 시크릿 - member의
+  # application.yml과 반드시 동일해야 한다(InternalApiAuthInterceptor).
+  internal:
+    admin-secret: "ghlove-msa-local-dev-internal-admin-secret-do-not-expose!!"
 
 logging:
   level:

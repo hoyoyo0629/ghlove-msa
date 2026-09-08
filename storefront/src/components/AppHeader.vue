@@ -19,7 +19,7 @@ function closeMenu() {
 
 // member 서비스에서 아직 Vue로 이관되지 않은 화면(마이페이지 등)은 계속 옛 Thymeleaf
 // 화면(8081)으로 보낸다 - 라운드가 진행되며 하나씩 내부 라우트로 바뀐다.
-const MEMBER_LEGACY = 'http://localhost:8081'
+const MEMBER_LEGACY = '/member'
 
 async function onLogout() {
   await auth.logout()

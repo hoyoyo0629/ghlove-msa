@@ -16,7 +16,6 @@ let pollTimer = null
 
 const claimForm = reactive({ claimType: '', reason: '' })
 const addressForm = reactive({ address: '', addressDetail: '' })
-const invoiceForm = reactive({ carrierCode: '', invoiceNo: '' })
 
 async function load() {
   try {
@@ -24,7 +23,6 @@ async function load() {
     addressForm.address = order.value.deliveryAddress ?? ''
     addressForm.addressDetail = order.value.deliveryAddressDetail ?? ''
     if (order.value.claimTypes.length && !claimForm.claimType) claimForm.claimType = order.value.claimTypes[0].key
-    if (order.value.carriers.length && !invoiceForm.carrierCode) invoiceForm.carrierCode = order.value.carriers[0].key
     if (order.value.orderStatus === 'PENDING' && !pollTimer) {
       pollTimer = setInterval(load, 2000)
     } else if (order.value.orderStatus !== 'PENDING' && pollTimer) {
@@ -69,24 +67,6 @@ async function submitClaim() {
 async function saveAddress() {
   try {
     await api.post('order', `/api/orders/${orderId}/delivery-address`, addressForm)
-    await load()
-  } catch (e) {
-    errorMessage.value = e.message
-  }
-}
-
-async function registerInvoice() {
-  try {
-    await api.post('order', `/api/orders/${orderId}/invoice`, invoiceForm)
-    await load()
-  } catch (e) {
-    errorMessage.value = e.message
-  }
-}
-
-async function updateDeliveryStatus(deliveryStatus) {
-  try {
-    await api.post('order', `/api/orders/${orderId}/delivery-status`, { deliveryStatus })
     await load()
   } catch (e) {
     errorMessage.value = e.message
@@ -182,18 +162,6 @@ function formatN(n) {
             <input type="text" v-model="addressForm.addressDetail" placeholder="상세주소" />
           </div>
           <button type="button" class="formBtn" @click="saveAddress">배송지 저장</button>
-
-          <div class="line"></div>
-          <div class="info-field-items">
-            <label for="carrierCode">송장 등록 (제공자/운영자용)</label>
-            <select id="carrierCode" v-model="invoiceForm.carrierCode">
-              <option v-for="c in order.carriers" :key="c.key" :value="c.key">{{ c.label }}</option>
-            </select>
-          </div>
-          <div class="info-field-items">
-            <input type="text" v-model="invoiceForm.invoiceNo" placeholder="송장번호" />
-          </div>
-          <button type="button" class="formBtn" @click="registerInvoice">송장 등록 (발송처리)</button>
         </div>
 
         <div v-else>
@@ -204,8 +172,7 @@ function formatN(n) {
             <li class="list_items" v-if="order.deliveryAddress"><span class="label">배송지</span><span class="data_val">{{ order.deliveryAddress }} {{ order.deliveryAddressDetail }}</span></li>
           </ul>
 
-          <button type="button" class="formBtn" v-if="order.deliveryStatus === 'SHIPPED'" @click="updateDeliveryStatus('IN_TRANSIT')">배송중으로 변경 (운영자용)</button>
-          <button type="button" class="formBtn" v-if="order.deliveryStatus === 'SHIPPED' || order.deliveryStatus === 'IN_TRANSIT'" @click="updateDeliveryStatus('DELIVERED')">배송완료로 변경 (운영자용)</button>
+          <!-- 송장 등록·배송상태 변경은 판매자/운영관리 기능이라 고객 화면에서 제거했다(SFR-006). -->
           <button type="button" class="blueBtn u-confirm" v-if="order.deliveryStatus === 'DELIVERED'" @click="confirmReceipt">수취확인 (구매확정)</button>
         </div>
       </div>

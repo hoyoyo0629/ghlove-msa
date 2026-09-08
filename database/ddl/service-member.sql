@@ -591,7 +591,7 @@ CREATE TABLE IF NOT EXISTS OP_USER_ACTION_LOG (
     CREATED_DATE                  VARCHAR(14) NOT NULL,
     REMOTE_ADDR                   VARCHAR(300),
     REQUEST_URI                   VARCHAR(500),
-    REQUEST_METHOD                VARCHAR(5),
+    REQUEST_METHOD                VARCHAR(10),
     LOGIN_ID                      VARCHAR(300) NOT NULL,
     PRIMARY KEY (ACTION_LOG_ID)
 );

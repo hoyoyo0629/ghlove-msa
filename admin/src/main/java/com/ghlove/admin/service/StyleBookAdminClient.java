@@ -15,8 +15,10 @@ public class StyleBookAdminClient {
 
     private final RestClient restClient;
 
-    public StyleBookAdminClient(@Value("${ghlove.gift-service.base-url}") String giftServiceBaseUrl) {
-        this.restClient = RestClient.create(giftServiceBaseUrl);
+    public StyleBookAdminClient(@Value("${ghlove.gift-service.base-url}") String giftServiceBaseUrl,
+            @Value("${ghlove.internal.admin-secret}") String adminSecret) {
+        this.restClient = RestClient.builder().baseUrl(giftServiceBaseUrl)
+                .defaultHeader("X-Internal-Secret", adminSecret).build();
     }
 
     public record StyleBookRow(Long id, String title, String content, String image, Integer ordering) {

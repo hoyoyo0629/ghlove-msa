@@ -17,8 +17,10 @@ public class PointClient {
 
     private final RestClient restClient;
 
-    public PointClient(@Value("${ghlove.point-service.base-url}") String pointServiceBaseUrl) {
-        this.restClient = RestClient.create(pointServiceBaseUrl);
+    public PointClient(@Value("${ghlove.point-service.base-url}") String pointServiceBaseUrl,
+            @Value("${ghlove.internal.admin-secret}") String adminSecret) {
+        this.restClient = RestClient.builder().baseUrl(pointServiceBaseUrl)
+                .defaultHeader("X-Internal-Secret", adminSecret).build();
     }
 
     public List<EarnLot> earnedLots(List<String> cntrSns) {

@@ -26,8 +26,13 @@ public class UserLevelAdminClient {
 
     private final RestClient restClient;
 
-    public UserLevelAdminClient(@Value("${ghlove.member-service.base-url}") String memberServiceBaseUrl) {
-        this.restClient = RestClient.create(memberServiceBaseUrl);
+    public UserLevelAdminClient(@Value("${ghlove.member-service.base-url}") String memberServiceBaseUrl,
+                                @Value("${ghlove.internal.admin-secret}") String adminSecret) {
+        // member의 /api/admin/user-levels 는 내부 전용이라 공유 시크릿을 실어야 통과한다.
+        this.restClient = RestClient.builder()
+                .baseUrl(memberServiceBaseUrl)
+                .defaultHeader("X-Internal-Secret", adminSecret)
+                .build();
     }
 
     public List<UserLevelDto> list() {

@@ -263,7 +263,7 @@ async function onSubmit() {
                   <p class="s-txt"><span>금융기관에 등록된</span> <span>금융인증서로 본인 인증 하기</span></p>
                   <p class="pointRed"><span>※ 해외 체류중인 국민</span> <span> (재외국민) 활용 가능</span></p>
                 </div>
-                <button type="button" class="formBtn financ" title="새 창 알림" @click="location.href='http://localhost:8081/signup/finance-cert'">인증하기</button>
+                <button type="button" class="formBtn financ" title="새 창 알림" @click="location.href='/member/signup/finance-cert'">인증하기</button>
               </div>
             </div>
             <div class="authentication-area mobi">
@@ -272,7 +272,7 @@ async function onSubmit() {
                   <h3>휴대폰</h3>
                   <p class="s-txt">본인 명의로 등록된 휴대폰으로<br /> 본인 인증 하기</p>
                 </div>
-                <button type="button" class="formBtn financ" title="새 창 알림" @click="location.href='http://localhost:8081/signup/mobile-auth'">인증하기</button>
+                <button type="button" class="formBtn financ" title="새 창 알림" @click="location.href='/member/signup/mobile-auth'">인증하기</button>
               </div>
             </div>
           </div>

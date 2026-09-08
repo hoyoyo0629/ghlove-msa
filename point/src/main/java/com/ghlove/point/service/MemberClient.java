@@ -14,8 +14,13 @@ public class MemberClient {
 
     private final RestClient restClient;
 
-    public MemberClient(@Value("${ghlove.member-service.base-url}") String memberServiceBaseUrl) {
-        this.restClient = RestClient.create(memberServiceBaseUrl);
+    public MemberClient(@Value("${ghlove.member-service.base-url}") String memberServiceBaseUrl,
+                        @Value("${ghlove.internal.admin-secret}") String adminSecret) {
+        // member의 /api/users/{id} 는 내부 전용이라 공유 시크릿을 실어야 통과한다.
+        this.restClient = RestClient.builder()
+                .baseUrl(memberServiceBaseUrl)
+                .defaultHeader("X-Internal-Secret", adminSecret)
+                .build();
     }
 
     public MemberInfo fetchOrNull(Long userId) {

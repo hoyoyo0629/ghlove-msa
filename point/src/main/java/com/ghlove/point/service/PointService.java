@@ -170,23 +170,35 @@ public class PointService {
 
         PointLedger original = pointLedgerRepository.findFirstByRefKeyAndTxnType(event.cntrSn(), TXN_EARN)
                 .orElseThrow();
-        long reverseAmount = -original.getPointAmount();
+        long earned = original.getPointAmount();
+        // 이미 사용된 포인트는 회수할 수 없다 - 적립 lot의 미사용 잔량(remainingAmount)만 회수한다.
+        // (예전 버그: 사용 여부와 무관하게 적립 전액을 차감해 잔액이 음수가 됐다. 포인트는 화폐성
+        //  자원이므로 잔액이 음수가 되면 안 된다.) 사용된 부분은 그 주문/사용 트랜잭션이 별도로 책임진다.
+        long reversible = original.getRemainingAmount() != null ? Math.max(0L, original.getRemainingAmount()) : 0L;
 
         PointLedger ledger = new PointLedger();
         ledger.setUserId(event.userId());
         ledger.setLocgovCode(event.cntrLocgovCode());
         ledger.setTxnType(TXN_REVERSE);
-        ledger.setPointAmount(reverseAmount);
-        ledger.setReason("기부 취소에 따른 포인트 회수");
+        ledger.setPointAmount(-reversible);
+        ledger.setReason(reversible < earned
+                ? "기부 취소에 따른 포인트 회수 (일부는 이미 사용되어 미사용분 " + reversible + "P만 회수)"
+                : "기부 취소에 따른 포인트 회수");
         ledger.setRefKey(event.cntrSn());
         ledger.setCreatedDate(LocalDateTime.now());
         pointLedgerRepository.save(ledger);
         pointLedgerPublisher.publish(ledger);
 
-        consumeLots(event.userId(), original.getPointAmount());
-        adjustBalance(event.userId(), reverseAmount);
+        // 이 적립 lot의 미사용 잔량을 소멸시키고, 딱 그만큼만 잔액에서 차감한다.
+        original.setRemainingAmount(0L);
+        pointLedgerRepository.save(original);
+        adjustBalance(event.userId(), -reversible);
+        if (reversible < earned) {
+            log.warn("Donation {} reversal: earned={} but only {} was unused - {}P already spent, not clawed back",
+                    event.cntrSn(), earned, reversible, earned - reversible);
+        }
         log.info("Reversed {} points from userId={} for cancelled donation {}",
-                original.getPointAmount(), event.userId(), event.cntrSn());
+                reversible, event.userId(), event.cntrSn());
     }
 
     /**
@@ -447,9 +459,13 @@ public class PointService {
     }
 
     private BigDecimal pointRateOf(String year, String locgovCode) {
-        return locgovPointRateRepository.findByStdrYearAndLocgovCode(year, locgovCode)
+        BigDecimal rate = locgovPointRateRepository.findByStdrYearAndLocgovCode(year, locgovCode)
                 .map(com.ghlove.point.domain.LocgovPointRate::getPointRate)
                 .orElseGet(this::defaultPointRate);
+        // 법정 상한(고향사랑 기부금법 제8조 답례품 제공한도, 기본 30%)을 적립 시점에도 클램프한다.
+        // 저장 시 가드가 도입되기 전 들어온 초과 데이터(예: 40%)로 상한을 넘겨 적립되는 것을 막는다.
+        BigDecimal maxRate = maxPointRate();
+        return rate != null && rate.compareTo(maxRate) > 0 ? maxRate : rate;
     }
 
     private BigDecimal defaultPointRate() {

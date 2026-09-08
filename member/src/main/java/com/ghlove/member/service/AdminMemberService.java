@@ -246,19 +246,20 @@ public class AdminMemberService {
     private record Page<T>(List<T> items, long totalElements, int totalPages) {
     }
 
+    // 날짜가 비어 있으면 "오늘"이 아니라 전 구간을 조회한다(A-1). 예전엔 기본값이 당일이라
+    // 운영자가 기간을 넓히기 전에는 회원/휴면/탈퇴 목록이 사실상 비어 보였다.
     private static String rangeStart(String dateStr) {
-        return parseOrToday(dateStr).format(DateTimeFormatter.BASIC_ISO_DATE) + "000000";
+        if (dateStr == null || dateStr.isBlank()) {
+            return "00000000000000";
+        }
+        return LocalDate.parse(dateStr).format(DateTimeFormatter.BASIC_ISO_DATE) + "000000";
     }
 
     private static String rangeEnd(String dateStr) {
-        return parseOrToday(dateStr).format(DateTimeFormatter.BASIC_ISO_DATE) + "235959";
-    }
-
-    private static LocalDate parseOrToday(String dateStr) {
         if (dateStr == null || dateStr.isBlank()) {
-            return LocalDate.now();
+            return "99999999999999";
         }
-        return LocalDate.parse(dateStr);
+        return LocalDate.parse(dateStr).format(DateTimeFormatter.BASIC_ISO_DATE) + "235959";
     }
 
     private void recordChangeLog(Long userId, String parameter) {

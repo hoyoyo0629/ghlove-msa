@@ -19,8 +19,11 @@ public class DonationClient {
 
     private final RestClient restClient;
 
-    public DonationClient(@Value("${ghlove.donation-service.base-url}") String donationServiceBaseUrl) {
-        this.restClient = RestClient.create(donationServiceBaseUrl);
+    public DonationClient(@Value("${ghlove.donation-service.base-url}") String donationServiceBaseUrl,
+                          @Value("${ghlove.internal.admin-secret}") String adminSecret) {
+        // donation의 /api/my-summary(회원별 기부총액)는 내부 전용이라 공유 시크릿을 실어야 통과한다.
+        this.restClient = RestClient.builder().baseUrl(donationServiceBaseUrl)
+                .defaultHeader("X-Internal-Secret", adminSecret).build();
     }
 
     public List<DesignatedProjectInfo> openProjects() {

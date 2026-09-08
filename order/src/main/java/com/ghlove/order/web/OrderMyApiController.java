@@ -151,31 +151,11 @@ public class OrderMyApiController {
         }
     }
 
-    @PostMapping("/api/orders/{orderId}/invoice")
-    public ResponseEntity<?> registerInvoice(@PathVariable String orderId, @RequestBody InvoiceRequest req) {
-        try {
-            orderService.registerInvoice(orderId, req.carrierCode(), req.invoiceNo());
-            return ResponseEntity.noContent().build();
-        } catch (OrderException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
-    }
-
-    public record InvoiceRequest(String carrierCode, String invoiceNo) {
-    }
-
-    @PostMapping("/api/orders/{orderId}/delivery-status")
-    public ResponseEntity<?> updateDeliveryStatus(@PathVariable String orderId, @RequestBody DeliveryStatusRequest req) {
-        try {
-            orderService.updateDeliveryStatus(orderId, req.deliveryStatus());
-            return ResponseEntity.noContent().build();
-        } catch (OrderException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
-    }
-
-    public record DeliveryStatusRequest(String deliveryStatus) {
-    }
+    // 송장번호 등록·배송상태 변경은 SFR-006상 판매자/운영관리 기능이다(택배사 연계는 운영관리
+    // 담당). 예전에는 고객 API(OrderMyApiController)에 소유권 검사조차 없이 노출돼 있어 구매자(또는
+    // 익명)가 자기 주문을 임의로 "배송완료"로 위조해 구매확정→정산까지 앞당길 수 있었다.
+    // 이 두 기능은 admin 인증(X-Internal-Secret)이 걸린 OrderAdminApiController
+    // (/api/admin/orders/{id}/invoice, /delivery-status)로만 수행하도록 여기서는 제거했다.
 
     public record ClaimRequest(String claimType, String reason) {
     }

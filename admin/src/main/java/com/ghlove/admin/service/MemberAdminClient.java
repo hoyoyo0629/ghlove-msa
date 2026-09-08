@@ -24,8 +24,13 @@ public class MemberAdminClient {
 
     private final RestClient restClient;
 
-    public MemberAdminClient(@Value("${ghlove.member-service.base-url}") String memberServiceBaseUrl) {
-        this.restClient = RestClient.create(memberServiceBaseUrl);
+    public MemberAdminClient(@Value("${ghlove.member-service.base-url}") String memberServiceBaseUrl,
+                             @Value("${ghlove.internal.admin-secret}") String adminSecret) {
+        // member의 /api/admin/** 는 내부 전용이라 공유 시크릿을 실어야 통과한다(InternalApiAuthInterceptor).
+        this.restClient = RestClient.builder()
+                .baseUrl(memberServiceBaseUrl)
+                .defaultHeader("X-Internal-Secret", adminSecret)
+                .build();
     }
 
     public SearchResult search(String fromDate, String toDate, String srchKey, String srchValue,

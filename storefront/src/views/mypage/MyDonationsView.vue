@@ -211,7 +211,7 @@ function formatAmount(n) {
         </div>
 
         <p class="s_txt" style="margin-top: 16px">
-          전자기부금영수증 발급이 필요하시면 <a href="http://localhost:8081/coming-soon">홈택스 &gt; 조회/발급 &gt; 전자기부금영수증 &gt; 메인화면</a> 메뉴에서 신청이 가능합니다.
+          전자기부금영수증 발급이 필요하시면 <a href="/member/coming-soon">홈택스 &gt; 조회/발급 &gt; 전자기부금영수증 &gt; 메인화면</a> 메뉴에서 신청이 가능합니다.
         </p>
       </div>
     </div>

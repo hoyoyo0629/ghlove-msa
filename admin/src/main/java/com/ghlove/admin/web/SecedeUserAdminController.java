@@ -26,8 +26,8 @@ public class SecedeUserAdminController {
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size,
                         Model model) {
-        String effectiveFrom = fromDate == null || fromDate.isBlank() ? today() : fromDate;
-        String effectiveTo = toDate == null || toDate.isBlank() ? today() : toDate;
+        String effectiveFrom = fromDate;  // 기본값 today() 제거 - 빈 값이면 member가 전체 기간으로 조회한다(A-1)
+        String effectiveTo = toDate;
         MemberAdminClient.SecedeSearchResult result = memberAdminClient.searchSecede(
                 effectiveFrom, effectiveTo, srchKey, srchValue, page, size);
         model.addAttribute("list", result.content());

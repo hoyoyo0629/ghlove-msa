@@ -19,8 +19,10 @@ public class CategoryAdminClient {
 
     private final RestClient restClient;
 
-    public CategoryAdminClient(@Value("${ghlove.gift-service.base-url}") String giftServiceBaseUrl) {
-        this.restClient = RestClient.create(giftServiceBaseUrl);
+    public CategoryAdminClient(@Value("${ghlove.gift-service.base-url}") String giftServiceBaseUrl,
+            @Value("${ghlove.internal.admin-secret}") String adminSecret) {
+        this.restClient = RestClient.builder().baseUrl(giftServiceBaseUrl)
+                .defaultHeader("X-Internal-Secret", adminSecret).build();
     }
 
     public List<MajorDto> tree() {

@@ -20,8 +20,10 @@ public class MobileCategoryEditAdminClient {
     private final RestClient restClient;
     private final String giftServiceBaseUrl;
 
-    public MobileCategoryEditAdminClient(@Value("${ghlove.gift-service.base-url}") String giftServiceBaseUrl) {
-        this.restClient = RestClient.create(giftServiceBaseUrl);
+    public MobileCategoryEditAdminClient(@Value("${ghlove.gift-service.base-url}") String giftServiceBaseUrl,
+            @Value("${ghlove.internal.admin-secret}") String adminSecret) {
+        this.restClient = RestClient.builder().baseUrl(giftServiceBaseUrl)
+                .defaultHeader("X-Internal-Secret", adminSecret).build();
         this.giftServiceBaseUrl = giftServiceBaseUrl;
     }
 

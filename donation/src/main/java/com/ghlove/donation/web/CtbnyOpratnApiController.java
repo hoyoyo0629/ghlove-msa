@@ -79,8 +79,12 @@ public class CtbnyOpratnApiController {
         ctbnyOpratnService.deleteFile(fileId);
     }
 
-    private static LocalDateTime parseDate(String isoDate) {
-        return LocalDate.parse(isoDate).atStartOfDay();
+    /** 입력(yyyy-MM-dd 또는 yyyyMMdd)을 DB 저장 포맷 yyyyMMdd 문자열로 정규화한다. */
+    private static String parseDate(String isoDate) {
+        if (isoDate == null || isoDate.isBlank()) {
+            return null;
+        }
+        return isoDate.replace("-", "").trim();
     }
 
     public record CtbnyOpratnDto(Long registSn, String locgovCode, String bsnsPurpsCode, String bsnsNm,
@@ -88,9 +92,16 @@ public class CtbnyOpratnApiController {
                                   List<CtbnyOpratnFileDto> files) {
         static CtbnyOpratnDto of(CtbnyOpratn e, List<CtbnyOpratnFileDto> files) {
             return new CtbnyOpratnDto(e.getRegistSn(), e.getLocgovCode(), e.getBsnsPurpsCode(), e.getBsnsNm(),
-                    e.getBsnsCn(),
-                    e.getExpndtrDe() != null ? e.getExpndtrDe().toLocalDate().toString() : null,
+                    e.getBsnsCn(), formatYmd(e.getExpndtrDe()),
                     e.getExpndtrAmt(), e.getRm(), files);
+        }
+
+        /** 저장된 yyyyMMdd 를 화면 표시용 yyyy-MM-dd 로 변환(8자리가 아니면 원본 그대로). */
+        private static String formatYmd(String ymd) {
+            if (ymd == null || ymd.length() != 8) {
+                return ymd;
+            }
+            return ymd.substring(0, 4) + "-" + ymd.substring(4, 6) + "-" + ymd.substring(6, 8);
         }
     }
 

@@ -16,8 +16,10 @@ public class MainDisplayAdminClient {
 
     private final RestClient restClient;
 
-    public MainDisplayAdminClient(@Value("${ghlove.gift-service.base-url}") String giftServiceBaseUrl) {
-        this.restClient = RestClient.create(giftServiceBaseUrl);
+    public MainDisplayAdminClient(@Value("${ghlove.gift-service.base-url}") String giftServiceBaseUrl,
+            @Value("${ghlove.internal.admin-secret}") String adminSecret) {
+        this.restClient = RestClient.builder().baseUrl(giftServiceBaseUrl)
+                .defaultHeader("X-Internal-Secret", adminSecret).build();
     }
 
     public record ItemRow(Long itemId, String itemName, Integer displayOrder) {

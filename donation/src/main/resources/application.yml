@@ -45,6 +45,10 @@ ghlove:
     base-url: http://localhost:8083
   admin-service:
     base-url: http://localhost:8086
+  # member의 내부 전용 API(/api/users/walk-in, /api/users/{id})를 호출할 때 싣는 공유 시크릿 -
+  # member의 application.yml과 반드시 동일해야 한다(InternalApiAuthInterceptor).
+  internal:
+    admin-secret: "ghlove-msa-local-dev-internal-admin-secret-do-not-expose!!"
 
   # 외부 연계시스템 통합 지점 (AS-IS NgDonationRelayServiceImpl 재현). enabled=false인
   # 동안은 LocalTaxClient/NtsClient가 실제 호출 없이 모크 응답을 돌려주고, 방화벽이

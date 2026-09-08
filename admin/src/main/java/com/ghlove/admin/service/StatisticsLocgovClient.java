@@ -15,8 +15,10 @@ public class StatisticsLocgovClient {
 
     private final RestClient restClient;
 
-    public StatisticsLocgovClient(@Value("${ghlove.donation-service.base-url}") String donationServiceBaseUrl) {
-        this.restClient = RestClient.create(donationServiceBaseUrl);
+    public StatisticsLocgovClient(@Value("${ghlove.donation-service.base-url}") String donationServiceBaseUrl,
+            @Value("${ghlove.internal.admin-secret}") String adminSecret) {
+        this.restClient = RestClient.builder().baseUrl(donationServiceBaseUrl)
+                .defaultHeader("X-Internal-Secret", adminSecret).build();
     }
 
     public List<String> years() {
