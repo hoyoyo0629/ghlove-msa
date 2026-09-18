@@ -190,7 +190,7 @@ function ruleIcon(ok) {
 
         <div class="tab-content">
           <!-- ===================== 아이디 찾기 ===================== -->
-          <div v-show="tab === 'id'" class="tab-pane">
+          <div class="tab-pane" :class="{ active: tab === 'id' }">
             <div v-if="idStep === 1">
               <div class="form_wrap_line">
                 <p>금융인증서와 본인 명의의 휴대폰 중<br /><strong>선택하여 인증을 진행합니다.</strong></p>
@@ -239,7 +239,7 @@ function ruleIcon(ok) {
           </div>
 
           <!-- ===================== 비밀번호 찾기 ===================== -->
-          <div v-show="tab === 'pw'" class="tab-pane">
+          <div class="tab-pane" :class="{ active: tab === 'pw' }">
             <div v-if="pwStep === 1">
               <div class="form_wrap_line">
                 <p><strong>본인인증</strong>을 통해 비밀번호를<br />변경하실 수 있습니다.</p>

@@ -10,7 +10,7 @@
     <div class="logo">답례품<span class="badge">gift</span></div>
     <div class="nav-links">
         <a th:href="@{/}">목록으로</a>
-        <a th:href="@{/my(sellerId=${sellerId})}">내 답례품 관리</a>
+        <a th:href="@{/my}">내 답례품 관리</a>
     </div>
 </nav>
 
@@ -20,7 +20,6 @@
     <p class="error" th:if="${param.errorMessage != null}" th:text="${param.errorMessage}"></p>
 
     <form th:action="@{/my/inquiries}" method="get" class="inline-form" style="max-width:320px; margin-bottom:20px;">
-        <input type="number" name="sellerId" placeholder="제공자 ID" th:value="${sellerId}" required>
         <button type="submit" style="width:auto;">조회</button>
     </form>
 
@@ -37,7 +36,6 @@
 
             <form th:if="${q.status != 'ANSWERED'}" th:action="@{'/inquiries/' + ${q.inquiryId} + '/answer'}"
                   method="post" style="margin-top:10px;">
-                <input type="hidden" name="sellerId" th:value="${sellerId}">
                 <textarea name="answer" rows="2" placeholder="답변을 입력하세요" required style="margin-bottom:6px;"></textarea>
                 <button type="submit" class="small-btn">답변 등록</button>
             </form>
@@ -45,5 +43,6 @@
         <p class="empty" th:if="${#lists.isEmpty(inquiries)}">등록된 문의가 없습니다.</p>
     </div>
 </div>
+<div th:replace="~{fragments/alert :: gh-alert}"></div>
 </body>
 </html>

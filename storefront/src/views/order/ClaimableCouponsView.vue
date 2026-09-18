@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
 
 // Thymeleaf 버전 order/coupon/claimable.html과 동일 출처.
 const router = useRouter()
@@ -27,10 +28,10 @@ async function claim(couponId) {
 }
 
 function benefitLabel(c) {
-  return c.payType === '1' ? `${new Intl.NumberFormat('ko-KR').format(c.pay)}P 할인` : `${c.pay}% 할인`
+  return c.payType === '1' ? `${formatN(c.pay)}P 할인` : `${c.pay}% 할인`
 }
 function conditionLabel(c) {
-  return c.payRestriction && c.payRestriction > 0 ? `${new Intl.NumberFormat('ko-KR').format(c.payRestriction)}P 이상 구매시` : '조건없음'
+  return c.payRestriction && c.payRestriction > 0 ? `${formatN(c.payRestriction)}P 이상 구매시` : '조건없음'
 }
 </script>
 

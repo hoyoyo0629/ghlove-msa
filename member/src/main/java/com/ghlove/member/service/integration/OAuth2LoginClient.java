@@ -8,15 +8,17 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 표준 OAuth2 authorization-code 흐름을 쓰는 SNS 로그인 연계(카카오/네이버) 공용
- * 클라이언트. 두 공급자 모두 authorize→token→profile 3단계는 동일하고 프로필 응답
- * JSON 모양만 달라, provider별로 파싱만 분기한다 (AS-IS는 각각 별도 컨트롤러였지만
- * 실질적으로 같은 프로토콜이라 하나로 합쳤다).
+ * 표준 OAuth2 authorization-code 흐름을 쓰는 SNS 로그인 연계 클라이언트.
+ *
+ * <p>현재 이 방식을 쓰는 것은 네이버뿐이다 - 카카오는 프로필 조회형 로그인이 아니라
+ * 인증서비스(카카오톡 지갑 본인인증, CI 발급)로 붙기 때문에 {@link KakaoCertClient}가
+ * 따로 있다(AS-IS도 카카오는 처음부터 인증서비스만 썼다). provider별로 프로필 응답
+ * JSON 모양만 다르므로 파싱 지점만 분기해 둔다.
  */
 @Slf4j
 public class OAuth2LoginClient {
 
-    public enum Provider { KAKAO, NAVER }
+    public enum Provider { NAVER }
 
     private final Provider provider;
     private final boolean enabled;
@@ -83,16 +85,9 @@ public class OAuth2LoginClient {
         if (profile == null) {
             throw new IllegalStateException(provider + " 프로필 조회 결과가 비어 있습니다.");
         }
-        if (provider == Provider.KAKAO) {
-            Object id = profile.get("id");
-            Map<String, Object> kakaoAccount = (Map<String, Object>) profile.getOrDefault("kakao_account", Map.of());
-            Map<String, Object> kakaoProfile = (Map<String, Object>) kakaoAccount.getOrDefault("profile", Map.of());
-            return new ExternalIdentity("KAKAO", String.valueOf(id),
-                    (String) kakaoProfile.get("nickname"), (String) kakaoAccount.get("email"), null);
-        }
         // NAVER: 실제 응답은 { "response": { "id", "email", "name" } }
         Map<String, Object> response = (Map<String, Object>) profile.getOrDefault("response", profile);
-        return new ExternalIdentity("NAVER", String.valueOf(response.get("id")),
+        return ExternalIdentity.ofProfile("NAVER", String.valueOf(response.get("id")),
                 (String) response.get("name"), (String) response.get("email"), null);
     }
 

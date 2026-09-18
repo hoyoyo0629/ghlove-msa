@@ -2,10 +2,12 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
 
 // AS-IS mypage/cntrPoint.html(및 Thymeleaf 버전 point/my.html) 재현.
 const router = useRouter()
 const data = ref(null)
+const useLocgovCode = ref('')
 const useAmount = ref('')
 const useOrderCode = ref('')
 const useMessage = ref('')
@@ -18,18 +20,15 @@ onMounted(load)
 async function usePoints() {
   useMessage.value = ''
   try {
-    await api.post('point', '/use', { amount: Number(useAmount.value), orderCode: useOrderCode.value || undefined })
+    await api.post('point', '/api/my/points/use', { amount: Number(useAmount.value), locgovCode: useLocgovCode.value, orderCode: useOrderCode.value || null })
     useMessage.value = '포인트가 사용되었습니다.'
     useAmount.value = ''
+    useLocgovCode.value = ''
     useOrderCode.value = ''
     await load()
   } catch (e) {
     useMessage.value = e.message
   }
-}
-
-function formatAmount(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
 }
 </script>
 
@@ -65,25 +64,25 @@ function formatAmount(n) {
                 <img class="icon-img" src="/images/icon/cli-icon_my-amount-all.png" alt="총 기부금액" />
                 <span class="label-title">총 적립 포인트</span>
               </label>
-              <div class="m-field"><input type="text" id="cntrPointTotal" :value="formatAmount(data.totalEarned)" readonly /><span class="s_txt">P</span></div>
+              <div class="m-field"><input type="text" id="cntrPointTotal" :value="formatN(data.totalEarned)" readonly /><span class="s_txt">P</span></div>
             </div>
             <div class="mypage-point-list">
               <label class="col3_label" for="usePointTotal">
                 <img class="icon-img" src="/images/icon/cli-icon_my-amount-all.png" alt="총 기부금액" />
                 <span class="label-title">총 사용 포인트</span>
               </label>
-              <div class="m-field"><input type="text" id="usePointTotal" :value="formatAmount(data.totalUsed)" readonly /><span class="s_txt">P</span></div>
+              <div class="m-field"><input type="text" id="usePointTotal" :value="formatN(data.totalUsed)" readonly /><span class="s_txt">P</span></div>
             </div>
             <div class="mypage-point-list">
               <label class="col3_label" for="blcePointTotal">
                 <img class="icon-img" src="/images/icon/cli-icon_my-amount-all.png" alt="총 기부금액" />
                 <span class="label-title">총 잔여 포인트</span>
               </label>
-              <div class="m-field"><input type="text" id="blcePointTotal" :value="formatAmount(data.balance)" readonly /><span class="s_txt">P</span></div>
+              <div class="m-field"><input type="text" id="blcePointTotal" :value="formatN(data.balance)" readonly /><span class="s_txt">P</span></div>
             </div>
           </div>
           <div style="font-size: 12px; color: #888; margin-top: 6px" v-if="data.reservedAmount > 0">
-            예약중 {{ formatAmount(data.reservedAmount) }}P 제외 가용잔액 {{ formatAmount(data.availableBalance) }}P
+            예약중 {{ formatN(data.reservedAmount) }}P 제외 가용잔액 {{ formatN(data.availableBalance) }}P
           </div>
         </div>
       </div>
@@ -114,9 +113,9 @@ function formatAmount(n) {
                 <td>{{ data.locgovSummary.length - i }}</td>
                 <td>{{ row.upperLocgovNm }}</td>
                 <td>{{ row.locgovNm }}</td>
-                <td>{{ formatAmount(row.earned) }}</td>
-                <td>{{ formatAmount(row.used) }}</td>
-                <td>{{ formatAmount(row.remaining) }}</td>
+                <td>{{ formatN(row.earned) }}</td>
+                <td>{{ formatN(row.used) }}</td>
+                <td>{{ formatN(row.remaining) }}</td>
                 <td>고향사랑e음</td>
                 <td class="loc_mall">
                   <button type="button" class="deepBlue moreView" @click="router.push({ path: '/gifts', query: { locgovCode: row.locgovCode } })">
@@ -141,7 +140,7 @@ function formatAmount(n) {
         <span>곧 소멸 예정인 포인트가 {{ data.upcomingExpirations.length }}건 있습니다:</span>
         <ul style="margin: 6px 0 0; padding-left: 18px">
           <li v-for="(lot, i) in data.upcomingExpirations" :key="i">
-            <span>{{ formatAmount(lot.remainingAmount) }}P</span> - <span>{{ lot.expirationDate }}</span> 소멸 예정
+            <span>{{ formatN(lot.remainingAmount) }}P</span> - <span>{{ lot.expirationDate }}</span> 소멸 예정
           </li>
         </ul>
       </div>
@@ -149,6 +148,13 @@ function formatAmount(n) {
       <div class="section-title">포인트 사용 (테스트)</div>
       <p v-if="useMessage">{{ useMessage }}</p>
       <form class="inline-form" @submit.prevent="usePoints">
+        <!-- 지자체 선택 필수 - 기부 포인트는 기부한 지자체 답례품에만 쓸 수 있다(SFR-004). -->
+        <select v-model="useLocgovCode" required>
+          <option value="">지자체 선택</option>
+          <option v-for="row in data.locgovSummary.filter(r => r.remaining > 0)" :key="row.locgovCode" :value="row.locgovCode">
+            {{ row.locgovNm }} ({{ formatN(row.remaining) }}P)
+          </option>
+        </select>
         <input type="number" v-model="useAmount" placeholder="사용 포인트" min="1" step="1" required />
         <input type="text" v-model="useOrderCode" placeholder="주문코드(선택)" />
         <button type="submit">사용하기</button>
@@ -169,7 +175,7 @@ function formatAmount(n) {
           <tr v-for="(l, i) in data.ledger" :key="i">
             <td>{{ l.createdDate ? l.createdDate.replace('T', ' ').slice(0, 16) : '' }}</td>
             <td>{{ l.txnTypeLabel ?? l.txnType }}</td>
-            <td :class="l.pointAmount > 0 ? 'positive' : 'negative'">{{ l.pointAmount > 0 ? '+' : '' }}{{ formatAmount(l.pointAmount) }}P</td>
+            <td :class="l.pointAmount > 0 ? 'positive' : 'negative'">{{ l.pointAmount > 0 ? '+' : '' }}{{ formatN(l.pointAmount) }}P</td>
             <td>{{ l.reason }}</td>
             <td>{{ l.refKey }}</td>
           </tr>

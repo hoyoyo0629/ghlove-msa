@@ -203,6 +203,38 @@ public class OperationContentService {
         return popupRepository.findAllByOrderByPopupIdDesc();
     }
 
+    /**
+     * storefront 공개 노출용 - 현재 노출기간 안에 있고 사용중(useYn='Y')인 팝업.
+     * AS-IS `displayPopupList`(popup-mapper.xml)는 CONCAT(START_DATE,START_TIME) ~
+     * CONCAT(END_DATE,END_TIME) 사이(단위: yyyyMMddHH)를 본다. AS-IS는 그 쿼리에서
+     * POPUP_CLOSE=1도 걸지만 MSA는 POPUP_CLOSE를 "닫기버튼 노출여부"로 쓰므로(엔티티 주석)
+     * 노출 여부는 운영자 토글값인 useYn으로 판정한다. 팝업은 소량이라 필터는 인메모리로 처리한다.
+     */
+    public List<Popup> displayPopups() {
+        String nowHour = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHH"));
+        return popupRepository.findByUseYnOrderByPopupIdDesc(USE_Y).stream()
+                .filter(p -> withinDisplayWindow(p, nowHour))
+                .toList();
+    }
+
+    private boolean withinDisplayWindow(Popup p, String nowHour) {
+        String start = displayBound(p.getStartDate(), p.getStartTime());
+        String end = displayBound(p.getEndDate(), p.getEndTime());
+        if (start == null || end == null) {
+            return false; // AS-IS BETWEEN도 날짜가 없으면 노출되지 않는다
+        }
+        return start.compareTo(nowHour) <= 0 && nowHour.compareTo(end) <= 0;
+    }
+
+    /** yyyyMMdd(8자리) + HH(기본 00) → yyyyMMddHH. 형식이 어긋나면 null. */
+    private String displayBound(String date, String time) {
+        if (date == null || date.length() < 8) {
+            return null;
+        }
+        String hh = (time == null || time.isBlank()) ? "00" : (time.length() == 1 ? "0" + time : time);
+        return date.substring(0, 8) + hh;
+    }
+
     @Transactional
     public Popup createPopup(String subject, String content, String popupType, String startDate, String endDate) {
         return createPopup(subject, content, popupType, startDate, endDate, null, null, null);

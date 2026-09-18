@@ -54,6 +54,10 @@ public class Review {
     @Column(name = "DISPLAY_FLAG")
     private String displayFlag;
 
+    /** 좋아요 수 (AS-IS `updateItemReviewLikeCount`가 갱신하던 값). */
+    @Column(name = "LIKE_COUNT")
+    private Integer likeCount = 0;
+
     @Column(name = "CREATED_DATE")
     private LocalDateTime createdDate;
 }

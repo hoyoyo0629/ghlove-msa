@@ -1,7 +1,7 @@
 /*
 @font-face {
     font-family: 'GangwonEduPowerExtraBoldA';
-    src: url('/static/fonts/GangwonEduPowerExtraBoldA.woff') format('woff');
+    src: url('/fonts/GangwonEduPowerExtraBoldA.woff') format('woff');
 }
 
 @font-face {
@@ -20,19 +20,19 @@
 
 @font-face {
     font-family: 'PretendardGOV-ExtraBold';
-    src: url('/static/fonts/PretendardGOV-ExtraBold.woff') format('woff');
+    src: url('/fonts/PretendardGOV-ExtraBold.woff') format('woff');
 }
 
 @font-face {
     font-family: "PretendardGOV-Regular";
     src: local("PretendardGOV-Regular"),
-        url("/static/fonts/PretendardGOV-Regular.woff") format('woff');
+        url("/fonts/PretendardGOV-Regular.woff") format('woff');
 }
 
 @font-face {
     font-family: "PretendardGOV-Bold";
     src: local("PretendardGOV-Bold"),
-        url("/static/fonts/PretendardGOV-Bold.woff") format('woff');
+        url("/fonts/PretendardGOV-Bold.woff") format('woff');
 }
 
 :root {
@@ -539,23 +539,23 @@ section .s_title>span a.moreBtnLink {
 }
 
 .donation_steps .steps-box>div.loc_select>div.icon-bg {
-    background-image: url('/static/images/icon/loc_select-off.png');
+    background-image: url('/images/icon/loc_select-off.png');
 }
 
 .donation_steps .steps-box>div.loc_select.on>div.icon-bg {
-    background-image: url('/static/images/icon/loc_select-on.png');
+    background-image: url('/images/icon/loc_select-on.png');
 }
 
 .donation_steps .steps-box>div.donation>div.icon-bg {
-    background-image: url('/static/images/icon/donation-off.png');
+    background-image: url('/images/icon/donation-off.png');
 }
 
 .donation_steps .steps-box>div.donation.on>div.icon-bg {
-    background-image: url('/static/images/icon/donation-on.png');
+    background-image: url('/images/icon/donation-on.png');
 }
 
 .donation_steps .steps-box>div.donation_complete>div.icon-bg {
-    background-image: url('/static/images/icon/cli-icon_sign-up-complete-off.png');
+    background-image: url('/images/icon/cli-icon_sign-up-complete-off.png');
 }
 
 
@@ -702,13 +702,13 @@ textarea {
 }
 
 input[type='search'] {
-    background-image: url('/static/images/icon/cli-icon_search-gray.png');
+    background-image: url('/images/icon/cli-icon_search-gray.png');
     background-repeat: no-repeat;
     background-position: right center;
 }
 
 input[type='search']:focus {
-    background-image: url('/static/images/icon/cli-icon_search-blue.png');
+    background-image: url('/images/icon/cli-icon_search-blue.png');
 
 }
 
@@ -791,7 +791,7 @@ input[type='radio']:focus {
 }
 
 input[type='radio']:checked {
-    background-image: url('/static/images/icon/cli-icon_radio-c.png');
+    background-image: url('/images/icon/cli-icon_radio-c.png');
     background-repeat: no-repeat;
     border: none;
 }
@@ -851,7 +851,7 @@ button.wishBtn {
     width: 24px;
     height: 24px;
     box-sizing: content-box;
-    background-image: url('/static/images/icon/icon_wish-list_off.png');
+    background-image: url('/images/icon/icon_wish-list_off.png');
     background-repeat: no-repeat;
     background-size: 24px;
     background-position: center center;
@@ -863,7 +863,7 @@ button.wishBtn.addToWishList {
 }
 
 button.wishBtn.on {
-    background-image: url('/static/images/icon/icon_wish-list_on.png');
+    background-image: url('/images/icon/icon_wish-list_on.png');
 }
 
 button.buyBtn {
@@ -961,7 +961,7 @@ button.formBtn.intrst .icon_area {
     /* display: inline-block;  */
     width: 26px;
     height: 23px;
-    background-image: url('/static/images/icon/cli-icon_btn-intrst_off.png');
+    background-image: url('/images/icon/cli-icon_btn-intrst_off.png');
     background-repeat: no-repeat;
     background-size: 100%;
     transform: translateY(1px);
@@ -973,7 +973,7 @@ button.formBtn.intrst:hover {
 }
 
 button.formBtn.intrst:hover .icon_area {
-    background-image: url('/static/images/icon/cli-icon_btn-intrst_on.png');
+    background-image: url('/images/icon/cli-icon_btn-intrst_on.png');
 }
 
 button.formBtn.donation:focus-visible,
@@ -1260,7 +1260,7 @@ button.illustBtn:hover span::after {
     display: inline-block;
     width: 22px;
     height: 26px;
-    background-image: url('/static/images/icon/cli-icon_btn-illust-arrow.png');
+    background-image: url('/images/icon/cli-icon_btn-illust-arrow.png');
     background-repeat: no-repeat;
     background-position: center right;
     background-size: 18px auto;
@@ -1373,7 +1373,7 @@ button.formBtn.intrst .icon_area {
     /* display: inline-block;  */
     width: 16px;
     height: 18px;
-    background-image: url('/static/images/icon/loc_intrst-off.png');
+    background-image: url('/images/icon/loc_intrst-off.png');
     background-repeat: no-repeat;
     background-size: 16px auto;
     transform: translateY(1px);
@@ -1385,12 +1385,12 @@ button.formBtn.intrst:hover {
 }
 
 button.formBtn.intrst:hover .icon_area {
-    background-image: url('/static/images/icon/loc_intrst-on.png');
+    background-image: url('/images/icon/loc_intrst-on.png');
 
 }
 
 button.formBtn.intrst .active {
-    background-image: url('/static/images/icon/loc_intrst-on.png') !important;
+    background-image: url('/images/icon/loc_intrst-on.png') !important;
 }
 
 button.formBtn.dona {
@@ -1493,7 +1493,7 @@ button.formBtn.donation:hover {
     top: -11px;
     left: 50%;
     transform: translateX(-50%);
-    background-image: url('/static/images/icon/cli-icon_2depth-heart.png');
+    background-image: url('/images/icon/cli-icon_2depth-heart.png');
     background-size: 15px auto;
     z-index: 99;
 }
@@ -1929,7 +1929,7 @@ button.chatbot:hover .newsIcon_off{display:none;}
     }
 
     .round-illustBtn span {
-        background-image: url('/static/images/icon/btn-illust-arrow3.png');
+        background-image: url('/images/icon/btn-illust-arrow3.png');
         width: 18px;
         position: relative;
         transform: translate(2px, -8px);

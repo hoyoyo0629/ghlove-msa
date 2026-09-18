@@ -41,7 +41,7 @@
     font-size: 1.4rem;
     line-height: 2rem;
     color: #222;
-    background: url(/static/images/icon/icon_main_more.png) no-repeat 100% 50%;
+    background: url(/images/icon/icon_main_more.png) no-repeat 100% 50%;
     background-size: 10px auto;
 }
 
@@ -252,12 +252,12 @@
 
 .main_banner .swiper-button-next {
     right: -30px;
-    background-image: url('/static/images/icon/paging_btn_next.png');
+    background-image: url('/images/icon/paging_btn_next.png');
 }
 
 .main_banner .swiper-button-prev {
     left: -30px;
-    background-image: url('/static/images/icon/paging_btn_prev.png');
+    background-image: url('/images/icon/paging_btn_prev.png');
 }
 .main_banner .swiper-container .swiper-slide button:focus {
   	border: 2px solid red;
@@ -374,7 +374,7 @@
     display: block;
     width: 68px;
     height: 14px;
-    background-image: url('/static/images/goods/loc_deco.png');
+    background-image: url('/images/goods/loc_deco.png');
     background-size: 68px auto;
     background-repeat: no-repeat;
     position: absolute;
@@ -418,15 +418,15 @@
 }
 
 .loc_header .loc_main-btn_box button .loc_btn.main {
-    background-image: url('/static/images/icon/loc_main-go.png');
+    background-image: url('/images/icon/loc_main-go.png');
 }
 
 .loc_header .loc_main-btn_box button .loc_btn.intrst {
-    background-image: url('/static/images/icon/loc_intrst-off.png');
+    background-image: url('/images/icon/loc_intrst-off.png');
 }
 
 .loc_header .loc_main-btn_box button.on .loc_btn.intrst {
-    background-image: url('/static/images/icon/loc_intrst-on.png');
+    background-image: url('/images/icon/loc_intrst-on.png');
 }
 
 
@@ -551,13 +551,13 @@
 }
 
 .md_section .swiper-button-prev {
-    background-image: url(/static/images/icon/btn_md_prev.png);
+    background-image: url(/images/icon/btn_md_prev.png);
     background-position: 0 35%;
     left: -25px;
 }
 
 .md_section .swiper-button-next {
-    background-image: url(/static/images/icon/btn_md_next.png);
+    background-image: url(/images/icon/btn_md_next.png);
     background-position: 0 35%;
     right: -25px;
 }
@@ -769,7 +769,7 @@
     font-family: 'Montserrat';
     line-height: 1.6rem;
     color: #333;
-    background: url(/static/images/icon/icon_main_more_b.png) no-repeat 100% 50%;
+    background: url(/images/icon/icon_main_more_b.png) no-repeat 100% 50%;
     background-size: 15px auto;
 }
 

@@ -2,6 +2,8 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
+import BasePagination from '../../components/BasePagination.vue'
 
 // AS-IS designated-donation/index-main.html 재현(donation 서비스 designated-list.html과 동일
 // 출처, GNB "기부 > 특정사업에 기부하기"). 상태(진행중/종료)·정렬(최근등록순/참여금액순/모금율순/
@@ -78,9 +80,6 @@ function goPage(p) {
 
 function imgUrl(p) {
   return p.imageUrl || '/images/thumb.png'
-}
-function formatN(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
 }
 </script>
 
@@ -176,19 +175,7 @@ function formatN(n) {
             </router-link>
           </li>
         </ul>
-        <div class="card-pagination" v-if="data.totalPages > 1">
-          <div class="pagination_ali">
-            <ul class="pagination-frame">
-              <li><a class="fist arrow_btn" href="javascript:void(0)" @click="goPage(1)"><img src="/images/icon/paging_btn-first.png" alt="처음" /></a></li>
-              <li><a class="prev arrow_btn" href="javascript:void(0)" @click="goPage(Math.max(1, page - 1))"><img src="/images/icon/paging_btn-prev.png" alt="이전" /></a></li>
-              <li v-for="p in data.totalPages" :key="p" :class="{ 'selected-page': p === page }">
-                <a class="page-text" href="javascript:void(0)" @click="goPage(p)">{{ p }}</a>
-              </li>
-              <li><a class="next arrow_btn" href="javascript:void(0)" @click="goPage(Math.min(data.totalPages, page + 1))"><img src="/images/icon/paging_btn-next.png" alt="다음" /></a></li>
-              <li><a class="last arrow_btn" href="javascript:void(0)" @click="goPage(data.totalPages)"><img src="/images/icon/paging_btn-last.png" alt="마지막" /></a></li>
-            </ul>
-          </div>
-        </div>
+        <BasePagination card :page="page" :total-pages="data.totalPages" @change="goPage" />
       </div>
       <div class="list-none" v-else>
         <img src="/images/icon/empty-prj.png" alt="결과 없음" />

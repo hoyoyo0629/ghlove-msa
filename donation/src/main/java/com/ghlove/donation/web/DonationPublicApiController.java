@@ -32,6 +32,37 @@ public class DonationPublicApiController {
     private final PointClient pointClient;
     private final MemberClient memberClient;
     private final JwtVerifier jwtVerifier;
+    private final com.ghlove.donation.service.LocgovAdminService locgovAdminService;
+
+    /** AS-IS getLocGovLmtt 응답의 표시용 3개 필드. 날짜는 AS-IS SQL이 DATE_FORMAT(...,'%Y.%m.%d')로
+     *  내려주던 형식(yyyy.MM.dd) 그대로 맞춘다 - 화면 문구에 그대로 박히는 값이라서다. */
+    public record LocgovLmttDto(String lmttBgnDe, String lmttEndDe, String violtResnCn) {
+    }
+
+    /**
+     * 지자체 기부제한 조회 - AS-IS `POST /api/ngdonation/getLocGovLmtt` 재현.
+     * AS-IS는 기부 진입점(답례품 상세의 기부하기, 기부하기 화면의 납부 제출, 지자체 선택 화면)
+     * 마다 이걸 먼저 불러 제한 기간이면 안내를 띄우고 진행을 막는다.
+     *
+     * <p>제한이 없으면 AS-IS와 같이 data를 비워 보낸다(그쪽도 data가 없으면 통과시킨다).
+     * 답례품 상세가 gift(8084)에 있어 교차 오리진 호출이 되므로 그 오리진을 열어 둔다.
+     */
+    @CrossOrigin(origins = {"http://localhost:8084", "http://localhost:5173"}, allowCredentials = "true")
+    @GetMapping("/api/locgov-lmtt")
+    public Map<String, Object> locgovLmtt(@RequestParam String locgovCode) {
+        return locgovAdminService.activeLmttOf(locgovCode)
+                .<Map<String, Object>>map(l -> Map.of("data", new LocgovLmttDto(
+                        formatLmttDate(l.getLmttBgnDe()), formatLmttDate(l.getLmttEndDe()), l.getVioltResnCn())))
+                .orElseGet(Map::of);
+    }
+
+    /** yyyyMMdd -> yyyy.MM.dd (AS-IS DATE_FORMAT '%Y.%m.%d'). 형식이 다르면 원문을 그대로 둔다. */
+    private static String formatLmttDate(String yyyyMMdd) {
+        if (yyyyMMdd == null || yyyyMMdd.length() != 8) {
+            return yyyyMMdd;
+        }
+        return yyyyMMdd.substring(0, 4) + "." + yyyyMMdd.substring(4, 6) + "." + yyyyMMdd.substring(6, 8);
+    }
 
     public record LocgovOptionDto(String locgovCode, String locgovNm, String upperLocgovCode, String upperLocgovNm) {
     }

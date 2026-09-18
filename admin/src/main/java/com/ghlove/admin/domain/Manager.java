@@ -58,9 +58,11 @@ public class Manager {
     @Column(name = "UPDATED_DATE")
     private String updatedDate;
 
-    /** OP_ROLE.AUTHORITY 참조. AS-IS 실제 6단계: ROLE_ADMIN_1(시스템주담당자)/2(시스템부담당자)/
-     *  3(행안부주담당자)/4(행안부부담당자)/5(지자체주담당자)/6(지자체부담당자) - 자세한 내용은
-     *  {@link com.ghlove.admin.service.MenuService}. */
+    /** OP_ROLE.AUTHORITY 참조. AS-IS는 8단계다: ROLE_ADMIN_1(시스템주담당자)/2(시스템부담당자)/
+     *  3(행안부주담당자)/4(행안부부담당자)/5(지자체주담당자)/6(지자체부담당자)/
+     *  7(오프라인주담당자)/8(오프라인부담당자) - AS-IS 근거는 ghlove-common의
+     *  `UserAdminRole`(SYS/MOIS/LOC/OFF 4그룹 × 정·부). 이 프로젝트는 1~6만 구현했고
+     *  7·8은 미구현이다. 자세한 내용은 {@link com.ghlove.admin.service.MenuService}. */
     @Column(name = "AUTHORITY")
     private String authority;
 

@@ -1,0 +1,90 @@
+{
+  // 실행: Ctrl+Shift+P -> "Tasks: Run Task" -> 아래 label 선택
+  //  - "개별 터미널" 계열: 서비스마다 전용 터미널에 로그가 실시간으로 흐름(Ctrl+C 로 그 서비스만 중지). 디버깅/로그 관찰에 적합.
+  //  - "백그라운드" 계열: scripts\*.ps1 로 창 없이 기동하고 로그는 logs\<서비스>.log 로 모임. 그냥 띄워두기에 적합.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "BE: member (8081)",
+      "type": "shell", "command": "gradlew.bat", "args": ["bootRun"],
+      "options": { "cwd": "${workspaceFolder}/member" },
+      "isBackground": true, "problemMatcher": [],
+      "presentation": { "group": "backend", "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "BE: donation (8082)",
+      "type": "shell", "command": "gradlew.bat", "args": ["bootRun"],
+      "options": { "cwd": "${workspaceFolder}/donation" },
+      "isBackground": true, "problemMatcher": [],
+      "presentation": { "group": "backend", "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "BE: point (8083)",
+      "type": "shell", "command": "gradlew.bat", "args": ["bootRun"],
+      "options": { "cwd": "${workspaceFolder}/point" },
+      "isBackground": true, "problemMatcher": [],
+      "presentation": { "group": "backend", "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "BE: gift (8084)",
+      "type": "shell", "command": "gradlew.bat", "args": ["bootRun"],
+      "options": { "cwd": "${workspaceFolder}/gift" },
+      "isBackground": true, "problemMatcher": [],
+      "presentation": { "group": "backend", "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "BE: order (8085)",
+      "type": "shell", "command": "gradlew.bat", "args": ["bootRun"],
+      "options": { "cwd": "${workspaceFolder}/order" },
+      "isBackground": true, "problemMatcher": [],
+      "presentation": { "group": "backend", "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "BE: admin (8086)",
+      "type": "shell", "command": "gradlew.bat", "args": ["bootRun"],
+      "options": { "cwd": "${workspaceFolder}/admin" },
+      "isBackground": true, "problemMatcher": [],
+      "presentation": { "group": "backend", "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "FE: storefront (5173)",
+      "type": "shell", "command": "npm", "args": ["run", "dev"],
+      "options": { "cwd": "${workspaceFolder}/storefront" },
+      "isBackground": true, "problemMatcher": [],
+      "presentation": { "group": "frontend", "panel": "dedicated", "reveal": "always" }
+    },
+
+    {
+      "label": "BE: 전체 기동 (개별 터미널)",
+      "dependsOn": [
+        "BE: member (8081)", "BE: donation (8082)", "BE: point (8083)",
+        "BE: gift (8084)", "BE: order (8085)", "BE: admin (8086)"
+      ],
+      "dependsOrder": "parallel", "problemMatcher": []
+    },
+    {
+      "label": "전체 기동 (BE+FE, 개별 터미널)",
+      "dependsOn": ["BE: 전체 기동 (개별 터미널)", "FE: storefront (5173)"],
+      "dependsOrder": "parallel", "problemMatcher": []
+    },
+
+    {
+      "label": "BE: 전체 기동 (백그라운드)",
+      "type": "shell",
+      "command": "powershell", "args": ["-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/scripts/dev-all.ps1"],
+      "problemMatcher": [], "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "BE: 전체 중지",
+      "type": "shell",
+      "command": "powershell", "args": ["-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/scripts/dev-stop.ps1"],
+      "problemMatcher": [], "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "상태 확인",
+      "type": "shell",
+      "command": "powershell", "args": ["-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/scripts/dev-status.ps1"],
+      "problemMatcher": [], "presentation": { "reveal": "always", "panel": "shared" }
+    }
+  ]
+}

@@ -50,10 +50,23 @@ public class UserApiController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    /** AS-IS join.html checkIdUsedYn()의 POST /api/join/getUserInfoByUserId 대응 - 회원가입 아이디 중복확인. */
+    /**
+     * 이 회원과 같은 사람(CI 동일)이 <b>올해 탈퇴하면서 남긴 기부액</b>. donation의 연간 한도
+     * 계산이 잔여한도에서 이 값을 빼기 위해 호출한다 - AS-IS `DonationVerification`이
+     * `getGMberSecsnSumCntrAmt(mberCi)`로 `G_MBER_SECSN`을 CI로 조회하던 것과 같은 자리다.
+     * CI는 개인식별자라 응답에 담지 않고 <b>합계만</b> 돌려준다.
+     */
+    @GetMapping("/api/users/{userId}/withdrawn-donation-carryover")
+    public Map<String, Long> withdrawnDonationCarryOver(@PathVariable Long userId) {
+        return Map.of("amount", memberService.withdrawnDonationCarryOverOf(userId));
+    }
+
+    /** AS-IS join.html checkIdUsedYn()의 POST /api/join/getUserInfoByUserId 대응 - 회원가입 아이디 중복확인.
+     *  AS-IS는 이 엔드포인트도 `checkDuplication()`을 그대로 태워 <b>가입 불가 아이디 목록</b>까지
+     *  같이 대조하므로(JoinController:129), 금지 아이디도 "이미 사용중"으로 나온다. */
     @GetMapping("/api/check-login-id")
     public Map<String, Boolean> checkLoginId(@RequestParam String loginId) {
-        return Map.of("available", userRepository.findByLoginId(loginId).isEmpty());
+        return Map.of("available", memberService.loginIdAvailable(loginId));
     }
 
     @PostMapping("/api/users/walk-in")

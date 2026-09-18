@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
 
 // AS-IS order/step2.html 재현 (Thymeleaf 버전 order/order-complete.html과 동일 출처).
 const route = useRoute()
@@ -32,10 +33,6 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-function formatN(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
-}
 </script>
 
 <template>

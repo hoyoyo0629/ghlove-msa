@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
 
 // 기존 donation 서비스의 /donations/offline(offline.html, SFR-003 "기탁서(오프라인) 기부 등록")은
 // 사이트 헤더/디자인이 전혀 적용되지 않은 내부용 임시 폼이었고, 로그인 세션과 무관하게 회원ID를
@@ -57,7 +58,7 @@ function onProvinceChanged() {
 function onAmountInput(e) {
   const raw = Number(String(e.target.value).replace(/[^\d]/g, '')) || 0
   amount.value = raw
-  amountDisplay.value = raw ? new Intl.NumberFormat('ko-KR').format(raw) : ''
+  amountDisplay.value = raw ? formatN(raw) : ''
 }
 
 async function submit() {

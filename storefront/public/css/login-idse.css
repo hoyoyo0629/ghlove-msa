@@ -145,13 +145,13 @@
     /* position: relative;
       top:50%; left: 50%;*/
     transform: translate(0, 2px);
-    background: url('/static/images/icon/cli-icon_not-comfirm.png') #FB502E;
+    background: url('/images/icon/cli-icon_not-comfirm.png') #FB502E;
     background-repeat: no-repeat;
     background-position: center center;
 }
 
 .info-field-items .pw-validation-area span.pw-validation.vali-confirm::before {
-    background: url('/static/images/icon/cli-icon_comfirm.png') #09C2C7;
+    background: url('/images/icon/cli-icon_comfirm.png') #09C2C7;
     background-repeat: no-repeat;
     background-position: center center;
 }

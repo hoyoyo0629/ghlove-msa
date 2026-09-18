@@ -119,6 +119,21 @@ public class OrderMyApiController {
         }
     }
 
+    /** 회원이 누르는 "배송완료" (AS-IS `POST /api/order/shpping-complete`). */
+    @PostMapping("/api/orders/{orderId}/mark-delivered")
+    public ResponseEntity<?> markDelivered(@PathVariable String orderId, HttpServletRequest request) {
+        Long userId = requireUser(request);
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            orderService.markDelivered(orderId, userId);
+            return ResponseEntity.noContent().build();
+        } catch (OrderException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
     @PostMapping("/api/orders/{orderId}/confirm-receipt")
     public ResponseEntity<?> confirmReceipt(@PathVariable String orderId, HttpServletRequest request) {
         Long userId = requireUser(request);

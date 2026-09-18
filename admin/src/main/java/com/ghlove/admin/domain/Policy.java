@@ -15,6 +15,14 @@ import lombok.Setter;
 @NoArgsConstructor
 public class Policy {
 
+    /** AS-IS saleson.shop.policy.domain.Policy의 POLICY_TYPE 상수와 같은 값. */
+    public static final String TYPE_AGREEMENT = "0";
+    public static final String TYPE_PROTECT_POLICY = "1";
+    public static final String TYPE_TRADER_RAW = "2";
+    public static final String TYPE_MARKETING_AGREEMENT = "3";
+    public static final String TYPE_COPYRIGHT = "5";
+    public static final String EXHIBITION_ON = "Y";
+
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "opPolicyIdSeq")
     @SequenceGenerator(name = "opPolicyIdSeq", sequenceName = "op_policy_policy_id_seq", allocationSize = 1)

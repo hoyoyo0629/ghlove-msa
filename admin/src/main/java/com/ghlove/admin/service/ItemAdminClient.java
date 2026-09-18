@@ -124,6 +124,36 @@ public class ItemAdminClient {
         }
     }
 
+    /** 답례품의 제철식품관 지정 조회 (AS-IS ItemManagerController:563). */
+    public List<Integer> seasonFoodMonths(Long itemId) {
+        try {
+            Integer[] months = restClient.get().uri("/api/admin/gift-items/{id}/season-food-months", itemId)
+                    .retrieve().body(Integer[].class);
+            return months == null ? List.of() : List.of(months);
+        } catch (RestClientResponseException e) {
+            throw new ManagerException(extractMessage(e, "제철 월 조회에 실패했습니다."));
+        }
+    }
+
+    /** 답례품의 제철식품관 지정 갱신 - 선택된 월로 통째 교체한다. */
+    public void updateSeasonFoodMonths(Long itemId, List<Integer> months, Long managerId) {
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        if (months != null) {
+            months.forEach(m -> body.add("months", String.valueOf(m)));
+        }
+        if (managerId != null) {
+            body.add("managerId", String.valueOf(managerId));
+        }
+        try {
+            restClient.put().uri("/api/admin/gift-items/{id}/season-food-months", itemId)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(body)
+                    .retrieve().toBodilessEntity();
+        } catch (RestClientResponseException e) {
+            throw new ManagerException(extractMessage(e, "제철 월 저장에 실패했습니다."));
+        }
+    }
+
     public int bulkAssignCategory(List<Long> itemIds, String categoryCode) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         itemIds.forEach(id -> body.add("itemIds", String.valueOf(id)));

@@ -1,0 +1,90 @@
+계층	AS-IS 구분	AS-IS 항목	근거	MSA 대응	판정	비고
+컨트롤러	분류	saleson/shop/** 207개 컨트롤러 2043 엔드포인트	경로·명칭 4분류	admin 92 컨트롤러 543 엔드포인트	판정	운영관리 121/1459, 판매자 20/124, 원제품 46/276, 모바일 19/181
+컨트롤러	원제품shop	ItemController /item 24종	views/front에 item 뷰 0개, 프론트 호출 0	없음	죽은코드	원제품 PC 쇼핑몰
+컨트롤러	원제품shop	OrderController /order/** 38종	동일	없음	죽은코드
+컨트롤러	원제품shop	UserController /users 36종	동일	없음	죽은코드
+컨트롤러	원제품shop	MypageController /mypage 23종	동일	없음	죽은코드
+컨트롤러	원제품shop	MainController / 14종	동일	없음	죽은코드
+컨트롤러	원제품shop	FeaturedController /pages/* 13종	동일	없음	죽은코드
+컨트롤러	원제품shop	OrderClaimApplyController /order-claim-apply 11종	동일	없음	죽은코드
+컨트롤러	원제품shop	EventViewController /ev 9종, SnsUserController /sns-user-delete 9종	동일	없음	죽은코드
+컨트롤러	원제품shop	CartController 7 · CategoriesController 6 · EventController 6 · GoogleAnalyticsController 6 · UserDeliveryController 6	동일	없음	죽은코드	CategoriesController만 opmanager JSP에서 호출
+컨트롤러	원제품shop	나머지 33종 (BanWord·Calendar·Coupon·Faq·Help·Island·Keyword·Lists·Message·Naver·Notice·OpenMarket·Popup·Qna·Ranking·RestockNotice·Review·Search·Seo·Share·ShipmentReturn·SiteMap·StoreInquiry·Wishlist·Zipcode 등)	동일	없음	죽은코드	Zipcode·Island·UserSns 3종은 opmanager JSP에서 호출
+컨트롤러	모바일	/m/* 19개 컨트롤러 181 엔드포인트 (MainMobile 9, MypageMobile, ItemMobile, CartMobile, OrderMobile, FaqMobile, QnaMobile, NoticeMobile, EventMobile, CouponMobile, IslandMobile, RankingMobile, AttendanceMobile, CategoriesMobile, UserDeliveryMobile, StoreInquiryMobile, UserMobile, GiftItemMobile, FeaturedMobile)	views/front 뷰 부재 + 프론트 호출 0	없음	죽은코드	모바일 웹 통째 사장
+컨트롤러	운영관리	user 계열 (UserManager, GeneralCustomerManager, LocgovManager, LocgovPersonInCharge, OffPersonInCharge, OperPersonInCharge, SecedeUser, SleepUser, UserLevelManager, ManagerRequest, LclgvHnrUser) 74 JSP	views/opmanager/i18n/user	member-admin, person-in-charge, off-person-in-charge, manager-admin, locgov-admin, secede-user-admin, sleep-user-admin, user-level-admin, role-admin, honor-user-admin	대응있음
+컨트롤러	운영관리	order 계열 (OrderManager, ClaimMemoManager, OrderAgency, HoldOrder) 54 JSP	views/opmanager/i18n/order	order-admin(6), settlements(3)	대응있음
+컨트롤러	운영관리	give 계열 (GiveNoticeManager, GiveOperationManager, GivePointManager, GiveStateManager, GiveStatistics) 39 JSP	views/opmanager/i18n/give	give(9) - 모금현황·지출내역·기부포인트·변경신청	대응있음
+컨트롤러	운영관리	shop-statistics (ShopStatisticsManager, StatisticsLocgovManager) 38 JSP	views/opmanager/i18n/shop-statistics	shop-statistics(27), statistics-locgov(2)	대응있음
+컨트롤러	운영관리	item 계열 (ItemManager, GiftItemManager, CategoriesManager, CategoriesEditManager, CategoriesFilterManager, SpecialityItemManager) 25 JSP	views/opmanager/i18n/item	gift-items(5), gift-categories(3), mobile-category-edit-admin(2)	대응있음
+컨트롤러	운영관리	community (CommunityManager, LocgFaqManager, LocGovDataBoardManager) 24 JSP	views/opmanager/i18n/community	community(6) - board·databoard·locv-faq	대응있음
+컨트롤러	운영관리	offgive (OffgiveManager) 19 JSP	views/opmanager/i18n/offgive	offgive(4)	대응있음
+컨트롤러	운영관리	designated-donation (DesignatedDonationManager) 17 JSP	views/opmanager/i18n/designated-donation	designated(6)	대응있음
+컨트롤러	운영관리	config (ConfigManager, ConfigIsmsManager, ConfigLogManager) 17 JSP	views/opmanager/i18n/config	site-config(8), isms-config(1)	대응있음
+컨트롤러	운영관리	log (LogManager, AccessManager) 15 JSP	views/opmanager/i18n/log	log(7), send-log-admin(3), access(2)	대응있음
+컨트롤러	운영관리	remittance (RemittanceManager) 9 JSP - 송금예정·확인·완료	views/opmanager/i18n/remittance	settlements(3) - 목록·대기·상세 + 세금계산서·입금·마감	대응있음	이름만 다름, 단계 구조 차이
+컨트롤러	운영관리	qna 계열 (QnaManager, QnaAdminManager, QnaLocgovManager, QnaItemManager, QnaOpenManager) 18 JSP	views/opmanager/i18n/qna*	qna(3), qna-admin(2), gift-inquiries(1)	대응있음
+컨트롤러	운영관리	권한체계 (role-mapper 11, userrole 2, OP_MENU_RIGHT, menu-manager 14)	MenuManagerController, 벤더 role 프레임워크	RoleAdminController 8종 + /{authority}/matrix 권한 매트릭스	대응있음	op_role·op_menu_right(36행)·op_menu(121행) 실데이터
+컨트롤러	운영관리	manual(4)·featured(4)·banner(4)·categories-team-group(4) JSP	views/opmanager/i18n	manual-admin, featured-admin, main-banner-admin+content, category-teams	대응있음
+컨트롤러	운영관리	menu(3)·maintenance(3)·mail-config(3)·mail(3) JSP	views/opmanager/i18n	menu-admin, maintenance-admin, mail-config, email	대응있음
+컨트롤러	운영관리	welfareCenter(5)·lclgvHnrUser(3)·brand(3)·user-level(2) JSP	views/opmanager/i18n	welfare-center-admin, honor-user-admin, brand, user-level-admin	대응있음
+컨트롤러	운영관리	qustnr (QustnrManager) 3 JSP	views/opmanager/i18n/qustnr	survey-admin(3) /admin/surveys 7종	부분	운영자 등록만 - 사용자 참여 화면은 common 조치대상 4
+컨트롤러	운영관리	point-check (PointCheckManager) 1 JSP	views/opmanager/i18n/point-check	reconciliation(1) /reconciliation/order-point	대응있음
+컨트롤러	운영관리	batch-job(2)·batch-log(1)·access(2)·code(2) JSP	views/opmanager/i18n	batch-job, batch, access, codes	부분	동적 스케줄러 엔진 없음(common §10)
+컨트롤러	운영관리	user-group(3)·user-login-banner(1)·order-agency(1)·claim-memo(1) JSP	views/opmanager/i18n	각각 대응 클래스 존재	대응있음
+컨트롤러	운영관리	proposal(10) + proposal-statistics(6) JSP	views/opmanager/i18n	없음	재현누락	조치후보 6 - 최대 미구현 그룹
+컨트롤러	운영관리	magicline (MagicLineManager) 12 JSP	views/opmanager/i18n/magicline	클래스 4개	부분	공동인증서 운영관리
+컨트롤러	운영관리	catalog 8 JSP	views/opmanager/i18n/catalog	없음	재현누락	common §6 전자카탈로그와 동일 건
+컨트롤러	운영관리	temp-process (TempProcessManager) 5 JSP	views/opmanager/i18n/temp-process, temp-process-mapper 21쿼리 live	클래스 1개	부분
+컨트롤러	운영관리	newsletter (NewsletterManager) 4 JSP	views/opmanager/i18n/newsletter	없음	재현누락	common §6 소식지와 동일 건
+컨트롤러	운영관리	seasonal-food (SeasonalFoodManager) 제철 월 지정 (item form 내)	ItemServiceImpl:1471, item/form.jsp:934	admin gift-items/form.html 제철 월 체크박스 + PUT /api/admin/gift-items/{id}/season-food-months	조치완료	2026-09-10 - 빈 화면이던 제철식품관에 상품 노출, 3개 상한·범위검증 서버화
+컨트롤러	운영관리	speciality-item (SpecialityItemManager) 2 JSP	speciality-item-mapper 11쿼리 live	없음	재현누락	조치후보 1 - 특산품관
+컨트롤러	운영관리	locgov-notice (LocgovNoticeManager) 3 JSP	views/opmanager/i18n/locgov-notice	통합 /admin/notices (LOCGOV_CODE 컬럼) + isLocgovScoped 필터 + FundProject 지자체공지 탭	조치완료	§11 흡수확인
+컨트롤러	운영관리	shipment-return (ShipmentReturnManager) 3 JSP = 판매자별 반품지 주소록	ord.op_shipment_return (이관됨, 코드 0)	order ShipmentReturnService + admin ShipmentReturnAdminController	조치완료	2026-09-11 기본주소 단일성·PK시퀀스 (조치후보 3)
+컨트롤러	운영관리	delivery-company (DeliveryCompanyManager) 2 JSP	ord.op_delivery_company (이관됨, 코드 0)	order DeliveryCompanyService + admin DeliveryCompanyAdminController	조치완료	2026-09-11 마스터 CRUD·PK시퀀스 (조치후보 4)
+컨트롤러	운영관리	group(2) + group-banner(2) JSP	views/opmanager/i18n	없음	근거확인필요	원제품 잔재 가능성
+컨트롤러	운영관리	cntnts-stsfdg (CntntsStsfdgManager) 2 JSP	common stsfdg-mapper 1쿼리와 한 쌍	없음	재현누락	조치후보 7 - 콘텐츠 만족도
+컨트롤러	운영관리	sellerconfirm(1) + sellerconfirmOrder(1) JSP	sellerconfirm-mapper 6쿼리 live	없음	재현누락	조치후보 8 - 판매자 확인
+컨트롤러	운영관리	oz (OzViewTest) 1 JSP	views/opmanager/i18n/oz	없음	재현누락	OZ 리포트 (영수증 OZReport+FSW 화면보안 대체검토는 donation 인벤토리 §6)
+컨트롤러	운영관리	chatbot 1 JSP	views/opmanager/i18n/chatbot	없음	재현누락	챗봇 설정
+컨트롤러	운영관리	board-cfg (BoardCfgController) 2 JSP	common §9 범용 게시판 미사용에 연쇄	없음	죽은코드	재현 불필요
+컨트롤러	판매자	seller/order 50 JSP (발주·발송·송장·취소승인·반품승인 등)	views/seller	gift seller-dashboard.html 최근주문 20건 블록	부분	조치후보 2 - 보류 합의됨
+컨트롤러	판매자	seller/item 13 + gift-item 4 JSP	views/seller	gift register.html, edit.html, /gifts/{itemId}/stock·stop·discontinue	부분
+컨트롤러	판매자	seller/user 13 JSP	views/seller	없음	재현누락	판매자 계정관리
+컨트롤러	판매자	seller/remittance 7 JSP	views/seller	없음	재현누락	판매자용 정산 조회
+컨트롤러	판매자	seller/qna-item 4 JSP	views/seller	gift POST /inquiries/{inquiryId}/answer	대응있음
+컨트롤러	판매자	seller/qna 4 + qna-locgov 5 JSP	views/seller	없음	재현누락
+컨트롤러	판매자	seller/mall 5 JSP	views/seller	없음	재현누락	몰 설정
+컨트롤러	판매자	seller/temp-process 5 · magicline 4 · shipment 3 · shipment-return 3 · sale-edit 3 JSP	views/seller	없음	재현누락
+컨트롤러	판매자	seller/sellerNotice 2 + notice 2 JSP	views/seller	admin seller-notice-admin (운영자 발행측만)	부분
+컨트롤러	판매자	seller/main 1 JSP	views/seller	gift seller-dashboard.html	대응있음
+매퍼	stats-mapper	16쿼리 중 6 사장 (getDayStatsListAnalysys, getVisitCountByTime, getVisitCountByWeekday, getVisitList, insertLoginCount, selectVisitCountToday)	deadq 판정	없음	죽은코드	접속·방문통계 - common §8-1 수집단도 사장
+매퍼	brand-mapper	12쿼리 중 5 사장 (deleteBrandCategoryById, insertBrandCategory, updateBrandCategory, getOpManagerLocgovCode, getOpUserLocgovCode)	deadq 판정	brand(2)	죽은코드	브랜드-카테고리 연결 CRUD 전체
+매퍼	give-state-mapper	47쿼리 중 4 사장 (getCntrTaxTempLog, insertCntrTaxTempLog, giveDeleteAt, giveReqmngSmsUserInfoByReqId)	deadq 판정	give	죽은코드
+매퍼	give-statistics-mapper	25쿼리 중 3 사장 (statisticsGiveLocgovByAge/ByHour/ByMonth)	deadq 판정	GiveStatisticsController	죽은코드
+매퍼	cmnty-mapper	96쿼리 중 3 사장 (getFaqBbsCmntFileList, getSrBbsCmntFileList, getOffSrBbsCmntFileList)	deadq 판정	community(6)	죽은코드	게시판 댓글 첨부목록
+매퍼	seller-menu-mapper	7쿼리 중 3 사장 (getChildMenuList, getFirstMenuList_, getFirstMenuUrl)	deadq 판정	없음	죽은코드	판매자 동적메뉴 AS-IS도 반쯤 사장
+매퍼	email-mapper	12쿼리 중 2 사장 (getEmailAuthList, getEmailFileList)	deadq 판정	email(3)	죽은코드
+매퍼	기타 7종	statistics·shipment-return·categories·ranking·manager-action-log·remittance·designated-donation 각 1 사장	deadq 판정	각 대응	죽은코드	7건
+매퍼	role-mapper / security-mapper	11 + 14 = 25쿼리	인터페이스가 libs/opframework-3.15.0.jar 내부	RoleAdminController, JWT	보류	소스 grep으로 사장 판정 불가
+매퍼	cmnty-mapper	96쿼리 (사장 3 제외 93 live)	deadq 판정	community(6)	대응있음	최대 매퍼
+매퍼	remittance-mapper	63쿼리 (사장 1)	deadq 판정	settlements	대응있음
+매퍼	designated-donation-mapper	60쿼리 (사장 1)	deadq 판정	designated(6)	대응있음
+매퍼	categories-mapper	52쿼리 (사장 1)	deadq 판정	gift-categories	대응있음
+매퍼	give-state-mapper	47쿼리 (사장 4 제외 43 live)	deadq 판정	give(9)	대응있음
+매퍼	statistics-mapper	36쿼리 (사장 1)	deadq 판정	shop-statistics(27)	대응있음
+매퍼	bix5-mapper	35쿼리 전부 live	deadq 판정	없음	재현누락	BIX5 통계연계 - common §10 배치 14종과 한 쌍
+매퍼	display-mapper	30쿼리 전부 live	deadq 판정	main-display-admin(1)	부분
+매퍼	personincharge-mapper	27쿼리 전부 live	deadq 판정	person-in-charge(2), off-person-in-charge(2)	대응있음
+매퍼	generalcustomer-mapper	27쿼리 전부 live	deadq 판정	member-admin(3)	대응있음
+매퍼	offgive-mapper	22쿼리 전부 live	deadq 판정	offgive(4)	대응있음
+매퍼	temp-process-mapper	21쿼리 전부 live	deadq 판정	클래스 1개	부분
+매퍼	order-admin(11)·give-opertaion(14)·locgov-databoard(15)·managerrequest(16)·attendance(16)·userlevel(14)·usergroup(13)·categoriesedit(13)·email(12)·brand(12)·ranking(11)·speciality-item(11)·lclgvHnrUser(11)·welfarecenter(10)·customer(10)·login-log(10)·businesscode(10)	deadq 판정 - 사장 소수	각 대응	대응있음
+매퍼	group(9)·cardbenefits(9)·transfer(9)·batch-job(9)·shipment(8)·shipment-return(8)·condition(8)·log-manage(8)·locgFaq(8)·community(8)·deliverycompany(7)·accountnumber(7)·sms(7)·mailconfig(7)·sendmaillog(7)·manager-action-log(7)·store-inquiry(7)	deadq 판정	각 대응 또는 미구현	부분
+매퍼	sellerconfirm(6)·seasonal-food(6)·mainbanner(6)·temp-enc-data(5)·userauth(5)·statistics-locgov(4)·privacy-access(4)·sendsmslog(4)·calendar(4)·groupbanner(4)·ranking-batch(3)·smsconfig(3)·nuri2(3)·featuredbanner(3)·maindisplayitem(3)·secedeuser(3)	deadq 판정	각 대응 또는 미구현	부분
+매퍼	seller-mapper(18)·seller-user-mapper(23)·seller-item-mapper(1)	deadq 판정 - 사장 0	gift Seller 도메인	부분	판매자 포털 축소에 따라
+MSA전용	개방API	OpenApiController /open-api 2종	AS-IS 대응 없음	admin open-api(2)	근거확인필요	조치후보 9
+MSA전용	통계	배송 SLA 통계 /stats/sla	AS-IS 대응 없음	admin stats(2)	근거확인필요	조치후보 9
+MSA전용	연계	NtsReceiptLogAdminController (국세청 전자기부금영수증 전송로그)	AS-IS는 배치만(sendNtsEreceipt*)	admin nts-receipt-log-admin(1)	참고
+MSA전용	연계	DeliveryTrackingController (스마트택배 조회)	AS-IS SmartDeliveryBatchService	admin delivery-tracking.html	참고
+MSA전용	대사	ReconciliationController (주문·포인트 대사)	AS-IS point-check 확장	admin reconciliation(1)	참고
+MSA전용	배치	MemberBatchAdminController, NhExportBatchController	AS-IS 배치의 수동 실행분	admin batch(1)	참고

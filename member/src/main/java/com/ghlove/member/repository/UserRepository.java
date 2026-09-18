@@ -13,7 +13,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByLoginIdAndUserNameAndEmail(String loginId, String userName, String email);
 
-    Optional<User> findByMberCi(String mberCi);
+    /**
+     * 본인확인 CI로 계정을 찾는다. 탈퇴 후 같은 CI로 재가입이 가능하므로(AS-IS
+     * `getUserInfoByCi`가 `status_code='9'`만 보는 이유) 한 CI에 여러 행이 쌓일 수 있다.
+     * 따라서 단건 조회가 아니라 <b>상태로 좁혀서</b> 찾아야 한다 - 그러지 않으면
+     * 재가입한 회원에게서 `NonUniqueResultException`이 난다.
+     */
+    Optional<User> findFirstByMberCiAndStatusCodeOrderByUserIdDesc(String mberCi, String statusCode);
+
+    List<User> findByMberCiOrderByUserIdDesc(String mberCi);
 
     List<User> findByStatusCodeAndLoginDateBefore(String statusCode, String cutoff);
 

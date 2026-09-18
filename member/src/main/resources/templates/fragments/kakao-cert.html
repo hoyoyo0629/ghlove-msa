@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<!--
+  카카오 인증서비스(카카오톡 지갑 본인인증) 공통 스크립트 - 로그인/회원가입 화면이 같이 쓴다.
+  AS-IS login.html / join.html에 중복돼 있던 submitKakao() + code 처리와 같은 역할이며,
+  storefront SPA의 composables/useKakaoCert.js와 같은 흐름/같은 API를 쓴다.
+
+    1) startKakaoCert(type) : member에서 SDK 호출값을 받아 Kakao.Auth.authorizeForCert() 실행.
+                              실연계가 꺼져 있으면 기존 모의 인증 안내화면으로 넘긴다.
+    2) 카카오가 ?code=... 를 붙여 이 화면으로 되돌려보낸다.
+    3) 화면 로드 시 자동으로 verify를 호출하고, 결과를 onKakaoCertResult(result)로 넘긴다.
+       (JOIN_MEMBER면 신규가입 - 회원가입 화면은 가입완료 안내를 띄운다)
+
+  화면은 onKakaoCertResult(result)를 정의해두면 되고, 없으면 메인으로 이동한다.
+-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="kakao-cert-script">
+    <script th:inline="none">
+        var KAKAO_SDK_SRC = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js';
+        // AS-IS join.html이 쓰던 값 그대로 - SDK 버전을 올리면 해시도 같이 갱신해야 한다.
+        var KAKAO_SDK_INTEGRITY = 'sha384-TiCUE00h649CAMonG018J2ujOgDKW/kVWlChEuu4jK2vxfAAD0eZxzCKakxg55G4';
+        var KAKAO_SDK_FAIL_MSG = '카카오 기능 불러오기에 실패했습니다.\n새로고침 후 다시 진행해주세요.\n지속 문제 발생시 고객센터로 문의바랍니다.';
+
+        function loadKakaoSdk() {
+            if (window.Kakao) return Promise.resolve();
+            var existing = document.querySelector('script[src="' + KAKAO_SDK_SRC + '"]');
+            if (existing) {
+                return new Promise(function (resolve, reject) {
+                    existing.addEventListener('load', resolve);
+                    existing.addEventListener('error', function () { reject(new Error('sdk')); });
+                });
+            }
+            return new Promise(function (resolve, reject) {
+                var script = document.createElement('script');
+                script.src = KAKAO_SDK_SRC;
+                script.integrity = KAKAO_SDK_INTEGRITY;
+                script.crossOrigin = 'anonymous';
+                script.onload = resolve;
+                script.onerror = function () { reject(new Error('sdk')); };
+                document.head.appendChild(script);
+            });
+        }
+
+        /** type: 'JOIN'(회원가입 화면 경유) 또는 생략(로그인 화면 경유) */
+        function startKakaoCert(type) {
+            var query = type ? '?type=' + encodeURIComponent(type) : '';
+            fetch('/api/external-auth/kakao/config' + query, { credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (config) {
+                    if (!config.enabled) {
+                        location.href = config.mockUrl;
+                        return;
+                    }
+                    return loadKakaoSdk().then(function () {
+                        if (!window.Kakao.isInitialized()) {
+                            window.Kakao.init(config.jsKey);
+                        }
+                        window.Kakao.Auth.authorizeForCert({
+                            redirectUri: config.redirectUri,
+                            settleId: config.settleId,
+                            signData: config.signData,
+                            identifyItems: config.identifyItems
+                        });
+                    });
+                })
+                .catch(function () { alert(KAKAO_SDK_FAIL_MSG); });
+        }
+
+        (function consumeKakaoCertCode() {
+            var params = new URLSearchParams(location.search);
+            var code = params.get('code');
+            var error = params.get('error');
+            var errorDescription = params.get('error_description');
+            if (error) {
+                // AS-IS join.html도 카카오가 error를 붙여 되돌린 경우 그 문구를 그대로 띄웠다.
+                history.replaceState({}, null, location.pathname);
+                alert(errorDescription || error);
+                return;
+            }
+            if (!code) return;
+
+            var type = params.get('type') === 'JOIN' || location.pathname.indexOf('/signup') === 0 ? 'JOIN' : null;
+            // AS-IS history.replaceState - 새로고침으로 같은 code를 두 번 쓰지 않게 즉시 지운다.
+            history.replaceState({}, null, location.pathname);
+
+            fetch('/api/external-auth/kakao/verify', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: code, type: type })
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (result) {
+                    if (result.status !== 'OK') {
+                        alert(result.errMsg || '카카오톡 인증 로그인에 실패했습니다.');
+                        return;
+                    }
+                    if (typeof window.onKakaoCertResult === 'function') {
+                        window.onKakaoCertResult(result);
+                    } else {
+                        location.href = '/';
+                    }
+                })
+                .catch(function () { alert('오류가 발생했습니다.'); });
+        })();
+    </script>
+</th:block>
+</body>
+</html>

@@ -61,6 +61,9 @@
                                 <div class="date-col" th:text="${#strings.substring(detail.qna.createdDate, 0, 8)}"></div>
                                 <div class="date-col" th:text="'조회 ' + (${detail.qna.hits} ?: 0)"></div>
                             </div>
+                            <!-- AS-IS qna/qna-detail.html:70 - 현재 주소를 클립보드에 복사하고 알린다. -->
+                            <button type="button" class="share-con pointGray" onclick="ghCopyUrl()">
+                                <img th:src="@{/images/icon/cli-icon_share-con.png}" alt="">URL 복사</button>
                         </div>
                         <div class="notice-body dropdown-menu show" th:if="${detail.answer != null}">
                             <div class="notice-wrap">
@@ -91,5 +94,6 @@
 
 <div th:replace="~{fragments/floating-buttons :: floating-buttons}"></div>
 <div th:replace="~{fragments/footer :: site-footer}"></div>
+<div th:replace="~{fragments/alert :: gh-alert}"></div>
 </body>
 </html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>택배사 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/delivery-companies}">택배사관리</a></div>
+    <h3><span th:text="${company} != null ? '택배사 수정' : '택배사 등록'"></span></h3>
+    <div class="board_write">
+        <table class="board_write_table" summary="택배사 등록/수정">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>택배사명</td>
+                <td><input type="text" name="deliveryCompanyName" th:value="${company?.deliveryCompanyName()}" required form="dcForm"></td>
+            </tr>
+            <tr>
+                <td class="label">대표연락처</td>
+                <td><input type="text" name="telNumber" th:value="${company?.telNumber()}" form="dcForm"></td>
+            </tr>
+            <tr>
+                <td class="label">배송조회 URL</td>
+                <td><input type="text" name="deliveryCompanyUrl" th:value="${company?.deliveryCompanyUrl()}" placeholder="예: https://.../tracking" style="width:400px;" form="dcForm"></td>
+            </tr>
+            <tr>
+                <td class="label">송장번호 파라미터</td>
+                <td><input type="text" name="deliveryNumberParameter" th:value="${company?.deliveryNumberParameter()}" placeholder="예: invoiceNo" form="dcForm"></td>
+            </tr>
+            <tr>
+                <td class="label">전송방법</td>
+                <td>
+                    <select name="sendFlag" form="dcForm">
+                        <option value="1" th:selected="${company == null or company.sendFlag() == '1'}">GET</option>
+                        <option value="2" th:selected="${company != null and company.sendFlag() == '2'}">POST</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">사용</td>
+                <td><input type="checkbox" name="useFlag" value="Y" th:checked="${company == null or company.useFlag() == 'Y'}" form="dcForm"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <form id="dcForm" th:action="${company} != null ? @{'/admin/delivery-companies/' + ${company.deliveryCompanyId()}} : @{/admin/delivery-companies}" method="post"></form>
+    <div class="btn_all btn_center">
+        <button type="submit" form="dcForm" class="btn btn-dark-gray btn-small">저장</button>
+        <a class="btn" th:href="@{/admin/delivery-companies}">목록</a>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

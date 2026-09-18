@@ -898,7 +898,10 @@ CREATE TABLE IF NOT EXISTS USER_DATA_DESTRUCTION_LOG (
 
 INSERT INTO OP_COMMON_CODE (CODE_TYPE, CODE_LANGUAGE, ID, LABEL, CODE_VALUE, ORDERING, USE_YN) VALUES
 ('SYSTEM_CONFIG', 'ko', 'WITHDRAWN_DATA_RETENTION_DAYS', '탈퇴회원 개인정보 보관기간(일)', '30', 90, 'Y'),
-('SYSTEM_CONFIG', 'ko', 'LOGIN_LOG_RETENTION_DAYS', '로그인 로그 익명화 보관기간(일)', '365', 91, 'Y')
+('SYSTEM_CONFIG', 'ko', 'LOGIN_LOG_RETENTION_DAYS', '로그인 로그 익명화 보관기간(일)', '365', 91, 'Y'),
+-- SFR-002 "인증토큰/세션 관리(만료, 재인증 정책)" - 비밀번호 유효기간. AS-IS는 ISMS 설정
+-- LIFE_TIME_PASSWORD로 관리하며 미설정 시 180일로 떨어진다(UserServiceImpl.getPasswordExpiredDate).
+('SYSTEM_CONFIG', 'ko', 'LIFE_TIME_PASSWORD', '비밀번호 유효기간(일)', '180', 92, 'Y')
 ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
 
 -- SFR-002 "인증토큰/세션 관리(만료, 재인증 정책)" - AS-IS에 없던 신규 테이블(그래서 OP_
@@ -913,3 +916,17 @@ CREATE TABLE IF NOT EXISTS USER_REFRESH_TOKEN (
     CREATED_DATE VARCHAR(14)  NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_user_refresh_token_token ON USER_REFRESH_TOKEN (TOKEN);
+
+-- =====================================================================
+-- 비밀번호 유효기간 정책 도입 (SFR-002 "인증토큰/세션 관리 - 만료, 재인증 정책").
+-- PASSWORD_EXPIRED_DATE/PASSWORD_TYPE 컬럼은 AS-IS 스키마와 함께 이미 넘어와 있었지만
+-- 엔티티 매핑이 빠져 정책 자체가 동작하지 않았다. 이제 가입/비밀번호 변경/재설정 시
+-- "오늘 + LIFE_TIME_PASSWORD일"로 갱신하고, 로그인 시 만료면 변경 화면으로 보낸다.
+--
+-- 기존 행의 20240101은 스키마 이관 시 들어간 placeholder이지 실제 마지막 변경일이
+-- 아니다 - 그대로 두면 전 회원이 다음 로그인에서 즉시 만료 처리된다. 정책 도입
+-- 시점부터 유효기간을 시작하도록 미래 날짜로 한 번 밀어준다.
+-- =====================================================================
+UPDATE OP_USER
+   SET PASSWORD_EXPIRED_DATE = to_char(now() + interval '180 day', 'YYYYMMDD')
+ WHERE PASSWORD_EXPIRED_DATE IS NULL OR PASSWORD_EXPIRED_DATE <= to_char(now(), 'YYYYMMDD');

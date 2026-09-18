@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--
+  완료 알림 모달 - AS-IS `$s.alert()`(components/layouts/alert.vue의 #op-alert) 재현.
+
+  AS-IS는 부트스트랩 모달 + jQuery에 얹혀 있는데 이 MSA에는 그 체인이 없다. AS-IS의 CSS
+  (bootstrap/popup/p_notitle 계열)를 5개 모듈에 들여오면 order의 mypage-order.css 때처럼
+  기존 레이아웃과 충돌할 위험이 있어, **자기 CSS를 안에 들고 다니는 독립 프래그먼트**로
+  만들었다(클래스 접두사 gh-alert-). 어느 모듈에 붙여도 다른 스타일시트와 겹치지 않는다.
+
+  쓰는 법
+  1) 서버: 성공 후 `redirect:/어디?done=` + URL인코딩한 문구. 실패 경로의 `?errorMessage=`와
+     같은 관행이다.
+  2) 화면: </body> 앞에 <div th:replace="~{fragments/alert :: gh-alert}"></div> 한 줄.
+  3) 비동기(찜 토글 등): window.ghAlert('문구') 를 부른다.
+
+  문구는 서버가 정한다 - 모듈마다 JS 사전을 복사해 두지 않기 위해서다. Thymeleaf가 th:text로
+  이스케이프하므로 URL로 들어온 문자열이 마크업으로 해석되지 않는다.
+-->
+<body>
+<div th:fragment="gh-alert">
+    <div id="gh-alert" class="gh-alert-bg" th:classappend="${param.done != null} ? ' show' : ''">
+        <div class="gh-alert-box" role="alertdialog" aria-modal="true" aria-labelledby="gh-alert-msg">
+            <div class="gh-alert-msg" id="gh-alert-msg" th:text="${param.done}"></div>
+            <div class="gh-alert-btns">
+                <button type="button" class="gh-alert-ok" onclick="ghAlertClose()">확인</button>
+            </div>
+        </div>
+    </div>
+    <style>
+        .gh-alert-bg {
+            display: none;
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, .6);
+            z-index: 2000;
+        }
+        .gh-alert-bg.show { display: block; }
+        .gh-alert-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 420px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, .24);
+            overflow: hidden;
+        }
+        /* AS-IS .pop_txt - 문구는 \n 그대로 줄바꿈된다($s.alert이 \n으로 잘라 <p>로 뿌리던 것). */
+        .gh-alert-msg {
+            padding: 40px 24px 32px;
+            text-align: center;
+            font-size: 1.7rem;
+            line-height: 1.5;
+            color: #222;
+            white-space: pre-line;
+            word-break: keep-all;
+        }
+        .gh-alert-btns { display: flex; border-top: 1px solid #e5e5e5; }
+        .gh-alert-ok {
+            flex: 1;
+            min-width: 120px;
+            padding: 16px 32px;
+            border: 0;
+            background: #004cce;
+            color: #fff;
+            font-size: 1.6rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .gh-alert-ok:hover { background: #0040ad; }
+    </style>
+    <script th:inline="none">
+        /* 확인을 누르면 닫고, 뒤로가기·새로고침으로 다시 뜨지 않게 done 파라미터를 URL에서 지운다
+           (기부완료 모달의 completed 파라미터와 같은 처리). */
+        function ghAlertClose() {
+            var el = document.getElementById('gh-alert');
+            if (el) { el.classList.remove('show'); }
+            if (window.history.replaceState) {
+                var url = new URL(window.location.href);
+                url.searchParams.delete('done');
+                window.history.replaceState({}, '', url.toString());
+            }
+        }
+
+        /* 비동기 처리(찜 토글, 복사 등)에서 부르는 진입점 - AS-IS $s.alert(message)와 같은 자리. */
+        function ghAlert(message) {
+            var el = document.getElementById('gh-alert');
+            if (!el) { window.alert(message); return; }
+            document.getElementById('gh-alert-msg').textContent = message;
+            el.classList.add('show');
+            var ok = el.querySelector('.gh-alert-ok');
+            if (ok) { ok.focus(); }
+        }
+
+
+        /* AS-IS의 clip() - 현재 주소를 클립보드에 넣고 알린다. AS-IS는 textarea +
+           execCommand였는데, 지금 브라우저에선 Clipboard API가 정식 경로다(https 또는
+           localhost에서만 동작하므로 실패 시 예전 방식으로 떨어진다). */
+        function ghCopyUrl() {
+            var url = window.location.href;
+            var done = function () { ghAlert('URL이 복사되었습니다.'); };
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(url).then(done, function () { ghCopyUrlFallback(url, done); });
+            } else {
+                ghCopyUrlFallback(url, done);
+            }
+        }
+
+        function ghCopyUrlFallback(url, done) {
+            var textarea = document.createElement('textarea');
+            document.body.appendChild(textarea);
+            textarea.value = url;
+            textarea.select();
+            try { document.execCommand('copy'); } catch (e) { /* 복사 불가 브라우저 - 알림만 생략 */ }
+            document.body.removeChild(textarea);
+            done();
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            var el = document.getElementById('gh-alert');
+            if (el && el.classList.contains('show')) {
+                var ok = el.querySelector('.gh-alert-ok');
+                if (ok) { ok.focus(); }
+            }
+        });
+    </script>
+</div>
+</body>
+</html>

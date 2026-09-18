@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
 
 // Thymeleaf 버전 order/coupon/my.html과 동일 출처.
 const usable = ref([])
@@ -15,7 +16,7 @@ onMounted(async () => {
 })
 
 function benefitLabel(c) {
-  return c.payType === '1' ? `${new Intl.NumberFormat('ko-KR').format(c.pay)}P 할인` : `${c.pay}% 할인`
+  return c.payType === '1' ? `${formatN(c.pay)}P 할인` : `${c.pay}% 할인`
 }
 </script>
 
@@ -87,7 +88,7 @@ function benefitLabel(c) {
                     <td class="date-col">{{ c.couponName }}</td>
                     <td class="date-col">{{ c.dataStatusCode === '1' ? '사용완료' : '기간만료' }}</td>
                     <td class="date-col">{{ c.orderCode ?? '-' }}</td>
-                    <td class="date-col">{{ c.discountAmount != null ? `${new Intl.NumberFormat('ko-KR').format(c.discountAmount)}P` : '-' }}</td>
+                    <td class="date-col">{{ c.discountAmount != null ? `${formatN(c.discountAmount)}P` : '-' }}</td>
                   </tr>
                 </tbody>
               </table>

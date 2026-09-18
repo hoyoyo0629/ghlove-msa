@@ -368,6 +368,21 @@ ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
 -- =====================================================================
 ALTER TABLE PT_POINT_LEDGER ADD COLUMN IF NOT EXISTS REMAINING_AMOUNT BIGINT;
 
+-- =====================================================================
+-- 마이페이지 "기부포인트 조회"를 AS-IS와 같은 단위로 맞추기 위한 컬럼 (2026-09-09).
+-- AS-IS give-point-mapper.getGivePointList는 GROUP BY year(G_CNTR.CNTR_DE), 지자체로
+-- 묶고 연도 범위 검색을 제공하며 지자체별 기부금액(CNTR_AMT)도 같이 보여준다. point는
+-- 기부 원장을 갖고 있지 않으므로 DONATION_COMPLETED 이벤트가 실어 오는 기부일/기부금액을
+-- 적립(EARN) 행에 그대로 남겨 두고 조회에서 쓴다 (조회할 때마다 donation을 동기 호출하면
+-- 행 수만큼 N+1이 되고 "동기 REST 최소화" 원칙에도 어긋난다).
+--   STDR_YEAR : 기부연도(yyyy). 이 마이그레이션 이전 행은 기부일을 알 수 없어 원장
+--               생성연도로 백필했다.
+--   CNTR_AMT  : 기부금액(실납부액). 이전 행은 NULL이고 화면에서 "-"로 표시된다.
+-- =====================================================================
+ALTER TABLE PT_POINT_LEDGER ADD COLUMN IF NOT EXISTS STDR_YEAR VARCHAR(4);
+ALTER TABLE PT_POINT_LEDGER ADD COLUMN IF NOT EXISTS CNTR_AMT NUMERIC(15,0);
+UPDATE PT_POINT_LEDGER SET STDR_YEAR = to_char(CREATED_DATE, 'YYYY') WHERE STDR_YEAR IS NULL;
+
 INSERT INTO OP_COMMON_CODE (CODE_TYPE, CODE_LANGUAGE, ID, LABEL, ORDERING, USE_YN) VALUES
 ('PT_TXN_TYPE', 'ko', 'EXPIRE', '유효기간 소멸', 5, 'Y')
 ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
@@ -384,6 +399,10 @@ ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
 CREATE TABLE IF NOT EXISTS PT_POINT_RESERVATION (
     RESERVATION_ID   BIGSERIAL PRIMARY KEY,
     USER_ID          BIGINT      NOT NULL,
+    -- 어느 지자체가 적립해 준 포인트를 잡아두는 예약인지. SFR-004상 기부 포인트는
+    -- 기부한 지자체 답례품에만 쓸 수 있으므로, 예약도 지자체 단위여야 확정 시점에
+    -- 그 지자체 lot만 소진할 수 있다(NULL이면 다른 지자체 lot을 잠식한다).
+    LOCGOV_CODE      VARCHAR(50),
     AMOUNT           BIGINT      NOT NULL,
     REF_KEY          VARCHAR(50),
     REASON           VARCHAR(255),
@@ -404,3 +423,46 @@ ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
 INSERT INTO OP_COMMON_CODE (CODE_TYPE, CODE_LANGUAGE, ID, LABEL, CODE_VALUE, ORDERING, USE_YN) VALUES
 ('SYSTEM_CONFIG', 'ko', 'POINT_EXPIRY_NOTICE_DAYS', '소멸 예정 안내 기준일(일)', '30', 1, 'Y')
 ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
+
+-- =====================================================================
+-- CQRS ReadModel (SFR-004 "포인트 조회 서비스 ... CQRS 기반 ReadModel로 제공",
+-- ISP 조회모델 "포인트잔액/원장/만료뷰", ISP p.433 "쓰기는 정합성 중심, 읽기는
+-- 조회 최적화, 이벤트로 두 세계를 느슨하게 연결").
+--
+-- 쓰기모델(PT_POINT_LEDGER/PT_POINT_BALANCE)은 그대로 두고, 원장행이 생길 때마다
+-- 발행되는 point.ledger 이벤트를 스스로 구독해 이 두 테이블을 다시 만든다.
+-- 델타를 누적하지 않고 해당 회원분을 통째로 재계산하므로 Kafka 재전달(at-least-once)
+-- 이나 컨슈머 재시작에도 값이 어긋나지 않는다.
+--
+-- ※ 조회 전용이다. 차감/예약 가능 여부 판단은 최신성이 보장돼야 하므로 반드시
+--   쓰기모델을 직접 읽는다(ReadModel은 이벤트 지연만큼 뒤처질 수 있다).
+--
+-- REMAINING_AMOUNT = 원장 부호합(마이페이지 "잔여 포인트")
+-- LOT_REMAINING    = 미소진 lot 합(장바구니 "잔여 포인트")
+--   두 값은 정상이면 같아야 한다. 다르면 지자체 없는 차감 같은 사고가 있었다는 뜻이라
+--   한 행에 나란히 둬서 바로 드러나게 했다.
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS PT_RM_LOCGOV_POINT (
+    USER_ID          BIGINT        NOT NULL,
+    LOCGOV_CODE      VARCHAR(50)   NOT NULL,
+    STDR_YEAR        VARCHAR(4)    NOT NULL,
+    CNTR_AMT         NUMERIC(15,0) NOT NULL DEFAULT 0,
+    EARNED_AMOUNT    BIGINT        NOT NULL DEFAULT 0,
+    USED_AMOUNT      BIGINT        NOT NULL DEFAULT 0,
+    REMAINING_AMOUNT BIGINT        NOT NULL DEFAULT 0,
+    LOT_REMAINING    BIGINT        NOT NULL DEFAULT 0,
+    UPDATED_DATE     TIMESTAMP     NOT NULL DEFAULT now(),
+    PRIMARY KEY (USER_ID, LOCGOV_CODE, STDR_YEAR)
+);
+CREATE INDEX IF NOT EXISTS idx_pt_rm_locgov_point_user ON PT_RM_LOCGOV_POINT(USER_ID);
+CREATE TABLE IF NOT EXISTS PT_RM_EXPIRING_POINT (
+    USER_ID          BIGINT      NOT NULL,
+    EXPIRATION_DATE  VARCHAR(8)  NOT NULL,
+    LOCGOV_CODE      VARCHAR(50) NOT NULL,
+    REMAINING_AMOUNT BIGINT      NOT NULL DEFAULT 0,
+    UPDATED_DATE     TIMESTAMP   NOT NULL DEFAULT now(),
+    PRIMARY KEY (USER_ID, EXPIRATION_DATE, LOCGOV_CODE)
+);
+CREATE INDEX IF NOT EXISTS idx_pt_rm_expiring_point_user ON PT_RM_EXPIRING_POINT(USER_ID, EXPIRATION_DATE);
+GRANT SELECT, INSERT, UPDATE, DELETE ON PT_RM_LOCGOV_POINT TO point;
+GRANT SELECT, INSERT, UPDATE, DELETE ON PT_RM_EXPIRING_POINT TO point;

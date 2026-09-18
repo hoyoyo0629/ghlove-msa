@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
 
 // 기존 donation 서비스의 /honor/estimate(honor-estimate.html)는 사이트 헤더/디자인이 전혀
 // 적용되지 않은 내부용 임시 화면이었다(offline.html과 같은 성격) - AS-IS 자체에도 이 계산을
@@ -30,10 +31,6 @@ async function load() {
   }
 }
 onMounted(load)
-
-function formatN(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
-}
 </script>
 
 <template>

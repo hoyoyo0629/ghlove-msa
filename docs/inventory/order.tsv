@@ -1,0 +1,73 @@
+계층	AS-IS 구분	AS-IS 항목	근거	MSA 대응	판정	비고
+화면	cart	index.html 장바구니	inbound 160	GET /cart	대응있음
+화면	order	step1.html 주문/결제	inbound 8	POST /checkout	대응있음
+화면	order	step2.html 주문완료	inbound 13	GET /checkout/done	대응있음
+화면	mypage	orderList.html 주문목록	inbound 28	GET /my	대응있음
+화면	mypage	orderDetail.html 주문상세	inbound 4	GET /orders/{orderId}	대응있음
+화면	mypage	orderCancel.html 취소/반품/교환 내역	inbound 12	GET /claims/my	대응있음
+화면	mypage	deliveryInfo.html 배송지 관리	inbound 9	member /delivery	대응있음	member 도메인 배정
+화면	components/ui	modal-order_cancle.vue 취소 팝업	orderDetail/orderList에서 호출	claim 폼	대응있음
+화면	components/ui	modal-return.vue 반품 팝업	동상	claim 폼	대응있음
+화면	components/ui	modal-exchange.vue 교환 팝업	동상	claim 폼	대응있음
+화면	cart/old	index_old.html	inbound 0	-	죽은코드
+화면	order/old	no-member_saleson.html	inbound 0	-	죽은코드	_saleson = 원제품 원본
+화면	order/old	step1_saleson.html / step2_saleson.html	inbound 0	-	죽은코드	동상
+컨트롤러	/api/cart	GET '' 장바구니 조회	cart/index.html	GET /cart, GET /api/cart	대응있음
+컨트롤러	/api/cart	POST /add 담기	17개 화면	POST /cart/items	대응있음
+컨트롤러	/api/cart	POST /delete 삭제	cart/index.html, cart.vue	POST /cart/items/delete	대응있음
+컨트롤러	/api/cart	POST /update-quantity 수량변경	cart/index.html	PUT /api/cart/items/{id}/quantity	대응있음
+컨트롤러	/api/cart	POST shipping-payment-type	호출처 0	-	죽은코드	배송비 결제방식
+컨트롤러	/api/order	POST /buy 바로선택/주문진입	cart/index:652, details-main, item_tab-ali	POST /checkout	대응있음
+컨트롤러	/api/order	POST /payment-step 결제단계	order/step1.html:836	POST /checkout (검토단계)	대응있음
+컨트롤러	/api/order	POST /giveGoodsSavePay 답례품 주문저장+결제	order/step1.html:1836	POST /checkout/complete	대응있음	실사용 결제 경로
+컨트롤러	/api/order	GET /detail 주문상세	orderDetail, writeReview, step2	GET /orders/{orderId}, /api/orders/{orderId}	대응있음
+컨트롤러	/api/order	POST /confirm-purchase 구매확정	orderDetail, orderList	POST /orders/{orderId}/confirm-receipt	대응있음
+컨트롤러	/api/order	POST /shpping-complete 배송완료	orderDetail, orderList (회원이 호출)	POST /orders/{id}/mark-delivered (회원)	조치완료	AS-IS와 동일하게 회원이 수령확인. 본인 주문만
+컨트롤러	/api/order	GET /cancel-apply 취소 팝업	orderDetail, orderList	claim 폼	대응있음
+컨트롤러	/api/order	POST /cancel-apply 취소 처리	modal-order_cancle.vue	POST /orders/{orderId}/claim (CANCEL)	대응있음
+컨트롤러	/api/order	GET /return-apply 반품 팝업	orderDetail, orderList	claim 폼	대응있음
+컨트롤러	/api/order	POST /return-apply 반품 처리	modal-return.vue	POST /orders/{orderId}/claim (RETURN)	대응있음
+컨트롤러	/api/order	GET /exchange-apply 교환 팝업	orderDetail, orderList	claim 폼	대응있음
+컨트롤러	/api/order	POST /exchange-apply 교환 처리	modal-exchange.vue	POST /orders/{orderId}/claim (EXCHANGE)	대응있음
+컨트롤러	/api/order	POST /refund-amount 환불예상액	modal-order_cancle.vue	반품/교환 폼의 복원 포인트 안내	조치완료	AS-IS는 PG 환불계산이 본체 - 포인트 단일결제라 표시만 재현
+컨트롤러	/api/order	POST /save	호출처 0	-	죽은코드	원제품 결제경로
+컨트롤러	/api/order	POST /pay	호출처 0	-	죽은코드	원제품 결제경로
+컨트롤러	/api/order	POST /cancel	호출처 0	-	죽은코드	실경로는 cancel-apply
+컨트롤러	/api/order	GET /coupons	호출처 0	-	죽은코드	쿠폰 미사용과 일관
+컨트롤러	/api/order	POST /redirect-pay	호출처 0, 래퍼도 없음	-	죽은코드
+컨트롤러	/api/order	GET /easypay/easypay_request	호출처 0	-	죽은코드	원제품 PG
+컨트롤러	/api/order	GET /naverpay/payment	호출처 0	-	죽은코드	원제품 PG
+매퍼	order-mapper.xml	115건 중 101건 사용	saleson.shop.order.OrderMapper	JPA Repository	대응있음
+매퍼	order-mapper.xml	배치 취소/반품 6건 (ForCancelBatch/ForReturnBatch)	호출 0	-	죽은코드	배치 일괄처리 경로 사장
+매퍼	order-mapper.xml	updateCancelStatus / updateReturnStatus	호출 0	-	죽은코드
+매퍼	order-mapper.xml	insertOrderCancelTarget	인터페이스 미선언	-	죽은코드	XML 고아
+매퍼	order-mapper.xml	deleteOrderItemSetBuyTemp	호출 0	-	죽은코드
+매퍼	order-mapper.xml	getActiveItemsByParam	호출 0	-	죽은코드
+매퍼	order-mapper.xml	getOrderCodeCountForOrderTemp	호출 0	-	죽은코드
+매퍼	order-mapper.xml	getOrderExchangeApplyByOrderItemId	호출 0	-	죽은코드
+매퍼	order-mapper.xml	updateOrderPayment	호출 0	-	죽은코드
+매퍼	order-claim-apply-mapper.xml	57건 중 55건 사용	order.claimapply.OrderClaimApplyMapper	ClaimService	대응있음
+매퍼	order-claim-apply-mapper.xml	getReturnShippingNumberCheck / updateReturnStatus	호출 0	-	죽은코드
+매퍼	order-shipping-mapper.xml	36건 중 35건 사용	order.shipping.OrderShippingMapper	배송 처리	대응있음
+매퍼	order-shipping-mapper.xml	getOrderShippingByParam	호출 0	-	죽은코드
+매퍼	cart-mapper.xml	19건 중 18건 사용	saleson.shop.cart.CartMapper	CartItem 엔티티	대응있음
+매퍼	cart-mapper.xml	getCartAvailableInsertValidationCountForItemTypeByCartParam	호출 0	-	죽은코드
+매퍼	order-payment-mapper.xml	17건 중 15건 사용	order.payment.OrderPaymentMapper	결제 정보	부분	PG 미연계
+매퍼	order-payment-mapper.xml	getWaitingDeposit(Count|List)ByParamForBatch	호출 0	-	죽은코드	무통장 입금대기 배치 - 포인트 결제라 해당없음
+매퍼	order-refund-mapper.xml	9건 전부 사용	order.refund.OrderRefundMapper	환불 처리	부분
+매퍼	claim-mapper.xml	6건 전부 사용	saleson.shop.claim.ClaimMapper	Claim 엔티티	대응있음
+매퍼	order-add-payment-mapper.xml	7건 중 6건 사용	order.addpayment.OrderAddPaymentMapper	추가결제	의도적축소	PG 미연계
+매퍼	order-add-payment-mapper.xml	deleteOrderAddPaymentById	호출 0	-	죽은코드
+매퍼	deliveryhope-mapper.xml	5건 중 4건 사용	deliveryhope.DeliveryHopeMapper	배송희망일	확인필요
+매퍼	deliveryhope-mapper.xml	getDeliveryHopeById	인터페이스 미선언	-	죽은코드	XML 고아
+서비스로직	결제	결제 경로 두 벌 (save/pay vs giveGoodsSavePay)	step1.html:1836	POST /checkout/complete	대응있음	원제품 경로는 사장, 고향사랑 전용만 live
+서비스로직	배송완료	회원이 직접 배송완료 처리	orderList/orderDetail의 shppingComplete	markDelivered() + 화면 버튼	조치완료	배송중(SHIPPED/IN_TRANSIT)에만 노출
+서비스로직	구매확정	자동 구매확정	AS-IS 배치 확인 필요	미구현	보류	cart-review-remaining-tasks order 3-1
+MSA전용	쿠폰	CouponApiController 20 + CouponMy* 9	AS-IS /api/order/coupons도 호출 0	화면 진입점만 숨김	보류	coupon-feature-unused-hide-ui
+MSA전용	운영관리	/api/admin/orders (14개)	-	-	근거확인필요	admin 도메인 배정 검토
+MSA전용	운영관리	/api/admin/claims (6개)	-	-	근거확인필요
+MSA전용	운영관리	/api/admin/excel-download-logs	-	-	근거확인필요
+서비스로직	주문취소	발송 후 취소 불가 (AS-IS 상태 10/20만)	orderList.html:287	OrderService.isShipped() 검증	조치완료	발송된 물건의 재고·포인트가 되돌아가던 문제
+서비스로직	반품/교환	배송완료 후에만 신청 가능 (AS-IS 상태 35)	orderList.html:180,318,321	ClaimService에 isDelivered() 검증	조치완료	배송 전 신청이 가능하던 문제
+서비스로직	교환/반품	itemReturnFlag='Y' + mobileItemYn='N' 추가조건	orderList.html:318	GiftItemInfo.returnable() + 화면 폼 숨김	조치완료	Gift.mobileItemYn 매핑 추가. 취소에는 미적용
+서비스로직	클레임	유형별 시점 분기 (취소=발송전 / 반품·교환=배송완료후)	orderList.html:287,318,321	ClaimService.request() claimType 분기	조치완료	6-2에서 취소에까지 배송완료 조건이 걸렸던 것을 교정

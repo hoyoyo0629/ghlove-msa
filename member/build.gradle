@@ -41,6 +41,10 @@ dependencies {
 
     runtimeOnly 'org.postgresql:postgresql'
 
+    // 로컬 개발 전용: SQL 로그에 파라미터를 인라인해 "바로 실행 가능한 쿼리" 형태로 찍는다(P6Spy).
+    // developmentOnly = bootRun/IDE 실행 시에만 classpath 에 오르고 운영 bootJar 에는 포함되지 않는다.
+    developmentOnly 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.10.0'
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 

@@ -1,26 +1,55 @@
 <!DOCTYPE html>
+<!--
+  실연계가 아직 열리지 않은 외부 인증수단(디지털원패스/카카오/네이버/금융인증서/간편인증)의
+  모의 통과 안내화면.
+
+  이 화면은 member를 직접(:8081) 열었을 때와 storefront SPA에서 /member 접두사를 거쳐
+  열었을 때 모두 동작해야 한다. 그래서
+    - form은 action=""(= 이 화면을 띄운 GET과 같은 URL로 POST) 으로 두고,
+    - CSS는 /css/style.css를 링크하지 않고 인라인으로 넣는다.
+  둘 다 루트 절대경로를 쓰면 /member 접두사 아래에서 프록시 대상 밖(SPA 오리진)으로
+  나가버려 각각 404/스타일 유실이 된다. 돌아가기 링크의 /signup,/login은 SPA에도 같은
+  경로의 라우트가 있어 그대로 쓸 수 있다(단 @{}로 감싸면 jsessionid가 붙어 SPA 라우트가
+  매칭되지 않으므로 ${...}로 그대로 출력한다).
+-->
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title th:text="${providerName} + ' 로그인 - 고향사랑e음 (member service)'"></title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <title th:text="${providerName} + ' 인증 - 고향사랑e음 (member service)'"></title>
+    <style>
+        body { margin: 0; padding: 40px 16px; background: #f5f6f8;
+               font-family: "Malgun Gothic", "맑은 고딕", sans-serif; color: #222; }
+        .wrap { max-width: 640px; margin: 0 auto; background: #fff; border: 1px solid #dfe3e8;
+                border-radius: 8px; padding: 32px; }
+        h1 { margin: 0 0 20px; font-size: 20px; }
+        .badge { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 10px;
+                 background: #eef2ff; color: #3b5bdb; font-size: 12px; vertical-align: middle; }
+        .result-box { margin: 0 0 24px; padding: 16px; background: #f8f9fa; border-radius: 6px;
+                      font-size: 14px; line-height: 1.7; }
+        code { background: #eceff1; padding: 1px 4px; border-radius: 3px; }
+        .links { margin-top: 16px; text-align: center; }
+        button.login { padding: 12px 24px; border: 0; border-radius: 6px; background: #1a4fa0;
+                       color: #fff; font-size: 15px; cursor: pointer; }
+        .links a { color: #1a4fa0; font-size: 14px; }
+    </style>
 </head>
 <body>
 <div class="wrap">
-    <h1 th:text="${providerName} + ' 로그인'"><span class="badge">member</span></h1>
+    <h1><span th:text="${providerName} + ' 인증'"></span><span class="badge">member</span></h1>
     <p class="result-box">
         <span th:text="${providerName}"></span> 연계는 코드 구현이 완료되었지만, 아직 방화벽/실제 연계 기관 승인이
         열리지 않아 이 환경에서는 비활성화(<code>enabled: false</code>) 상태입니다.<br>
         연계가 열리면 이 화면 대신 실제 <span th:text="${providerName}"></span> 인증 화면으로 연결됩니다.
-        지금은 아래 버튼으로 모의 인증을 통과해 로그인 흐름을 계속 테스트할 수 있습니다.
+        지금은 아래 버튼으로 모의 인증을 통과해 로그인/회원가입 흐름을 계속 테스트할 수 있습니다.
     </p>
-    <form th:action="@{'/login/mock/' + ${providerCode}}" method="post">
+    <form action="" method="post">
         <div class="links">
-            <button type="submit" class="login">[테스트용] 모의 인증으로 로그인</button>
+            <button type="submit" class="login">[테스트용] 모의 인증으로 계속하기</button>
         </div>
     </form>
     <div class="links">
-        <a th:href="@{/login}">로그인으로 돌아가기</a>
+        <a th:href="${backUrl} != null ? ${backUrl} : '/login'"
+           th:text="${backLabel} != null ? ${backLabel} : '로그인으로 돌아가기'"></a>
     </div>
 </div>
 </body>

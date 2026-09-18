@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
 import { useAuthStore } from '../../stores/auth'
+import { formatN } from '../../utils/format'
 
 // AS-IS items/details-main.html 재현(gift 서비스 detail.html과 동일 출처). AS-IS의 옵션(단일/조합형)
 // 선택 UI는 이 프로젝트의 Gift 도메인에 옵션 개념 자체가 없어 스코프 밖, 이미지 갤러리도 swiper 없이
@@ -109,6 +110,8 @@ async function submitInquiry() {
   try {
     await api.post('gift', `/api/gifts/${props.itemId}/inquiries`, { question: f.question, secret: f.secret })
     inquiryForm.value = { question: '', secret: false }
+    // AS-IS items/details-main.html:2612
+    alert('답례품Q&A가 등록되었습니다.')
     await load()
   } catch (e) {
     errorMessage.value = e.message
@@ -139,8 +142,29 @@ async function reportInquiry(inquiry) {
   }
 }
 
-function formatN(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
+// 재입고 알림 신청 (AS-IS ItemController:879, 품절 답례품 상세의 "재입고 알림" 버튼).
+async function requestRestock() {
+  if (!auth.loggedIn) return requireLogin()
+  try {
+    const res = await api.post('gift', `/gifts/${props.itemId}/restock-notice`)
+    detail.value.restockRequested = true
+    alert(res.message || '재입고 시 알려드리겠습니다.')
+  } catch (e) {
+    alert(e.message)
+  }
+}
+
+// 상품평 좋아요 (AS-IS ItemController:899, 비로그인도 IP로 가능·취소 없음). liked=false면 이미 누른 상태.
+async function likeReview(r) {
+  try {
+    const res = await api.post('gift', `/reviews/${r.itemReviewId}/like`)
+    if (res.liked) {
+      r.likeCount = (r.likeCount ?? 0) + 1
+      r.likedByMe = true
+    }
+  } catch (e) {
+    alert(e.message)
+  }
 }
 </script>
 
@@ -248,6 +272,8 @@ function formatN(n) {
           <div class="info_row warning" v-if="detail.gift.soldOut === '1'">
             <img class="icon-img" src="/images/icon/donation-warning.png" alt="주의" />
             <span class="s-txt">해당 답례품은 판매 종료 되었습니다.</span>
+            <button v-if="!detail.restockRequested" type="button" class="formBtn" style="margin-left: 10px; padding: 2px 12px; font-size: 13px" @click="requestRestock">재입고 알림</button>
+            <span v-else class="s-txt" style="margin-left: 10px; color: #1b6b3a">재입고 알림 신청됨</span>
           </div>
           <div class="info_row warning" v-if="detail.gift.soldOut !== '1' && detail.gift.dataStatusCode !== 'APPROVED'">
             <img class="icon-img" src="/images/icon/donation-warning.png" alt="주의" />
@@ -285,12 +311,12 @@ function formatN(n) {
       </div>
       <div class="center tab_container">
         <div class="tab-content item_view">
-          <div id="nav-detail" class="tab-pane show active">
+          <div id="nav-detail" class="tab-pane" :class="{ 'show active': activeTab === 'nav-detail' }">
             <h3 class="sr-only">답례품정보</h3>
             <div class="item_detail" v-html="detail.gift.detailContent"></div>
           </div>
 
-          <div id="nav-review" class="tab-pane">
+          <div id="nav-review" class="tab-pane" :class="{ 'show active': activeTab === 'nav-review' }">
             <div class="item_review">
               <div class="total_top"><h3 class="total">답례품후기 <span class="pointblue">{{ detail.reviews.length }}</span></h3></div>
               <div class="list_wrap review_list">
@@ -315,9 +341,14 @@ function formatN(n) {
                           <img v-for="src in r.imageUrls" :key="src" :src="api.assetUrl('gift', src)" style="width: 80px; height: 80px; object-fit: cover; margin-right: 6px" />
                         </div>
                       </div>
-                      <button type="button" class="formBtn" style="margin-top:6px; padding:2px 10px; font-size:12px;" @click="reportReview(r)">
-                        {{ r.reportedByMe ? '신고됨' : '신고' }}
-                      </button>
+                      <div style="margin-top:6px; display:flex; gap:6px;">
+                        <button type="button" class="formBtn" style="padding:2px 10px; font-size:12px;" :disabled="r.likedByMe" @click="likeReview(r)">
+                          좋아요 {{ r.likeCount ?? 0 }}
+                        </button>
+                        <button type="button" class="formBtn" style="padding:2px 10px; font-size:12px;" @click="reportReview(r)">
+                          {{ r.reportedByMe ? '신고됨' : '신고' }}
+                        </button>
+                      </div>
                     </div>
                   </li>
                 </ul>
@@ -358,7 +389,7 @@ function formatN(n) {
             </div>
           </div>
 
-          <div id="nav-qna" class="tab-pane">
+          <div id="nav-qna" class="tab-pane" :class="{ 'show active': activeTab === 'nav-qna' }">
             <div class="item_review">
               <div class="total_top"><h3 class="total">답례품Q&amp;A <span class="pointblue">{{ detail.inquiries.length }}</span></h3></div>
               <div class="list_wrap review_list">
@@ -405,7 +436,7 @@ function formatN(n) {
             </div>
           </div>
 
-          <div id="nav-buyer" class="tab-pane">
+          <div id="nav-buyer" class="tab-pane" :class="{ 'show active': activeTab === 'nav-buyer' }">
             <h3 class="sr-only">배송/반품/교환</h3>
             <div class="item_detail">
               <p>배송방법 : 택배 (배송비 무료)</p>
@@ -413,7 +444,7 @@ function formatN(n) {
             </div>
           </div>
 
-          <div id="nav-notice" class="tab-pane">
+          <div id="nav-notice" class="tab-pane" :class="{ 'show active': activeTab === 'nav-notice' }">
             <h3 class="sr-only">상품고시</h3>
             <table class="board_write_table">
               <colgroup><col style="width: 150px" /><col /></colgroup>

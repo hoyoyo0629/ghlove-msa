@@ -1,6 +1,17 @@
 server:
   port: 8081
+  # redirect:/xxx 의 Location 헤더를 절대URL(http://host:port/xxx)이 아니라 상대경로(/xxx)로
+  # 내보낸다. Tomcat 기본값은 요청의 Host 헤더로 절대URL을 만드는데, storefront SPA가
+  # /member 접두사로 프록시할 때(vite changeOrigin / Kong) Host가 member 자신으로 바뀌어
+  # 있어서 로그인·SNS인증 후 리다이렉트가 SPA를 벗어나 member:8081로 튕겨나가 버린다.
+  tomcat:
+    use-relative-redirects: true
   servlet:
+    session:
+      # 세션ID를 URL에 붙이지 않는다(;jsessionid=...). 기본값은 쿠키가 아직 확인되지 않은
+      # 첫 요청의 리다이렉트/링크에 세션ID를 끼워 넣는데, 그러면 SPA 라우트가 매칭되지 않고
+      # (/signup;jsessionid=...) 세션ID가 주소창·리퍼러·로그에 노출된다.
+      tracking-modes: cookie
     encoding:
       charset: UTF-8
       enabled: true
@@ -17,7 +28,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
-    show-sql: true
+    show-sql: false          # SQL은 아래 logging 의 org.hibernate.SQL 로거로 일원화(System.out 중복 출력 방지)
     open-in-view: false
     properties:
       hibernate:
@@ -55,6 +66,19 @@ ghlove:
   # 재사용한다(AdminApiAuthInterceptor 참고). 브라우저/외부에 노출되면 안 된다.
   internal:
     admin-secret: "ghlove-msa-local-dev-internal-admin-secret-do-not-expose!!"
+  # 실제 본인인증 게이트웨이(금융인증서/휴대폰CI)가 없는 개발환경에서 아이디·비밀번호 찾기를
+  # 끝까지 테스트하기 위한 우회 스위치. 켜면 아이디/비밀번호 찾기 모달에 "인증번호 없이 진행
+  # (테스트용)" 링크가 나오고, 인증번호 발송/검증 단계를 건너뛴다(이름+휴대폰번호, 비밀번호
+  # 찾기는 아이디까지 일치 검사는 그대로 거친다).
+  # ※ 운영에서는 반드시 false여야 한다 - 이름과 휴대폰번호만 아는 사람이 남의 비밀번호를
+  #   바꿀 수 있는 계정 탈취 경로가 된다. 기본값도 false이고, 이 로컬 설정에서만 켜둔다.
+  dev:
+    identity-verification-bypass: true
+  # AS-IS 가입 불가 아이디 - 운영관리 쇼핑몰 설정의 `deniedId`(콤마 구분)를 그대로 옮긴 자리다.
+  # UserServiceImpl.checkDuplication()이 회원 테이블 조회 전에 이 목록을 먼저 대조하고,
+  # 걸리면 중복 아이디와 똑같이 "이미 사용중"으로 응답한다. admin 설정 이관 시 주입원만 바꾼다.
+  member:
+    denied-login-ids: admin,administrator,manager,master,operator,root,system,test,guest,ghlove
   # D11 회원등급 관리(/api/admin/user-levels) 아이콘 업로드 저장 경로 - PopupImageStorageService
   # (admin)와 동일한 로컬 디스크 저장 패턴.
   upload:
@@ -65,14 +89,26 @@ ghlove:
       idp-url: https://www.onepass.go.kr/api/auth
       site-id: ""
       return-url: http://localhost:8081/onepass-callback
+    # 카카오는 일반 OAuth 로그인이 아니라 "카카오 인증서비스"(카카오톡 지갑 본인인증)다 -
+    # AS-IS와 동일하게 화면이 JS SDK의 authorizeForCert로 인증을 시작하고, 서버는 돌아온
+    # 인가코드를 SSOL 툴킷 중계 API에 넘겨 CI/이름/생년월일/휴대폰을 받는다.
+    # enabled=true로 켜기 전에 채워야 하는 값:
+    #   - js-key      : 카카오 개발자센터 JavaScript 앱키
+    #   - settle-id   : 카카오 인증서비스 계약 시 발급되는 정산ID
+    #   - *-redirect-uri : 카카오 개발자센터에 등록한 Redirect URI와 문자 그대로 같아야 한다.
+    #                      AS-IS처럼 로그인 경유/회원가입 경유를 따로 둔다(각 화면 주소).
+    #   - toolkit.*   : 중계 API 주소와 SsolAuth 액세스토큰
     kakao:
       enabled: false
-      authorize-url: https://kauth.kakao.com/oauth/authorize
-      token-url: https://kauth.kakao.com/oauth/token
-      profile-url: https://kapi.kakao.com/v2/user/me
-      client-id: ""
-      client-secret: ""
-      redirect-uri: http://localhost:8081/login/kakao/callback
+      js-key: ""
+      settle-id: ""
+      identify-items: ci,name,birthday,phone_number,gender
+      login-redirect-uri: http://localhost:5173/login
+      join-redirect-uri: http://localhost:5173/signup
+      toolkit:
+        base-url: ""
+        access-token: ""
+        verify-path: /api/s1/login/request/SAK201
     naver:
       enabled: false
       authorize-url: https://nid.naver.com/oauth2.0/authorize
@@ -86,6 +122,21 @@ ghlove:
       api-url: https://ums.example.com
       client-id: ""
 
+# 로컬 개발 전용: P6Spy 가 datasource 를 감싸 파라미터가 인라인된(바로 실행 가능한) SQL 한 줄을
+# 로거 'p6spy' 로 찍는다. developmentOnly 의존성이라 운영 bootJar 에는 P6Spy 자체가 없어 무효.
+decorator:
+  datasource:
+    p6spy:
+      enable-logging: true
+      logging: slf4j
+      multiline: false        # 한 줄로 출력(복붙해서 바로 실행하기 좋게). true 로 두면 여러 줄 정렬
+      # 기본 포맷(파이프 구분, ?쿼리+인라인쿼리 중복)이 지저분해서, 실행시간+인라인SQL 만 남긴다.
+      log-format: "%(executionTime)ms | %(sqlSingleLine)"
+
 logging:
   level:
     com.ghlove.member: DEBUG
+    p6spy: DEBUG                           # P6Spy 가 찍는 인라인 SQL
+    # 아래 Hibernate 로거는 P6Spy 와 중복이라 꺼둔다(P6Spy 없이 순수 Hibernate 로그만 볼 땐 주석 해제)
+    # org.hibernate.SQL: DEBUG             # 실행 SQL 문(? 자리표시)
+    # org.hibernate.orm.jdbc.bind: TRACE   # 바인딩 파라미터 값(별도 줄)

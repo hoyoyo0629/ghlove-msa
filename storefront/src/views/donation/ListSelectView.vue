@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
+import BasePagination from '../../components/BasePagination.vue'
 
 // AS-IS donation/list-select.html("기금사업 소개") 재현. Thymeleaf 버전(FundProjectController)은
 // 진입만 서버 렌더링하고 이후 상호작용은 fetch로 조각(fragment) HTML을 받아 교체하는 SSR
@@ -196,17 +197,7 @@ function seletedLoc() {
                       <tr class="list-none" v-if="!fund.projects.length"><td colspan="2">기금사업을 준비중입니다.</td></tr>
                     </tbody>
                   </table>
-                  <div class="pagination_ali" v-if="fund.projectTotalPages > 1">
-                    <ul class="pagination-frame">
-                      <li><a class="fist arrow_btn" href="javascript:void(0)" @click="projectPage(1)"><img src="/images/icon/paging_btn-first.png" alt="처음" /></a></li>
-                      <li><a class="prev arrow_btn" href="javascript:void(0)" @click="projectPage(Math.max(1, fund.projectCurrentPage - 1))"><img src="/images/icon/paging_btn-prev.png" alt="이전" /></a></li>
-                      <li v-for="p in fund.projectTotalPages" :key="p" :class="{ 'selected-page': p === fund.projectCurrentPage }">
-                        <a class="page-text" href="javascript:void(0)" @click="projectPage(p)">{{ p }}</a>
-                      </li>
-                      <li><a class="next arrow_btn" href="javascript:void(0)" @click="projectPage(Math.min(fund.projectTotalPages, fund.projectCurrentPage + 1))"><img src="/images/icon/paging_btn-next.png" alt="다음" /></a></li>
-                      <li><a class="last arrow_btn" href="javascript:void(0)" @click="projectPage(fund.projectTotalPages)"><img src="/images/icon/paging_btn-last.png" alt="마지막" /></a></li>
-                    </ul>
-                  </div>
+                  <BasePagination :page="fund.projectCurrentPage" :total-pages="fund.projectTotalPages" @change="projectPage" />
                 </div>
               </div>
 
@@ -225,17 +216,7 @@ function seletedLoc() {
                       <tr class="list-none" v-if="!fund.notices.length"><td colspan="2">지자체 공지사항을 준비중입니다.</td></tr>
                     </tbody>
                   </table>
-                  <div class="pagination_ali" v-if="fund.noticeTotalPages > 1">
-                    <ul class="pagination-frame">
-                      <li><a class="fist arrow_btn" href="javascript:void(0)" @click="noticePage(1)"><img src="/images/icon/paging_btn-first.png" alt="처음" /></a></li>
-                      <li><a class="prev arrow_btn" href="javascript:void(0)" @click="noticePage(Math.max(1, fund.noticeCurrentPage - 1))"><img src="/images/icon/paging_btn-prev.png" alt="이전" /></a></li>
-                      <li v-for="p in fund.noticeTotalPages" :key="p" :class="{ 'selected-page': p === fund.noticeCurrentPage }">
-                        <a class="page-text" href="javascript:void(0)" @click="noticePage(p)">{{ p }}</a>
-                      </li>
-                      <li><a class="next arrow_btn" href="javascript:void(0)" @click="noticePage(Math.min(fund.noticeTotalPages, fund.noticeCurrentPage + 1))"><img src="/images/icon/paging_btn-next.png" alt="다음" /></a></li>
-                      <li><a class="last arrow_btn" href="javascript:void(0)" @click="noticePage(fund.noticeTotalPages)"><img src="/images/icon/paging_btn-last.png" alt="마지막" /></a></li>
-                    </ul>
-                  </div>
+                  <BasePagination :page="fund.noticeCurrentPage" :total-pages="fund.noticeTotalPages" @change="noticePage" />
                 </div>
               </div>
             </div>

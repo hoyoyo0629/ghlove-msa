@@ -1,6 +1,6 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
 // AS-IS header_ali.vue 마크업/클래스를 그대로 재현한다(Thymeleaf 버전 fragments/header.html과
@@ -8,6 +8,7 @@ import { useAuthStore } from '../stores/auth'
 // 맞추고, GNB 아코디언 열고닫기만 Vue reactive state로 구현한다(AS-IS도 클릭 토글, 마우스오버 아님).
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 
 const openIndex = ref(null)
 function toggleMenu(i) {
@@ -16,6 +17,8 @@ function toggleMenu(i) {
 function closeMenu() {
   openIndex.value = null
 }
+// AS-IS와 동일하게 하위메뉴를 클릭해 화면이 이동하면 GNB를 닫는다(라우트 변경 감지).
+watch(() => route.fullPath, closeMenu)
 
 // member 서비스에서 아직 Vue로 이관되지 않은 화면(마이페이지 등)은 계속 옛 Thymeleaf
 // 화면(8081)으로 보낸다 - 라운드가 진행되며 하나씩 내부 라우트로 바뀐다.
@@ -157,7 +160,7 @@ async function onLogout() {
                           <li><strong class="tit"><router-link to="/cart">장바구니</router-link></strong><p class="txt">담아둔 답례품을 확인할 수 있어요</p></li>
                           <li><strong class="tit"><router-link to="/claims/my">취소반품교환</router-link></strong><p class="txt">주문 취소/반품/교환 내역을 확인할 수 있어요</p></li>
                           <li><strong class="tit"><router-link to="/mypage/delivery">배송지 관리</router-link></strong><p class="txt">배송지 목록을 관리할 수 있어요</p></li>
-                          <li><strong class="tit"><router-link to="/mypage/donations">기부확인증 보기</router-link></strong><p class="txt">기부확인증을 발급받을 수 있어요</p></li>
+                          <li><strong class="tit"><router-link to="/mypage/receipts">기부확인증 보기</router-link></strong><p class="txt">기부확인증을 발급받을 수 있어요</p></li>
                           <li><strong class="tit"><router-link to="/mypage/honor-certificates">기부혜택증 보기</router-link></strong><p class="txt">세액공제 예상액을 확인할 수 있어요</p></li>
                           <li><strong class="tit"><router-link to="/mypage/qna">1:1 문의</router-link></strong><p class="txt">궁금한 점을 문의할 수 있어요</p></li>
                           <li><strong class="tit"><router-link to="/mypage/profile">회원정보수정</router-link></strong><p class="txt">회원 정보를 수정할 수 있어요</p></li>

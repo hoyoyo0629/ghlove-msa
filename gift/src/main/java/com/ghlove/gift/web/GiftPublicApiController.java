@@ -47,6 +47,7 @@ public class GiftPublicApiController {
     private final WishlistService wishlistService;
     private final LocgovClient locgovClient;
     private final JwtVerifier jwtVerifier;
+    private final com.ghlove.gift.service.RestockNoticeService restockNoticeService;
 
     public record GiftCardDto(Long itemId, String itemName, Integer salePrice, boolean soldOut,
                                String locgovCode, String locgovName, String thumbnailUrl,
@@ -102,7 +103,7 @@ public class GiftPublicApiController {
 
     public record ReviewDto(Long itemReviewId, Long userId, String userName, String createdDate,
                              Integer score, String subject, String content, List<String> imageUrls,
-                             boolean reportedByMe) {
+                             boolean reportedByMe, Integer likeCount, boolean likedByMe) {
     }
 
     public record InquiryDto(Long inquiryId, String status, String statusLabel, String secretYn,
@@ -119,7 +120,8 @@ public class GiftPublicApiController {
 
     public record DetailResponse(Gift gift, List<String> imageUrls, String locgovName, String categoryLabel,
                                   SellerDto seller, boolean wishlisted, List<ReviewDto> reviews,
-                                  double averageScore, List<InquiryDto> inquiries, List<OptionDto> options) {
+                                  double averageScore, List<InquiryDto> inquiries, List<OptionDto> options,
+                                  boolean restockRequested) {
     }
 
     @GetMapping("/api/gifts/{itemId}/detail")
@@ -146,7 +148,9 @@ public class GiftPublicApiController {
                         REVIEW_DATE_FORMAT.format(r.getCreatedDate()), r.getScore(), r.getSubject(), r.getContent(),
                         reviewImages.getOrDefault(r.getItemReviewId(), List.of()).stream()
                                 .map(ri -> "/uploads/" + ri.getReviewImage()).toList(),
-                        authUserId.isPresent() && reviewService.reportedBy(r.getItemReviewId(), authUserId.get())))
+                        authUserId.isPresent() && reviewService.reportedBy(r.getItemReviewId(), authUserId.get()),
+                        r.getLikeCount() == null ? 0 : r.getLikeCount(),
+                        reviewService.likedBy(r.getItemReviewId().intValue(), authUserId.orElse(null))))
                 .toList();
 
         Map<String, String> inquiryStatusLabels = giftService.codesOf("GIFT_INQUIRY_STATUS");
@@ -167,7 +171,8 @@ public class GiftPublicApiController {
                 locgovClient.namesByCode().get(gift.getLocgovCode()),
                 giftService.codesOf("GIFT_CATEGORY").get(gift.getCategoryCode()),
                 seller != null ? new SellerDto(seller.getCompanyName(), seller.getTelephoneNumber()) : null,
-                wishlisted, reviewDtos, averageScore, inquiryDtos, optionDtos);
+                wishlisted, reviewDtos, averageScore, inquiryDtos, optionDtos,
+                authUserId.isPresent() && restockNoticeService.isRequested(itemId.intValue(), authUserId.get()));
         return ResponseEntity.ok(response);
     }
 

@@ -1,6 +1,13 @@
+/* top/left를 명시한다. position:fixed인데 top이 auto면 "정적 위치"에 고정되는데,
+   이 오버레이는 본문 뒤에 놓여 있어서 그 위치가 화면 아래(수천 px)가 되어 버린다
+   - 버튼을 눌러도 모달이 안 보이는 것처럼 된다. AS-IS는 모달 마크업이 본문보다 앞에
+   있어 정적 위치가 0이라 우연히 정상으로 보였을 뿐이라, 문서 순서에 의존하지 않도록
+   여기서 못박는다. */
 .black-bg {
     background-color: rgba(0, 0, 0, 0.6);
     position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
     display: none;
@@ -516,7 +523,7 @@
     right: 133px;
     width: 18px;
     height: 15px;
-    background: url(/static/images/icon/cli-icon_btn-close.png) no-repeat center center;
+    background: url(/images/icon/cli-icon_btn-close.png) no-repeat center center;
     padding: 2px 1px 6px 6px;
     margin: 12px;
     border-radius: 3px;

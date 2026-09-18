@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
 
 // AS-IS point/reservations.html(SFR-004 예약/예약해제) 재현. 기존 화면은 골격만 있는
 // 내부용(css/style.css)이었는데, RoleRequestView/RoleQueueView와 같은 방식으로 나머지
@@ -10,6 +11,7 @@ import { api } from '../../api/http'
 const data = ref(null)
 const loading = ref(true)
 
+const locgovCode = ref('')
 const amount = ref('')
 const refKey = ref('')
 const reason = ref('')
@@ -30,10 +32,12 @@ async function onSubmit() {
   try {
     await api.post('point', '/api/my/reservations', {
       amount: Number(amount.value),
+      locgovCode: locgovCode.value,
       refKey: refKey.value || undefined,
       reason: reason.value || undefined,
     })
     amount.value = ''
+    locgovCode.value = ''
     refKey.value = ''
     reason.value = ''
     await load()
@@ -60,10 +64,6 @@ async function releaseReservation(id) {
   } catch (e) {
     errorMessage.value = e.message
   }
-}
-
-function formatAmount(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
 }
 </script>
 
@@ -94,7 +94,7 @@ function formatAmount(n) {
                 <img class="icon-img" src="/images/icon/cli-icon_my-amount-all.png" alt="가용 잔액" />
                 <span class="label-title">가용 잔액 (보유 - 예약중)</span>
               </label>
-              <div class="m-field"><input type="text" id="availableBalance" :value="formatAmount(data.availableBalance)" readonly /><span class="s_txt">P</span></div>
+              <div class="m-field"><input type="text" id="availableBalance" :value="formatN(data.availableBalance)" readonly /><span class="s_txt">P</span></div>
             </div>
           </div>
         </div>
@@ -104,6 +104,19 @@ function formatAmount(n) {
         <p class="error" v-if="errorMessage">{{ errorMessage }}</p>
         <form @submit.prevent="onSubmit">
           <div class="info-field-group">
+            <!-- 지자체 선택 필수 - 기부 포인트는 기부한 지자체 답례품에만 쓸 수 있어(SFR-004)
+                 예약도 지자체 단위다. 지자체 없이 예약하면 확정 시 다른 지자체 lot이 소진된다. -->
+            <div class="info-field-items">
+              <label for="locgovCode" class="flied-title">지자체</label>
+              <span class="form-field">
+                <select id="locgovCode" v-model="locgovCode" required>
+                  <option value="">지자체 선택</option>
+                  <option v-for="b in data.locgovBalances" :key="b.locgovCode" :value="b.locgovCode">
+                    {{ b.locgovNm }} (가용 {{ formatN(b.available) }}P)
+                  </option>
+                </select>
+              </span>
+            </div>
             <div class="info-field-items">
               <label for="amount" class="flied-title">예약 포인트</label>
               <span class="form-field"><input type="number" id="amount" v-model="amount" min="1" step="1" placeholder="예약할 포인트" required /></span>
@@ -130,10 +143,11 @@ function formatAmount(n) {
           <div class="list_body table-container w3c_v_2410" v-if="data.reservations.length">
             <div class="list_wrap">
               <table>
-                <caption class="sr-only">예약 내역 - 예약ID, 포인트, 참조키, 사유, 상태, 일시, 처리로 구성</caption>
+                <caption class="sr-only">예약 내역 - 예약ID, 지자체, 포인트, 참조키, 사유, 상태, 일시, 처리로 구성</caption>
                 <thead class="list-title">
                   <tr class="items_wrap">
                     <th class="date-col" scope="col">예약ID</th>
+                    <th class="date-col" scope="col">지자체</th>
                     <th class="date-col" scope="col">포인트</th>
                     <th class="date-col" scope="col">참조키</th>
                     <th class="date-col" scope="col">사유</th>
@@ -145,7 +159,8 @@ function formatAmount(n) {
                 <tbody class="item_list-group">
                   <tr class="list-items" v-for="r in data.reservations" :key="r.reservationId">
                     <td class="date-col">{{ r.reservationId }}</td>
-                    <td class="date-col">{{ formatAmount(r.amount) }}P</td>
+                    <td class="date-col">{{ r.locgovNm ?? '-' }}</td>
+                    <td class="date-col">{{ formatN(r.amount) }}P</td>
                     <td class="date-col">{{ r.refKey }}</td>
                     <td class="date-col">{{ r.reason }}</td>
                     <td class="date-col">{{ r.statusLabel ?? r.status }}</td>

@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
 
 // AS-IS mypage/receiptListPrint.html(및 Thymeleaf 버전 certificate-print.html) 재현 - 새 탭에서
 // window.print()를 호출하는 A4 두 페이지(1페이지 확인증 앞면, 2페이지 기부내역 뒷면). App.vue가
@@ -20,10 +21,6 @@ onMounted(async () => {
     document.body.textContent = e.message
   }
 })
-
-function formatN(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
-}
 </script>
 
 <template>

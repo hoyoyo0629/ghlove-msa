@@ -1,8 +1,9 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
 import { loadDaumPostcode } from '../../utils/daumPostcode'
+import { formatN } from '../../utils/format'
 
 // AS-IS order/step1.html 재현 (Thymeleaf 버전 order/checkout.html과 동일 출처). 장바구니에서
 // 선택한 cartItemId 목록을 쿼리로 받아 읽기전용 재표시 + 배송지입력 + 결제하기.
@@ -16,7 +17,10 @@ const cartItemIds = Array.isArray(route.query.cartItemId)
     : []
 
 const groups = ref([])
-const totalPoint = ref(0)
+// 쿠폰 할인/배송비까지 반영된 실제 결제 금액. 화면에서 직접 계산하지 않고 서버의
+// /api/checkout/preview를 그대로 쓴다 - 결제(complete)와 완전히 같은 CartService 계산이라
+// "화면에 뜬 포인트 != 실제 차감 포인트"가 구조적으로 생길 수 없다.
+const quote = ref(null)
 const couponsByCartItem = ref({})
 const errorMessage = ref('')
 const loading = ref(true)
@@ -42,8 +46,8 @@ async function load() {
   try {
     const data = await api.post('order', '/api/checkout/review', { cartItemId: cartItemIds })
     groups.value = data.groups
-    totalPoint.value = data.totalPoint
     couponsByCartItem.value = data.couponsByCartItem
+    await refreshQuote()
   } catch (e) {
     router.replace('/cart?errorMessage=' + encodeURIComponent(e.message))
   } finally {
@@ -51,6 +55,45 @@ async function load() {
   }
 }
 onMounted(load)
+
+function selectedCoupons() {
+  const couponByCartItem = {}
+  Object.entries(couponSelections).forEach(([cartItemId, couponUserId]) => {
+    if (couponUserId) couponByCartItem[cartItemId] = Number(couponUserId)
+  })
+  return couponByCartItem
+}
+
+async function refreshQuote() {
+  try {
+    quote.value = await api.post('order', '/api/checkout/preview', {
+      cartItemId: cartItemIds,
+      couponByCartItem: selectedCoupons(),
+      deliveryAddress: form.address || null,
+    })
+    errorMessage.value = ''
+  } catch (e) {
+    // 같은 쿠폰 중복선택 등은 결제 전에 여기서 먼저 드러난다.
+    quote.value = null
+    errorMessage.value = e.message
+  }
+}
+
+// 쿠폰 선택과 배송지(제주·도서산간 추가배송비)가 바뀌면 금액을 다시 받아온다.
+watch([couponSelections, () => form.address], () => {
+  if (!loading.value) refreshQuote()
+})
+
+const lineQuotes = computed(() => {
+  const byCartItem = {}
+  quote.value?.groups.forEach((g) => g.lines.forEach((l) => (byCartItem[l.cartItemId] = l)))
+  return byCartItem
+})
+const groupQuotes = computed(() => {
+  const byLocgov = {}
+  quote.value?.groups.forEach((g) => (byLocgov[g.locgovCode] = g))
+  return byLocgov
+})
 
 async function searchAddress() {
   await loadDaumPostcode()
@@ -62,26 +105,58 @@ async function searchAddress() {
   }).open()
 }
 
+// 쿠폰 사용 UI 숨김 (2026-09-09). 쿠폰 기능이 AS-IS에서도 미사용이라 자동발급을 멈추고
+// 화면 진입점을 전부 감췄다 - 여기만 라우트가 아니라 결제 화면 안의 select라서 플래그로
+// 끈다. 서버의 /api/checkout/review·preview·complete는 쿠폰 계약을 그대로 유지하므로
+// (선택된 쿠폰이 없으면 할인 0) 이 값을 true로 되돌리면 그대로 복구된다.
+// 쿠폰을 고를 수 없으면 할인은 항상 0이라, 아래 할인 표시들(라인/그룹/합계)은 각자
+// discount > 0 조건 때문에 자동으로 사라진다.
+const COUPON_ENABLED = false
+
 function couponLabel(c) {
-  return c.payType === '1' ? `${c.couponName} (${new Intl.NumberFormat('ko-KR').format(c.pay)}P 할인)` : `${c.couponName} (${c.pay}% 할인)`
+  return c.payType === '1' ? `${c.couponName} (${formatN(c.pay)}P 할인)` : `${c.couponName} (${c.pay}% 할인)`
 }
 
+/** 포인트 부족 판정은 반드시 배송비까지 더한 groupPayable 기준 (서버 체크아웃과 동일). */
 function insufficient(g) {
-  return g.groupTotal > g.givePoint
+  const q = groupQuotes.value[g.locgovCode]
+  return q ? q.groupPayable > q.givePoint : false
 }
 
 async function submit() {
   errorMessage.value = ''
+  // AS-IS order/step1.html:1562~1667 - 결제 직전 배송지/받는분 필드와 포인트 잔액을 각각 확인한다.
+  // (입력칸의 required는 폼 submit이 아니라 발동하지 않으므로 여기서 직접 막는다.)
+  if (!form.receiverName.trim()) {
+    alert('받으시는 분을 입력해 주세요.')
+    return
+  }
+  if (!form.receiverPhone.trim()) {
+    alert('연락처를 입력해 주세요.')
+    return
+  }
+  if (!form.post.trim() || !form.address.trim()) {
+    alert('배송지 주소를 입력해 주세요.')
+    return
+  }
+  if (!form.addressDetail.trim()) {
+    alert('배송지 상세주소를 입력해 주세요.')
+    return
+  }
+  const short = groups.value.find((g) => insufficient(g))
+  if (short) {
+    // AS-IS order/step1.html:1425
+    alert(`${short.locgovNm || short.locgovCode} 포인트가 부족합니다.`)
+    return
+  }
   if (!form.agree) {
-    errorMessage.value = '구매 동의가 필요합니다.'
+    // AS-IS order/step1.html:1578
+    alert('구매에 동의해주시기 바랍니다.')
     return
   }
   submitting.value = true
   try {
-    const couponByCartItem = {}
-    Object.entries(couponSelections).forEach(([cartItemId, couponUserId]) => {
-      if (couponUserId) couponByCartItem[cartItemId] = Number(couponUserId)
-    })
+    const couponByCartItem = selectedCoupons()
     const res = await api.post('order', '/api/checkout/complete', {
       cartItemId: cartItemIds,
       receiverName: form.receiverName,
@@ -97,10 +172,6 @@ async function submit() {
   } finally {
     submitting.value = false
   }
-}
-
-function formatN(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
 }
 </script>
 
@@ -157,10 +228,18 @@ function formatN(n) {
                   <div class="date-col g_amtprc">
                     <div class="g_info_wrap">
                       <div class="g_info__amount">{{ line.quantity }}개</div>
-                      <div class="g_info__price">{{ formatN(line.lineTotal) }} P</div>
+                      <div class="g_info__price">
+                        {{ formatN(line.lineTotal) }} P
+                        <span class="pointRed" v-if="lineQuotes[line.cartItemId]?.discount > 0">
+                          - {{ formatN(lineQuotes[line.cartItemId].discount) }} P (쿠폰)
+                        </span>
+                        <span v-if="lineQuotes[line.cartItemId]?.deliveryFee > 0">
+                          + {{ formatN(lineQuotes[line.cartItemId].deliveryFee) }} P (배송비)
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div class="date-col coupon-select" v-if="couponsByCartItem[line.cartItemId]?.length">
+                  <div class="date-col coupon-select" v-if="COUPON_ENABLED && couponsByCartItem[line.cartItemId]?.length">
                     <label :for="'coupon_' + line.cartItemId">쿠폰 사용</label>
                     <select :id="'coupon_' + line.cartItemId" v-model="couponSelections[line.cartItemId]">
                       <option value="">쿠폰 미사용</option>
@@ -172,11 +251,20 @@ function formatN(n) {
                 </li>
               </ul>
             </div>
-            <div class="cart_bot">
-              <div class="smallTxt">답례품 포인트 <span class="bot_P">{{ formatN(g.groupTotal) }} P</span> + 무료배송 =</div>
+            <div class="cart_bot" v-if="groupQuotes[g.locgovCode]">
+              <div class="smallTxt">
+                답례품 포인트 <span class="bot_P">{{ formatN(groupQuotes[g.locgovCode].groupTotal) }} P</span>
+                <template v-if="groupQuotes[g.locgovCode].groupDiscount > 0">
+                  - 쿠폰할인 <span class="bot_P">{{ formatN(groupQuotes[g.locgovCode].groupDiscount) }} P</span>
+                </template>
+                <template v-if="groupQuotes[g.locgovCode].groupDeliveryFee > 0">
+                  + 배송비 <span class="bot_P">{{ formatN(groupQuotes[g.locgovCode].groupDeliveryFee) }} P</span> =
+                </template>
+                <template v-else>+ 무료배송 =</template>
+              </div>
               <div class="bigTxt">
                 <span class="bot_txt">결제 예정 포인트</span>
-                <span class="bot_price" :class="insufficient(g) ? 'pointRed' : 'pointblue'">{{ formatN(g.groupTotal) }}P</span>
+                <span class="bot_price" :class="insufficient(g) ? 'pointRed' : 'pointblue'">{{ formatN(groupQuotes[g.locgovCode].groupPayable) }}P</span>
                 <span v-if="insufficient(g)"> ( 구매불가 )</span>
               </div>
             </div>
@@ -231,22 +319,29 @@ function formatN(n) {
         <div class="mobile_section_bar"></div>
         <div class="s-contents payment">
           <h3>결제하기</h3>
-          <ul class="each_loc_list">
-            <li class="loc_list" v-for="g in groups" :key="g.locgovCode">
-              <div class="loc_name">{{ g.locgovNm }}</div>
+          <ul class="each_loc_list" v-if="quote">
+            <li class="loc_list" v-for="q in quote.groups" :key="q.locgovCode">
+              <div class="loc_name">{{ q.locgovNm }}</div>
               <div class="last_point_info">
                 <span class="lebel_title">최종 결제 포인트</span>
-                <span class="pointblue">{{ formatN(g.groupTotal) }}P</span>
+                <span class="pointblue">{{ formatN(q.groupPayable) }}P</span>
               </div>
               <div class="last_point_info">
                 <span class="lebel_title">포인트 예상 잔액</span>
-                <span>{{ formatN(g.givePoint - g.groupTotal) }}P</span>
+                <span :class="q.groupPayable > q.givePoint ? 'pointRed' : ''">{{ formatN(q.givePoint - q.groupPayable) }}P</span>
               </div>
             </li>
           </ul>
-          <div class="total_point">
-            <div class="last_point_info"><span class="lebel_title">배송비</span><span>무료배송</span></div>
-            <div class="last_point_info"><span class="lebel_title">답례품 포인트</span><span class="pointblue bigTxt">{{ formatN(totalPoint) }}P</span></div>
+          <div class="total_point" v-if="quote">
+            <div class="last_point_info"><span class="lebel_title">답례품 포인트</span><span>{{ formatN(quote.totalPoint) }}P</span></div>
+            <div class="last_point_info" v-if="quote.totalDiscount > 0">
+              <span class="lebel_title">쿠폰 할인</span><span class="pointRed">- {{ formatN(quote.totalDiscount) }}P</span>
+            </div>
+            <div class="last_point_info">
+              <span class="lebel_title">배송비</span>
+              <span>{{ quote.totalDeliveryFee > 0 ? formatN(quote.totalDeliveryFee) + 'P' : '무료배송' }}</span>
+            </div>
+            <div class="last_point_info"><span class="lebel_title">최종 결제 포인트</span><span class="pointblue bigTxt">{{ formatN(quote.totalPayable) }}P</span></div>
           </div>
           <div class="cart_info_txt">
             <ul>
@@ -262,8 +357,8 @@ function formatN(n) {
       <button type="button" class="blueBtn cancellation" @click="router.push('/cart')">
         취소<span><img src="/images/icon/cli-icon_btn-hover-arrow.png" alt="이전화면으로 이동" /></span>
       </button>
-      <button type="button" class="blueBtn u-confirm" :disabled="submitting" @click="submit">
-        <span>{{ formatN(totalPoint) }} P</span>&nbsp;결제하기<span><img src="/images/icon/cli-icon_btn-hover-arrow.png" alt="답례품 주문하기" /></span>
+      <button type="button" class="blueBtn u-confirm" :disabled="submitting || !quote" @click="submit">
+        <span>{{ formatN(quote?.totalPayable ?? 0) }} P</span>&nbsp;결제하기<span><img src="/images/icon/cli-icon_btn-hover-arrow.png" alt="답례품 주문하기" /></span>
       </button>
     </div>
   </section>

@@ -121,3 +121,30 @@
 .userid-override { margin: 0 0 2rem; text-align: center; font-size: 1.3rem; color: var(--color-gray-light); }
 .userid-override summary { cursor: pointer; }
 .userid-override form { display: inline-flex; gap: .8rem; margin-top: .8rem; }
+
+/* 주문 상세의 신청/처리 폼 - AS-IS는 이 동작들을 모달로 띄우지만(order-modal.css) 이
+   MSA는 화면 안 인라인 폼으로 받는다. 한 줄에 입력칸과 버튼이 나란히 놓이게만 한다. */
+.claim-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0 0;
+}
+
+.claim-form input[type="text"],
+.claim-form select {
+    height: 40px;
+    padding: 0 10px;
+    border: 1px solid var(--gray4, #d5d5d5);
+    border-radius: 4px;
+}
+
+.claim-form input[type="text"] {
+    min-width: 220px;
+}
+
+.claim-form select {
+    min-width: 160px;
+    max-width: 240px;
+}

@@ -4,6 +4,7 @@ import com.ghlove.order.domain.*;
 import com.ghlove.order.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +51,16 @@ public class CouponService {
     private final CouponTargetItemRepository couponTargetItemRepository;
     private final CouponTargetUserRepository couponTargetUserRepository;
     private final MemberClient memberClient;
+
+    /**
+     * 쿠폰 기능 마스터 스위치 (2026-09-09부터 false). 컨트롤러는 @ConditionalOnProperty로
+     * 아예 등록되지 않지만, 체크아웃(주문결제)은 쿠폰 컨트롤러를 거치지 않고 이 서비스를
+     * 직접 부르는 별도 경로라 여기서도 막아야 실제로 차단된다 - 쿠폰 목록을 내려주지 않고
+     * (usableIssuesForItem), 요청 본문에 쿠폰ID를 직접 실어 보내도 할인이 붙지 않는다
+     * (previewDiscount → applyToOrder). 자세한 경위는 application.yml의 ghlove.coupon 주석.
+     */
+    @Value("${ghlove.coupon.enabled:false}")
+    private boolean couponEnabled;
 
     private static String today() {
         return LocalDate.now().format(DATE);
@@ -349,8 +360,12 @@ public class CouponService {
 
     // ==================== 체크아웃 통합 ====================
 
-    /** 특정 상품라인에 지금 적용 가능한(미사용+기간내+상품조건 만족) 이 회원의 쿠폰 발급건. */
+    /** 특정 상품라인에 지금 적용 가능한(미사용+기간내+상품조건 만족) 이 회원의 쿠폰 발급건.
+     *  쿠폰 기능이 꺼져 있으면 빈 목록 - 주문결제 화면의 쿠폰 select가 렌더링되지 않는다. */
     public List<CouponIssue> usableIssuesForItem(Long userId, Long itemId) {
+        if (!couponEnabled) {
+            return List.of();
+        }
         String t = today();
         return couponIssueRepository.findByUserIdOrderByCreatedDateDesc(userId).stream()
                 .filter(i -> STATUS_DOWNLOADED.equals(i.getDataStatusCode()))
@@ -368,6 +383,11 @@ public class CouponService {
 
     /** 체크아웃 시점 할인 미리보기 (마감 확정 전, 검증만). */
     public long previewDiscount(Long userId, Integer couponIssueId, Long itemId, long lineTotal, int quantity) {
+        // 쿠폰 OFF 상태에서 요청 본문에 쿠폰ID를 직접 실어 보내도 할인이 붙지 않게 막는다
+        // (applyToOrder도 이 메서드를 거치므로 주문 생성 경로까지 함께 차단된다).
+        if (!couponEnabled) {
+            throw new OrderException("현재 쿠폰을 사용할 수 없습니다.");
+        }
         CouponIssue issue = couponIssueRepository.findByCouponUserIdAndUserId(couponIssueId, userId)
                 .orElseThrow(() -> new OrderException("쿠폰을 찾을 수 없습니다."));
         if (!STATUS_DOWNLOADED.equals(issue.getDataStatusCode()) || isExpired(issue, today()) || !itemEligible(issue, itemId)) {

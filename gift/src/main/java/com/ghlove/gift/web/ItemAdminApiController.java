@@ -92,6 +92,29 @@ public class ItemAdminApiController {
         }
     }
 
+    /**
+     * 답례품의 제철식품관 지정 (AS-IS는 답례품 저장 트랜잭션 안에서 같이 처리한다 -
+     * `ItemServiceImpl:1471~1479`). MSA는 admin이 gift를 HTTP로 부르는 구조라
+     * 저장 파라미터에 섞지 않고 하위 리소스로 분리했다 - 답례품 본문 수정 없이
+     * 제철 월만 바꾸는 것도 운영에서 흔한 일이라 그 편이 쓰기 좋다.
+     */
+    @GetMapping("/{id}/season-food-months")
+    public List<Integer> seasonFoodMonths(@PathVariable Long id) {
+        return giftService.seasonFoodMonthsOf(id);
+    }
+
+    @PutMapping("/{id}/season-food-months")
+    public List<Integer> updateSeasonFoodMonths(@PathVariable Long id,
+                                                 @RequestParam(required = false) List<Integer> months,
+                                                 @RequestParam(required = false) Long managerId) {
+        try {
+            giftService.replaceSeasonFoodMonths(id, months, managerId);
+            return giftService.seasonFoodMonthsOf(id);
+        } catch (GiftException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
     @PostMapping("/bulk-category")
     public Map<String, Integer> bulkCategory(@RequestParam List<Long> itemIds, @RequestParam String categoryCode) {
         try {

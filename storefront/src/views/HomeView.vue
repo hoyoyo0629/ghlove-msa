@@ -1,14 +1,28 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+// AS-IS main.html과 동일하게 Swiper로 메인 배너를 구동한다(자동재생/이전·다음/페이지네이션).
+// 스타일은 new.css가 @import하는 swiper-bundle.min.css(전역)가 담당하므로 여기서는 동작만 붙인다.
+import Swiper from 'swiper'
+import { Navigation, Pagination, Autoplay } from 'swiper/modules'
 import { api } from '../api/http'
 import { useAuthStore } from '../stores/auth'
+import { formatN } from '../utils/format'
+import SitePopups from '../components/SitePopups.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
-const searchQuery = ref('')
-function submitSearch() {
-  router.push({ path: '/gifts', query: searchQuery.value ? { q: searchQuery.value } : {} })
+
+// 검색바 - AS-IS main.html: Enter 또는 검색버튼 클릭 시 답례품몰로 이동, 삭제버튼은 입력 비우기
+const searchKeyword = ref('')
+function search() {
+  router.push({ path: '/gifts', query: searchKeyword.value ? { q: searchKeyword.value } : {} })
+}
+function keydown(e) {
+  if (e.key === 'Enter') search()
+}
+function clearSearch() {
+  searchKeyword.value = ''
 }
 
 const banners = ref([])
@@ -26,6 +40,37 @@ async function loadHome() {
   }
 }
 
+// 배너 클릭: 같은 도메인 링크는 무조건 SPA 라우터로 태운다(절대 URL이어도 origin이 같으면 경로만
+// 추출). 그래야 존재하지 않는 게시물/경로일 때 백엔드 Whitelabel 404가 아니라 SPA catch-all →
+// AS-IS 404 페이지가 뜬다. 진짜 외부 도메인만 기본 이동, 링크가 없으면 아무것도 하지 않는다.
+function onBannerClick(item, e) {
+  const raw = item?.linkUrl
+  if (!raw || raw === '#') {
+    e.preventDefault()
+    return
+  }
+  let path = raw
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const u = new URL(raw)
+      if (u.origin !== window.location.origin) return // 진짜 외부 도메인 → 기본 이동
+      path = u.pathname + u.search + u.hash // 같은 도메인 → SPA 경로로 전환
+    } catch {
+      return // URL 파싱 실패 시 기본 동작에 맡긴다
+    }
+  }
+  e.preventDefault()
+  router.push(path)
+}
+
+// 날짜를 YYYY-MM-DD로 통일한다(원본이 20260914이든 2026-09-14이든 동일 출력).
+function fmtDate(s) {
+  if (!s) return ''
+  const d = String(s).replace(/[^0-9]/g, '')
+  if (d.length >= 8) return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`
+  return String(s)
+}
+
 const yoyPercent = computed(() => {
   const now = giveState.value.nowYearTotalAmt ?? 0
   const prev = giveState.value.prevYearTotalAmt ?? 0
@@ -33,84 +78,117 @@ const yoyPercent = computed(() => {
   return Math.floor((now * 100) / prev)
 })
 
-function formatAmount(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
-}
-
-// AS-IS는 Swiper.js로 배너를 돌리지만, Thymeleaf 버전과 동일하게 별도 라이브러리 없는
-// 최소한의 자동재생/이전·다음/페이지네이션 로직을 그대로 유지한다.
-const current = ref(0)
-let timer = null
-let paused = false
-
-function showSlide(index) {
-  const len = banners.value.length
-  if (len === 0) return
-  current.value = (index + len) % len
-}
-function restart() {
-  clearInterval(timer)
-  if (!paused && banners.value.length > 1) {
-    timer = setInterval(() => showSlide(current.value + 1), 5000)
+// AS-IS main.html initSwiper()와 동일한 설정으로 메인 배너를 구동한다(slidesPerView/speed/autoplay
+// delay·pagination type:custom·navigation 셀렉터까지 그대로). pagination을 custom으로 둬야
+// new.css의 .swiper-pagination-custom 스타일이 적용된다(fraction이면 클래스가 달라 안 먹음).
+let swiper = null
+const paused = ref(false)
+async function initSwiper() {
+  await nextTick()
+  if (swiper) {
+    swiper.destroy(true, true)
+    swiper = null
   }
+  if (banners.value.length === 0) return
+  swiper = new Swiper('.main-d-ban-swiper .swiper', {
+    modules: [Navigation, Pagination, Autoplay],
+    slidesPerView: 1,
+    spaceBetween: 16,
+    speed: 800,
+    loop: banners.value.length > 1,
+    autoplay: { delay: 6000, disableOnInteraction: false },
+    navigation: {
+      nextEl: '.main-d-ban-swiper .swiper-button-next',
+      prevEl: '.main-d-ban-swiper .swiper-button-prev',
+    },
+    pagination: {
+      el: '.main-d-ban-swiper .swiper-pagination',
+      type: 'custom',
+      renderCustom(sw, current, total) {
+        return `<div class="swiper-pagination-current"><span class="sr-only">현재 페이지</span>${current}</div> / <div class="swiper-pagination-total"><span class="sr-only">전체 페이지</span>${total}</div>`
+      },
+    },
+  })
+  paused.value = false
 }
-function prevSlide() {
-  showSlide(current.value - 1)
-  restart()
+// AS-IS의 재생/멈춤 버튼과 동일 - 자동재생 중이면 멈춤버튼만, 멈추면 재생버튼만 보인다
+function playBtnEvnet() {
+  swiper?.autoplay?.start()
+  paused.value = false
 }
-function nextSlide() {
-  showSlide(current.value + 1)
-  restart()
-}
-function toggleAutoplay() {
-  paused = !paused
-  restart()
+function stopBtnEvnet() {
+  swiper?.autoplay?.stop()
+  paused.value = true
 }
 
 onMounted(async () => {
   await loadHome()
-  restart()
+  await initSwiper()
 })
-onBeforeUnmount(() => clearInterval(timer))
+onBeforeUnmount(() => {
+  if (swiper) {
+    swiper.destroy(true, true)
+    swiper = null
+  }
+})
 </script>
 
 <template>
   <div id="contents" class="contents-page">
+    <SitePopups />
     <section class="main-content inner">
-      <div class="main-content__left">
+      <div class="main-content__left" id="tmpMove">
+        <!-- 메인 배너 (AS-IS main.html 마크업 그대로, Swiper 구동) -->
         <div class="banner-wrapper">
-          <div class="main-d-ban-swiper" id="main-banner" v-if="banners.length">
-            <a
-              v-for="(b, i) in banners"
-              :key="b.bannerId"
-              class="banner-slide"
-              :class="{ active: i === current }"
-              :href="b.linkUrl || '#'"
-              :style="{ backgroundImage: `url(${b.imageUrl})` }"
-              :title="b.title"
-            >
-              <span class="sr-only">{{ b.title }}</span>
-            </a>
-            <div class="swiper-indicator" v-if="banners.length > 1">
-              <button type="button" class="swiper-autoplay-toggle" @click="toggleAutoplay"><span class="sr-only">일시정지</span></button>
+          <div class="main-d-ban-swiper" v-if="banners.length">
+            <div class="swiper">
+              <ul class="swiper-wrapper">
+                <li class="swiper-slide" v-for="(item, i) in banners" :key="item.bannerId ?? i">
+                  <a :href="item.linkUrl || '#'" :title="item.title" class="swiper-img-full" @click="onBannerClick(item, $event)">
+                    <img class="pc-only" :src="item.imageUrl" :alt="item.title" />
+                    <img class="mob-only" :src="item.mobileImageUrl || item.imageUrl" :alt="item.title" />
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div class="swiper-indicator">
+              <div class="swiper-controller">
+                <button type="button" class="swiper-button-play" v-show="paused" @click="playBtnEvnet"><span class="sr-only">메인 배너 자동 롤링 재생</span></button>
+                <button type="button" class="swiper-button-stop" v-show="!paused" @click="stopBtnEvnet"><span class="sr-only">메인 배너 자동 롤링 멈춤</span></button>
+              </div>
               <div class="swiper-navigation">
-                <button type="button" class="swiper-button-prev" @click="prevSlide"><span class="sr-only">이전 배너</span></button>
-                <span class="swiper-pagination swiper-pagination-custom">
-                  <span class="swiper-pagination-current">{{ current + 1 }}</span> / <span>{{ banners.length }}</span>
-                </span>
-                <button type="button" class="swiper-button-next" @click="nextSlide"><span class="sr-only">다음 배너</span></button>
+                <button type="button" class="swiper-button-prev"><span class="sr-only">메인 배너 이전 슬라이드</span></button>
+                <div class="swiper-pagination"></div>
+                <button type="button" class="swiper-button-next"><span class="sr-only">메인 배너 다음 슬라이드</span></button>
               </div>
             </div>
           </div>
-          <div class="main-d-ban-swiper" v-else style="background-image:url(/images/new/2026-main-banner-pc-01.png)"></div>
+          <!-- 배너 데이터가 없을 때도 기본 배너 이미지로 영역을 유지한다 -->
+          <div class="main-d-ban-swiper" v-else>
+            <div class="swiper">
+              <ul class="swiper-wrapper">
+                <li class="swiper-slide">
+                  <a href="#" class="swiper-img-full">
+                    <img class="pc-only" src="/images/new/2026-main-banner-pc-01.png" alt="" />
+                    <img class="mob-only" src="/images/new/2026-main-banner-mo-01.png" alt="" />
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
-        <div class="search-bar">
-          <form @submit.prevent="submitSearch">
-            <i class="ico-gov"></i>
-            <input class="krds-input" type="text" v-model="searchQuery" placeholder="기부할 고향 및 답례품을 검색해보세요" />
-            <button type="submit" class="search-bar__btn"><i class="ico-search"></i><span class="sr-only">검색</span></button>
-          </form>
+        <!-- //메인 배너 -->
+        <!-- 검색바 (AS-IS main.html 마크업 그대로) -->
+        <div class="search-bar form-conts btn-ico-wrap" data-delete="true">
+          <i class="ico-gov"></i>
+          <label for="search-input" class="sr-only">답례품 검색</label>
+          <input type="text" class="krds-input" placeholder="기부할 고향 및 답례품을 검색해보세요" id="search-input" @keydown="keydown" v-model="searchKeyword" />
+          <div class="btn-group">
+            <button type="button" class="krds-btn medium icon pure btn-delete-input" @click="clearSearch"><span class="sr-only">내용 삭제</span><i class="svg-icon ico-delete-fill"></i></button>
+            <button type="button" class="search-bar__btn" @click.prevent="search"><i class="ico-search"></i><span class="sr-only">검색</span></button>
+          </div>
         </div>
+        <!-- //검색바 -->
       </div>
 
       <aside class="main-content__aside">
@@ -120,7 +198,7 @@ onBeforeUnmount(() => clearInterval(timer))
             <span class="donation__date">(전일 기준)</span>
           </div>
           <div class="donation__amount">
-            <span class="amount__number">{{ formatAmount(giveState.nowYearTotalAmt) }}원</span>
+            <span class="amount__number">{{ formatN(giveState.nowYearTotalAmt) }}원</span>
             <span class="amount__days" v-if="giveState.dDay > 0">D-{{ giveState.dDay }}</span>
           </div>
           <div class="donation__progress">
@@ -139,7 +217,7 @@ onBeforeUnmount(() => clearInterval(timer))
 
         <div class="login-section" v-if="!auth.loggedIn">
           <div class="login__message">여러분의 소중한 기부가<br />고향에 큰 힘이 됩니다.</div>
-          <router-link class="login__btn" to="/login">로그인</router-link>
+          <button type="button" class="login__btn" @click="router.push('/login')">로그인</button>
           <div class="login__links">
             <router-link class="login__link" to="/find-idpw">아이디 찾기 · 비밀번호 찾기</router-link>
             <i class="login__bar"></i>
@@ -160,13 +238,13 @@ onBeforeUnmount(() => clearInterval(timer))
           </div>
           <div class="login__donation">
             <ul class="login__items">
-              <li class="login__item"><span class="login__tit">올해 기부액</span><span class="login__num">{{ formatAmount(auth.me.donationSummary?.thisYearAmt) }}원</span></li>
-              <li class="login__item"><span class="login__tit">기부총액</span><span class="login__num">{{ formatAmount(auth.me.donationSummary?.totalAmt) }}원</span></li>
+              <li class="login__item"><span class="login__tit">올해 기부액</span><span class="login__num">{{ formatN(auth.me.donationSummary?.thisYearAmt) }}원</span></li>
+              <li class="login__item"><span class="login__tit">기부총액</span><span class="login__num">{{ formatN(auth.me.donationSummary?.totalAmt) }}원</span></li>
             </ul>
           </div>
           <div class="login__point">
             <ul class="login__items">
-              <li class="login__item"><span class="login__tit">보유 포인트</span><span class="login__num">{{ formatAmount(auth.me.pointBalance) }}P</span></li>
+              <li class="login__item"><span class="login__tit">보유 포인트</span><span class="login__num">{{ formatN(auth.me.pointBalance) }}P</span></li>
             </ul>
           </div>
           <a class="login__btn--out" href="#" @click.prevent="auth.logout()">
@@ -234,14 +312,22 @@ onBeforeUnmount(() => clearInterval(timer))
           <div class="prj__tit">{{ p.title }}</div>
           <div class="location-label"><span>{{ p.locgovName }}</span></div>
           <div class="prj__stat">
-            <span>{{ formatAmount(p.raisedAmt) }}원</span>
+            <span>{{ formatN(p.raisedAmt) }}원</span>
             <span class="prj__stat-ratio">{{ p.percent }}%</span>
           </div>
           <div class="ratio-bar"><div class="ratio-bar__fill" :style="{ width: p.percent + '%' }"></div></div>
-          <div class="prj__date">{{ p.beginYmd }} ~ {{ p.endYmd }}</div>
+          <div class="prj__date">{{ fmtDate(p.beginYmd) }} ~ {{ fmtDate(p.endYmd) }}</div>
         </li>
       </ul>
       <p class="empty-note" v-if="!projects.length">현재 진행중인 특정사업이 없습니다.</p>
     </section>
   </div>
 </template>
+
+<style scoped>
+/* npm swiper(v11)가 nav 버튼에 기본 화살표 svg를 주입하는데, AS-IS는 new.css의 ::after(mask-image)로
+   화살표를 그리므로 주입 svg를 숨겨 AS-IS와 동일하게 보이도록 한다. */
+.main-d-ban-swiper :deep(.swiper-navigation-icon) {
+  display: none;
+}
+</style>

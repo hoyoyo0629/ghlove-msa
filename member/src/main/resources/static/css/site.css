@@ -133,3 +133,14 @@
 .dev-bypass { text-align: center; margin-top: 2.4rem; font-size: 1.3rem; color: var(--color-gray-light); }
 .dev-bypass button { background: none; border: none; text-decoration: underline; cursor: pointer; color: var(--color-primary); font-size: 1.3rem; }
 
+
+/* AS-IS event.css의 목록 없음 안내 - 배송지 목록 등에서 "등록된 ...이 없습니다"를
+   가운데 정렬로 띄운다. member는 event.css를 들여오지 않아 이 규칙만 빠져 있었다. */
+.list-none {
+    text-align: center;
+    padding: 90px 0 150px;
+}
+
+.list-none img {
+    width: 168px;
+}

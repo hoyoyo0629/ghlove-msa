@@ -52,31 +52,31 @@
 }
 
 .changeInfo .steps-box>div.agreement>div.icon-bg {
-    background-image: url('/static/images/icon/cli-icon_agreement-off.png');
+    background-image: url('/images/icon/cli-icon_agreement-off.png');
 }
 
 .changeInfo .steps-box>div.agreement.on>div.icon-bg {
-    background-image: url('/static/images/icon/cli-icon_agreement-on.png');
+    background-image: url('/images/icon/cli-icon_agreement-on.png');
 }
 
 .changeInfo .steps-box>div.authentication>div.icon-bg {
-    background-image: url('/static/images/icon/cli-icon_authentication-off.png');
+    background-image: url('/images/icon/cli-icon_authentication-off.png');
 }
 
 .changeInfo .steps-box>div.authentication.on>div.icon-bg {
-    background-image: url('/static/images/icon/cli-icon_authentication-on.png');
+    background-image: url('/images/icon/cli-icon_authentication-on.png');
 }
 
 .changeInfo .steps-box>div.enter-info>div.icon-bg {
-    background-image: url('/static/images/icon/cli-icon_enter-info-off.png');
+    background-image: url('/images/icon/cli-icon_enter-info-off.png');
 }
 
 .changeInfo .steps-box>div.enter-info.on>div.icon-bg {
-    background-image: url('/static/images/icon/cli-icon_enter-info-on.png');
+    background-image: url('/images/icon/cli-icon_enter-info-on.png');
 }
 
 .changeInfo .steps-box>div.sign-up-complete>div.icon-bg {
-    background-image: url('/static/images/icon/cli-icon_sign-up-complete-off.png');
+    background-image: url('/images/icon/cli-icon_sign-up-complete-off.png');
 }
 
 /*  약관동의 필드 -  accept-terms-area */

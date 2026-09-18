@@ -5,6 +5,7 @@ import com.ghlove.gift.domain.GiftOrderStock;
 import com.ghlove.gift.domain.GiftSubcategory;
 import com.ghlove.gift.domain.GiftSubcategoryItem;
 import com.ghlove.gift.domain.ItemImage;
+import com.ghlove.gift.domain.SeasonFoodItem;
 import com.ghlove.gift.domain.Seller;
 import com.ghlove.gift.event.GiftLifecyclePublisher;
 import com.ghlove.gift.repository.CommonCodeRepository;
@@ -54,6 +55,8 @@ public class GiftService {
     private static final String RESERVATION_RESERVED = "RESERVED";
     private static final String RESERVATION_RESTORED = "RESTORED";
     private static final String LABEL_NONE = "1";
+    /** 제철 월 선택 상한 - AS-IS `opmanager/i18n/item/form.jsp:5152`의 "3개까지 가능합니다". */
+    private static final int SEASON_FOOD_MONTH_LIMIT = 3;
     private static final DateTimeFormatter CREATED_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
@@ -127,6 +130,40 @@ public class GiftService {
                     STATUS_APPROVED, DISPLAY_ON, categoryCode);
         }
         return gifts.stream().filter(this::withinDisplayPeriod).toList();
+    }
+
+    /** 답례품 수정화면에서 체크상태를 되살리기 위한 조회 (AS-IS ItemManagerController:563). */
+    public List<Integer> seasonFoodMonthsOf(Long itemId) {
+        return seasonFoodItemRepository.findByItemIdOrderBySeasonFoodMonth(itemId).stream()
+                .map(SeasonFoodItem::getSeasonFoodMonth)
+                .toList();
+    }
+
+    /**
+     * 답례품의 제철 월 지정을 통째로 갈아끼운다 - AS-IS `ItemServiceImpl:1471~1479`가
+     * 답례품 저장 때마다 `deleteSeasonFoodItem` 후 선택된 월만큼 `insertSeasonFoodItem` 하는 것과 같다.
+     * AS-IS 폼은 최대 3개까지만 체크되게 막지만(`item/form.jsp:5152`) 그건 화면단 제약뿐이라
+     * 서버에서도 같이 막는다 - 운영자 화면을 거치지 않는 호출로 제한이 무력화되면 안 된다.
+     */
+    @Transactional
+    public void replaceSeasonFoodMonths(Long itemId, List<Integer> months, Long managerId) {
+        List<Integer> distinct = months == null ? List.of()
+                : months.stream().filter(java.util.Objects::nonNull).distinct().sorted().toList();
+        if (distinct.stream().anyMatch(m -> m < 1 || m > 12)) {
+            throw new GiftException("제철 월은 1~12 사이여야 합니다.");
+        }
+        if (distinct.size() > SEASON_FOOD_MONTH_LIMIT) {
+            throw new GiftException("제철 월 선택은 " + SEASON_FOOD_MONTH_LIMIT + "개까지 가능합니다.");
+        }
+        seasonFoodItemRepository.deleteByItemId(itemId);
+        for (Integer month : distinct) {
+            SeasonFoodItem row = new SeasonFoodItem();
+            row.setItemId(itemId);
+            row.setSeasonFoodMonth(month);
+            row.setFrstRegisterId(managerId);
+            row.setFrstRegistPnttm(LocalDateTime.now());
+            seasonFoodItemRepository.save(row);
+        }
     }
 
     /** 답례품몰 GNB "제철식품관" - AS-IS G_SEASON_FOOD_ITEM에서 이번 달로 등록된 답례품. */
@@ -603,8 +640,13 @@ public class GiftService {
 
     /** 판매중지. 승인된 상품을 제공자/지자체가 임시로 노출에서 내릴 때 사용. */
     @Transactional
-    public Gift stop(Long itemId) {
+    public Gift stop(Long itemId, Long sellerId) {
         Gift gift = detail(itemId);
+        // discontinue()와 동일한 소유권 검사 - 예전에는 이 검사가 없어 itemId만 바꾸면
+        // 남의 답례품을 판매중지시킬 수 있었다.
+        if (!gift.getSellerId().equals(sellerId)) {
+            throw new GiftException("본인이 등록한 답례품만 판매중지할 수 있습니다.");
+        }
         if (!STATUS_APPROVED.equals(gift.getDataStatusCode())) {
             throw new GiftException("승인된 답례품만 판매중지할 수 있습니다.");
         }
@@ -621,11 +663,15 @@ public class GiftService {
      * restoreStockForOrder를 통해서만 이뤄진다.
      */
     @Transactional
-    public Gift adjustStock(Long itemId, int newQuantity) {
+    public Gift adjustStock(Long itemId, Long sellerId, int newQuantity) {
         if (newQuantity < 0) {
             throw new GiftException("재고 수량은 0 이상이어야 합니다.");
         }
         Gift gift = detail(itemId);
+        // 소유권 검사 - 예전에는 없어 남의 답례품 재고를 임의로 바꿀 수 있었다.
+        if (!gift.getSellerId().equals(sellerId)) {
+            throw new GiftException("본인이 등록한 답례품만 재고를 조정할 수 있습니다.");
+        }
         gift.setStockQuantity(newQuantity);
         gift.setSoldOut(newQuantity <= 0 ? SOLD_OUT : IN_STOCK);
         return giftRepository.save(gift);

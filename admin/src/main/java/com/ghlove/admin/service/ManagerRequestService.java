@@ -68,7 +68,7 @@ public class ManagerRequestService {
 
     /** 승인 - OP_MANAGER 행을 새로 만들고 임시 비밀번호를 발급한다(반환값 - 승인 화면에서
      *  1회 노출, 이 프로젝트의 이메일 모크 정책과 동일하게 실제 메일 전송 대신 화면 표시).
-     *  authority는 승인자가 화면에서 직접 고른 AS-IS 실제 6단계 역할 중 하나 - 신청서 자체의
+     *  authority는 승인자가 화면에서 직접 고른 구현된 6개 역할(ROLE_ADMIN_1~6) 중 하나 - 신청서 자체의
      *  locgovCode(광역단위, 참고용)와 달리 지자체 정/부담당자(ROLE_ADMIN_5/6)의 실제 조회범위
      *  locgovCode는 승인 시점에 승인자가 기초단체 단위로 명시적으로 배정한다. */
     @Transactional

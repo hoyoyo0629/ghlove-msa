@@ -1,0 +1,1193 @@
+@charset "utf-8";
+
+/*
+	Copyright(c) 2019 Onlinepowers
+	http://www.onlinepowers.com
+*/
+/* 배송지추가 주소찾기 */
+#layerDaumAddr {
+  width: unset;
+}
+
+/* ============================ common ============================ */
+.modal-dialog {
+  width: 88%;
+  max-width: 32rem;
+}
+
+/* -------- modal-header -------- */
+.modal-header {
+  display: block;
+  padding: 1.6rem 1.8rem;
+  text-align: center;
+  border-bottom: 1px solid #e2e2e2;
+}
+
+.modal-header .modal_tit {
+  font-weight: 700;
+  font-size: 1.8rem;
+  line-height: 2.8rem;
+  color: #000;
+}
+
+/* -------- modal-body -------- */
+.modal .modal-content {
+  border-radius: 20px;
+}
+
+.modal .modal-body {
+  padding: 30px;
+  font-weight: 400;
+}
+
+.modal .pop_txt {
+  margin-top: 45px;
+  text-align: center;
+}
+
+.modal .pop_txt p {
+  font-family: "Noto Sans KR", var(--fs-NotoSnasR), sans-serif;
+  font-weight: 500;
+  font-size: 1.5rem;
+  line-height: 2.2rem;
+  color: var(--gray2);
+}
+
+.modal .pop_txt2 {
+  text-align: center;
+}
+
+.modal .pop_txt2 p {
+  font-weight: 500;
+  font-size: 1.5rem;
+  line-height: 2.2rem;
+  color: #333;
+}
+
+.modal .btn-group {
+  margin-top: 3rem;
+}
+
+/* -------- modal_close -------- */
+.modal_close {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.2rem;
+  z-index: 10;
+  width: 3.2rem;
+  height: 3.2rem;
+  background: url("/static/images/icon/cli-icon_btn-close.png") no-repeat 0 0;
+  /* background-size: 100%; */
+  background-position: center center;
+  box-shadow: none;
+  background-size: 20px auto;
+}
+
+/* -------- modal_full -------- */
+.modal_full .modal-content {
+  border: 0;
+  border-radius: 0;
+}
+
+.btn_lg {
+  background-color: var(--main-color2);
+  border: 0;
+  border-radius: 10px;
+}
+
+/* ============================ 오늘 하루이창을 열지 않음 레이어 팝업 레이어 ============================ */
+
+.p_notice .modal-body {
+  padding-top: 60px;
+  text-align: center;
+}
+
+.p_notice_title .modal-body,
+.p_notice_full .modal-body {
+  padding-top: 30px;
+}
+
+.p_admin {
+  max-width: initial;
+  padding: 0;
+}
+
+.p_admin .modal-dialog {
+  min-height: initial;
+  max-width: initial;
+  max-height: initial;
+  width: auto;
+  height: auto;
+  margin: auto;
+}
+
+.p_admin.modal_full .modal-dialog {
+  max-width: initial;
+}
+
+.p_admin.modal_full .modal-body {
+  max-height: initial;
+}
+
+.p_notice .check_area,
+.p_admin .check_area {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 10px;
+  text-align: center;
+  background: #fff;
+}
+
+/* ============================ 오늘 하루이창을 열지 않음 레이어 팝업 레이어 - 윈도우 ============================ */
+.p_admin_win {
+  /*display: none;*/
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1050;
+  /* width: 100%; */
+  height: 100%;
+  background: #fff;
+  border: 1px solid #dfdede;
+  box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.16);
+}
+
+.p_admin_win .p_header {
+  text-align: center;
+  background: #000;
+  display: none;
+}
+
+.p_admin_win .p_header .p_header_tit {
+  padding: 1.6rem 0;
+  color: #fff;
+  font-size: 1.8rem;
+  text-align: center;
+}
+
+.p_admin_win .p_body {
+  /* padding-bottom: 40px; */
+  text-align: center;
+}
+
+.p_admin_win .check_area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 10px;
+  text-align: center;
+  background: #fff;
+}
+
+.check_area label {
+  font-size: 14px;
+  color: #878787;
+  font-weight: 400;
+  /* background-size: 18px;
+	background-position: 3px left;
+	background-image: url('/static/images/icon/icon_check-off.png'); */
+}
+
+.p_admin_win .p_admin_win_close {
+  display: block;
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  width: 18px;
+  height: 15px;
+  background: url("/static/images/icon/cli-icon_btn-close.png") no-repeat center center;
+  padding: 6px 5px 6px 6px;
+  margin: 12px;
+  border-radius: 3px;
+  box-sizing: content-box;
+  background-size: 18px auto;
+  background-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.16);
+  /* background-size:53px auto; */
+}
+
+/* ============================ 제주/도서산간지역 레이어 ============================ */
+.pop_delivery_location .location_top {
+  display: flex;
+  position: relative;
+}
+
+.pop_delivery_location .location_top .custom-select.box {
+  width: calc(100% - 66%);
+  margin-right: 16px;
+}
+
+.pop_delivery_location .form-control.box {
+  position: relative;
+  width: calc(100% - 37%);
+  padding: 0 50px 0 13px;
+}
+
+.pop_delivery_location .search_btn {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  width: 30px;
+  height: 42px;
+  margin-top: -21px;
+  background: #fff;
+}
+
+.pop_delivery_location .search_btn img {
+  width: auto;
+  height: auto;
+}
+
+.pop_delivery_location .table_detail {
+  margin-top: 20px;
+  border: 1px solid #e2e2e2;
+}
+
+.pop_delivery_location .table_detail tr:first-child {
+  border-top: 0;
+}
+
+.pop_delivery_location .table_detail tr {
+  border-top: 1px solid #e2e2e2;
+  border-bottom: 1px solid #e2e2e2;
+}
+
+.pop_delivery_location .table_detail th {
+  padding: 6px 0;
+  color: #959595;
+  font-size: 1.2rem;
+  font-weight: 500;
+  line-height: 1.7rem;
+  vertical-align: middle;
+  text-align: center;
+  border-right: 1px solid #e2e2e2;
+  background: #f7f7f7;
+}
+
+.pop_delivery_location .table_detail td {
+  padding: 12px 17px;
+  color: #959595;
+  font-size: 1.2rem;
+  line-height: 1.7rem;
+  border-right: 1px solid #e2e2e2;
+}
+
+.pop_delivery_location .table_detail td:nth-child(2),
+.pop_delivery_location .table_detail td:nth-child(3) {
+  text-align: center;
+}
+
+/* ============================ 다운로드가능쿠폰 레이어 ============================ */
+.pop_down_coupon .coupon_list {
+  border-top: 0;
+}
+
+.pop_down_coupon .table_detail th,
+.pop_down_coupon .table_detail td {
+  text-align: center;
+  border-right: 1px solid #e2e2e2;
+}
+
+.pop_down_coupon .table_detail td:first-child {
+  text-align: left;
+}
+
+.pop_down_coupon .btn_down_coupon span {
+  display: inline-block;
+}
+
+.btn_down_coupon span:before {
+  content: "";
+  display: inline-block;
+  width: 15px;
+  height: 14px;
+  margin-right: 8px;
+  background: #fbfbfb url(/static/images/icon/icon_down01.png) no-repeat;
+  background-size: 15px auto;
+}
+
+/* ============================ sns공유하기 레이어 ============================ */
+.layer_sns .modal-body {
+  height: 100%;
+  padding-right: 0;
+  padding-left: 0;
+  align-items: center;
+  flex-direction: column;
+}
+
+.layer_sns .sns_pop {
+  display: flex;
+  justify-content: center;
+}
+
+.layer_sns .sns_pop a {
+  display: block;
+  width: 17%;
+  max-width: 56px;
+  margin-left: 13px;
+}
+
+.layer_sns .sns_pop a:first-child {
+  margin-left: 0;
+}
+
+.layer_sns .sns_pop a img {
+  width: 100%;
+  height: 100%;
+}
+
+/* ============================ 상품 상세보기 레이어 ============================ */
+.modal_rev_dialog .modal-content {
+  padding: 0;
+  overflow: hidden;
+  border: none;
+}
+
+.modal_rev_dialog .modal-content .modal-head {
+  background-color: var(--main-color2);
+  color: #fff;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.modal_rev_dialog .modal-content .modal-body {
+  padding: 0;
+  /* margin-bottom: 10px; */
+}
+
+.modal_rev_dialog .modal-content .modal_close {
+  background-image: url("/static/images/icon/btn_close-modal.png");
+}
+
+.modal_rev_dialog {
+  max-width: 600px;
+  max-height: 720px;
+  width: 100%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  overflow: hidden;
+}
+
+.modal_rev_dialog .swiper-wrapper {
+  height: 640px !important;
+  width: 600px !important;
+  margin-bottom: 0 !important;
+}
+
+.modal_rev_dialog .swiper-slide {
+  width: 600px;
+  height: 600px;
+}
+
+.modal_rev_dialog .swiper-slide img {
+  height: 600px !important;
+  object-fit: cover;
+}
+.modal_rev_dialog .swiper-container {
+}
+.modal_rev_dialog .swiper-container-horizontal > .swiper-pagination-bullets {
+  bottom: 15px;
+}
+
+.popup_detail.modal_full .modal-dialog {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100vh;
+  margin: 0;
+}
+
+.popup_detail.modal_full .modal-dialog {
+  max-width: 100%;
+}
+
+.popup_detail .modal-dialog-centered.modal-dialog-scrollable .modal-content {
+  max-height: 100vh;
+  height: 100vh;
+}
+
+.popup_detail.modal .modal-body {
+  max-width: 100%;
+  max-height: 100%;
+  /* margin: 80px auto 0; */
+}
+
+.popup_detail .img_area:first-child {
+  margin: 0 auto;
+}
+
+.popup_detail .img_area {
+  width: 600px;
+  height: 600px;
+  margin: 70px auto 0;
+  background: #e2e2e2;
+}
+
+.popup_detail .img_area img {
+  width: 100%;
+  height: 100%;
+}
+
+/* ============================ 상품후기 상세보기 레이어 ============================ */
+
+.pop_detail_review .modal-dialog {
+  max-width: 60rem;
+}
+
+.pop_detail_review .modal-content {
+  background: none;
+  border: 0;
+}
+
+.pop_detail_review .modal-body {
+  background: 0;
+}
+
+.pop_detail_review .item_detail_review {
+  margin-bottom: 30px;
+}
+
+.pop_detail_review .thumb_area_wrap {
+  display: flex;
+  margin-top: 30px;
+  justify-content: center;
+}
+
+.pop_detail_review .thumb_area {
+  overflow: hidden;
+  width: 65px;
+  height: 65px;
+  margin-right: 30px;
+}
+
+.pop_detail_review .thumb_area:last-child {
+  margin-right: 0;
+}
+
+.pop_detail_review .thumb_area img {
+  width: 100%;
+  height: 100%;
+}
+
+.pop_detail_review .thumb_area.on {
+  border: 4px solid #000;
+}
+
+.pop_detail_review .item_detail_review {
+  width: auto;
+  height: auto;
+  margin: 0 auto;
+}
+
+.pop_detail_review .modal_close {
+  right: 3.2rem;
+  width: 65px;
+  height: 65px;
+  background: url(/static/images/icon/btn_popclose_wh.png) no-repeat 0 0;
+  background-size: 65px auto;
+}
+
+/* ============================ 스타일북 ============================ */
+.modal.pop_style_book {
+  overflow: hidden;
+}
+
+.pop_style_book .modal-content {
+  padding-top: 49px;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+}
+
+.pop_style_book .modal-body {
+  height: calc(100vh - 200px);
+  padding: 0;
+  background-color: #fff;
+  overflow-y: auto;
+}
+
+/* scroll 보이게 활성화 */
+.pop_style_book .style_conts::-webkit-scrollbar {
+  width: 7px;
+}
+
+.pop_style_book .style_conts::-webkit-scrollbar-thumb {
+  background: #000;
+}
+
+/* --- style_list ---*/
+.style_list .style_conts {
+  padding: 11px 30px 30px;
+}
+
+.style_list .txt_top {
+  padding-bottom: 20px;
+  border-bottom: 1px solid #d8d8d8;
+}
+
+.style_list .txt_top .link_share {
+  display: block;
+  width: 46px;
+  height: 46px;
+  margin-left: -12px;
+  background: url(/static/images/icon/btn_share_w.png) no-repeat;
+  background-size: 100%;
+}
+
+.style_list .txt_top .title {
+  display: -webkit-box;
+  max-height: 4rem;
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 2rem;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-wrap: break-word;
+}
+
+.style_list .txt_top .conts {
+  margin-top: 20px;
+  font-size: 1.2rem;
+  line-height: 1.8rem;
+  color: #686868;
+}
+
+.style_list .txt_bot {
+  padding-top: 20px;
+}
+
+.style_list .txt_bot .relate_tit {
+  font-weight: 700;
+  font-size: 1.4rem;
+  line-height: 2rem;
+  color: #333;
+}
+
+.style_list .txt_bot .list_area:nth-child(odd) {
+  padding-right: 6px;
+}
+
+.style_list .txt_bot .list_area:nth-child(even) {
+  padding-left: 6px;
+}
+
+/* --- modal_close ---*/
+.pop_style_book .modal_close {
+  right: 2px;
+  top: 0;
+  background-image: url(/static/images/icon/btn_popclose_wh.png);
+}
+
+/* ============================ 조건부무료배송 레이어 ============================ */
+.condi_ship_txt {
+  margin: 20px 0;
+  text-align: center;
+}
+
+.condi_ship_txt dt {
+  margin-top: 15px;
+  font-weight: 500;
+  font-size: 1.5rem;
+  line-height: 2.2rem;
+  color: #333;
+}
+
+.condi_ship_txt dt:first-child {
+  margin-top: 0;
+}
+
+.condi_ship_txt dd {
+  margin-top: 5px;
+  font-size: 1.4rem;
+  line-height: 2rem;
+  color: #959595;
+}
+
+/* ============================ 복수배송지등록 레이어 ============================ */
+.multi_deli_list .deli_area {
+  padding: 2rem 20px 2.5rem;
+  border-bottom: 5px solid #f6f6f6;
+}
+
+.multi_deli_list .deli_area:first-child {
+  padding-top: 0;
+}
+
+.multi_deli_list .deli_area:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.multi_deli_list .deli_tit {
+  font-weight: 700;
+  font-size: 1.6rem;
+  line-height: 2.4rem;
+  color: #000;
+}
+
+.multi_deli_list .item_list {
+  margin-top: 24px;
+}
+
+.multi_deli_list .radio_wrap {
+  margin-top: 30px;
+}
+
+.multi_deli_list .radio_wrap .radio_area {
+  margin: 0 1.4rem 5px 0;
+}
+
+.multi_deli_list .form_wrap_line {
+  margin-top: 20px;
+}
+
+.pop_multi_destin .btn-group {
+  margin-top: 4rem;
+  padding: 0 20px;
+}
+
+/* ============================ 배송지목록 레이어 ============================ */
+.pop_deli_list .delivery_list {
+  margin-top: 0;
+  border-top: 0;
+}
+
+.pop_deli_list .link_deli_add {
+  margin-top: 30px;
+  text-align: center;
+}
+
+.pop_deli_list .link_deli_add a {
+  display: inline-block;
+  font-weight: 500;
+  font-size: 1.2rem;
+  line-height: 1.8rem;
+  color: #4c4c4c;
+  text-decoration: underline;
+}
+
+/* ============================ 취소신청 레이어 ============================ */
+.apply_wrap .item_list {
+  margin-bottom: 20px;
+}
+
+.apply_wrap .item_list .list_area:nth-last-of-type(1) {
+  padding-bottom: 0;
+}
+
+.apply_wrap .apply_area {
+  margin-bottom: 40px;
+}
+
+.apply_wrap .apply_area:nth-last-of-type(1) {
+  margin-bottom: 0;
+}
+
+.apply_wrap .apply_area .apply_tit {
+  margin-bottom: 20px;
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 2.2rem;
+  color: #000;
+}
+
+.apply_wrap .form_wrap_line .info_dot {
+  margin-top: 20px;
+}
+
+.apply_wrap .radio_area.refund {
+  margin-top: 40px;
+}
+
+.apply_wrap .apply_total {
+  margin-top: 40px;
+  padding: 9px 12px;
+  background: #f6f6f6;
+}
+
+.apply_wrap .apply_total dl {
+  display: flex;
+  padding: 7px 0;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.apply_wrap .apply_total dt,
+.apply_wrap .apply_total dd {
+  font-size: 1.4rem;
+  line-height: 2rem;
+  color: #333;
+}
+
+.apply_wrap .apply_total dt {
+  font-weight: 400;
+}
+
+.apply_wrap .apply_total dd {
+  font-weight: 500;
+}
+
+.apply_wrap .apply_total .total_area dt {
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 2.2rem;
+}
+
+.apply_wrap .apply_total .total_area dd {
+  font-size: 1.6rem;
+  line-height: 2.2rem;
+}
+
+/* ============================ 교환신청, 반품신청 레이어 ============================ */
+.apply_wrap .tab-content {
+  padding-top: 20px;
+}
+
+.apply_wrap .form-group .radio_area {
+  margin-right: 60px;
+}
+
+/* ============================ 적용상품보기 레이어 ============================ */
+.coupon_guide {
+  margin-bottom: 15px;
+  font-weight: 500;
+  font-size: 1.6rem;
+  line-height: 2.4rem;
+  color: #333;
+  text-align: center;
+}
+
+.coupon_guide strong {
+  color: #000;
+}
+
+/* ============================ 이용약관 레이어 ============================ */
+.terms_wrap dl {
+  margin-top: 2.5rem;
+}
+
+.terms_wrap dl:first-child {
+  margin-top: 0;
+}
+
+.terms_wrap dt,
+.terms_wrap dd {
+  font-size: 1.3rem;
+  line-height: 2.4rem;
+  color: #333;
+}
+
+.terms_wrap dt {
+  font-weight: 700;
+}
+
+/* ======================================== ~ mobile ======================================== */
+@media (max-width: 767px) {
+  /* ============ common ============ */
+  .modal-dialog {
+    margin: auto;
+  }
+
+  /* --- modal_full --- */
+  .modal_full .modal-dialog {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100vh;
+    margin: 0;
+  }
+
+  .modal_full .modal-body {
+    padding: 20px;
+  }
+
+  .modal_full .modal-content {
+    min-height: 100vh;
+  }
+
+  /* ============ 복수배송지등록 레이어 ============ */
+  .pop_multi_destin .modal-body {
+    padding-right: 0;
+    padding-left: 0;
+  }
+}
+
+/* ======================================== tablet ======================================== */
+@media (min-width: 768px) {
+  /* ============ common ============ */
+  /* --- modal_full --- */
+  .modal_full .modal-content {
+    padding-bottom: 30px;
+  }
+
+  .modal_full .modal-body {
+    max-height: 750px;
+    padding-bottom: 0;
+  }
+
+  .modal_full .modal-dialog {
+    max-width: 600px;
+  }
+
+  /* ============ 상품상세 후기 보기 ============ */
+  .pop_detail_review .item_detail_review {
+    width: 450px;
+    height: 450px;
+  }
+
+  /* ============ 스타일북 ============ */
+  .pop_style_book .modal-dialog {
+    width: auto;
+    max-width: 920px;
+  }
+
+  .pop_style_book .modal-content {
+    padding-top: 0;
+  }
+
+  .pop_style_book .modal-body {
+    height: auto;
+  }
+
+  .style_list {
+    display: flex;
+  }
+
+  .style_list .style_img {
+    position: relative;
+    width: 600px;
+    background: #f0f0f0;
+  }
+
+  .style_list .style_img > img {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    margin: auto;
+  }
+
+  .style_list .style_conts {
+    width: 320px;
+    min-height: 600px;
+    max-height: calc(100vh - 200px);
+    /*height: 600px;*/
+    padding-top: 14px;
+    overflow-y: auto;
+  }
+
+  .style_list .txt_top {
+    padding-bottom: 25px;
+  }
+
+  .style_list .txt_top .title {
+    margin-top: 20px;
+    font-size: 18px;
+  }
+
+  .style_list .txt_top .conts {
+    font-size: 13px;
+    line-height: 21px;
+  }
+
+  .style_list .txt_bot {
+    padding-top: 15px;
+  }
+
+  .pop_style_book .modal_close {
+    top: -49px;
+  }
+
+  /* ============ 복수배송지등록 레이어 ============ */
+  .multi_deli_list .deli_area {
+    border-bottom: 1px solid #333;
+  }
+
+  .multi_deli_list .deli_area,
+  .pop_multi_destin .btn-group {
+    padding-right: 0;
+    padding-left: 0;
+  }
+}
+
+/* ======================================== pc ======================================== */
+@media (min-width: 992px) {
+  /* ============ 상품후기 상세보기 레이어 ============ */
+  .pop_detail_review .item_detail_review {
+    width: 540px;
+    height: 540px;
+    margin: 0 auto;
+  }
+}
+
+/* ================= 추가  ===================================================================================== */
+/* 후기작성 */
+.md_rv_write .top_tit {
+  margin-bottom: 30px;
+  font-size: 1.3rem;
+  color: #333;
+  text-align: center;
+  line-height: 22px;
+}
+
+.md_rv_write .top_tit > dt {
+  margin-bottom: 20px;
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #000;
+  line-height: 34px;
+}
+
+.md_rv_write .prd_info {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.md_rv_write .prd_info > dt {
+  display: table-cell;
+  width: 125px;
+  vertical-align: top;
+}
+
+.md_rv_write .prd_info > dd {
+  display: table-cell;
+  padding: 30px;
+  background: #fbfbfb;
+  vertical-align: middle;
+}
+
+.md_rv_write .prd_info > dd > p {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: #333;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.md_rv_write .op_view_chk {
+  display: inline-block;
+  position: relative;
+  min-width: 20px;
+  min-height: 20px;
+  margin-top: 20px;
+  vertical-align: top;
+}
+
+.md_rv_write .rv_form > dt {
+  display: flex;
+  margin: 40px 0 15px;
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: #000;
+}
+
+.md_rv_write .rv_form > dt .score {
+  margin-left: 15px;
+  font-size: 3rem;
+  font-weight: 700;
+  color: #000;
+}
+
+.md_rv_write .rv_form .info_dot > p > b {
+  font-weight: 700;
+  color: #000;
+}
+
+.md_rv_write .rv_form .custom-select {
+  margin-bottom: 10px;
+}
+
+.md_rv_write .file_area {
+  margin-top: 15px;
+}
+
+.md_rv_write .file_area ul {
+  display: flex;
+}
+
+.md_rv_write .file_area li {
+  position: relative;
+  margin-right: 4%;
+  width: 65px;
+  height: 65px;
+}
+
+.md_rv_write .file_area li:last-child {
+  margin-right: 0;
+}
+
+.md_rv_write .file_area li div {
+  width: 100%;
+  height: 100%;
+}
+
+.md_rv_write .file_area input[type="file"] {
+  display: none;
+}
+
+.md_rv_write .file_area .btn_file_del {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 26px;
+  height: 26px;
+  background: url(/static/images/icon/btn_file_del.png) no-repeat 50%;
+  background-size: 18px;
+}
+
+.md_rv_write .file_area .btn_file_add {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: url(/static/images/icon/btn_file_add.png) no-repeat 0 0;
+  background-size: 100%;
+  cursor: pointer;
+}
+
+.md_rv_write .file_area .info {
+  margin-top: 1.1rem;
+  font-size: 1.2rem;
+  line-height: 1.7rem;
+  color: #959595;
+}
+
+.md_rv_write .file_sel_area input {
+  display: none;
+}
+
+/* 나와 비슷한 체형의 상품후기 모아보기 */
+.md_rv_myft .myft_top {
+  text-align: right;
+}
+
+.md_rv_myft .myft_top .btn_filter_reset {
+  display: inline-block;
+  padding: 15px 20px 15px 10px;
+  font-size: 1.4rem;
+  background: url(/static/images/icon/icon_reset.png) no-repeat center right;
+  background-size: 15px auto;
+  vertical-align: top;
+}
+
+.md_rv_myft .myft_list {
+  padding: 30px 0;
+  border: solid #d8d8d8;
+  border-width: 1px 0;
+}
+
+.md_rv_myft .myft_list > dt {
+  margin-top: 60px;
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: #000;
+}
+
+.md_rv_myft .myft_list > dt:first-child {
+  margin: 0;
+}
+
+.md_rv_myft .myft_list > dd {
+  font-size: 0;
+  line-height: 0;
+}
+
+.md_rv_myft .myft_list .chk_g > span {
+  display: inline-block;
+  position: relative;
+  min-width: 40px;
+  min-height: 40px;
+  margin: 10px 10px 0 0;
+  vertical-align: top;
+}
+
+.chk_g input[type="checkbox"] {
+  position: absolute;
+  left: -9999px;
+  width: 0;
+  height: 0;
+  border: none;
+  overflow: hidden;
+}
+
+.chk_g input[type="checkbox"] + label {
+  position: relative;
+  display: block;
+  padding: 7px 10px 3px;
+  background: #fff;
+  border: solid 1px #959595;
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: #000;
+  text-align: center;
+  line-height: 28px;
+  cursor: pointer;
+  transition: all 0.4s;
+}
+
+.chk_g input[type="checkbox"]:checked + label {
+  background: #000;
+  border: solid 1px #000;
+  color: #fff;
+}
+
+@media (max-width: 414px) {
+  .md_rv_write .top_tit > dt {
+    margin-bottom: 15px;
+    font-size: 2.2rem;
+  }
+
+  .md_rv_write .prd_info > dt {
+    width: 100px;
+  }
+}
+
+
+.p_admin_win {
+  top: 10%;
+  left: 5%;
+  /* width: 80%; */
+  height: unset;
+  /* max-width: 360px; */
+  /* max-width: 1080px; */
+  position: absolute;
+
+  /* 최소 너비 지정 */
+  min-width: unset;
+}
+
+@media screen and (max-width: 768px) {
+  #layerDaumAddr.modal-content {
+    left: -20px;
+  }
+
+  .p_admin_win {
+    top: 10%;
+    /* left: 5%; */
+    width: 80%;
+    height: unset;
+    /* max-width: 360px; */
+    position: absolute;
+    min-width: 360px;
+
+    /* 팝업 가운데 정렬	 */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3000;
+  }
+}

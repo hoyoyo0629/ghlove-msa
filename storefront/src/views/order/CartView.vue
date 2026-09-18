@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
 
 // AS-IS cart/index.html 재현 (Thymeleaf 버전 order/cart.html과 동일 출처). AS-IS는 체크박스
 // change 이벤트마다 순수 JS로 합계를 재계산하지만, 여기서는 selected Set을 reactive로 두고
@@ -48,11 +49,24 @@ function toggleLine(cartItemId, val) {
   else selected.delete(cartItemId)
 }
 
+function selectedLines(g) {
+  return g.lines.filter((l) => selected.has(l.cartItemId))
+}
 function groupSelectedTotal(g) {
-  return g.lines.filter((l) => selected.has(l.cartItemId)).reduce((sum, l) => sum + l.lineTotal, 0)
+  return selectedLines(g).reduce((sum, l) => sum + l.lineTotal, 0)
+}
+// 배송비는 서버가 답례품별 배송정책으로 계산해 line.deliveryFee/payable로 내려준다
+// (예전에는 화면이 "무료배송"으로 하드코딩해 실제 차감 포인트와 어긋났다). 배송지 입력 전
+// 단계라 제주·도서산간 추가배송비는 아직 빠져 있고, 주문결제 화면에서 주소를 넣으면
+// /api/checkout/preview가 그것까지 반영한 금액으로 다시 내려준다.
+function groupSelectedDeliveryFee(g) {
+  return selectedLines(g).reduce((sum, l) => sum + l.deliveryFee, 0)
+}
+function groupSelectedPayable(g) {
+  return selectedLines(g).reduce((sum, l) => sum + l.payable, 0)
 }
 function insufficient(g) {
-  return groupSelectedTotal(g) > g.givePoint
+  return groupSelectedPayable(g) > g.givePoint
 }
 
 async function changeQuantity(line) {
@@ -76,6 +90,8 @@ async function deleteSelected() {
     return
   }
   await api.post('order', '/api/cart/items/delete', { cartItemId: ids })
+  // AS-IS cart/index.html:552
+  alert('해당 답례품이 장바구니에서 삭제되었습니다.')
   await load()
 }
 
@@ -92,10 +108,6 @@ function goCheckout() {
     }
   }
   router.push({ path: '/checkout', query: { cartItemId: ids } })
-}
-
-function formatN(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
 }
 </script>
 
@@ -205,11 +217,14 @@ function formatN(n) {
                   <div class="smallTxt">
                     답례품 포인트
                     <span class="bot_P">{{ formatN(groupSelectedTotal(g)) }} P</span>
-                    + 무료배송 =
+                    <template v-if="groupSelectedDeliveryFee(g) > 0">
+                      + 배송비 <span class="bot_P">{{ formatN(groupSelectedDeliveryFee(g)) }} P</span> =
+                    </template>
+                    <template v-else>+ 무료배송 =</template>
                   </div>
                   <div class="bigTxt">
                     <span class="bot_txt">결제 예정 포인트</span>
-                    <span class="bot_price" :class="insufficient(g) ? 'pointRed' : 'pointblue'">{{ formatN(groupSelectedTotal(g)) }}P</span>
+                    <span class="bot_price" :class="insufficient(g) ? 'pointRed' : 'pointblue'">{{ formatN(groupSelectedPayable(g)) }}P</span>
                   </div>
                   <span class="pointRed" v-if="insufficient(g)"> ( 주문불가 )</span>
                 </div>

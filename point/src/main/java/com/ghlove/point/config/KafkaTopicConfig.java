@@ -27,4 +27,13 @@ public class KafkaTopicConfig {
                 .replicas(1)
                 .build();
     }
+
+    /** ISP 도메인 이벤트 "포인트예약됨/해제됨" 토픽 - point가 소유한다. */
+    @Bean
+    public NewTopic pointReservationTopic() {
+        return TopicBuilder.name(com.ghlove.point.event.PointReservationPublisher.TOPIC)
+                .partitions(1)
+                .replicas(1)
+                .build();
+    }
 }

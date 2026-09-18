@@ -105,8 +105,16 @@ public class Gift {
     @Column(name = "SHIPPING_EXTRA_CHARGE2")
     private Integer shippingExtraCharge2;
 
+    /** 반품 가능여부 (Y/N, 기본 Y). AS-IS는 이 값이 'Y'일 때만 교환·반품 버튼을 보여준다. */
     @Column(name = "ITEM_RETURN_FLAG")
     private String itemReturnFlag;
+
+    /**
+     * 모바일상품(교환권) 여부 (Y/N, 기본 N). 실물 배송이 없는 상품이라 AS-IS는
+     * 교환·반품 대상에서 제외한다(`mypage/orderList.html:318,321`).
+     */
+    @Column(name = "MOBILE_ITEM_YN")
+    private String mobileItemYn;
 
     /** 대표상품 여부 (AS-IS opmanager/item/representative-item - 실제 운영사이트에 살아있는
      *  기능, view_search_spcl_item과는 무관). 'Y'면 대표상품 목록에 노출된다. */

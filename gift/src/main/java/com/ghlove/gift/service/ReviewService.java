@@ -28,6 +28,7 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final ReviewImageRepository reviewImageRepository;
     private final ReviewReportRepository reviewReportRepository;
+    private final com.ghlove.gift.repository.ReviewLikeRepository reviewLikeRepository;
     private final FileStorageService fileStorageService;
 
     public List<Review> reviewsOf(Long itemId) {
@@ -192,5 +193,60 @@ public class ReviewService {
             return "";
         }
         return "\"" + value.replace("\"", "\"\"") + "\"";
+    }
+
+    /** 마이페이지 "답례품 후기"의 행별 삭제 (AS-IS mypage/review.html deleteReview) - 본인이 쓴
+     * 후기만 지울 수 있다. 첨부 이미지와 신고 이력은 후기에 딸린 행이라 같이 정리한다
+     * (업로드된 파일 자체는 다른 곳에서 참조될 수 있어 건드리지 않는다). */
+    @Transactional
+    public void deleteMine(Long itemReviewId, Long userId) {
+        Review review = reviewRepository.findById(itemReviewId)
+                .orElseThrow(() -> new GiftException("후기를 찾을 수 없습니다."));
+        if (!userId.equals(review.getUserId())) {
+            throw new GiftException("본인이 작성한 후기만 삭제할 수 있습니다.");
+        }
+        reviewImageRepository.deleteAll(reviewImageRepository.findByItemReviewIdOrderByOrderingAsc(itemReviewId));
+        reviewReportRepository.deleteAll(reviewReportRepository.findByItemReviewIdIn(List.of(itemReviewId)));
+        reviewRepository.delete(review);
+    }
+
+    /**
+     * 상품평 좋아요 (AS-IS `ItemServiceImpl.saveItemReviewLike()` `:5523~5553`).
+     *
+     * <p><b>취소가 없는 1회성</b>이다 - 이미 누른 상태면 아무 일도 하지 않고 false를 돌려준다.
+     * 토글이 아니라는 점이 관심답례품(wishlist)과 다르다. 중복 판정은 로그인 회원이면
+     * USER_ID, 비로그인이면 IP로 한다(AS-IS 그대로).
+     *
+     * @return 이번 호출로 실제 좋아요가 기록됐으면 true, 이미 누른 상태였으면 false
+     */
+    @Transactional
+    public boolean like(Integer itemReviewId, Long userId, String ip) {
+        Review review = reviewRepository.findById(itemReviewId.longValue())
+                .orElseThrow(() -> new GiftException("상품평을 찾을 수 없습니다."));
+
+        boolean already = userId != null
+                ? reviewLikeRepository.existsByItemReviewIdAndUserId(itemReviewId, userId)
+                : reviewLikeRepository.existsByItemReviewIdAndUserIdIsNullAndIp(itemReviewId, ip);
+        if (already) {
+            return false;
+        }
+
+        com.ghlove.gift.domain.ReviewLike like = new com.ghlove.gift.domain.ReviewLike();
+        like.setItemReviewId(itemReviewId);
+        like.setUserId(userId);
+        like.setIp(ip);
+        like.setCreated(java.time.LocalDateTime.now());
+        reviewLikeRepository.save(like);
+
+        // AS-IS는 updateItemReviewLikeCount 쿼리로 집계했다 - 여기서는 카운터를 올린다.
+        review.setLikeCount((review.getLikeCount() == null ? 0 : review.getLikeCount()) + 1);
+        reviewRepository.save(review);
+        return true;
+    }
+
+    /** 로그인 회원이 이 상품평에 이미 좋아요를 눌렀는지 (상세화면 버튼 상태 표시용). 비로그인은
+     *  IP 기준이라 화면 상태로는 표시하지 않는다(AS-IS도 count만 보여주고 누른 상태는 안 남긴다). */
+    public boolean likedBy(Integer itemReviewId, Long userId) {
+        return userId != null && reviewLikeRepository.existsByItemReviewIdAndUserId(itemReviewId, userId);
     }
 }

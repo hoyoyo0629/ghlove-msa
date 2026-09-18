@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
 
 // AS-IS goods/index-main.html 재현(gift 서비스 list.html과 동일 출처). GNB "답례품몰"(전체/카테고리/검색/
 // 지자체몰) · "제철식품관" · "마을기업관" 3개 메뉴가 전부 이 화면 하나(mode 파라미터)로 들어온다.
@@ -49,10 +50,6 @@ async function toggleWishlist(gift) {
   } catch {
     router.push({ path: '/login', query: { target: route.fullPath } })
   }
-}
-
-function formatN(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
 }
 </script>
 

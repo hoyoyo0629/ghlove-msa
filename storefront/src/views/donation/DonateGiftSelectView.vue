@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
 
 // SFR-003 "기부금 납부 시 답례품 선택 기능 추가" - 기부 결제완료(MyDonationsView의 완료 처리) 직후
 // "답례품을 제공 받음"을 선택한 기부 건이면 여기로 이동한다. AS-IS/기존 TO-BE는 기부→포인트적립까지만
@@ -59,10 +60,6 @@ function goCart() {
 
 function skip() {
   router.push('/mypage/donations')
-}
-
-function formatN(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
 }
 </script>
 

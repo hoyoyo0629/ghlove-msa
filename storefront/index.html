@@ -5,32 +5,20 @@
     <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>고향사랑e음</title>
+    <!-- 전 페이지 공통 base(AS-IS 모든 화면이 공통 로드하는 셋) — 최상단이라야 페이지 전용/컴포넌트
+         CSS가 이를 덮어쓴다. 화면 전용 CSS(main/event/item/order_ali/donation_doak 등)는 AS-IS가
+         페이지별로만 로드하므로, SPA에서도 라우트별로만 주입한다(src/router/pageStyles.js).
+         전역에 다 얹으면 화면끼리 CSS가 새어나가(bleed) AS-IS와 렌더가 달라진다. -->
+    <link rel="stylesheet" href="/css/bootstrap/bootstrap.css" />
+    <link rel="stylesheet" href="/css/swiper.min.css" />
     <link rel="stylesheet" href="/css/common.css" />
     <link rel="stylesheet" href="/css/new.css" />
     <link rel="stylesheet" href="/css/default_ali.css" />
-    <link rel="stylesheet" href="/css/login-total.css" />
-    <link rel="stylesheet" href="/css/joind-ag.css" />
-    <link rel="stylesheet" href="/css/join-inf2.css" />
-    <link rel="stylesheet" href="/css/joind-agf.css" />
-    <link rel="stylesheet" href="/css/m_main.css" />
-    <link rel="stylesheet" href="/css/change-info.css" />
-    <link rel="stylesheet" href="/css/mypage-status.css" />
-    <link rel="stylesheet" href="/css/favo_info.css" />
-    <link rel="stylesheet" href="/css/data_v.css" />
-    <link rel="stylesheet" href="/css/ct_nov.css" />
+    <link rel="stylesheet" href="/css/header-footer_ali.css" />
+    <link rel="stylesheet" href="/css/popup.css" />
     <link rel="stylesheet" href="/css/layout.css" />
-    <link rel="stylesheet" href="/css/main.css" />
-    <link rel="stylesheet" href="/css/goods_card.css" />
-    <link rel="stylesheet" href="/css/item.css" />
-    <link rel="stylesheet" href="/css/order_ali.css" />
-    <link rel="stylesheet" href="/css/donation_doak.css" />
-    <link rel="stylesheet" href="/css/notice-box.css" />
-    <link rel="stylesheet" href="/css/designation.css" />
-    <link rel="stylesheet" href="/css/lclgv-map.css" />
+    <!-- site.css는 AS-IS엔 없는 MSA 자체 오버라이드(전부 네임스페이스됨) — 전역 유지 -->
     <link rel="stylesheet" href="/css/site.css" />
-    <link rel="stylesheet" href="/css/event.css" />
-    <link rel="stylesheet" href="/css/evt_card.css" />
-    <link rel="stylesheet" href="/css/evt_detail.css" />
   </head>
   <body>
     <div id="app"></div>

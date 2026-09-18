@@ -1,14 +1,17 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api/http'
+import { useKakaoCert } from '../composables/useKakaoCert'
 import { useAuthStore } from '../stores/auth'
+import { loadDaumPostcode } from '../utils/daumPostcode'
 
 // AS-IS users/join.html(및 Thymeleaf 버전 signup.html)의 3단계(약관동의/본인인증/정보입력)
 // 위저드를 그대로 재현한다. 본인인증은 실제 연계가 없는 환경이라 로그인 화면과 동일하게
 // dev-bypass로 건너뛴다(AS-IS에는 없는, 이 프로젝트가 테스트를 위해 추가한 우회).
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 
 const STEP_TITLES = { 1: '회원가입', 2: '본인인증', 3: '회원 정보 입력' }
 const step = ref(1)
@@ -45,14 +48,69 @@ function onAdChildChange() {
   terms.agreeAd = terms.adSms && terms.adEmail && terms.adPbanc && terms.adKakao
 }
 
+/** 필수약관 2건 - 다음 단계로 넘어갈 때와 카카오톡/네이버 인증으로 넘어갈 때 모두 검사한다
+ *  (AS-IS agree.vue nextStep()/submitKakao()/submitNaver()가 각각 같은 검사를 했다). */
+function requiredTermsAgreed() {
+  if (!terms.agreeTerms) { alert('이용약관에 동의해주세요'); return false }
+  if (!terms.agreePrivacy) { alert('개인정보 수집·이용에 동의해주세요'); return false }
+  return true
+}
+
 function goToStep(n) {
-  if (n === 2) {
-    if (!terms.agreeTerms) { alert('이용약관에 동의해주세요'); return }
-    if (!terms.agreePrivacy) { alert('개인정보 수집·이용에 동의해주세요'); return }
-  }
+  if (n === 2 && !requiredTermsAgreed()) return
   step.value = n
   window.scrollTo(0, 0)
 }
+
+// AS-IS agree.vue submitKakao()/submitNaver() - 약관동의 단계에서 바로 카카오톡/네이버
+// 인증으로 간편가입한다(본인인증·정보입력 단계를 건너뛴다).
+//
+// window.location을 명시적으로 쓴다 - Vue 템플릿 표현식의 `location`은 컴포넌트 인스턴스
+// (_ctx.location)로 해석되어 undefined가 되므로 템플릿에서 직접 대입하면 동작하지 않는다.
+function externalAuth(path) {
+  window.location.href = '/member' + path
+}
+
+// 카카오는 인증서비스(카카오톡 지갑 본인인증)라 화면이 JS SDK로 인증창을 띄운다(AS-IS와 동일).
+const kakaoCert = useKakaoCert()
+function startKakaoJoin() {
+  if (!requiredTermsAgreed()) return
+  kakaoCert.start('JOIN')
+}
+// 네이버는 member가 리다이렉트를 전담하는 일반 OAuth라 진입점으로 넘기기만 한다. type=JOIN을
+// 실어야 신규가입으로 끝났을 때 서버가 이 화면으로 되돌려준다(AS-IS code=JOIN_MEMBER).
+function startNaverJoin() {
+  if (!requiredTermsAgreed()) return
+  externalAuth('/login/naver?type=JOIN')
+}
+
+// 가입완료 안내(AS-IS join.html의 code=JOIN_MEMBER 모달)가 열리는 경로는 두 가지다.
+//  - 카카오 인증서비스: 이 화면으로 ?code=가 돌아오고, verify 응답이 JOIN_MEMBER인 경우
+//  - 네이버/모의 인증: member가 ?joined=<provider>로 되돌려주는 경우
+// 안내문에 쓰는 이름은 member ExternalLoginController.AUTH_NAMES와 같은 매핑이다 - 리다이렉트
+// Location 헤더에는 한글을 담을 수 없어(헤더가 유실된다) provider 코드로만 오간다.
+const AUTH_NAMES = { KAKAO: '카카오톡', NAVER: '네이버', ONEPASS: '디지털원패스', FINANCE_CERT: '금융인증서', ANYID: '간편인증' }
+const joinedAuthName = ref('')
+onMounted(async () => {
+  const certResult = await kakaoCert.consumeCode(route, 'JOIN')
+  if (certResult) {
+    await auth.fetchMe()
+    if (certResult.code === 'JOIN_MEMBER') {
+      joinedAuthName.value = certResult.authName
+    } else {
+      router.push('/')
+    }
+    return
+  }
+
+  const joined = route.query.joined
+  if (!joined) return
+  await auth.fetchMe()
+  if (!auth.loggedIn) return
+  joinedAuthName.value = AUTH_NAMES[joined] || String(joined)
+  // AS-IS history.replaceState - 새로고침해도 안내가 다시 뜨지 않게 쿼리를 지운다.
+  window.history.replaceState({}, '', '/signup')
+})
 
 const form = reactive({
   userName: '',
@@ -60,9 +118,22 @@ const form = reactive({
   loginId: '',
   password: '',
   passwordConfirm: '',
+  post: '',
   address: '',
   addressDetail: '',
 })
+
+// 주소찾기 - 회원정보수정/배송지와 동일한 다음 우편번호 위젯(utils/daumPostcode). AS-IS 회원가입은
+// juso.go.kr 팝업이지만 이 프로젝트는 이미 daum.Postcode로 통일해 다른 화면과 동작을 맞춘다.
+async function searchAddress() {
+  await loadDaumPostcode()
+  new window.daum.Postcode({
+    oncomplete(data) {
+      form.post = data.zonecode
+      form.address = data.roadAddress || data.jibunAddress
+    },
+  }).open()
+}
 const phoneCode = ref('010')
 const phoneMid = ref('')
 const phoneLast = ref('')
@@ -240,6 +311,20 @@ async function onSubmit() {
         <div class="btn-box many">
           <button type="button" class="blueBtn cancellation" @click="router.push('/')">취소<span><img src="/images/icon/cli-icon_btn-hover-arrow.png" alt="" /></span></button>
           <button type="button" class="blueBtn u-confirm" @click="goToStep(2)">다음<span><img src="/images/icon/cli-icon_btn-hover-arrow.png" alt="" /></span></button>
+
+          <button type="button" class="btn-simple btn-simple--kakao" id="kakaoLoginBtn" title="카카오톡 인증 로그인" @click="startKakaoJoin">
+            <div class="btn-simple__logo">
+              <img src="/images/kakao/kakaotalk_symbol_screen.png" class="btn-simple__img" alt="" aria-hidden="true" />
+            </div>
+            <span class="btn-simple__txt">카카오톡 인증</span>
+          </button>
+
+          <button type="button" class="btn-simple btn-simple--naver" id="naverLoginBtn" title="네이버 인증 로그인" @click="startNaverJoin">
+            <div class="btn-simple__logo">
+              <img src="/images/new/naver_logo_2.png" style="height: 44px; border-radius: 8px" alt="" aria-hidden="true" />
+            </div>
+            <span class="btn-simple__txt">네이버 인증</span>
+          </button>
         </div>
       </fieldset>
     </div>
@@ -263,7 +348,7 @@ async function onSubmit() {
                   <p class="s-txt"><span>금융기관에 등록된</span> <span>금융인증서로 본인 인증 하기</span></p>
                   <p class="pointRed"><span>※ 해외 체류중인 국민</span> <span> (재외국민) 활용 가능</span></p>
                 </div>
-                <button type="button" class="formBtn financ" title="새 창 알림" @click="location.href='/member/signup/finance-cert'">인증하기</button>
+                <button type="button" class="formBtn financ" title="새 창 알림" @click="externalAuth('/signup/finance-cert')">인증하기</button>
               </div>
             </div>
             <div class="authentication-area mobi">
@@ -272,7 +357,7 @@ async function onSubmit() {
                   <h3>휴대폰</h3>
                   <p class="s-txt">본인 명의로 등록된 휴대폰으로<br /> 본인 인증 하기</p>
                 </div>
-                <button type="button" class="formBtn financ" title="새 창 알림" @click="location.href='/member/signup/mobile-auth'">인증하기</button>
+                <button type="button" class="formBtn financ" title="새 창 알림" @click="externalAuth('/signup/mobile-auth')">인증하기</button>
               </div>
             </div>
           </div>
@@ -392,11 +477,17 @@ async function onSubmit() {
                     </select>
                   </span>
                 </div>
-                <div class="info-field-items">
+                <div class="info-field-items userAddress">
                   <span class="flied-title">주소</span>
                   <div class="form-field">
-                    <input type="text" v-model="form.address" placeholder="주소" />
-                    <input type="text" v-model="form.addressDetail" placeholder="상세주소" />
+                    <div class="search-address m-field">
+                      <input type="text" v-model="form.post" placeholder="우편번호" readonly />
+                      <button type="button" class="formBtn" @click="searchAddress">주소찾기</button>
+                    </div>
+                    <div class="input-address">
+                      <input type="text" v-model="form.address" placeholder="주소" readonly />
+                      <input type="text" v-model="form.addressDetail" placeholder="상세주소" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -409,6 +500,30 @@ async function onSubmit() {
           </div>
         </fieldset>
       </form>
+    </div>
+
+    <!-- AS-IS join.html의 가입완료 축하 모달 - 카카오톡/네이버 인증이 신규가입으로 끝났을
+         때만(AS-IS code=JOIN_MEMBER) 열린다. 확인은 AS-IS closePopupKakao()와 동일하게
+         기부하기 화면으로 보낸다. -->
+    <div class="black-bg show" id="joinComplete" v-if="joinedAuthName && auth.me">
+      <div class="overlayer join-complete">
+        <div class="overlayer-header"></div>
+        <div class="overlayer-body">
+          <h2>고향사랑e음<br />{{ joinedAuthName }} 인증 로그인 통한 회원가입 완료</h2>
+          <h2 style="color: red">{{ auth.me.userName }}회원님의 ID는 {{ auth.me.loginId }}입니다.</h2>
+          <img src="/images/icon/cli-icon_join-complete.png" alt="가입을 축하합니다" />
+          <div class="line"></div>
+          <h2 class="s-txt">국민비서·SMS 수신동의</h2>
+          <h2 class="s-txt">email 수신동의</h2>
+          <p>미동의를 선택하실 경우 마이페이지 &gt; 동의 항목을</p>
+          <p>미선택으로 체크하시기 바랍니다.</p>
+          <div class="btn-box">
+            <button type="button" class="blueBtn u-confirm" @click="router.push('/donate')">
+              확인<span><img src="/images/icon/cli-icon_btn-hover-arrow.png" alt="" /></span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </template>

@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
 import CustomerLnb from '../../components/CustomerLnb.vue'
+import BasePagination from '../../components/BasePagination.vue'
 
 // AS-IS qna/qna-open.html 재현 - 로그인 없이도 누구나 볼 수 있는 공개 Q&A 게시판.
 // 마이페이지 "1:1 문의"(QnaView.vue)와 OP_QNA를 공유한다.
@@ -150,19 +151,7 @@ function lockedClick() {
             </div>
           </div>
 
-          <div class="card-pagination" v-if="data.totalPages > 1">
-            <div class="pagination_ali">
-              <ul class="pagination-frame">
-                <li><a class="fist arrow_btn" href="javascript:void(0)" @click="goPage(1)"><img src="/images/icon/paging_btn-first.png" alt="처음" /></a></li>
-                <li><a class="prev arrow_btn" href="javascript:void(0)" @click="goPage(Math.max(1, page - 1))"><img src="/images/icon/paging_btn-prev.png" alt="이전" /></a></li>
-                <li v-for="p in data.totalPages" :key="p" :class="{ 'selected-page': p === page }">
-                  <a class="page-text" href="javascript:void(0)" @click="goPage(p)">{{ p }}</a>
-                </li>
-                <li><a class="next arrow_btn" href="javascript:void(0)" @click="goPage(Math.min(data.totalPages, page + 1))"><img src="/images/icon/paging_btn-next.png" alt="다음" /></a></li>
-                <li><a class="last arrow_btn" href="javascript:void(0)" @click="goPage(data.totalPages)"><img src="/images/icon/paging_btn-last.png" alt="마지막" /></a></li>
-              </ul>
-            </div>
-          </div>
+          <BasePagination card :page="page" :total-pages="data.totalPages" @change="goPage" />
         </div>
 
         <div class="btn-box">

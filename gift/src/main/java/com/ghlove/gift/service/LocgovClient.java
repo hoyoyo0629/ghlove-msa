@@ -40,9 +40,17 @@ public class LocgovClient {
     /** locgovCode -> "상위지자체명 지자체명" 맵. 실패/미매칭 시 그 항목은 그냥 빠진다(호출부가 코드로 폴백). */
     public Map<String, String> namesByCode() {
         return allLocgovs().stream()
-                .collect(Collectors.toMap(LocgovInfo::locgovCode,
-                        l -> (l.upperLocgovNm() != null ? l.upperLocgovNm() + " " : "") + l.locgovNm(),
-                        (a, b) -> a));
+                .collect(Collectors.toMap(LocgovInfo::locgovCode, LocgovClient::displayName, (a, b) -> a));
+    }
+
+    /** 제주·세종처럼 광역명과 기초명이 같은 지자체는 "제주특별자치도 제주특별자치도"로 겹쳐 보이므로
+     * 한 번만 표시한다. */
+    private static String displayName(LocgovInfo l) {
+        String upper = l.upperLocgovNm();
+        if (upper == null || upper.isBlank() || upper.equals(l.locgovNm())) {
+            return l.locgovNm();
+        }
+        return upper + " " + l.locgovNm();
     }
 
     public record LocgovInfo(String locgovCode, String locgovNm, String upperLocgovCode, String upperLocgovNm) {

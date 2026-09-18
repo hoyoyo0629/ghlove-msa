@@ -34,7 +34,7 @@
 /* 왼쪽 지도 박스 - 시·도*/
 .map-select-area .map-country {
     position: relative;
-    background-image: url('/static/images/map/cli-map_all.png');
+    background-image: url('/images/map/cli-map_all.png');
     background-repeat: no-repeat;
     background-position: center center;
     background-size: 530px;
@@ -47,14 +47,14 @@
     position: absolute;
     width: 19px;
     height: 25px;
-    background-image: url('/static/images/icon/cli-map_pin.png');
+    background-image: url('/images/icon/cli-map_pin.png');
     background-repeat: no-repeat;
     background-position: center right;
 }
 
 .map-select-area .point-mark:hover,
 .map-select-area .point-mark.currentPin {
-    background-image: url('/static/images/icon/cli-map_pin-on.png');
+    background-image: url('/images/icon/cli-map_pin-on.png');
 }
 
 /* ****************시,도 핀 위치 ********************* */
@@ -170,93 +170,93 @@
 
 .map-select-area .map-region.none {
     background-color: #fff;
-    background-image: url('/static/images/map/cli-map_region-none.png');
+    background-image: url('/images/map/cli-map_region-none.png');
     display: block;
 }
 
 /* 서울 */
 .map-select-area .map-region.region11000 {
-    background-image: url('/static/images/map/cli-map_region11.png');
+    background-image: url('/images/map/cli-map_region11.png');
 }
 
 /* 부산 */
 .map-select-area .map-region.region26000 {
-    background-image: url('/static/images/map/cli-map_region26.png');
+    background-image: url('/images/map/cli-map_region26.png');
 }
 
 /* 대구광역시 */
 .map-select-area .map-region.region27000 {
-    background-image: url('/static/images/map/cli-map_region27.png');
+    background-image: url('/images/map/cli-map_region27.png');
 }
 
 /* 인천 */
 .map-select-area .map-region.region28000 {
-    background-image: url('/static/images/map/cli-map_region28.png');
+    background-image: url('/images/map/cli-map_region28.png');
 }
 
 /* 광주광역시 */
 .map-select-area .map-region.region29000 {
-    background-image: url('/static/images/map/cli-map_region29.png');
+    background-image: url('/images/map/cli-map_region29.png');
 }
 
 /* 대전광역시 */
 .map-select-area .map-region.region30000 {
-    background-image: url('/static/images/map/cli-map_region30.png');
+    background-image: url('/images/map/cli-map_region30.png');
 }
 
 /* 울산광역시 */
 .map-select-area .map-region.region31000 {
-    background-image: url('/static/images/map/cli-map_region31.png');
+    background-image: url('/images/map/cli-map_region31.png');
 }
 
 /* 경기 */
 .map-select-area .map-region.region41000 {
-    background-image: url('/static/images/map/cli-map_region41.png');
+    background-image: url('/images/map/cli-map_region41.png');
 }
 
 /* 강원 */
 .map-select-area .map-region.region42000 {
-    background-image: url('/static/images/map/cli-map_region42.png');
+    background-image: url('/images/map/cli-map_region42.png');
 }
 
 /* 충청븍도 */
 .map-select-area .map-region.region43000 {
-    background-image: url('/static/images/map/cli-map_region43.png');
+    background-image: url('/images/map/cli-map_region43.png');
 }
 
 /* 충청남도 */
 .map-select-area .map-region.region44000 {
-    background-image: url('/static/images/map/cli-map_region44.png');
+    background-image: url('/images/map/cli-map_region44.png');
 }
 
 /* 전라북도 */
 .map-select-area .map-region.region45000 {
-    background-image: url('/static/images/map/cli-map_region45.png');
+    background-image: url('/images/map/cli-map_region45.png');
 }
 
 /* 전라남도 */
 .map-select-area .map-region.region46000 {
-    background-image: url('/static/images/map/cli-map_region46.png');
+    background-image: url('/images/map/cli-map_region46.png');
 }
 
 /* 경상북도 */
 .map-select-area .map-region.region47000 {
-    background-image: url('/static/images/map/cli-map_region47.png');
+    background-image: url('/images/map/cli-map_region47.png');
 }
 
 /* 경상남도 */
 .map-select-area .map-region.region48000 {
-    background-image: url('/static/images/map/cli-map_region48.png');
+    background-image: url('/images/map/cli-map_region48.png');
 }
 
 /* 제주특별자치도 */
 .map-select-area .map-region.region50000 {
-    background-image: url('/static/images/map/cli-map_region50.png');
+    background-image: url('/images/map/cli-map_region50.png');
 }
 
 /* 세종특별자치도 */
 .map-select-area .map-region.region36000 {
-    background-image: url('/static/images/map/cli-map_region60.png');
+    background-image: url('/images/map/cli-map_region60.png');
 }
 
 /* ****************시·군·구 핀 위치 ********************* */
@@ -1459,7 +1459,7 @@
     line-height: 130px;
     text-align: center;
     min-height: 130px;
-    background-image: url('/static/images/cli-pc_map-procedure_txtbg.png');
+    background-image: url('/images/cli-pc_map-procedure_txtbg.png');
     background-position: center center;
     background-repeat: no-repeat;
     background-size: contain;

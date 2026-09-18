@@ -55,6 +55,13 @@ public class UserDetail {
     @Column(name = "RECEIVE_KAKAO")
     private String receiveKakao;
 
+    /** 국민비서 알림서비스 수신동의 (AS-IS users/modify.html의 receivePbanc - v-model로
+     *  실제 저장되는 값이다. MSA는 이 항목만 화면에서 disabled로 막아둬 재현이 빠져 있었다).
+     *  AS-IS는 0=수신/1=비수신을 쓰지만 여기서는 나머지 3개 수신동의와 같은 'Y'/'N'으로
+     *  통일한다 - RECEIVE_EMAIL/SMS/KAKAO가 전부 Y/N이라 한 화면에서 규약이 갈리면 안 된다. */
+    @Column(name = "RECEIVE_PBANC")
+    private String receivePbanc;
+
     /** OP_USER_LEVEL(saleson 멀티벤더 회원등급/할인율 체계) FK, NOT NULL 제약만 있고 이
      *  프로젝트는 등급 개념을 실제로 쓰지 않는다(마스터 데이터 자체가 비어있는 saleson
      *  boilerplate) - 가입 시 항상 1(기본 등급)로 채운다. */

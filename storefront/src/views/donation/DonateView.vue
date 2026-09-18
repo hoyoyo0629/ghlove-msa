@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
 
 // AS-IS donation-main.html 재현(donation 서비스 donate.html과 동일 출처, GNB "기부 > 자치단체에
 // 기부하기"). 의도적 축소: 거주지 확인은 행정정보공동이용센터 연계가 없어(다른 외부연계와 동일한
@@ -72,7 +73,7 @@ const selectedLocgovName = computed(() =>
 const pointEstimateTxt = computed(() => {
   if (presentType.value !== '100' || pointRatePercent.value == null || !amount.value) return ''
   const points = Math.floor((amount.value * pointRatePercent.value) / 100)
-  return `( ${new Intl.NumberFormat('ko-KR').format(points)} 포인트 적립예상 )`
+  return `( ${formatN(points)} 포인트 적립예상 )`
 })
 
 function onProvinceChanged() {
@@ -123,13 +124,13 @@ async function verifyResidence() {
 
 function addAmount(add, reset) {
   amount.value = reset ? 0 : amount.value + add
-  amountDisplay.value = amount.value ? new Intl.NumberFormat('ko-KR').format(amount.value) : ''
+  amountDisplay.value = amount.value ? formatN(amount.value) : ''
 }
 
 function onAmountInput(e) {
   const raw = Number(String(e.target.value).replace(/[^\d]/g, '')) || 0
   amount.value = raw
-  amountDisplay.value = raw ? new Intl.NumberFormat('ko-KR').format(raw) : ''
+  amountDisplay.value = raw ? formatN(raw) : ''
 }
 
 function toggleAllAgree(e) {
@@ -182,10 +183,6 @@ async function submit() {
   } catch (e) {
     errorMessage.value = e.message
   }
-}
-
-function formatN(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
 }
 </script>
 

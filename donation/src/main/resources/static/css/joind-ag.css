@@ -61,31 +61,31 @@
 }
 
 .joind .steps-box>div.agreement>div.icon-bg {
-    background-image: url('/static/images/icon/cli-icon_agreement-off.png');
+    background-image: url('/images/icon/cli-icon_agreement-off.png');
 }
 
 .joind .steps-box>div.agreement.on>div.icon-bg {
-    background-image: url('/static/images/icon/cli-icon_agreement-on.png');
+    background-image: url('/images/icon/cli-icon_agreement-on.png');
 }
 
 .joind .steps-box>div.authentication>div.icon-bg {
-    background-image: url('/static/images/icon/cli-icon_authentication-off.png');
+    background-image: url('/images/icon/cli-icon_authentication-off.png');
 }
 
 .joind .steps-box>div.authentication.on>div.icon-bg {
-    background-image: url('/static/images/icon/cli-icon_authentication-on.png');
+    background-image: url('/images/icon/cli-icon_authentication-on.png');
 }
 
 .joind .steps-box>div.enter-info>div.icon-bg {
-    background-image: url('/static/images/icon/cli-icon_enter-info-off.png');
+    background-image: url('/images/icon/cli-icon_enter-info-off.png');
 }
 
 .joind .steps-box>div.enter-info.on>div.icon-bg {
-    background-image: url('/static/images/icon/cli-icon_enter-info-on.png');
+    background-image: url('/images/icon/cli-icon_enter-info-on.png');
 }
 
 .joind .steps-box>div.sign-up-complete>div.icon-bg {
-    background-image: url('/static/images/icon/cli-icon_sign-up-complete-off.png');
+    background-image: url('/images/icon/cli-icon_sign-up-complete-off.png');
 }
 
 
@@ -205,10 +205,10 @@
 }
 .accept-terms-area .authentication-area.financ{
     border-radius: 0 60px 60px 60px;
-    background-image: url('/static/images/auth-financ.png');
+    background-image: url('/images/auth-financ.png');
 }
 .accept-terms-area .authentication-area.mobi{
-    background-image: url('/static/images/authentication_m.png');
+    background-image: url('/images/authentication_m.png');
 }
 .accept-terms-area .authentication-area .authentication-box {
     /* width: 40%; */

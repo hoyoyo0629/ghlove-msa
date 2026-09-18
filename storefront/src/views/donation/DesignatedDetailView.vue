@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
 
 // AS-IS designated-donation/details.html 재현(donation 서비스 designated-detail.html과 동일
 // 출처). 이미지 갤러리는 AS-IS도 대표 이미지 1장 구조가 대부분이라(donation 서비스 라운드에서
@@ -59,9 +60,6 @@ function goDonate() {
 }
 function imgUrl() {
   return project.value.imageUrl || '/images/thumb.png'
-}
-function formatN(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
 }
 </script>
 

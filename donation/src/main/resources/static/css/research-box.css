@@ -242,7 +242,7 @@ transform: translate(0px,0px);
 
     .research-box .research-area {
         min-height: 416px;
-        background-image: url('/static/images/cli_research_m.png');
+        background-image: url('/images/cli_research_m.png');
         background-repeat: no-repeat;
         background-position: right bottom;
     }

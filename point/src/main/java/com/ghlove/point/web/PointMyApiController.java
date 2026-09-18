@@ -31,6 +31,11 @@ public class PointMyApiController {
     private final MemberClient memberClient;
     private final JwtVerifier jwtVerifier;
 
+    /** Thymeleaf 화면(PointController)과 **같은** 스위치로 막는다 - 한쪽만 막으면
+     *  SPA가 쓰는 이 JSON 경로로 그대로 우회된다. */
+    @org.springframework.beans.factory.annotation.Value("${ghlove.dev.manual-point-use:false}")
+    private boolean manualPointUseEnabled;
+
     public record LedgerRowDto(String txnType, String txnTypeLabel, long pointAmount, String reason,
                                 String refKey, String expirationDate, String createdDate) {
         static LedgerRowDto of(PointLedger l, Map<String, String> labels) {
@@ -83,15 +88,24 @@ public class PointMyApiController {
                 locgovSummary));
     }
 
-    public record ReservationDto(Long reservationId, long amount, String refKey, String reason,
+    public record ReservationDto(Long reservationId, String locgovCode, String locgovNm, long amount,
+                                  String refKey, String reason,
                                   String status, String statusLabel, String createdDate) {
-        static ReservationDto of(PointReservation r, Map<String, String> labels) {
-            return new ReservationDto(r.getReservationId(), r.getAmount(), r.getRefKey(), r.getReason(),
+        static ReservationDto of(PointReservation r, Map<String, String> labels, Map<String, String> locgovNames) {
+            return new ReservationDto(r.getReservationId(), r.getLocgovCode(),
+                    r.getLocgovCode() != null ? locgovNames.getOrDefault(r.getLocgovCode(), r.getLocgovCode()) : null,
+                    r.getAmount(), r.getRefKey(), r.getReason(),
                     r.getStatus(), labels.get(r.getStatus()), r.getCreatedDate() != null ? r.getCreatedDate().toString() : null);
         }
     }
 
-    public record ReservationsResponse(long availableBalance, List<ReservationDto> reservations) {
+    /** 예약 가능한 지자체 한 줄 - 예약이 지자체 단위라 화면이 선택지를 알아야 한다(SFR-004). */
+    public record ReservationLocgovDto(String locgovCode, String locgovNm,
+                                        long remaining, long reserved, long available) {
+    }
+
+    public record ReservationsResponse(long availableBalance, List<ReservationLocgovDto> locgovBalances,
+                                        List<ReservationDto> reservations) {
     }
 
     /** {@link PointController}(Thymeleaf) `/reservations` GET과 동일 조합. */
@@ -103,12 +117,24 @@ public class PointMyApiController {
         }
         Long userId = authUserId.get();
         Map<String, String> statusLabels = pointService.codesOf("PT_RESERVATION_STATUS");
+        Map<String, String> locgovNames = new LinkedHashMap<>();
+        locgovClient.allLocgovs().forEach(l -> locgovNames.put(l.locgovCode(), l.locgovNm()));
+        List<ReservationLocgovDto> locgovBalances = pointService.ledgerSummaryByLocgov(userId).stream()
+                .map(s -> {
+                    long remaining = pointService.balanceByLocgov(userId, s.locgovCode());
+                    long reserved = pointService.reservedAmountOf(userId, s.locgovCode());
+                    return new ReservationLocgovDto(s.locgovCode(),
+                            locgovNames.getOrDefault(s.locgovCode(), s.locgovCode()),
+                            remaining, reserved, remaining - reserved);
+                })
+                .filter(r -> r.remaining() > 0)
+                .toList();
         return ResponseEntity.ok(new ReservationsResponse(
-                pointService.availableBalanceOf(userId),
-                pointService.reservationsOf(userId).stream().map(r -> ReservationDto.of(r, statusLabels)).toList()));
+                pointService.availableBalanceOf(userId), locgovBalances,
+                pointService.reservationsOf(userId).stream().map(r -> ReservationDto.of(r, statusLabels, locgovNames)).toList()));
     }
 
-    public record ReserveRequest(long amount, String refKey, String reason) {
+    public record ReserveRequest(long amount, String locgovCode, String refKey, String reason) {
     }
 
     @PostMapping("/api/my/reservations")
@@ -118,7 +144,7 @@ public class PointMyApiController {
             return ResponseEntity.status(401).build();
         }
         try {
-            pointService.reserve(authUserId.get(), body.amount(), body.refKey(), body.reason());
+            pointService.reserve(authUserId.get(), body.amount(), body.locgovCode(), body.refKey(), body.reason());
         } catch (PointException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -153,6 +179,30 @@ public class PointMyApiController {
         }
         try {
             pointService.releaseReservation(id);
+        } catch (PointException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    public record UsePointsRequest(long amount, String locgovCode, String orderCode) {
+    }
+
+    /** 마이페이지 "기부포인트 조회"의 포인트 사용. Thymeleaf용 {@link PointController#usePoints}는
+     * `@RequestParam` + `redirect:`라 SPA가 그대로 호출하면 JSON 바디가 바인딩되지 않아 400이 나고,
+     * 통과하더라도 응답이 HTML이라 프론트의 JSON 파싱에서 다시 실패한다 - 같은 서비스 호출을
+     * 이 화면 전용 JSON 계약으로 노출한다. */
+    @PostMapping("/api/my/points/use")
+    public ResponseEntity<?> usePoints(HttpServletRequest request, @RequestBody UsePointsRequest body) {
+        var authUserId = jwtVerifier.currentUserId(request);
+        if (authUserId.isEmpty()) {
+            return ResponseEntity.status(401).build();
+        }
+        if (!manualPointUseEnabled) {
+            return ResponseEntity.badRequest().body(Map.of("message", "포인트 수동 사용이 허용되지 않는 환경입니다."));
+        }
+        try {
+            pointService.usePoints(authUserId.get(), body.amount(), body.locgovCode(), body.orderCode());
         } catch (PointException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

@@ -55,6 +55,9 @@ public class OnePassClient {
         if (ci == null || ci.isBlank()) {
             throw new IllegalArgumentException("디지털원패스 인증 결과에 CI 값이 없습니다.");
         }
-        return new ExternalIdentity("ONEPASS", ci, callbackParams.get("name"), null, callbackParams.get("birthday"));
+        // 디지털원패스도 본인확인(CI) 기반이라 externalId와 ci가 같은 값이다 - ci가 채워져야
+        // 다른 본인인증 수단으로 이미 가입한 회원과 같은 사람으로 연결된다.
+        return new ExternalIdentity("ONEPASS", ci, callbackParams.get("name"), null,
+                callbackParams.get("birthday"), callbackParams.get("phoneNumber"), null, ci);
     }
 }

@@ -7,21 +7,19 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
- * 마이페이지 "관심지자체" (AS-IS mypage/intrstLocGov.html). 이 목록 화면 자체의 조회+선택삭제
- * 외에, member의 Thymeleaf "회원 정보 수정" 화면(:8081)과 storefront(Vue3 SPA, dev 서버 :5173 -
- * ProfileView.vue/ListSelectView.vue)이 관심지자체 칩을 추가/삭제하는 크로스오리진 AJAX 호출도
- * 여기서 받는다(add/remove) - 그래서 이 둘만 두 오리진 모두에 CORS를 열고 JSON으로 응답한다.
- * SFR-010: userId는 로그인 JWT 쿠키에서만 가져온다 - 이 쿠키는 어느 서비스 페이지에서
- * 요청을 보냈든(member의 프로필 화면 포함) 브라우저가 동일하게 자동으로 실어 보낸다
- * (쿠키 스코프는 host 기준이지 origin 기준이 아님).
+ * 마이페이지 "관심지자체" 추가/삭제 AJAX 엔드포인트. 목록 화면(관심지자체 관리)은 storefront
+ * Vue3 SPA(InterestLocgovsView.vue) + {@code /api/my/interest-locgovs}로 이관되어 서버렌더
+ * (Thymeleaf interest-locgovs.html) 흐름은 제거됐다(2026-09-17 Thymeleaf 폐기).
+ *
+ * <p>남은 것은 storefront(SPA :5173 - ProfileView.vue/ListSelectView.vue/InterestLocgovsView.vue)가
+ * 관심지자체 칩을 추가/삭제할 때 직접 호출하는 이 크로스오리진 AJAX(add/remove)뿐이라, 두 오리진
+ * 모두에 CORS를 열고 JSON으로 응답한다. SFR-010: userId는 로그인 JWT 쿠키에서만 가져온다 -
+ * 이 쿠키는 어느 오리진에서 요청을 보냈든 브라우저가 동일하게 실어 보낸다(host 스코프).
  */
 @Controller
 @RequiredArgsConstructor
@@ -29,20 +27,6 @@ public class InterestLocgovController {
 
     private final DonationService donationService;
     private final JwtVerifier jwtVerifier;
-
-    private String loginRedirect(String returnPath) {
-        return "redirect:http://localhost:8081/login?target=" + encode("http://localhost:8082" + returnPath);
-    }
-
-    @GetMapping("/interest-locgovs")
-    public String list(HttpServletRequest request, Model model) {
-        var authUserId = jwtVerifier.currentUserId(request);
-        if (authUserId.isEmpty()) {
-            return loginRedirect("/interest-locgovs");
-        }
-        model.addAttribute("interestLocgovs", donationService.interestLocgovsOf(authUserId.get()));
-        return "interest-locgovs";
-    }
 
     /** member 프로필 화면의 "추가" 버튼이 fetch()로 호출 (AJAX 전용). */
     @PostMapping("/interest-locgovs")
@@ -72,23 +56,5 @@ public class InterestLocgovController {
         }
         donationService.removeInterestLocgov(authUserId.get(), locgovCode);
         return ResponseEntity.noContent().build();
-    }
-
-    /** AS-IS는 개별 삭제 없이 체크박스로 골라 "선택삭제"만 지원한다 (이 목록 화면 자체의 동작 - 위 단건 add/remove는 회원정보수정 화면의 AJAX용). */
-    @PostMapping("/interest-locgovs/delete")
-    public String removeSelected(@RequestParam(required = false) java.util.List<String> locgovCodes,
-                                  HttpServletRequest request) {
-        var authUserId = jwtVerifier.currentUserId(request);
-        if (authUserId.isEmpty()) {
-            return loginRedirect("/interest-locgovs");
-        }
-        if (locgovCodes != null && !locgovCodes.isEmpty()) {
-            donationService.removeInterestLocgovs(authUserId.get(), locgovCodes);
-        }
-        return "redirect:/interest-locgovs";
-    }
-
-    private String encode(String value) {
-        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 }

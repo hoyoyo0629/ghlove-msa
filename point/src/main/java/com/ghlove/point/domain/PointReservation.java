@@ -28,6 +28,11 @@ public class PointReservation {
     @Column(name = "USER_ID")
     private Long userId;
 
+    /** 어느 지자체 포인트에 대한 예약인지 (SFR-004: 기부 포인트는 기부한 지자체
+     *  답례품에만 사용 가능). 확정 시 이 지자체의 lot만 소진한다. */
+    @Column(name = "LOCGOV_CODE")
+    private String locgovCode;
+
     @Column(name = "AMOUNT")
     private Long amount;
 

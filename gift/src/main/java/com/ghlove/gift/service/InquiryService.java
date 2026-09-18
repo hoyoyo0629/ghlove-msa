@@ -73,13 +73,39 @@ public class InquiryService {
         return inquiryRepository.save(inquiry);
     }
 
+    /**
+     * 제공자 답변 - <b>자기 답례품에 달린 문의에만</b> 답할 수 있다.
+     * 예전에는 소유권 검사가 없어 `inquiryId`만 바꾸면 남의 답례품 문의에 답변을 달 수 있었다.
+     */
     @Transactional
-    public Inquiry answer(Long inquiryId, String answer) {
+    public Inquiry answer(Long inquiryId, Long sellerId, String answer) {
+        Inquiry inquiry = inquiryRepository.findById(inquiryId)
+                .orElseThrow(() -> new GiftException("문의를 찾을 수 없습니다."));
+        Long ownerSellerId = giftRepository.findById(inquiry.getItemId())
+                .map(com.ghlove.gift.domain.Gift::getSellerId)
+                .orElse(null);
+        if (ownerSellerId == null || !ownerSellerId.equals(sellerId)) {
+            throw new GiftException("본인이 등록한 답례품의 문의에만 답변할 수 있습니다.");
+        }
+        return writeAnswer(inquiry, answer);
+    }
+
+    /**
+     * 운영자 대리 답변 - 운영관리 화면(`/api/admin/gift-inquiries/{id}/answer`)에서 쓴다.
+     * 운영자는 모든 답례품의 문의를 처리해야 하므로 제공자 소유권 검사를 타지 않는다.
+     * 이 경로는 내부 시크릿으로 이미 보호된다.
+     */
+    @Transactional
+    public Inquiry answerAsOperator(Long inquiryId, String answer) {
+        Inquiry inquiry = inquiryRepository.findById(inquiryId)
+                .orElseThrow(() -> new GiftException("문의를 찾을 수 없습니다."));
+        return writeAnswer(inquiry, answer);
+    }
+
+    private Inquiry writeAnswer(Inquiry inquiry, String answer) {
         if (answer == null || answer.isBlank()) {
             throw new GiftException("답변 내용을 입력해 주세요.");
         }
-        Inquiry inquiry = inquiryRepository.findById(inquiryId)
-                .orElseThrow(() -> new GiftException("문의를 찾을 수 없습니다."));
         if (STATUS_ANSWERED.equals(inquiry.getStatus())) {
             throw new GiftException("이미 답변이 등록된 문의입니다.");
         }
@@ -137,5 +163,22 @@ public class InquiryService {
                 .orElseThrow(() -> new GiftException("문의를 찾을 수 없습니다."));
         inquiry.setDisplayFlag(display ? DISPLAY_ON : DISPLAY_OFF);
         return inquiryRepository.save(inquiry);
+    }
+
+    /** 마이페이지 "답례품 Q&A"의 행별 삭제 (AS-IS mypage/inquiryItem.html deleteItemQna) - 본인 문의만,
+     * 그리고 **답변완료된 문의는 삭제할 수 없다**(AS-IS가 그 경우 "답변완료된 문의는 삭제할 수 없습니다."
+     * 를 띄운다 - 답변이 달린 뒤 질문만 사라지면 답변이 고아가 되기 때문). */
+    @Transactional
+    public void deleteMine(Long inquiryId, Long userId) {
+        Inquiry inquiry = inquiryRepository.findById(inquiryId)
+                .orElseThrow(() -> new GiftException("문의를 찾을 수 없습니다."));
+        if (!userId.equals(inquiry.getUserId())) {
+            throw new GiftException("본인이 작성한 문의만 삭제할 수 있습니다.");
+        }
+        if (STATUS_ANSWERED.equals(inquiry.getStatus())) {
+            throw new GiftException("답변완료된 문의는 삭제할 수 없습니다.");
+        }
+        inquiryReportRepository.deleteAll(inquiryReportRepository.findByInquiryIdIn(List.of(inquiryId)));
+        inquiryRepository.delete(inquiry);
     }
 }

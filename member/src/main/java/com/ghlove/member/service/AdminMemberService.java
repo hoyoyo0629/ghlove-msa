@@ -44,6 +44,8 @@ public class AdminMemberService {
     private final UserDetailRepository userDetailRepository;
     private final UserRoleRepository userRoleRepository;
     private final UserChangeLogRepository userChangeLogRepository;
+    private final MemberService memberService;
+    private final PointClient pointClient;
 
     /** D3 일반회원 검색 (AS-IS GeneralCustomerManagerController) - 가입일 범위 기본값 오늘. */
     public MemberSearchResultDto search(String fromDate, String toDate, String srchKey, String srchValue,
@@ -110,6 +112,12 @@ public class AdminMemberService {
         if (STATUS_WITHDRAWN.equals(user.getStatusCode())) {
             throw new MemberException("이미 탈퇴한 회원입니다.");
         }
+        // 본인 탈퇴와 마찬가지로 그 해 기부액을 CI 기준으로 남겨야 재가입 시 연간 한도가
+        // 이어진다 - 강제 탈퇴라고 해서 한도가 초기화되면 안 된다.
+        memberService.snapshotDonationForLimitCarryOver(user);
+        // 잔여 기부포인트도 본인 탈퇴와 동일하게 소멸시킨다(AS-IS GeneralCustomerServiceImpl:286~296).
+        pointClient.expireAllOnWithdrawal(userId);
+
         user.setStatusCode(STATUS_WITHDRAWN);
         user.setLeaveDate(now());
         user.setUpdatedDate(now());

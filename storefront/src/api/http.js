@@ -9,6 +9,20 @@ const SERVICE_PREFIX = {
   admin: '/admin',
 }
 
+// AS-IS op.saleson.js:4492 handleApiExeption의 401 처리를 SPA 전역으로 재현하기 위한 훅.
+// 이미 열린 화면에서 세션이 만료돼 보호 API가 401을 주면 조용히 깨지지 않도록, main.js에서 등록한
+// 핸들러가 "로그인 후 이용이 가능합니다." 안내 + /login?target= 이동을 수행한다.
+let unauthorizedHandler = null
+export function setUnauthorizedHandler(fn) {
+  unauthorizedHandler = fn
+}
+
+function checkUnauthorized(res) {
+  if (res.status === 401 && unauthorizedHandler) {
+    unauthorizedHandler()
+  }
+}
+
 async function parseErrorMessage(res) {
   let message = `요청을 처리하지 못했습니다. (${res.status})`
   try {
@@ -28,6 +42,7 @@ async function request(service, path, { method = 'GET', body } = {}) {
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
 
+  checkUnauthorized(res)
   if (!res.ok) throw new Error(await parseErrorMessage(res))
   if (res.status === 204) return null
   return res.json()
@@ -37,6 +52,7 @@ async function request(service, path, { method = 'GET', body } = {}) {
  * 직접 지정하지 않아야 브라우저가 경계 문자열(boundary)을 자동으로 채운다. */
 async function requestMultipart(service, path, formData, method = 'POST') {
   const res = await fetch(SERVICE_PREFIX[service] + path, { method, credentials: 'include', body: formData })
+  checkUnauthorized(res)
   if (!res.ok) throw new Error(await parseErrorMessage(res))
   if (res.status === 204) return null
   return res.json()
@@ -52,6 +68,7 @@ async function requestForm(service, path, params) {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams(params).toString(),
   })
+  checkUnauthorized(res)
   if (!res.ok) throw new Error(await parseErrorMessage(res))
   if (res.status === 204) return null
   return res.json()

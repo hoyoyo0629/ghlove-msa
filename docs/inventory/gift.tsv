@@ -1,0 +1,75 @@
+계층	AS-IS 구분	AS-IS 항목	근거	MSA 대응	판정	비고
+화면	goods	index.html (래퍼) → index-main.html	inbound 160 / 6, :82~88 location.replace	GET / (list.html)	대응있음	래퍼-실화면 2단 구조
+화면	goods	searchGoods.html (래퍼) → searchGoods-main.html	inbound 41 / 34	검색 기능 구현됨	대응있음
+화면	items	details.html (래퍼) → details-main.html	inbound 58 / 58, :71~77	GET /gifts/{itemId} (detail.html)	대응있음
+화면	components/layouts	item_tab-ali.vue 상세 탭 컴포넌트	details-main.html:1241 활성 등록	detail.html 탭	대응있음
+화면	category	index.html 카테고리	inbound 160	GET /api/categories	대응있음
+화면	community-business	communityList-main.html 마을기업	inbound 2	GET /community-business	대응있음
+화면	featured	eventList.html 지역이벤트 목록	footer_ali.vue:225,229 (?ing=Y/N)	GET /events?ing=Y|N (events.html)	조치완료	AS-IS 목록조건 재현, 진행중/종료 분기
+화면	featured	eventDetail.html 지역이벤트 상세	inbound 5	GET /events/{featuredUrl} (event-detail.html)	조치완료	이벤트 답례품 편성순서 유지
+화면	featured	detail.html 기획전 상세	inbound 12	GET /events/{featuredUrl}	조치완료	이벤트 댓글은 common(게시판) 범위로 이관
+화면	mypage	review.html 상품평	inbound 12	GET /my/reviews	대응있음
+화면	mypage	writeReview.html 상품평 작성	inbound 2	POST /gifts/{id}/reviews	대응있음
+화면	mypage	favorItem.html 관심상품	inbound 10	GET /wishlist (wishlist.html)	대응있음
+화면	mypage	inquiry.html 상품문의	inbound 11	GET /my/qna	대응있음
+화면	mypage	inquiryItem.html 상품문의 상세	inbound 10	GET /my/inquiries	대응있음
+화면	catalog	catalog-main.html	진입 리다이렉트가 없는 파일(/catalog/index.html)을 가리킴	-	죽은코드	디렉터리 전체 고립
+화면	catalog	catalog-faq.html	inbound 0	-	죽은코드
+화면	catalog	index_old.html	inbound 0	-	죽은코드
+화면	components/layouts	header_news.vue	catalog 2화면만 등록, 그 화면들이 도달불가	-	죽은코드	동반 사장
+화면	components/layouts	header_ali_20240529.vue	활성 등록 0	-	죽은코드	catalog 진입 리다이렉트 보유
+화면	featured	eventDetail_backup.html / eventList_backup.html	inbound 0	-	죽은코드
+컨트롤러	/api/item	GET /{itemUserCode} 상세	item_tab-ali, details-main, donation-main, totalsearch	GET /api/gifts/{itemId}	대응있음
+컨트롤러	/api/item	GET /reviews	item_tab-ali, details-main	detail.html 리뷰 탭	대응있음
+컨트롤러	/api/item	GET /review/info/{code}	mypage/writeReview.html	POST /gifts/{id}/reviews	대응있음
+컨트롤러	/api/item	POST /review	확인필요	POST /gifts/{id}/reviews	확인필요
+컨트롤러	/api/item	POST /review/add-like/{id}	item_tab-ali.vue	POST /reviews/{id}/like + 도움돼요 버튼	조치완료	취소없는 1회성, 로그인=userId·비로그인=IP 중복판정
+컨트롤러	/api/item	POST /wishlist	14개 화면	wishlist 기능	대응있음
+컨트롤러	/api/item	POST /remove-wishlist	details-main, event/seasonal	wishlist 기능	대응있음
+컨트롤러	/api/item	GET relation 연관상품	item_tab-ali, details-main	확인필요	확인필요
+컨트롤러	/api/item	GET /qna 상품문의	item_tab-ali, details-main	inquiries.html	대응있음
+컨트롤러	/api/item	GET /restock 재입고알림 조회	item_tab-ali, details-main	RestockNoticeService.isRequested + detail.html	조치완료	MSA 참조 0건
+컨트롤러	/api/item	POST /restock 재입고알림 신청	item_tab-ali.vue	POST /gifts/{itemId}/restock-notice	조치완료	품절일 때만+중복차단. OP_RESTOCK_NOTICE 시퀀스 DDL 추가
+컨트롤러	/api/item	GET /list/list-new 목록	goods/index-main, searchGoods-main, donation/list-select	GET /api/open/gifts	대응있음
+컨트롤러	/api/item	GET /getUserCntrPoint	items/details-main.html	point 연계	대응있음
+컨트롤러	/api/item	GET /coupons	item_tab-ali.vue	없음	의도적축소	쿠폰 미사용 결정
+컨트롤러	/api/item	POST /download-all-coupons	item_tab-ali.vue	없음	의도적축소	동상
+컨트롤러	/api/category	GET updated-check	modules/op.vue.js	-	확인필요	카테고리 캐시 갱신
+컨트롤러	/api/category	GET '' 목록	op.saleson.js 래퍼	GET /api/categories	대응있음
+컨트롤러	/api/category	GET /current	category/index, item_tab-ali, details-main	카테고리 트리	대응있음
+컨트롤러	/api/category	GET /filter	category/index.html	확인필요	확인필요
+컨트롤러	/api/category	GET /price-areas	category/index.html	확인필요	확인필요
+컨트롤러	/api/category	GET /category-path	goods/searchGoods-main.html	대응있음	대응있음
+컨트롤러	/api/category	GET /best	op.saleson.js 래퍼	/api/ranking/{groupCode}	대응있음
+컨트롤러	/api/categories	GET /searchResult	래퍼 searchGoods 호출처 0	-	죽은코드	검색화면은 list-new 사용
+컨트롤러	/api/catalog	6개 엔드포인트 전부	소비 화면이 도달불가한 catalog/ 덩어리	-	죽은코드
+컨트롤러	/api/display	GET /best /md /new /group-best /lately /promotion /style-book	메인화면 등	일부 대응	부분	common 시트에서 정리
+매퍼	item-mapper.xml	173건 중 151건 사용	saleson.shop.item.ItemMapper	JPA Repository	대응있음
+매퍼	item-mapper.xml	ItemOption 관련 13건	호출 0 / XML고아	-	죽은코드	상품옵션 기능 미사용
+매퍼	item-mapper.xml	deleteItemById	호출 0	-	죽은코드
+매퍼	item-mapper.xml	insertFullItem	호출 0	-	죽은코드
+매퍼	item-mapper.xml	insertItemListForExcel	호출 0	-	죽은코드
+매퍼	item-mapper.xml	mergeItemHits / updateItemHitsAll	호출 0	-	죽은코드	조회수 집계
+매퍼	item-mapper.xml	updateItemStockScheduleDate	호출 0	-	죽은코드	입고예정일
+매퍼	item-mapper.xml	getItemCountByDeliveryChargeId / getItemCountByDeliveryId	호출 0	-	죽은코드
+매퍼	item-mapper.xml	getItemListByOpenMarketItemParam	호출 0	-	죽은코드	오픈마켓 연동 잔재
+매퍼	item-addition-mapper.xml	6건 중 5건 사장	호출 0	-	죽은코드	추가상품 기능 미사용
+매퍼	wishlist-mapper.xml	13건 중 9건 사용	wishlist.WishlistMapper	Wishlist 엔티티	대응있음
+매퍼	wishlist-mapper.xml	deleteWishlistById / getWishlistById / getWishlistDuplicate / updateWishlist	호출 0 / XML고아	-	죽은코드
+매퍼	categories-mapper.xml	52건 중 50건 사용	categories.CategoriesMapper	카테고리 3계층	대응있음
+매퍼	categories-mapper.xml	getCategoiesListByLevels / getCategoryListByMaxLevel	XML고아 / 호출 0	-	죽은코드
+매퍼	catalog-mapper.xml	34건	소비 경로 전체 도달불가	-	죽은코드
+매퍼	display-mapper.xml	30건 전부 사용	display.DisplayMapper	메인 전시	부분	common 시트
+매퍼	featured-mapper.xml	25건 중 24건 사용	featured.FeaturedMapper	/api/admin/featured	부분	사용자 화면 없음
+매퍼	featured-mapper.xml	getFeaturedCntByType	XML고아	-	죽은코드
+매퍼	item-front-mapper.xml	18건 전부 사용	item.ItemFrontMapper	Gift 조회	대응있음
+매퍼	inquiry-mapper.xml	6건 전부 사용	inquiry.InquiryMapper	inquiries.html	대응있음
+보안	판매자포털	sellerId를 쿼리파라미터로 신뢰	GiftController.register/edit/discontinue	currentSellerId() + 서비스 계층 소유권 검사	조치완료	9개 엔드포인트 전환, stop/adjustStock/answer에 소유권 검사 신설
+MSA전용	운영관리	/api/admin/gift-categories (대·중·소 3계층 15개)	-	-	근거확인필요	admin 도메인 배정 검토
+MSA전용	운영관리	/api/admin/category-teams (팀·그룹·배너 18개)	-	-	근거확인필요
+MSA전용	운영관리	/api/admin/featured (기획전 7개)	-	-	근거확인필요
+MSA전용	운영관리	/api/admin/ranking (6개)	-	-	근거확인필요
+MSA전용	운영관리	/api/admin/style-books (8개)	-	-	근거확인필요
+MSA전용	운영관리	/api/admin/mobile-category-edit (5개)	-	-	근거확인필요
+MSA전용	운영관리	/api/admin/main-display (2개)	-	-	근거확인필요
+MSA전용	운영관리	/api/admin/sellers /brands /gift-reviews	-	-	근거확인필요

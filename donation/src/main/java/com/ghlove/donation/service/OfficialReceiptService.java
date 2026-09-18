@@ -37,7 +37,6 @@ public class OfficialReceiptService {
     private final LocgovRepository locgovRepository;
     private final DonationLevyRepository donationLevyRepository;
     private final CntrReceiptLogRepository cntrReceiptLogRepository;
-    private final LocgovSealService locgovSealService;
     private final MemberClient memberClient;
 
     public OfficialReceipt build(Long userId, String cntrSn) {
@@ -45,9 +44,9 @@ public class OfficialReceiptService {
         Locgov locgov = locgovRepository.findById(donation.getCntrLocgovCode()).orElse(null);
         DonationLevy levy = donationLevyRepository.findById(cntrSn).orElse(null);
         MemberInfo member = memberClient.fetch(userId);
-        String sealImageDataUri = locgov != null
-                ? locgovSealService.sealDataUri(locgov.getLocgovCode()).orElse(null)
-                : null;
+        // 직인 미전송(TO-BE): 조회 화면(HTML)에는 직인을 내려보내지 않는다. 직인은
+        // ReceiptPdfService가 서버에서 별도 복호화해 PDF에만 병합한다.
+        String sealImageDataUri = null;
 
         String locgovDisplay = locgov != null
                 ? (nullToEmpty(locgov.getUpperLocgovNm()) + " " + nullToEmpty(locgov.getLocgovNm())).trim()
@@ -66,7 +65,8 @@ public class OfficialReceiptService {
                 formatDisplayDate(RAW_DATE.format(LocalDate.now())),
                 (issuedBefore + 1),
                 sealImageDataUri,
-                locgov != null ? locgov.getOffcsNm() : null
+                locgov != null ? locgov.getOffcsNm() : null,
+                locgov != null ? locgov.getLocgovCode() : null
         );
     }
 
@@ -121,6 +121,7 @@ public class OfficialReceiptService {
             String issueDateDisplay,
             long issueCount,
             String sealImageDataUri,
-            String offcsNm
+            String offcsNm,
+            String locgovCode
     ) {}
 }

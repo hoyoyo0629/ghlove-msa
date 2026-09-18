@@ -73,7 +73,8 @@ public class QnaController {
         }
         try {
             qnaService.ask(userId, userName, email, qnaGroup, subject, question, secretFlag, files);
-            return "redirect:/qna";
+            // AS-IS qna/qna-form.html:255
+            return Done.redirect("/qna", "등록되었습니다.");
         } catch (QnaException e) {
             return "redirect:/qna?errorMessage=" + encode(e.getMessage());
         }

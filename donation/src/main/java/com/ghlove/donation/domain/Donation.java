@@ -43,6 +43,14 @@ public class Donation {
     @Column(name = "CNTR_PATH_CODE")
     private String cntrPathCode;
 
+    /**
+     * 연계기관 코드 (공통코드 `LINK_INSTT_CD`). 고향사랑e음이 아닌 외부 창구(연계기관)를 통해
+     * 들어온 기부에 채워진다. 포인트 조회 화면의 "기부처" 열이 이 값으로 표시된다 -
+     * 비어 있으면 `고향사랑e음`(AS-IS `mypage/cntrPoint.html:127~129`).
+     */
+    @Column(name = "LINK_INSTT_CD")
+    private String linkInsttCd;
+
     @Column(name = "FRST_REGIST_PNTTM")
     private String frstRegistPnttm;
 

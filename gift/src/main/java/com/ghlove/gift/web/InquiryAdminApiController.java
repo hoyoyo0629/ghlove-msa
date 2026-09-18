@@ -49,7 +49,7 @@ public class InquiryAdminApiController {
     @PostMapping("/{id}/answer")
     public Inquiry answer(@PathVariable Long id, @RequestParam String answer) {
         try {
-            return inquiryService.answer(id, answer);
+            return inquiryService.answerAsOperator(id, answer);
         } catch (GiftException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }

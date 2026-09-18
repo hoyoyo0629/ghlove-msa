@@ -95,6 +95,7 @@ public class DonationService {
     private final HonorBenefitRepository honorBenefitRepository;
     private final SpecialDisasterZoneRepository specialDisasterZoneRepository;
     private final HonorCntrbtrRepository honorCntrbtrRepository;
+    private final com.ghlove.donation.repository.HonorViewHistRepository honorViewHistRepository;
     private final InterestLocgovRepository interestLocgovRepository;
     private final com.ghlove.donation.repository.PrjNoticeRepository prjNoticeRepository;
     private final DesignatedAdminService designatedAdminService;
@@ -473,7 +474,16 @@ public class DonationService {
      * 있던 등급 행도 건드리지 않는다(강등 없음 - 한 번 달성한 등급은 유지).
      */
     private void upsertHonorTier(Donation donation, Locgov locgov) {
-        if (locgov == null || locgov.getStdr1LevelAmt() == null) {
+        if (locgov == null) {
+            return;
+        }
+        // 등급 기준금액은 지자체가 설정하는 값이라 미설정이면 null 또는 0으로 남는다. 0을 그대로
+        // 임계값으로 쓰면 누적액이 항상 0 이상이라 100원만 기부해도 최고등급("특급")이 붙는다
+        // (실제로 g_locgov의 전 지자체가 0인 상태에서 재현됨) - 양수 구간만 유효한 기준으로 본다.
+        long lv1 = positiveOrZero(locgov.getStdr1LevelAmt());
+        long lv2 = positiveOrZero(locgov.getStdr2LevelAmt());
+        long lv3 = positiveOrZero(locgov.getStdr3LevelAmt());
+        if (lv1 == 0 && lv2 == 0 && lv3 == 0) {
             return;
         }
         int year = Integer.parseInt(donation.getCntrDe().substring(0, 4));
@@ -484,11 +494,11 @@ public class DonationService {
 
         // AS-IS 공통코드 HONOR_STD 실제값(09.공통코드 목록.xlsx) - 100:우수, 200:최우수, 300:특급.
         String level = null;
-        if (locgov.getStdr3LevelAmt() != null && cumulative.compareTo(BigDecimal.valueOf(locgov.getStdr3LevelAmt())) >= 0) {
+        if (lv3 > 0 && cumulative.compareTo(BigDecimal.valueOf(lv3)) >= 0) {
             level = "300";
-        } else if (locgov.getStdr2LevelAmt() != null && cumulative.compareTo(BigDecimal.valueOf(locgov.getStdr2LevelAmt())) >= 0) {
+        } else if (lv2 > 0 && cumulative.compareTo(BigDecimal.valueOf(lv2)) >= 0) {
             level = "200";
-        } else if (cumulative.compareTo(BigDecimal.valueOf(locgov.getStdr1LevelAmt())) >= 0) {
+        } else if (lv1 > 0 && cumulative.compareTo(BigDecimal.valueOf(lv1)) >= 0) {
             level = "100";
         }
         if (level == null) {
@@ -523,6 +533,67 @@ public class DonationService {
     }
 
     public record HonorCertificateRow(Integer stdrYear, String locgovCode, String locgovName, String levelCode) {
+    }
+
+    /**
+     * 포인트 조회 화면 "기부처" 열 - 지자체별로 그 회원이 어느 창구를 통해 기부했는지.
+     *
+     * <p>AS-IS `mypage-mapper.xml:97~121`의 `DETAIL` 계산을 그대로 옮겼다. 지자체별로
+     * 연계기관(`LINK_INSTT_CD`)을 건수 내림차순으로 세어 <b>1위 하나</b>를 고르고, 그 지자체에
+     * 연계기관이 둘 이상이면 `"OOO 등 N건"`으로 묶는다. 연계기관 코드가 없는(=고향사랑e음
+     * 직접 기부) 건만 있으면 지자체가 결과에 담기지 않으며, 화면은 그때 `고향사랑e음`을 쓴다
+     * (`cntrPoint.html:127~129`의 `data.detail`이 빈 경우 분기).
+     *
+     * @return 지자체코드 → 기부처 표시문구
+     */
+    public Map<String, String> donationSourcesByLocgov(Long userId) {
+        Map<String, String> labels = codesOf("LINK_INSTT_CD");
+        Map<String, Map<String, Long>> byLocgov = new java.util.LinkedHashMap<>();
+        // AS-IS의 DETAIL 서브쿼리(`mypage-mapper.xml:102~120`)는 상태 필터 없이 그 회원의
+        // 전체 기부를 세므로 여기서도 상태로 거르지 않는다.
+        for (Donation d : donationRepository.findByUserIdOrderByFrstRegistPnttmDesc(userId)) {
+            String code = d.getLinkInsttCd();
+            if (code == null || code.isBlank()) {
+                continue;
+            }
+            byLocgov.computeIfAbsent(d.getCntrLocgovCode(), k -> new java.util.LinkedHashMap<>())
+                    .merge(code, 1L, Long::sum);
+        }
+
+        Map<String, String> result = new java.util.LinkedHashMap<>();
+        byLocgov.forEach((locgovCode, counts) -> {
+            String topCode = counts.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElse(null);
+            if (topCode == null) {
+                return;
+            }
+            String label = labels.getOrDefault(topCode, topCode);
+            long distinct = counts.size();
+            result.put(locgovCode, distinct > 1 ? label + " 등 " + distinct + "건" : label);
+        });
+        return result;
+    }
+
+    /**
+     * 기부혜택증 열람 이력 기록 (AS-IS `saveHonorViewHist` → `OP_HONOR_VIEW_HIST`).
+     * 화면이 보여준 지자체 코드를 중복 없이 남긴다 - 같은 화면에 같은 지자체 혜택증이
+     * 연도별로 여러 장 있을 수 있는데, 이력의 단위는 "무엇을 봤는가"이지 몇 장인지가 아니다.
+     * 이력 기록이 실패해도 혜택증 화면 자체는 열려야 하므로 예외를 삼킨다.
+     */
+    @Transactional
+    public void recordHonorCertificateViews(Long userId, List<HonorCertificateRow> shown) {
+        try {
+            shown.stream()
+                    .map(HonorCertificateRow::locgovCode)
+                    .filter(code -> code != null && !code.isBlank())
+                    .distinct()
+                    .forEach(code -> honorViewHistRepository.save(
+                            new com.ghlove.donation.domain.HonorViewHist(userId, code)));
+        } catch (RuntimeException e) {
+            log.warn("기부혜택증 열람이력 기록 실패 - 화면은 그대로 보여준다. userId={}", userId, e);
+        }
     }
 
     /** 마이페이지 "관심지자체" 목록 - 지자체명 + "나의 기부현황"(연도 무관 완료 기부 합산)까지 합류. */
@@ -749,7 +820,8 @@ public class DonationService {
 
         totalAnnualLimit().ifPresent(totalLimit -> {
             BigDecimal existing = sum(donationRepository
-                    .findByUserIdAndCntrDeStartingWithAndCntrSttusCode(userId, year, STATUS_COMPLETED));
+                    .findByUserIdAndCntrDeStartingWithAndCntrSttusCode(userId, year, STATUS_COMPLETED))
+                    .add(withdrawnCarryOver(userId));
             if (existing.add(amount).compareTo(totalLimit) > 0) {
                 throw new DonationException("연간 총 기부한도(" + formatWon(totalLimit)
                         + ")를 초과합니다. 올해 누적 기부액: " + formatWon(existing));
@@ -768,6 +840,15 @@ public class DonationService {
                                 + ")를 초과합니다. 올해 누적 기부액: " + formatWon(existing));
                     }
                 });
+    }
+
+    /**
+     * 같은 사람이 올해 탈퇴하며 남긴 기부액 - 연간 한도 계산에 <b>이미 쓴 금액</b>으로 함께 더한다.
+     * AS-IS `DonationVerification`이 `maxCntrAmt = 한도 - 본인기부합 - 탈퇴기부합 - 위기부합`으로
+     * 빼던 것 중 "탈퇴기부합"에 해당한다. 이게 없으면 탈퇴 후 재가입으로 한도가 초기화된다.
+     */
+    private BigDecimal withdrawnCarryOver(Long userId) {
+        return BigDecimal.valueOf(memberClient.withdrawnDonationCarryOver(userId));
     }
 
     private Optional<BigDecimal> totalAnnualLimit() {
@@ -790,7 +871,17 @@ public class DonationService {
         }
         BigDecimal used = sum(donationRepository.findByUserIdAndCntrDeStartingWithAndCntrSttusCode(
                 userId, String.valueOf(LocalDate.now().getYear()), STATUS_COMPLETED));
-        return limit.get().subtract(used).max(BigDecimal.ZERO);
+        // 탈퇴 이력분도 이미 쓴 금액이다 - 빼지 않으면 화면이 실제보다 큰 한도를 안내하고,
+        // 그 금액을 입력한 회원이 제출 단계에서야 막힌다. 다만 이건 표시용 경로라 member
+        // 조회가 실패해도 화면을 죽이지 않고 0으로 본다 - 실제 차단은 validateAnnualLimit이 한다.
+        BigDecimal carryOver;
+        try {
+            carryOver = withdrawnCarryOver(userId);
+        } catch (RuntimeException e) {
+            log.warn("기부가능 한도 표시용 탈퇴이력 조회 실패 - 0으로 표시한다. userId={}", userId, e);
+            carryOver = BigDecimal.ZERO;
+        }
+        return limit.get().subtract(used).subtract(carryOver).max(BigDecimal.ZERO);
     }
 
     /**
@@ -873,11 +964,22 @@ public class DonationService {
         }
     }
 
+    /**
+     * 기부금액의 형식 검증 - AS-IS `DonationVerification.isDonationNormalAmount()`의
+     * `amount % 100 != 0 || amount < 0` 부분(잔여한도 검사는 {@link #validateAnnualLimit}).
+     * 세외수입 수납 연계가 100원 단위로만 고지서를 만들 수 있어 AS-IS가 건 제약이다.
+     */
     private void requireAmount(BigDecimal amount) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new DonationException("기부금액은 0보다 커야 합니다.");
         }
+        if (amount.remainder(AMOUNT_UNIT).compareTo(BigDecimal.ZERO) != 0) {
+            throw new DonationException("기부금액은 100원 단위로 입력해 주세요.");
+        }
     }
+
+    /** AS-IS `amount % 100 != 0` - 기부금액은 100원 단위여야 한다. */
+    private static final BigDecimal AMOUNT_UNIT = BigDecimal.valueOf(100);
 
     private BigDecimal sum(List<Donation> donations) {
         return donations.stream().map(Donation::getCntrAmt).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -890,5 +992,10 @@ public class DonationService {
     private String generateCntrSn() {
         int suffix = RANDOM.nextInt(9000) + 1000;
         return "D" + PNTTM_FORMAT.format(LocalDateTime.now()) + suffix;
+    }
+
+    /** 명예기부자 등급 기준금액 - null/0/음수는 "미설정"으로 보고 0을 돌려준다. */
+    private static long positiveOrZero(Integer amount) {
+        return amount != null && amount > 0 ? amount : 0L;
     }
 }

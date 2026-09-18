@@ -2217,6 +2217,16 @@ CREATE TABLE IF NOT EXISTS OP_RESTOCK_NOTICE (
     CREATED_DATE                 VARCHAR(14) NOT NULL,
     PRIMARY KEY (RESTOCK_NOTICE_ID)
 );
+-- AS-IS는 애플리케이션에서 채번했으나(sequenceService), 이 MSA는 JPA IDENTITY를 쓰므로
+-- 다른 gift 테이블과 동일하게 시퀀스 DEFAULT를 건다.
+CREATE SEQUENCE IF NOT EXISTS op_restock_notice_id_seq START WITH 1000;
+ALTER TABLE OP_RESTOCK_NOTICE ALTER COLUMN RESTOCK_NOTICE_ID SET DEFAULT nextval('op_restock_notice_id_seq');
+ALTER SEQUENCE op_restock_notice_id_seq OWNED BY OP_RESTOCK_NOTICE.RESTOCK_NOTICE_ID;
+
+-- 리뷰 좋아요도 동일 (AS-IS는 JPA @GeneratedValue로 채번했다)
+CREATE SEQUENCE IF NOT EXISTS op_item_review_like_id_seq START WITH 1000;
+ALTER TABLE OP_ITEM_REVIEW_LIKE ALTER COLUMN ID SET DEFAULT nextval('op_item_review_like_id_seq');
+ALTER SEQUENCE op_item_review_like_id_seq OWNED BY OP_ITEM_REVIEW_LIKE.ID;
 
 CREATE TABLE IF NOT EXISTS OP_REVIEW_FILTER (
     ID                           BIGINT NOT NULL,

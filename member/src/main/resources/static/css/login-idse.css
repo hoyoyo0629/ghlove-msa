@@ -145,13 +145,13 @@
     /* position: relative;
       top:50%; left: 50%;*/
     transform: translate(0, 2px);
-    background: url('/static/images/icon/cli-icon_not-comfirm.png') #FB502E;
+    background: url('/images/icon/cli-icon_not-comfirm.png') #FB502E;
     background-repeat: no-repeat;
     background-position: center center;
 }
 
 .info-field-items .pw-validation-area span.pw-validation.vali-confirm::before {
-    background: url('/static/images/icon/cli-icon_comfirm.png') #09C2C7;
+    background: url('/images/icon/cli-icon_comfirm.png') #09C2C7;
     background-repeat: no-repeat;
     background-position: center center;
 }
@@ -248,4 +248,28 @@
         display: flex;
         flex-direction: column;
     }
+}
+
+/* ── AS-IS와 동일한 렌더링을 위해 bootstrap에서 가져온 두 규칙 ─────────────────────
+   AS-IS find-idpw.html은 bootstrap.css를 함께 로드해서 아래 두 가지를 전역으로 받는다.
+   TO-BE는 bootstrap을 쓰지 않으므로, 이 화면이 실제로 의존하는 부분만 같은 값으로 옮겨둔다
+   (bootstrap 전체를 넣으면 다른 화면까지 영향을 받는다). 이 파일은 find-idpw 화면에서만
+   로드하므로 영향 범위도 이 화면으로 한정된다.
+
+   - label을 inline-block으로 만들지 않으면 위쪽의
+     ".find-tab-area .info-field-items label { width: 24% }"가 인라인 요소에는 먹지 않아
+     이름/아이디 라벨 폭이 글자수대로 제각각이 되고 입력창 왼쪽 끝이 서로 어긋난다.
+   - .btn-group을 inline-flex로 만들지 않으면 common.css의
+     ".btn-group { justify-content: center }"가 블록 요소에는 의미가 없어
+     "본인인증" 버튼이 가운데가 아니라 왼쪽으로 붙는다. */
+.find-idpw label,
+#authModal label {
+    display: inline-block;
+    margin-bottom: 0.5rem;
+}
+
+.find-idpw .btn-group {
+    position: relative;
+    display: inline-flex;
+    vertical-align: middle;
 }

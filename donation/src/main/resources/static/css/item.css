@@ -24,7 +24,7 @@
 	display: inline-block;
 	width: 6px;
 	height: 9px;
-	background-image: url('/static/images/icon/cli-icon_bread-arrow.png');
+	background-image: url('/images/icon/cli-icon_bread-arrow.png');
 	margin: 0 12px;
 }
 
@@ -42,7 +42,7 @@
 	margin-left: 0;
 	padding-right: 20px;
 	/* font-size:22px; */
-	background: #fff url('/static/images/icon/filter_drop.png') no-repeat;
+	background: #fff url('/images/icon/filter_drop.png') no-repeat;
 	background-size: 17px auto;
 	background-position: 100% 1px;
 }
@@ -411,7 +411,7 @@
 	right: 0px;
 	width: 36px;
 	height: 36px;
-	background: url('/static/images/icon/cli-icon_dropdown.png') no-repeat right center;
+	background: url('/images/icon/cli-icon_dropdown.png') no-repeat right center;
 	background-size: 36px;
 	border: none;
 }
@@ -428,12 +428,12 @@
 	right: 0px;
 	width: 36px;
 	height: 36px;
-	background: url('/static/images/icon/cli-icon_dropdown.png') no-repeat right center;
+	background: url('/images/icon/cli-icon_dropdown.png') no-repeat right center;
 	background-size: 36px;
 	border: none;
 }
 .info_row .dropdown_box.show .dropdown-toggle::after {
-	background: url('/static/images/icon/cli-icon_close-opt.png') no-repeat right center;
+	background: url('/images/icon/cli-icon_close-opt.png') no-repeat right center;
 
 }
 
@@ -780,7 +780,7 @@
 	height: 36px !important;
 	margin: 0 !important;
 	padding: 0 !important;
-	background: url(/static/images/icon/npay_sp_text.png) no-repeat !important
+	background: url(/images/icon/npay_sp_text.png) no-repeat !important
 }
 
 .npay_btn_list {
@@ -844,7 +844,7 @@
 }
 
 .npay_btn_link.npay_btn_pay {
-	background-image: url(/static/images/icon/npay_sp_payment.png) !important;
+	background-image: url(/images/icon/npay_sp_payment.png) !important;
 	background-position: 50% 0 !important;
 	background-repeat: no-repeat !important
 }
@@ -866,19 +866,19 @@
 }
 
 .npay_btn_link.npay_btn_zzim {
-	background-image: url(/static/images/icon/npay_sp_zzim.png) !important;
+	background-image: url(/images/icon/npay_sp_zzim.png) !important;
 	background-position: 50% 0 !important;
 	background-repeat: no-repeat !important
 }
 
 .npay_btn_link.npay_btn_zzim2 {
-	background-image: url(/static/images/icon/npay_sp_zzim.png) !important;
+	background-image: url(/images/icon/npay_sp_zzim.png) !important;
 	background-position: 50% -105px !important;
 	background-repeat: no-repeat !important
 }
 
 .npay_btn_link.npay_btn_talk {
-	background-image: url(/static/images/icon/npay_sp_talk.png) !important;
+	background-image: url(/images/icon/npay_sp_talk.png) !important;
 	background-position: 50% 0 !important;
 	background-repeat: no-repeat !important
 }
@@ -902,13 +902,13 @@
 }
 
 .npay_btn_link.npay_btn_cart {
-	background-image: url(/static/images/icon/npay_sp_cart.png) !important;
+	background-image: url(/images/icon/npay_sp_cart.png) !important;
 	background-position: 50% 0 !important;
 	background-repeat: no-repeat !important
 }
 
 .npay_btn_link.npay_btn_talk2 {
-	background-image: url(/static/images/icon/npay_sp_talk_text.png) !important;
+	background-image: url(/images/icon/npay_sp_talk_text.png) !important;
 	background-position: 50% 0 !important;
 	background-repeat: no-repeat !important
 }
@@ -962,7 +962,7 @@
 	width: 39px !important;
 	height: 13px !important;
 	margin-top: -7px !important;
-	background: url(/static/images/icon/npay_sp_icon.png) no-repeat !important;
+	background: url(/images/icon/npay_sp_icon.png) no-repeat !important;
 }
 
 .npay_event .npay_event_text .event_link {
@@ -988,7 +988,7 @@
 	height: 16px !important;
 	margin: 0 !important;
 	padding: 0 !important;
-	background: url(/static/images/icon/npay_sp_more.png) no-repeat !important;
+	background: url(/images/icon/npay_sp_more.png) no-repeat !important;
 	text-decoration: none !important
 }
 
@@ -1065,17 +1065,17 @@
 }
 
 .npay_vertical .npay_btn_link.npay_btn_pay {
-	background-image: url(/static/images/icon/npay_sp_payment2.png) !important;
+	background-image: url(/images/icon/npay_sp_payment2.png) !important;
 	background-repeat: no-repeat !important
 }
 
 .npay_vertical .npay_btn_link.npay_btn_talk {
-	background-image: url(/static/images/icon/npay_sp_talk2.png) !important;
+	background-image: url(/images/icon/npay_sp_talk2.png) !important;
 	background-repeat: no-repeat !important
 }
 
 .npay_vertical .npay_btn_link.npay_btn_zzim2 {
-	background-image: url(/static/images/icon/npay_sp_zzim2.png) !important;
+	background-image: url(/images/icon/npay_sp_zzim2.png) !important;
 	background-repeat: no-repeat !important
 }
 
@@ -1642,7 +1642,7 @@
 
 .list_wrap.qna_list .list_top.dropdown .dropdown-toggle::after {
 	border: none !important;
-	background-image: url('/static/images/icon/list-dropdown.png');
+	background-image: url('/images/icon/list-dropdown.png');
 	background-size: 16px auto;
 	background-repeat: no-repeat;
 	display: inline-block;
@@ -1758,7 +1758,7 @@
 	width: 12px;
 	height: 13px;
 	margin-right: 4px;
-	background: url(/static/images/icon/icon_lock.png) no-repeat;
+	background: url(/images/icon/icon_lock.png) no-repeat;
 	background-size: 12px auto;
 	vertical-align: middle;
 }
@@ -2085,7 +2085,7 @@
 .center.drs .directSelect_area.dropdown .dropdown-toggle::after {
 	width: 14px;
 	height: 14px;
-	background-image: url('/static/images/icon/direct_drop.png');
+	background-image: url('/images/icon/direct_drop.png');
 	border: none;
 	background-size: 14px auto;
 	transform: translateY(4px);
@@ -2177,7 +2177,7 @@ button.wishBtn.addToWishList {
 .item_review .dropdown .dropdown-toggle::after, 
 .item_qna .dropdown .dropdown-toggle::after {
 	border: none !important;
-    background-image: url('/static/images/icon/list-dropdown.png');
+    background-image: url('/images/icon/list-dropdown.png');
     background-size: 16px auto;
     background-repeat: no-repeat;
     display: inline-block;

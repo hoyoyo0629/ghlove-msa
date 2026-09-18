@@ -111,6 +111,16 @@ public class PointApiController {
     public record CreditRequest(String cntrSn, Long userId, String locgovCode, BigDecimal cntrAmt, String cntrDe) {
     }
 
+    /**
+     * 회원 탈퇴 시 잔여 기부포인트 전량 소멸 (AS-IS `GeneralCustomerServiceImpl:286~296`).
+     * member의 탈퇴 처리가 호출한다 - 실패하면 member가 탈퇴를 중단해야 하므로 예외를 삼키지 않는다.
+     */
+    @PostMapping("/api/admin/expire-on-withdrawal")
+    public Map<String, Object> expireOnWithdrawal(@RequestParam Long userId) {
+        long expired = pointService.expireAllOnWithdrawal(userId);
+        return Map.of("userId", userId, "expiredPoints", expired);
+    }
+
     /** member 마이페이지 "회원탈퇴" 화면의 "잔여포인트" 표(지자체별) - PointController.myPoints()와
      *  동일한 지자체명 보강 로직. */
     @GetMapping("/api/locgov-point-summary")

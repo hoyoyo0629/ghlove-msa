@@ -1,6 +1,9 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../../api/http'
+import { useDateRangeSearch } from '../../composables/useDateRangeSearch'
+import { formatN } from '../../utils/format'
+import BasePagination from '../../components/BasePagination.vue'
 
 // AS-IS mypage/receiptList.html(및 Thymeleaf 버전 receipts.html/certificate.html) 재현.
 // AS-IS 원본은 Vue SPA라 "기부확인증 보기"를 목록 화면 위 모달로 띄운다(components/ui/
@@ -13,8 +16,7 @@ const loading = ref(true)
 const errorMessage = ref('')
 const selected = ref([])
 
-const searchStartDate = ref('')
-const searchEndDate = ref('')
+const { searchStartDate, searchEndDate, setRange, clearRange } = useDateRangeSearch()
 const upperLocgovCode = ref('')
 const locgovCode = ref('')
 
@@ -38,21 +40,10 @@ async function load(page = 1) {
 onMounted(() => load())
 
 function reset() {
-  searchStartDate.value = ''
-  searchEndDate.value = ''
+  clearRange()
   upperLocgovCode.value = ''
   locgovCode.value = ''
   load()
-}
-
-function quickRange(mode, value) {
-  const end = new Date()
-  const start = new Date()
-  if (mode === 'week') start.setDate(start.getDate() - value * 7)
-  else if (mode === 'month') start.setMonth(start.getMonth() - value)
-  const iso = (d) => d.toISOString().slice(0, 10)
-  searchStartDate.value = iso(start)
-  searchEndDate.value = iso(end)
 }
 
 function toggleAll(e) {
@@ -89,10 +80,6 @@ function printCertificate() {
 
 function closeModal() {
   certificate.value = null
-}
-
-function formatN(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
 }
 </script>
 
@@ -147,10 +134,10 @@ function formatN(n) {
                     <label for="endDate" class="sr-only">종료일</label>
                   </div>
                   <div class="formbtn-box">
-                    <button class="formBtn week-1" type="button" @click="quickRange('week', 1)">1주일</button>
-                    <button class="formBtn month-1" type="button" @click="quickRange('month', 1)">1개월</button>
-                    <button class="formBtn month-3" type="button" @click="quickRange('month', 3)">3개월</button>
-                    <button class="formBtn month-6" type="button" @click="quickRange('month', 6)">6개월</button>
+                    <button class="formBtn week-1" type="button" @click="setRange('week', 1)">1주일</button>
+                    <button class="formBtn month-1" type="button" @click="setRange('month', 1)">1개월</button>
+                    <button class="formBtn month-3" type="button" @click="setRange('month', 3)">3개월</button>
+                    <button class="formBtn month-6" type="button" @click="setRange('month', 6)">6개월</button>
                   </div>
                 </div>
                 <div class="selected-field-line city">
@@ -228,17 +215,7 @@ function formatN(n) {
             </table>
           </div>
 
-          <div class="pagination_ali" v-if="data.totalPages > 1">
-            <ul class="pagination-frame">
-              <li><a class="fist arrow_btn" href="javascript:void(0)" @click="load(1)"><img src="/images/icon/paging_btn-first.png" alt="처음" /></a></li>
-              <li><a class="prev arrow_btn" href="javascript:void(0)" @click="load(Math.max(1, data.currentPage - 1))"><img src="/images/icon/paging_btn-prev.png" alt="이전" /></a></li>
-              <li v-for="p in data.totalPages" :key="p" :class="{ 'selected-page': p === data.currentPage }">
-                <a class="page-text" href="javascript:void(0)" @click="load(p)">{{ p }}</a>
-              </li>
-              <li><a class="next arrow_btn" href="javascript:void(0)" @click="load(Math.min(data.totalPages, data.currentPage + 1))"><img src="/images/icon/paging_btn-next.png" alt="다음" /></a></li>
-              <li><a class="last arrow_btn" href="javascript:void(0)" @click="load(data.totalPages)"><img src="/images/icon/paging_btn-last.png" alt="마지막" /></a></li>
-            </ul>
-          </div>
+          <BasePagination :page="data.currentPage" :total-pages="data.totalPages" @change="load" />
         </div>
       </div>
     </div>

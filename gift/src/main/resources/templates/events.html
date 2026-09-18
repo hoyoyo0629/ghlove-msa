@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>기부하기 &gt; 지역이벤트 - 고향사랑e음</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+    <link rel="stylesheet" th:href="@{/css/goods_card.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<!-- AS-IS featured/eventList.html 재현. 진입은 살아있는 푸터(footer_ali.vue:225,229)의
+     ?ing=Y(진행중) / ?ing=N(종료) 두 링크다. AS-IS 목록 조건(EventController:88~97)은
+     featuredType='1' + featuredFlag='Y' + displayListFlag='Y'이고, 진행중/종료는
+     conditionType='FRONT' / progression='3'으로 갈랐다 - 여기서는 시작·종료일로 표현했다. -->
+<section class="center">
+    <div class="page-title-box">
+        <span class="ali_breadcrumb">
+            <a th:href="@{'http://localhost:8081/'}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            <span>기부하기</span>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            지역이벤트
+        </span>
+        <h2 class="page-title-txt">지역이벤트</h2>
+        <p>각 지자체가 진행하는 지역이벤트를 확인해 보세요.</p>
+    </div>
+</section>
+
+<section id="contents" class="center">
+    <div th:if="${errorMessage}" class="info_row warning">
+        <span class="s-txt" th:text="${errorMessage}"></span>
+    </div>
+
+    <!-- AS-IS는 진행중/종료 두 진입점을 푸터 링크로 갖는다 - 화면 안에서도 오갈 수 있게 탭으로 둔다. -->
+    <div class="condi_section">
+        <ul class="loc_tab">
+            <li th:classappend="${ing == 'Y'} ? 'currentB' : ''">
+                <a th:href="@{/events(ing='Y')}">진행중인 이벤트</a>
+            </li>
+            <li th:classappend="${ing == 'N'} ? 'currentB' : ''">
+                <a th:href="@{/events(ing='N')}">종료된 이벤트</a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="section all_goods">
+        <ul class="goods-list-group">
+            <li class="goods-list-items" th:each="e : ${events}">
+                <div class="list_inner">
+                    <span class="img_frame">
+                        <a class="img_cover_link" th:href="@{'/events/' + ${e.featuredUrl}}">
+                            <img class="item_img"
+                                 th:src="${e.thumbnailImage != null and !#strings.isEmpty(e.thumbnailImage)} ? @{'/uploads/' + ${e.thumbnailImage}} : @{/images/thumb.png}"
+                                 th:alt="${e.featuredName}">
+                        </a>
+                        <span class="tag_box" th:text="${progressions.get(e.featuredId)}"></span>
+                    </span>
+                    <a class="card_title" th:href="@{'/events/' + ${e.featuredUrl}}" th:text="${e.featuredName}"></a>
+                    <span class="s-txt" th:if="${e.featuredSimpleContent != null}" th:text="${e.featuredSimpleContent}"></span>
+                    <span class="s-txt" th:if="${e.startDate != null and e.endDate != null}"
+                          th:text="${e.startDate} + ' ~ ' + ${e.endDate}"></span>
+                </div>
+            </li>
+        </ul>
+        <div class="common_none" th:if="${#lists.isEmpty(events)}">
+            <p th:text="${ing == 'Y'} ? '진행중인 지역이벤트가 없습니다.' : '종료된 지역이벤트가 없습니다.'"></p>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+</body>
+</html>

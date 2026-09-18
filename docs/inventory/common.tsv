@@ -1,0 +1,143 @@
+계층	AS-IS 구분	AS-IS 항목	근거	MSA 대응	판정	비고
+레이아웃	컴포넌트	header_ali.vue (주 헤더)	live 등록 77곳	storefront AppHeader.vue	대응있음	GNB 6대메뉴 구조 일치
+레이아웃	컴포넌트	footer_ali.vue (주 푸터)	live 등록 81곳	storefront AppFooter.vue	대응있음	FNB 5항목 순서까지 일치
+레이아웃	컴포넌트	sitemapModal.vue / guide/sitemap.html	live 등록 6곳	AppFooter.vue #modal_sitemap (CSS :target)	대응있음	AS-IS와 동일한 :target 모달 방식
+레이아웃	컴포넌트	components/ui/fixedBtn.vue 플로팅 6종	live 등록 67곳	FloatingButtons.vue 4종	부분	소식지·카탈로그 버튼 누락
+레이아웃	컴포넌트	mypage-lnb_ali.vue	live 등록 23곳	storefront 마이페이지 내비	대응있음
+레이아웃	컴포넌트	header_g.vue / m_tabbar_g.vue (모바일)	live 등록 18/16곳	없음	재현누락	모바일 탭바 미구현
+레이아웃	컴포넌트	donation_info-lnb_ali.vue	live 등록 5곳	donation 화면 내 내비	대응있음
+레이아웃	컴포넌트	header.vue / footer.vue	category/index.html, featured/detail.html 2화면 전용	AppHeader/AppFooter로 통합	의도적축소	전용 변형 유지 불필요
+레이아웃	컴포넌트	header_news.vue	catalog/* 전용	없음	죽은코드	카탈로그 미이관과 동반
+레이아웃	컴포넌트	item_tab-ali.vue / prj_tab-ali.vue	live 등록 2/1곳	gift·donation 상세 탭	대응있음
+레이아웃	컴포넌트	customer-lnb_ali.vue	12개 화면 전부 주석	CustomerLnb.vue (구현됨)	참고	AS-IS 사장, MSA는 노출 - 현행 유지 기록
+레이아웃	컴포넌트	donation-lnb_ali.vue	6곳 전부 주석	없음	죽은코드	member 작업에서 기확인
+레이아웃	컴포넌트	subsearch_ali.vue	6화면이 등록하나 파일 부재(_unUsed로 개명)	없음	죽은코드	템플릿 미배치라 404는 미발생
+레이아웃	컴포넌트	totalSearch.vue	header_ali.vue:202 주석, 나머지 사장 헤더	없음	죽은코드	헤더 통합검색 진입 사장
+레이아웃	컴포넌트	statistics-lnb_ali / statistics_tab / lnbbar_ali / sub-header_ali / swipemenu_ali	live 등록 0	없음	죽은코드	5종
+레이아웃	컴포넌트	header_*_bak/_as-is/_temp/_20240529/_new, header_g_bak/_20240731/_map, m_tabbar_* 변형, header_dsg_g 등	백업·날짜본	없음	죽은코드	14종
+화면·GNB	메뉴트리	기부 2 / 답례품 3 / 안내사항 6 / 이벤트 2 / 고객센터 4	header_ali.vue:221~ menuItems 하드코딩	AppHeader.vue 동일 트리	대응있음	17항목 1:1
+화면·GNB	메뉴트리	마이페이지 14항목	header_ali.vue menuItems	AppHeader.vue 16항목	부분	답례품 Q&A·답례품 후기 GNB 누락(화면·사이트맵엔 존재)
+화면·GNB	메뉴항목	연말정산 세액공제 안내 /donation/guide3.html	header_ali.vue	/honor (TaxCreditGuideView.vue)	대응있음	라우트명 아닌 내용으로 확인
+화면·GNB	메뉴항목	회원정보수정·비밀번호 변경·역할신청 2종	AS-IS는 마이페이지 LNB / RFP 신규	AppHeader.vue GNB	참고	MSA 추가분, 근거 있음
+컨트롤러	notice	GET /api/notice	NoticeController:38 / getNotice → notice/list, list-select, map-select, totalsearch	GET /api/notices/list (admin)	대응있음
+컨트롤러	notice	POST /api/notice/detail	NoticeController:102 / detailNotice → notice/detail	GET /api/notices/{id}	대응있음
+컨트롤러	notice	POST /api/notice/hits	NoticeController:82 / updateNoticeHits → 4화면	/api/notices/{id} 내부 처리	대응있음	전용 API 대신 상세조회에 흡수
+컨트롤러	notice	GET /api/notice/donation/list	NoticeController:123 / getDonationNotice → donation/list-select	없음	재현누락	기부화면 전용 공지
+컨트롤러	faq	GET /api/faq	FaqController:38 / getFaq → faq/list, designated-donation/details, totalsearch	GET /api/faqs	대응있음
+컨트롤러	faq	POST /api/faq/hits	FaqController:73 / updateFaqHits → 3화면	POST /faqs/{id}/hit	대응있음
+컨트롤러	qna	GET/POST /api/qna/qna-open, qna-detail, qna-group, qna-open/update, /delete, /hits, /file-download	QnaController:335~656 / qna/qna-open·qna-detail·qna-edit·qna-form	GET /api/qna/board, /api/qna/board/{qnaId}, POST /api/qna	대응있음	공개 Q&A 9종
+컨트롤러	qna	GET /api/qna/inquiry, POST /api/qna/inquiry	QnaController:75,121 / mypage/inquiry	member 1:1 문의	대응있음
+컨트롤러	qna	POST /api/qna/delete-inquiry	QnaController:181 / deleteInquiry 호출부 0	없음	죽은코드
+컨트롤러	qna	GET/POST /api/qna/item-inquiry, delete-item-inquiry	QnaController:214~300 / mypage/inquiryItem, items/details-main, item_tab-ali	gift 답례품 Q&A	대응있음
+컨트롤러	databoard	GET /api/data-board, /detail, /file-download/{dataFileId}	DataboardController:72~158 / data-board/list·detail, totalsearch	GET /api/data-board, /{id}, /data-board/file-download/{fileId}	대응있음
+컨트롤러	databoard	GET /api/data-board/dash-board	DataboardController:200 / 래퍼 없음	없음	죽은코드
+컨트롤러	help	GET /api/help, /api/help/detail	HelpController:47,90 / getHelp·getHelpDetail 호출부 0	admin /admin/manuals (운영자용)	죽은코드	사용자 매뉴얼 화면 사장
+컨트롤러	help	GET /api/help/file-download/{mnlSn}, /comm/file-info	HelpController:117,135 / components/ui/helpBtn.vue	없음	재현누락	도움말 버튼 첨부 다운로드
+컨트롤러	policy	GET /api/policy/clause, /protect, /copyright	PolicyController:31,51,91 / policy/auth·privacy·copyright, footer.vue	GET /api/policies/{name} + donation /policy/{privacy,copyright,auth}	대응있음
+컨트롤러	policy	GET /api/policy/marketing	PolicyController:71 / getPolicyMarketing 호출부 0	없음	죽은코드
+컨트롤러	popup	GET /api/popup/list	PopupController:31 / getPopups → popup-layer.vue, main.html	admin GET /api/popups + storefront SitePopups.vue	조치완료	2026-09-10 - useYn+노출기간 필터, 오늘하루 localStorage (조치대상 2)
+컨트롤러	popup	GET /api/popup/index/{id}	PopupController:51 / getPopupById → popup/index.html	없음	재현누락
+컨트롤러	qustnr	GET /api/qustnr{qustnrSn}	QustnrController:33 / qustnr/detail.html 직접 호출	admin GET /api/surveys/{id}·/active + storefront SurveyView.vue	조치완료	2026-09-10 로그인·노출기간·1인1회 판정 (조치대상 4)
+컨트롤러	qustnr	POST /api/qustnr{qustnrSn}	QustnrController:48 / 설문 응답 등록	admin POST /api/surveys/{id}/responses (JwtVerifier)	조치완료	2026-09-10 중복응답 409 차단
+컨트롤러	event	GET /api/event, /event/{featuredUrl}, /event/replies, POST /event/reply	EventController:78~368 / featured/*, event/*, main.html, totalsearch	admin /api/events, /api/events/{id} + gift 지역이벤트	대응있음	댓글은 gift 리뷰로 흡수
+컨트롤러	event	GET /api/event/spot	EventController:182 / getSpotItems 호출부 0	없음	죽은코드
+컨트롤러	event	GET /api/event/items	EventController:121	gift 이벤트 상세 내 답례품	대응있음
+컨트롤러	totalsearch	GET /api/totalsearch/{locgov,item,notice,qna,faq,databoard,guidance,event,specialitem} 9종	TotalSearchController:43~336 / totalsearch/index.html	없음	재현누락	조치대상 3 - 메인 검색창이 유일 진입점
+컨트롤러	totalsearch	GET /api/totalsearch/{autokeyword,popular,myrecent,insert-recent,delete-recent,delete-recent-all} 6종	TotalSearchController:372~536 / totalSearch.vue(미등록) + main.html(insert-recent만)	없음	죽은코드	자동완성·최근검색어는 AS-IS 사장
+컨트롤러	search	GET /api/search/best-keyword, /recommend-keyword	SearchController:51,65 / header.vue(2화면)·사장 헤더	없음	죽은코드
+컨트롤러	search	GET /api/search/result	SearchController:94 / getSearchResult 호출부 0	없음	죽은코드
+컨트롤러	banner	GET /api/banner	BannerController:67 / main.html	GET /api/banners (admin) + member /api/home	대응있음
+컨트롤러	banner	GET /api/bannerserver	BannerController:87	없음	죽은코드
+컨트롤러	banner	GET /api/representative-banner/select	RepresentativeBannerController:37 / designated-donation/index-main, goods/index-main	admin /designated-projects/banners	대응있음
+컨트롤러	log	POST /api/log/action	LogController:35 / saveUserActionLog → 사장 헤더 4종만	없음	죽은코드
+컨트롤러	eventview	POST /api/event-log/{item,join-user,featured,order} 4종	EventLogController:34~87 / 호출부 0	없음	죽은코드
+컨트롤러	cache	GET /api/reload-cache/{cacheName}	CacheController:21 / 프론트 참조 0	없음	죽은코드
+컨트롤러	seo	GET /api/seo	SeoController:58 / op.seoul.donation.js	admin /admin/seo	대응있음
+컨트롤러	stsfdg	GET /api/stsfdg (만족도)	StsfdgController	없음	재현누락	stsfdg-mapper 1쿼리
+컨트롤러	common	POST /api/common/visit (접속통계)	CommonController:142 / saveVisitData → m_tabbar_g, header_news	없음	재현누락	조치대상 9, 모바일·카탈로그 한정
+컨트롤러	common	GET /api/common/cart-info	CommonController:185 / getCartInfo → 8곳	order 장바구니 건수	대응있음	주 헤더 header_ali.vue는 미호출
+컨트롤러	common	GET /api/common/quick-info	CommonController:211 / getQuickInfo → 4화면	gift 상세 퀵메뉴	대응있음
+컨트롤러	common	GET /api/common/island-info	CommonController:330 / getIslandType → item_tab-ali	order 도서산간 배송비	대응있음
+컨트롤러	common	GET /api/common/confirm-pbanc	CommonController:155 / main.html, users/login.html	없음	재현누락	공고 확인 팝업
+컨트롤러	common	GET /api/common/getGiveState, /userInfo	CommonController:564,613 / healthcheck → users/login.html	member GET /api/home (giveState)	대응있음
+컨트롤러	common	GET /api/common/userStatusInfo	CommonController:410 / header_news.vue 전용	없음	죽은코드	카탈로그 2화면 한정
+컨트롤러	common	GET /api/common/about-us, /account-numbers	CommonController:308,355 / footer.vue(2화면 전용)	AppFooter 정적 표기	의도적축소
+컨트롤러	common	GET /api/common/captcha/img, /captcha/audio	CommonController:508,525	admin GET /qna/captcha, /qna/captcha/audio-text	대응있음
+컨트롤러	common	GET /api/common/sealView/{locgovCode}	CommonController:437	donation 기부확인증 직인	대응있음
+컨트롤러	common	GET /api/common/alternate, /bank-info, /getRealTimeWaitUser, /seo	CommonController:268,530,653,371 / 호출부 0	없음	죽은코드	4건
+컨트롤러	common	GET /api/common/mainBanner/{type}/{bannerId}	CommonController:469 / 래퍼 없음	없음	죽은코드
+컨트롤러	common	GET /api/common/serverTime	CommonController:545	없음	죽은코드
+컨트롤러	인프라	saleson/common/controller/CommonController 33종 (/common/*)	ghlove-web	서비스별 개별 구현	부분
+컨트롤러	인프라	ErrorController 2종 (/error) + error/404.html	op.saleson.js:406,427 location.replace	전용 오류화면 없음	재현누락	조치대상 7
+컨트롤러	인프라	FileController 2 + FileUploadController 6 + ProgramFileDownloadController 1	/opmanager/file/**, /opmanager/fileDownload	서비스별 업로드/다운로드	대응있음
+컨트롤러	인프라	SmartEditorController 5 (/smarteditor)	ghlove-common	admin 위지윅 편집기	대응있음
+컨트롤러	인프라	SnsController 1 (/sns)	ghlove-common	member ExternalLoginService	대응있음
+컨트롤러	인프라	ThumbnailController 1	ghlove-common	없음	재현누락	썸네일 리사이즈 서버
+컨트롤러	프레임워크	com.onlinepowers.board.BoardController 17종 (/board/*, /m/board/*, /opmanager/board/*)	live 프론트에서 /board/ 링크 0건	없음	죽은코드	벤더 범용 게시판 미사용
+컨트롤러	프레임워크	com.onlinepowers.board.BoardCfgController 7종 (/opmanager/board-cfg)	BoardController 미사용에 연쇄	없음	죽은코드
+컨트롤러	프레임워크	com.onlinepowers.demo.DemoController 5종 (/demo)	샘플코드	없음	죽은코드
+컨트롤러	배치	ManualBatchController GET /batch/run/{jobName}	ghlove-batch	admin BatchJobController(화면만)	부분	동적 스케줄러 엔진 없음
+매퍼	notice-mapper.xml	20쿼리 중 getSellerNotice 미호출	deadq 판정	admin 공지 도메인	죽은코드	1건
+매퍼	qna-mapper.xml	36쿼리 중 insertQnaAnswerFile, updateQnaAnswerCountZero, updatesQna 미호출	deadq 판정	admin Q&A 도메인	죽은코드	3건
+매퍼	qna-admin-mapper.xml	21쿼리 전부 live	deadq 판정	admin QnaAdminController	대응있음
+매퍼	databoard-mapper.xml	15쿼리 전부 live	deadq 판정	admin DataBoard*	대응있음
+매퍼	qustnr-mapper.xml	21쿼리 전부 live	deadq 판정	admin QustnrAdminController + SurveyApiController	대응있음	공개 참여 조치완료(§16)
+매퍼	policy-mapper.xml	10쿼리 전부 live	deadq 판정	admin PolicyController	대응있음
+매퍼	popup-mapper.xml	8쿼리 전부 live	deadq 판정	admin OperationContentService.displayPopups()	대응있음	공개 노출 조치완료(§15)
+매퍼	help-mapper.xml / manual-mapper.xml	5 / 13쿼리 전부 live	deadq 판정	admin ManualAdminController	부분
+매퍼	main-mapper.xml	24쿼리 중 dashBoardReportForCal, getOpmanagerMainCall, getOpmanagerMainAmountChart_OLD, getOpmanagerMainCountChart_OLD 미호출	deadq 판정	admin AdminHomeController	죽은코드	4건
+매퍼	keyword-mapper.xml	6쿼리 중 getAutoComplete 미호출	deadq 판정	없음	죽은코드	1건
+매퍼	banword-mapper.xml	7쿼리 중 updateBanWord 미호출	deadq 판정	없음	죽은코드	1건
+매퍼	search-mapper.xml	8쿼리	화면 도달 막힘(§4)	없음	재현누락
+매퍼	totalsearch-myrecent-mapper.xml	4쿼리	totalSearch.vue 미등록	없음	죽은코드
+매퍼	board-mapper.xml	41쿼리	BoardController 진입점 0 - 연쇄 사장	없음	죽은코드	벤더 프레임워크
+매퍼	comment-mapper.xml	6쿼리	BoardController에만 연결	없음	죽은코드	연쇄 사장
+매퍼	code-mapper.xml	10쿼리 전부 live	deadq 판정	admin CommonCodeController + 서비스별 codesOf()	대응있음
+매퍼	config-mapper.xml	15쿼리 전부 live	deadq 판정	admin ShopConfigController, SiteConfigExtController	대응있음
+매퍼	maintenance-mapper.xml	11쿼리 전부 live	deadq 판정	admin MaintenanceAdminController	대응있음
+매퍼	message-mapper.xml	9쿼리 전부 live	deadq 판정	admin UmsAdminController	대응있음
+매퍼	change-log-mapper.xml	2쿼리	deadq 판정	admin AuditLogController	대응있음
+매퍼	exceldownload-log-mapper.xml	4쿼리	deadq 판정	admin ExcelDownloadLogAdminController	대응있음
+매퍼	access-mapper.xml	5쿼리	접속통계	없음	재현누락
+매퍼	mainbanner-mapper.xml / representativebanner-mapper.xml	6 / 7쿼리 전부 live	deadq 판정	admin MainBannerAdminController, RepresentativeBannerController	대응있음
+매퍼	seo-mapper.xml	9쿼리 전부 live	deadq 판정	admin SeoAdminController	대응있음
+매퍼	menu-manager-mapper.xml	14쿼리 전부 live	deadq 판정	admin MenuAdminController	대응있음
+매퍼	stsfdg-mapper.xml	1쿼리	만족도	없음	재현누락
+매퍼	framework-code/file/message/sequence/token-mapper.xml	33쿼리	인터페이스가 libs/opframework-3.15.0.jar 내부	JWT·DB시퀀스·서비스별 파일	보류	소스 grep으로 사장 판정 불가
+매퍼	menu-mapper.xml	19쿼리	ns=com.onlinepowers.framework.web.opmanager.menu.MenuMapper (jar 내부)	admin MenuAdminController	보류	위와 동일
+화면	policy	privacy.html / copyright.html / auth.html	live 진입 11/7/10	donation /policy/{privacy,copyright,auth}	대응있음
+화면	policy	privacy-form<날짜>.html 개정 이력 16종	현행 본문에서만 링크되는 자기연쇄 아카이브	donation static/policy/ 로 이관, 절대URL 상대경로화	조치완료	2026-09-10 - 16/16 200, 이전 전부 404 (조치후보 1)
+화면	policy	privacy-form20231026_temp.html	참조 0	없음	죽은코드	작업본
+화면	메인	main.html 배너 슬라이더(swiperList)	mounted:getInitBanner	HomeView banners	대응있음
+화면	메인	main.html 총 기부금 <total-give-state>	main.html:159	HomeView giveState (GET /api/home)	대응있음
+화면	메인	main.html 로그인 전/후 박스	main.html:163~169	HomeView login-section	대응있음
+화면	메인	main.html 특정사업(prjCard)	mounted:getDsgncntrList	HomeView projects 4건	대응있음
+화면	메인	main.html 팝업(focusPopup, getJoinComfirmPop)	mounted:1091,1093	HomeView.vue <SitePopups />	조치완료	2026-09-10 (조치대상 2)
+화면	메인	main.html 검색창 → /totalsearch/index.html	main.html:141,535	HomeView 검색창 → /gifts?q=	부분	조치대상 3 - placeholder는 동일, 동작은 답례품 검색
+화면	메인	getMdItems, getNewItems, getGroupBestItems, getDisplayStyleBooks, getEvent, getPromotion	def=1 call=0, 템플릿 v-for 없음	없음	죽은코드	6개 섹션 정의만 존재
+화면	고객센터	notice/list.html, notice/detail.html	live	storefront NoticeListView, NoticeDetailView	대응있음
+화면	고객센터	faq/list.html	live	storefront FaqListView	대응있음
+화면	고객센터	qna/qna-open, qna-detail, qna-edit, qna-form	live	storefront QnaBoardListView, QnaBoardDetailView	대응있음
+화면	고객센터	data-board/list.html, detail.html	live	storefront DataBoardListView, DataBoardDetailView	대응있음
+화면	이벤트	featured/eventList.html, detail.html	live	storefront EventListView, EventDetailView + gift 지역이벤트	대응있음
+화면	설문	qustnr/detail.html, detail_srvy.html	live	storefront SurveyView.vue (/survey, /survey/:id)	조치완료	2026-09-10 (조치대상 4)
+화면	통합검색	totalsearch/index.html	main.html 검색창에서만 도달	없음	재현누락	조치대상 3
+화면	오류	error/404.html	op.saleson.js 리다이렉트 대상	없음	재현누락	조치대상 7
+화면	팝업	popup/index.html	getPopupById	없음	재현누락
+화면	소식지	newsletter/ 77건	fixedBtn.vue:75 플로팅 버튼 진입	없음	보류	정적 콘텐츠, 이관 방식 결정 필요
+화면	카탈로그	catalog/catalog-main.html, catalog-faq.html	fixedBtn.vue catalogConfirm()	없음	보류	소식지와 동일 성격
+배치	스케줄러	OP_BATCH_JOB 기반 Quartz 동적 스케줄러	SchedulerServiceImpl.invokeJobChecker()	없음(각 서비스 @Scheduled 3개)	부분	admin.op_batch_job 1행(테스트)뿐
+배치	잡	포인트 소멸/알림 6종 (expirationPointBatch 외)	JobService	point PointService @Scheduled	대응있음
+배치	잡	쿠폰 2종 (couponRegularBatch, expirationCouponSendMessageBatch)	JobService	order CouponBatchScheduler	대응있음
+배치	잡	지정기부 상태 1종 (dsgnBizStatusUpdateBatch)	JobService	donation DesignatedAdminService @Scheduled	대응있음
+배치	잡	주문/배송 자동화 7종 (autoConfirmPurchaseBatch, autoShippingCompleteBatch 외)	JobService	없음	재현누락	order 3-1 자동 구매확정 보류와 동일 건
+배치	잡	통계 BIX5 연계 14종 (bix5*)	JobService	없음	보류	운영데이터 필요
+배치	잡	통계 리포트 6종 (statisticsReport*, statisticsYearReport*)	JobService, JobPsintService	admin StatsController(화면만)	부분
+배치	잡	국세청 전자기부금영수증 4종 (sendNtsEreceipt*)	JobService	admin NtsReceiptLogAdminController(화면만)	부분
+배치	잡	NH·누리2 외부연계 5종	JobService	admin NhExportBatchController 일부	부분
+배치	잡	수납(sunap) 5종	JobService	없음	재현누락
+배치	잡	회원 휴면/잠금 5종	JobService	admin SleepUserAdminController(화면만)	부분
+배치	잡	메시지 발송 6종 (sendCampaignMessageBatch, updateKakaoAlimTalkBatch 외)	JobService	없음	보류	사용자 지시로 알림톡 추후
+배치	잡	답례품 랭킹/노출 6종 (itemRankingType1~3Batch 외)	JobService	admin RankingAdminController(화면만)	부분
+배치	잡	정리성 삭제 5종 (deleteCartBatch, deleteCntrDataBatch 외)	JobService	없음	재현누락
+배치	잡	기타 6종 (autoCompleteKeywordBatch, userLevelBatch, opUserBirthdayStatBatch 외)	JobService	없음	재현누락

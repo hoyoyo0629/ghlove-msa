@@ -57,7 +57,9 @@ public class CheckoutApiController {
         if (groups.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "답례품을 선택해 주세요."));
         }
-        long totalPoint = groups.stream().mapToLong(CartGroup::groupTotal).sum();
+        // 배송비까지 더한 실제 결제 예정 포인트 (예전에는 답례품 포인트 합계만 내려주고
+        // 화면은 "무료배송"으로 하드코딩해, 실제 차감액과 어긋났다).
+        long totalPoint = groups.stream().mapToLong(CartGroup::groupPayable).sum();
 
         Map<Long, List<CouponOptionDto>> couponsByCartItem = new LinkedHashMap<>();
         for (var group : groups) {
@@ -67,6 +69,29 @@ public class CheckoutApiController {
             }
         }
         return ResponseEntity.ok(new ReviewResponse(groups, totalPoint, couponsByCartItem));
+    }
+
+    public record PreviewRequest(List<Long> cartItemId, Map<Long, Integer> couponByCartItem, String deliveryAddress) {
+    }
+
+    /**
+     * 쿠폰 선택/배송지 입력이 바뀔 때마다 호출하는 금액 재계산 - 실제 결제(complete)와
+     * 똑같은 CartService 계산을 쓰기 때문에, 화면에 뜬 결제 포인트가 곧 차감될 포인트다.
+     * (쿠폰 할인식은 정액/정률·수량비례·최소주문금액·할인상한이 얽혀 있어 화면에서 다시
+     * 구현하면 반드시 어긋난다 - CouponDiscountCalculator를 서버에서 그대로 태운다.)
+     */
+    @PostMapping("/api/checkout/preview")
+    public ResponseEntity<?> preview(@RequestBody PreviewRequest req, HttpServletRequest request) {
+        Long userId = requireUser(request);
+        if (userId == null) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            return ResponseEntity.ok(
+                    cartService.quote(userId, req.cartItemId(), req.couponByCartItem(), req.deliveryAddress()));
+        } catch (OrderException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     public record CompleteRequest(List<Long> cartItemId, String receiverName, String receiverPhone,

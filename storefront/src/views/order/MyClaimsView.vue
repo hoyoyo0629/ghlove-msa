@@ -1,11 +1,11 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../../api/http'
+import { useDateRangeSearch } from '../../composables/useDateRangeSearch'
 
 // Thymeleaf 버전 order/claims/my.html과 동일 출처 (AS-IS mypage/orderList.html 취소반품교환 탭 단순화).
 const claims = ref([])
-const searchStartDate = ref('')
-const searchEndDate = ref('')
+const { searchStartDate, searchEndDate, setRange, clearRange } = useDateRangeSearch()
 const itemName = ref('')
 const loading = ref(true)
 
@@ -19,24 +19,8 @@ async function search() {
   loading.value = false
 }
 onMounted(search)
-
-function pad2(n) {
-  return n < 10 ? '0' + n : '' + n
-}
-function toDateInput(d) {
-  return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate())
-}
-function setRange(unit, amount) {
-  const end = new Date()
-  const start = new Date()
-  if (unit === 'week') start.setDate(start.getDate() - 7 * amount)
-  else if (unit === 'month') start.setMonth(start.getMonth() - amount)
-  searchStartDate.value = toDateInput(start)
-  searchEndDate.value = toDateInput(end)
-}
 function reset() {
-  searchStartDate.value = ''
-  searchEndDate.value = ''
+  clearRange()
   itemName.value = ''
   search()
 }

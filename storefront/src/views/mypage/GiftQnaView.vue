@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../../api/http'
+import { useDateRangeSearch } from '../../composables/useDateRangeSearch'
 
 // AS-IS mypage 답례품Q&A(및 Thymeleaf 버전 my-qna.html) 재현 - 본인이 작성한 상품문의
 // 목록(작성 자체는 답례품 상세화면에서 한다, 판매자용 문의답변 화면과는 다른 화면).
@@ -8,8 +9,7 @@ import { api } from '../../api/http'
 const rows = ref([])
 const loading = ref(true)
 
-const searchStartDate = ref('')
-const searchEndDate = ref('')
+const { searchStartDate, searchEndDate, setRange, clearRange } = useDateRangeSearch()
 const itemName = ref('')
 
 async function load() {
@@ -26,21 +26,23 @@ async function load() {
 }
 onMounted(load)
 
-function reset() {
-  searchStartDate.value = ''
-  searchEndDate.value = ''
-  itemName.value = ''
-  load()
+// AS-IS inquiryItem.html의 행별 삭제 버튼(deleteItemQna). AS-IS와 동일하게 버튼 자체는 항상
+// 두고, 답변완료 건이면 서버가 거부한 메시지("답변완료된 문의는 삭제할 수 없습니다.")를 띄운다.
+async function remove(inquiryId) {
+  if (!confirm('해당 게시물을 삭제 하시겠습니까?')) return
+  try {
+    await api.delete('gift', `/api/my/qna/${inquiryId}`)
+    await load()
+    alert('삭제되었습니다.')  // AS-IS inquiryItem.html:358
+  } catch (e) {
+    alert(e.message)
+  }
 }
 
-function quickRange(mode, value) {
-  const end = new Date()
-  const start = new Date()
-  if (mode === 'week') start.setDate(start.getDate() - value * 7)
-  else if (mode === 'month') start.setMonth(start.getMonth() - value)
-  const iso = (d) => d.toISOString().slice(0, 10)
-  searchStartDate.value = iso(start)
-  searchEndDate.value = iso(end)
+function reset() {
+  clearRange()
+  itemName.value = ''
+  load()
 }
 </script>
 
@@ -72,10 +74,10 @@ function quickRange(mode, value) {
               <input type="date" id="searchEndDate" v-model="searchEndDate" />
             </div>
             <div class="formbtn-box">
-              <button class="formBtn" type="button" @click="quickRange('week', 1)">1주일</button>
-              <button class="formBtn" type="button" @click="quickRange('month', 1)">1개월</button>
-              <button class="formBtn" type="button" @click="quickRange('month', 3)">3개월</button>
-              <button class="formBtn" type="button" @click="quickRange('month', 6)">6개월</button>
+              <button class="formBtn" type="button" @click="setRange('week', 1)">1주일</button>
+              <button class="formBtn" type="button" @click="setRange('month', 1)">1개월</button>
+              <button class="formBtn" type="button" @click="setRange('month', 3)">3개월</button>
+              <button class="formBtn" type="button" @click="setRange('month', 6)">6개월</button>
             </div>
           </div>
         </div>
@@ -101,13 +103,14 @@ function quickRange(mode, value) {
           <div class="list_body table-container w3c_v_2410" v-if="rows.length">
             <div class="list_wrap">
               <table>
-                <caption class="sr-only">답례품Q&amp;A - 답례품정보, 문의내용, 답변상태, 작성일로 구성</caption>
+                <caption class="sr-only">답례품Q&amp;A - 답례품정보, 문의내용, 답변상태, 작성일, 삭제로 구성</caption>
                 <thead class="list-title">
                   <tr class="items_wrap">
                     <th class="date-col g_info_wrap" scope="col">답례품정보</th>
                     <th class="date-col" scope="col">문의내용</th>
                     <th class="date-col" scope="col">답변상태</th>
                     <th class="date-col" scope="col">작성일</th>
+                    <th class="date-col" scope="col">삭제</th>
                   </tr>
                 </thead>
                 <tbody class="item_list-group">
@@ -126,6 +129,9 @@ function quickRange(mode, value) {
                     </td>
                     <td class="date-col">{{ q.statusLabel }}</td>
                     <td class="date-col">{{ q.createdDateDisplay }}</td>
+                    <td class="date-col">
+                      <button type="button" class="formBtn del" @click="remove(q.inquiryId)">삭제</button>
+                    </td>
                   </tr>
                 </tbody>
               </table>

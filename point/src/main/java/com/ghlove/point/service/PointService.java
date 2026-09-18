@@ -23,6 +23,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +55,7 @@ public class PointService {
     private final CommonCodeRepository commonCodeRepository;
     private final PointReservationRepository pointReservationRepository;
     private final PointLedgerPublisher pointLedgerPublisher;
+    private final com.ghlove.point.event.PointReservationPublisher pointReservationPublisher;
 
     public Map<String, String> codesOf(String codeType) {
         return commonCodeRepository.findByCodeTypeAndLanguageAndUseYnOrderByOrdering(codeType, "ko", "Y").stream()
@@ -86,8 +88,8 @@ public class PointService {
 
     /**
      * 마이페이지 "기부포인트 조회" - 지자체별 적립/사용/잔여 (AS-IS mypage/cntrPoint.html).
-     * PT_POINT_LEDGER.POINT_AMOUNT는 부호 있는 값(+적립 EARN/RESTORE, -사용 USE/REVERSE/
-     * EXPIRE)이라 그냥 합산하면 잔여가 나온다 - 별도 잔액 컬럼을 새로 만들 필요가 없다.
+     * 적립·사용의 집계 의미는 {@link #earnedOf}/{@link #usedOf} 참고 - 부호가 아니라
+     * 거래유형으로 갈라서 취소분(REVERSE/RESTORE)을 각각 상계한다.
      */
     public List<LocgovPointSummary> ledgerSummaryByLocgov(Long userId) {
         Map<String, List<PointLedger>> byLocgov = ledgerOf(userId).stream()
@@ -95,8 +97,8 @@ public class PointService {
                 .collect(Collectors.groupingBy(PointLedger::getLocgovCode, LinkedHashMap::new, Collectors.toList()));
         return byLocgov.entrySet().stream()
                 .map(e -> {
-                    long earned = e.getValue().stream().mapToLong(PointLedger::getPointAmount).filter(a -> a > 0).sum();
-                    long used = e.getValue().stream().mapToLong(PointLedger::getPointAmount).filter(a -> a < 0).map(a -> -a).sum();
+                    long earned = earnedOf(e.getValue());
+                    long used = usedOf(e.getValue());
                     return new LocgovPointSummary(e.getKey(), earned, used, earned - used);
                 })
                 .toList();
@@ -105,12 +107,143 @@ public class PointService {
     public record LocgovPointSummary(String locgovCode, long earned, long used, long remaining) {
     }
 
-    public long totalEarnedOf(Long userId) {
-        return ledgerOf(userId).stream().mapToLong(PointLedger::getPointAmount).filter(a -> a > 0).sum();
+    /**
+     * 마이페이지 "기부포인트 조회" 목록 - AS-IS give-point-mapper.getGivePointList와 같은
+     * 단위로 **기부연도 + 지자체**로 묶고 연도 내림차순으로 준다. 연도 범위(from~to)를 주면
+     * 그 안만 본다(AS-IS shCntrYearStart/shCntrYearEnd).
+     *
+     * <p>지자체로만 묶는 {@link #ledgerSummaryByLocgov}는 예약/장바구니처럼 "지금 이 지자체에
+     * 얼마 남았나"를 보는 쪽이 쓴다 - 그쪽은 연도를 나눠선 안 되므로 별도로 둔다.
+     */
+    public List<YearLocgovPointSummary> ledgerSummaryByYearAndLocgov(Long userId, String yearFrom, String yearTo) {
+        return ledgerOf(userId).stream()
+                .filter(l -> l.getLocgovCode() != null)
+                .filter(l -> withinYear(l.getStdrYear(), yearFrom, yearTo))
+                .collect(Collectors.groupingBy(
+                        l -> new YearLocgovKey(yearOf(l), l.getLocgovCode()),
+                        LinkedHashMap::new, Collectors.toList()))
+                .entrySet().stream()
+                .map(e -> {
+                    List<PointLedger> rows = e.getValue();
+                    long earned = earnedOf(rows);
+                    long used = usedOf(rows);
+                    return new YearLocgovPointSummary(e.getKey().year(), e.getKey().locgovCode(),
+                            donatedAmountOf(rows), earned, used, earned - used);
+                })
+                .sorted(java.util.Comparator.comparing(YearLocgovPointSummary::year).reversed()
+                        .thenComparing(YearLocgovPointSummary::locgovCode))
+                .toList();
     }
 
+    /**
+     * 원장 행들의 **적립포인트** 합 - AS-IS give-point-mapper의 CNTR_POINT에 해당한다.
+     *
+     * <p>부호로 가르면 안 된다. 이 원장은 append-only라 취소가 원본 행을 지우지 않고 반대
+     * 부호의 행을 덧붙이는데, 그러면 주문취소 복원(RESTORE, 양수)이 적립으로 둔갑하고
+     * 기부취소 회수(REVERSE, 음수)가 사용으로 둔갑한다. 실제로 30,000P를 쓰고 주문을 취소하면
+     * 적립·사용이 나란히 30,000P씩 부풀었다(잔여만 우연히 맞았다).
+     *
+     * <p>AS-IS는 취소된 기부(CNTR_STTUS_CODE != '200')를 집계에서 빼고 취소된 사용내역은
+     * G_CNTR_USE_POINT 행 자체를 지운다(deleteGiveUsePoint). 즉 **취소분이 양쪽에서 사라지는
+     * 것이 AS-IS 의미**이고, append-only 원장에서 같은 결과를 내려면 거래유형으로 상계해야 한다.
+     */
+    public static long earnedOf(Collection<PointLedger> rows) {
+        return sumOf(rows, TXN_EARN, TXN_REVERSE);
+    }
+
+    /**
+     * 원장 행들의 **사용포인트** 합(양수). USE에서 주문취소 복원(RESTORE)을 상계한다.
+     * 소멸(EXPIRE)은 발행이 아니라 소진이라 사용 쪽에 넣는다 - 화면에 소멸 칸이 따로 없는데
+     * 여기서 빼면 "적립 - 사용"이 실제 잔액과 어긋난다(admin 일별집계도 같은 처리를 한다).
+     */
+    public static long usedOf(Collection<PointLedger> rows) {
+        return -sumOf(rows, TXN_USE, TXN_RESTORE, TXN_EXPIRE);
+    }
+
+    /**
+     * 기부금액 합 - 적립 행에만 실려 있다. 취소된 기부(REVERSE 행이 달린 CNTR_SN)의 적립 행은
+     * 제외한다: AS-IS가 CNTR_STTUS_CODE='200'만 세는 것과 같은 의미다.
+     * 이 컬럼을 넣기 전에 적립된 행은 값이 NULL이라 0으로 집계된다.
+     */
+    private static long donatedAmountOf(Collection<PointLedger> rows) {
+        java.util.Set<String> reversed = rows.stream()
+                .filter(l -> TXN_REVERSE.equals(l.getTxnType()))
+                .map(PointLedger::getRefKey)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+        return rows.stream()
+                .filter(l -> l.getCntrAmt() != null)
+                .filter(l -> l.getRefKey() == null || !reversed.contains(l.getRefKey()))
+                .mapToLong(l -> l.getCntrAmt().longValue())
+                .sum();
+    }
+
+    private static long sumOf(Collection<PointLedger> rows, String... txnTypes) {
+        java.util.Set<String> types = java.util.Set.of(txnTypes);
+        return rows.stream()
+                .filter(l -> types.contains(l.getTxnType()))
+                .filter(l -> l.getPointAmount() != null)
+                .mapToLong(PointLedger::getPointAmount)
+                .sum();
+    }
+
+    /**
+     * 마이페이지 "기부포인트 현황"(AS-IS mypage/cntrPointDetail.html) - 한 지자체(+연도)의
+     * 원장 행을 발생 순서대로 준다. 화면은 이 행들로 발생일자/적립/사용/잔여/참조를 그린다.
+     */
+    public List<PointLedger> ledgerDetail(Long userId, String locgovCode, String year) {
+        return ledgerOf(userId).stream()
+                .filter(l -> locgovCode == null || locgovCode.isBlank() || locgovCode.equals(l.getLocgovCode()))
+                .filter(l -> year == null || year.isBlank() || year.equals(yearOf(l)))
+                .sorted(java.util.Comparator.comparing(PointLedger::getCreatedDate,
+                        java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                .toList();
+    }
+
+    /** 회원이 실제로 갖고 있는 기부연도 목록 (검색 셀렉트박스용, 내림차순). */
+    public List<String> ledgerYearsOf(Long userId) {
+        return ledgerOf(userId).stream()
+                .map(this::yearOf)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .sorted(java.util.Comparator.reverseOrder())
+                .toList();
+    }
+
+    private String yearOf(PointLedger ledger) {
+        if (ledger.getStdrYear() != null && !ledger.getStdrYear().isBlank()) {
+            return ledger.getStdrYear();
+        }
+        return ledger.getCreatedDate() != null ? String.valueOf(ledger.getCreatedDate().getYear()) : null;
+    }
+
+    private boolean withinYear(String year, String from, String to) {
+        String value = year == null || year.isBlank() ? null : year;
+        if (value == null) {
+            return from == null || from.isBlank();
+        }
+        if (from != null && !from.isBlank() && value.compareTo(from) < 0) {
+            return false;
+        }
+        return to == null || to.isBlank() || value.compareTo(to) <= 0;
+    }
+
+    private record YearLocgovKey(String year, String locgovCode) {
+    }
+
+    /** AS-IS getGivePointList 한 행 - 기부연도/지자체/기부금액/적립/사용/잔여. */
+    public record YearLocgovPointSummary(String year, String locgovCode, long cntrAmt,
+                                          long earned, long used, long remaining) {
+    }
+
+    /** 마이페이지 "총 적립 포인트" 카드. 집계 의미는 {@link #earnedOf} 참고. */
+    public long totalEarnedOf(Long userId) {
+        return earnedOf(ledgerOf(userId));
+    }
+
+    /** 마이페이지 "총 사용 포인트" 카드. 집계 의미는 {@link #usedOf} 참고. */
     public long totalUsedOf(Long userId) {
-        return ledgerOf(userId).stream().mapToLong(PointLedger::getPointAmount).filter(a -> a < 0).map(a -> -a).sum();
+        return usedOf(ledgerOf(userId));
     }
 
     /**
@@ -140,6 +273,10 @@ public class PointService {
         ledger.setTxnType(TXN_EARN);
         ledger.setPointAmount(pointAmount);
         ledger.setReason("기부포인트 적립 (" + rate + "%)");
+        // AS-IS 요약이 기부연도·기부금액 단위라, 조회 때 donation을 다시 부르지 않도록
+        // 이벤트가 실어온 값을 적립 행에 그대로 남긴다.
+        ledger.setStdrYear(year);
+        ledger.setCntrAmt(event.cntrAmt());
         ledger.setRefKey(event.cntrSn());
         ledger.setCreatedDate(LocalDateTime.now());
         openLot(ledger, pointAmount);
@@ -264,21 +401,34 @@ public class PointService {
         adjustBalance(original.getUserId(), restoreAmount);
     }
 
-    /** 포인트 사용(차감) 수동 테스트 기능 (주문 외 임의 사용 시나리오 확인용). */
+    /**
+     * 포인트 사용(차감) 수동 테스트 기능 (주문 외 임의 사용 시나리오 확인용).
+     *
+     * <p>지자체를 반드시 받는다 - SFR-004상 기부 포인트는 기부한 지자체 답례품에만 쓸 수
+     * 있고, AS-IS도 사용이력(G_CNTR_USE_POINT)에 CNTR_LOCGOV_CODE를 항상 남긴다. 예전에는
+     * 이 경로가 지자체를 모른 채 전역 잔액만 보고 차감했는데, 그러면 원장행은 지자체가
+     * 비어 있는데 lot은 아무 지자체 것이나 소진돼서 "마이페이지 기부포인트 조회(원장 합계)"와
+     * "장바구니 잔여 포인트(lot 합계)"가 영구히 어긋났다.
+     */
     @Transactional
-    public void usePoints(Long userId, long amount, String orderCode) {
+    public void usePoints(Long userId, long amount, String locgovCode, String orderCode) {
         if (userId == null || userId <= 0) {
             throw new PointException("회원 ID를 입력해 주세요.");
+        }
+        if (locgovCode == null || locgovCode.isBlank()) {
+            throw new PointException("포인트를 사용할 지자체를 선택해 주세요.");
         }
         if (amount <= 0) {
             throw new PointException("사용 포인트는 0보다 커야 합니다.");
         }
-        if (balanceOf(userId) < amount) {
-            throw new PointException("보유 포인트가 부족합니다. (잔액: " + balanceOf(userId) + "P)");
+        long available = availableBalanceOf(userId, locgovCode);
+        if (available < amount) {
+            throw new PointException("해당 지자체의 사용 가능 포인트가 부족합니다. (가용잔액: " + available + "P)");
         }
 
         PointLedger ledger = new PointLedger();
         ledger.setUserId(userId);
+        ledger.setLocgovCode(locgovCode);
         ledger.setTxnType(TXN_USE);
         ledger.setPointAmount(-amount);
         ledger.setReason("포인트 사용");
@@ -287,7 +437,7 @@ public class PointService {
         pointLedgerRepository.save(ledger);
         pointLedgerPublisher.publish(ledger);
 
-        consumeLots(userId, amount);
+        consumeLots(userId, amount, locgovCode);
         adjustBalance(userId, -amount);
     }
 
@@ -295,9 +445,22 @@ public class PointService {
         return pointReservationRepository.sumReservedByUserId(userId);
     }
 
-    /** 가용 잔액 = 보유잔액 - 활성 예약 합계. 새 예약/사용 가능 여부 판단에 쓰인다. */
+    public long reservedAmountOf(Long userId, String locgovCode) {
+        return pointReservationRepository.sumReservedByUserIdAndLocgov(userId, locgovCode);
+    }
+
+    /** 가용 잔액 = 보유잔액 - 활성 예약 합계. 전체 합계 표시용. */
     public long availableBalanceOf(Long userId) {
         return balanceOf(userId) - reservedAmountOf(userId);
+    }
+
+    /**
+     * 지자체별 가용 잔액 = 그 지자체 lot 잔여합 - 그 지자체 활성 예약 합계.
+     * 예약/사용 가능 여부는 반드시 이 값으로 판단해야 한다 - 전역 잔액으로 판단하면
+     * 다른 지자체가 적립해 준 포인트를 쓸 수 있게 된다.
+     */
+    public long availableBalanceOf(Long userId, String locgovCode) {
+        return balanceByLocgov(userId, locgovCode) - reservedAmountOf(userId, locgovCode);
     }
 
     public List<PointReservation> reservationsOf(Long userId) {
@@ -312,40 +475,49 @@ public class PointService {
 
     /**
      * 포인트 예약(hold) - SFR-004. 원장/잔액은 건드리지 않고 예약 행만 남긴다 (결제
-     * 확정 전 "일단 잡아두기" 단계). 예약 가능 여부는 가용잔액 기준으로 판단한다.
+     * 확정 전 "일단 잡아두기" 단계). 예약 가능 여부는 <b>지자체별</b> 가용잔액 기준으로
+     * 판단한다.
      *
      * <p><b>실제 주문결제 SAGA({@link #deductForOrder})와는 의도적으로 분리된 별개
      * 기능이다</b> - 마이페이지 "포인트 예약 관리" 화면에서 회원이 직접 호출하는 수동
-     * 기능일 뿐, order 체크아웃이 이 경로를 타지 않는다. 이 메서드와 {@link
-     * #confirmReservation}은 (userId, amount) 전역 잔액만 보고 {@code locgovCode}를
-     * 전혀 모른다(이 프로젝트의 다른 모든 포인트 사용 경로 - {@link #deductForOrder},
-     * 장바구니/체크아웃 - 은 전부 지자체별로 분리 관리되는 것과 다름) - 그래서 그대로
-     * 실제 결제 SAGA에 연결하면 "다른 지자체가 적립한 포인트로 이 지자체 답례품을
-     * 사는" 규칙 위반이 발생한다(SFR-004 재검토 라운드에서 발견, 통합하지 않기로
-     * 결정). 나중에 통합이 필요해지면 {@link com.ghlove.point.domain.PointReservation}에
-     * locgovCode를 추가하고 {@link #confirmReservation}이 3-인자
-     * {@code consumeLots(userId, amount, locgovCode)}를 쓰도록 먼저 고쳐야 한다.
+     * 기능일 뿐, order 체크아웃이 이 경로를 타지 않는다(AS-IS에는 예약 개념 자체가 없는
+     * 이 프로젝트 신규 기능이다).
+     *
+     * <p>예전에는 이 메서드와 {@link #confirmReservation}이 {@code locgovCode}를 전혀
+     * 모른 채 전역 잔액만 봤는데, 확정 시 {@code consumeLots}가 만료일 순서로 아무 지자체
+     * lot이나 소진해 버려서 두 가지가 동시에 깨졌다: (1) "다른 지자체가 적립한 포인트로
+     * 이 지자체 답례품을 사는" SFR-004 위반, (2) 원장행에는 지자체가 비어 있는데 lot만
+     * 줄어드니 마이페이지 기부포인트 조회(원장 합계)와 장바구니 잔여 포인트(lot 합계)가
+     * 영구히 어긋남. 그래서 예약도 지자체 단위로 바꿨다.
      */
     @Transactional
-    public PointReservation reserve(Long userId, long amount, String refKey, String reason) {
+    public PointReservation reserve(Long userId, long amount, String locgovCode, String refKey, String reason) {
         if (userId == null || userId <= 0) {
             throw new PointException("회원 ID를 입력해 주세요.");
+        }
+        if (locgovCode == null || locgovCode.isBlank()) {
+            throw new PointException("예약할 지자체를 선택해 주세요.");
         }
         if (amount <= 0) {
             throw new PointException("예약 포인트는 0보다 커야 합니다.");
         }
-        if (availableBalanceOf(userId) < amount) {
-            throw new PointException("예약 가능한 포인트가 부족합니다. (가용잔액: " + availableBalanceOf(userId) + "P)");
+        long available = availableBalanceOf(userId, locgovCode);
+        if (available < amount) {
+            throw new PointException("해당 지자체의 예약 가능한 포인트가 부족합니다. (가용잔액: " + available + "P)");
         }
 
         PointReservation reservation = new PointReservation();
         reservation.setUserId(userId);
+        reservation.setLocgovCode(locgovCode);
         reservation.setAmount(amount);
         reservation.setRefKey(refKey);
         reservation.setReason(reason);
         reservation.setStatus(RESV_RESERVED);
         reservation.setCreatedDate(LocalDateTime.now());
-        return pointReservationRepository.save(reservation);
+        PointReservation saved = pointReservationRepository.save(reservation);
+        // ISP 도메인 이벤트 "포인트예약됨" - 예약은 원장을 건드리지 않아 PointLedgerEvent가 안 나간다.
+        pointReservationPublisher.publishReserved(saved);
+        return saved;
     }
 
     /** 예약 확정 - 이 시점에 비로소 실제 원장(USE)행과 잔액 차감이 발생한다. */
@@ -355,9 +527,21 @@ public class PointService {
         if (!RESV_RESERVED.equals(reservation.getStatus())) {
             throw new PointException("예약중 상태인 건만 확정할 수 있습니다.");
         }
+        String locgovCode = reservation.getLocgovCode();
+        if (locgovCode == null || locgovCode.isBlank()) {
+            // 지자체 없이 만들어진 옛 예약행 - 확정하면 다른 지자체 lot을 잠식하므로 막는다.
+            throw new PointException("지자체 정보가 없는 예약은 확정할 수 없습니다. 해제 후 다시 예약해 주세요.");
+        }
+        // 예약 후 그 지자체 포인트가 다른 경로로 빠져나갔을 수 있다 - 확정 시점에 다시 본다
+        // (자기 예약분은 아직 원장에 없으므로 lot 잔여합과 직접 비교한다).
+        long lotBalance = balanceByLocgov(reservation.getUserId(), locgovCode);
+        if (lotBalance < reservation.getAmount()) {
+            throw new PointException("해당 지자체의 포인트가 부족해 확정할 수 없습니다. (잔여: " + lotBalance + "P)");
+        }
 
         PointLedger ledger = new PointLedger();
         ledger.setUserId(reservation.getUserId());
+        ledger.setLocgovCode(locgovCode);
         ledger.setTxnType(TXN_USE);
         ledger.setPointAmount(-reservation.getAmount());
         ledger.setReason("포인트 예약 확정" + (reservation.getReason() != null ? " (" + reservation.getReason() + ")" : ""));
@@ -366,7 +550,7 @@ public class PointService {
         pointLedgerRepository.save(ledger);
         pointLedgerPublisher.publish(ledger);
 
-        consumeLots(reservation.getUserId(), reservation.getAmount());
+        consumeLots(reservation.getUserId(), reservation.getAmount(), locgovCode);
         adjustBalance(reservation.getUserId(), -reservation.getAmount());
 
         reservation.setStatus(RESV_CONFIRMED);
@@ -383,7 +567,10 @@ public class PointService {
         }
         reservation.setStatus(RESV_RELEASED);
         reservation.setResolvedDate(LocalDateTime.now());
-        return pointReservationRepository.save(reservation);
+        PointReservation released = pointReservationRepository.save(reservation);
+        // ISP 도메인 이벤트 "포인트해제됨".
+        pointReservationPublisher.publishReleased(released);
+        return released;
     }
 
     private PointReservation getReservationOrThrow(Long reservationId) {
@@ -451,6 +638,51 @@ public class PointService {
                     expiredAmount, lot.getUserId(), lot.getLedgerId(), lot.getExpirationDate());
         }
         return expiredLots.size();
+    }
+
+    /**
+     * 회원 탈퇴 시 잔여 기부포인트 전량 소멸 (AS-IS `GeneralCustomerServiceImpl:286~296`).
+     *
+     * <p>AS-IS는 탈퇴 처리 중 `getCntrBlcePointList(userId)`로 잔여 기부포인트를 뽑아
+     * `updateCntrBlcePointDel` + `insertCntrUsePoint`를 돈다 — <b>만료 배치와 완전히 같은
+     * 처리</b>다(소멸분을 사용 이력으로 남긴다). 그래서 여기서도 만료 배치와 같은 모양으로
+     * `EXPIRE` 원장행을 남기고 잔액을 깎는다. 사유 문구만 달리해 나중에 구분할 수 있게 한다.
+     *
+     * <p>탈퇴는 되돌릴 수 있는 처리가 아니므로 <b>실패하면 예외를 던진다</b> — member가 이
+     * 호출에 실패하면 탈퇴를 진행하지 말아야 한다. 소멸시키지 않은 포인트가 원장에 남으면
+     * 탈퇴 회원의 잔액이 살아 있는 상태가 된다.
+     *
+     * @return 소멸된 총 포인트
+     */
+    @Transactional
+    public long expireAllOnWithdrawal(Long userId) {
+        List<PointLedger> lots = pointLedgerRepository
+                .findByUserIdAndRemainingAmountGreaterThanOrderByExpirationDateAsc(userId, 0L);
+        long total = 0L;
+        for (PointLedger lot : lots) {
+            long remaining = lot.getRemainingAmount();
+
+            PointLedger expireLedger = new PointLedger();
+            expireLedger.setUserId(lot.getUserId());
+            expireLedger.setLocgovCode(lot.getLocgovCode());
+            expireLedger.setTxnType(TXN_EXPIRE);
+            expireLedger.setPointAmount(-remaining);
+            expireLedger.setReason("회원 탈퇴에 따른 소멸 (원 적립: 원장 #" + lot.getLedgerId() + ")");
+            expireLedger.setRefKey(String.valueOf(lot.getLedgerId()));
+            expireLedger.setCreatedDate(LocalDateTime.now());
+            pointLedgerRepository.save(expireLedger);
+            pointLedgerPublisher.publish(expireLedger);
+
+            lot.setRemainingAmount(0L);
+            pointLedgerRepository.save(lot);
+
+            adjustBalance(lot.getUserId(), -remaining);
+            total += remaining;
+        }
+        if (total > 0) {
+            log.info("Expired {} points on withdrawal (userId={}, lots={})", total, userId, lots.size());
+        }
+        return total;
     }
 
     /** donation 기부하기 화면의 "포인트 적립예상" 표시용 - 올해 기준 해당 지자체 적립률(%). */
@@ -532,12 +764,6 @@ public class PointService {
     private void openLot(PointLedger ledger, long amount) {
         ledger.setRemainingAmount(amount);
         ledger.setExpirationDate(DATE_FORMAT.format(LocalDate.now().plusDays(pointValidDays())));
-    }
-
-    /** 차감액을 만료 임박한 lot부터 순서대로 소비한다 (FIFO, 지자체 구분 없이 - 기부취소
-     * 회수/수동사용/예약확정처럼 "어느 답례품을 샀는지"가 없는 호출부용). */
-    private void consumeLots(Long userId, long debitAmount) {
-        consumeLots(userId, debitAmount, null);
     }
 
     /** 차감액을 만료 임박한 lot부터 순서대로 소비한다 (FIFO). locgovCode가 있으면 그

@@ -106,7 +106,7 @@
                     <li><router-link to="/mypage/delivery">배송지 관리</router-link></li>
                     <li><router-link to="/mypage/gift-qna">답례품 Q&amp;A</router-link></li>
                     <li><router-link to="/mypage/gift-reviews">답례품 후기</router-link></li>
-                    <li><router-link to="/mypage/donations">기부확인증 보기</router-link></li>
+                    <li><router-link to="/mypage/receipts">기부확인증 보기</router-link></li>
                     <li><router-link to="/mypage/honor-certificates">기부혜택증 보기</router-link></li>
                     <li><router-link to="/mypage/qna">1:1 문의</router-link></li>
                     <li><router-link to="/mypage/profile">회원정보수정</router-link></li>

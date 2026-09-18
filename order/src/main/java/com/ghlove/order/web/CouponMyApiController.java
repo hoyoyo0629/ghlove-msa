@@ -7,15 +7,24 @@ import com.ghlove.order.service.JwtVerifier;
 import com.ghlove.order.service.OrderException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
 
-/** storefront(Vue3 SPA)용 회원 쿠폰함 JSON API - {@link CouponMyController}(Thymeleaf)와 완전히
- *  같은 {@link CouponService} 로직을 감싼다. */
+/**
+ * storefront(Vue3 SPA)용 회원 쿠폰함 JSON API - {@link CouponMyController}(Thymeleaf)와 완전히
+ * 같은 {@link CouponService} 로직을 감싼다.
+ *
+ * <p>2026-09-09부터 기본 OFF (ghlove.coupon.enabled=false). 쿠폰 기능이 AS-IS에서도
+ * 사용되지 않아 자동발급을 멈추고 화면 진입점을 감췄는데, 화면만 감추면 이 API는 계속
+ * 응답해서 실제로는 아무것도 막히지 않기 때문이다. 빈이 등록되지 않으므로
+ * /api/my/coupons, /api/coupons** 는 404가 된다. 프로퍼티를 true로 되돌리면 그대로 복구된다.
+ */
 @RestController
+@ConditionalOnProperty(name = "ghlove.coupon.enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class CouponMyApiController {
 

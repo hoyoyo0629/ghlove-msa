@@ -45,7 +45,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
-    show-sql: true
+    show-sql: false          # SQL은 아래 logging 의 org.hibernate.SQL 로거로 일원화(System.out 중복 출력 방지)
     open-in-view: false
     properties:
       hibernate:
@@ -63,6 +63,20 @@ spring:
       # share Java event classes with order/point across the service boundary.
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
+# 로컬 개발 전용: P6Spy 가 datasource 를 감싸 파라미터가 인라인된(바로 실행 가능한) SQL 한 줄을
+# 로거 'p6spy' 로 찍는다. developmentOnly 의존성이라 운영 bootJar 에는 P6Spy 자체가 없어 무효.
+decorator:
+  datasource:
+    p6spy:
+      enable-logging: true
+      logging: slf4j
+      multiline: false        # 한 줄로 출력(복붙해서 바로 실행하기 좋게)
+      log-format: "%(executionTime)ms | %(sqlSingleLine)"
+
 logging:
   level:
     com.ghlove.gift: DEBUG
+    p6spy: DEBUG                           # P6Spy 가 찍는 인라인 SQL
+    # 아래 Hibernate 로거는 P6Spy 와 중복이라 꺼둔다(P6Spy 없이 순수 Hibernate 로그만 볼 땐 주석 해제)
+    # org.hibernate.SQL: DEBUG
+    # org.hibernate.orm.jdbc.bind: TRACE

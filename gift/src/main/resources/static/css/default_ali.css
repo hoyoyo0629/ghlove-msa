@@ -26,13 +26,13 @@
 @font-face {
     font-family: "PretendardGOV-Regular";
     src: local("PretendardGOV-Regular"),
-        url("/static/fonts/PretendardGOV-Regular.woff") format('woff');
+        url("/fonts/PretendardGOV-Regular.woff") format('woff');
 }
 
 @font-face {
     font-family: "PretendardGOV-Bold";
     src: local("PretendardGOV-Bold"),
-        url("/static/fonts/PretendardGOV-Bold.woff") format('woff');
+        url("/fonts/PretendardGOV-Bold.woff") format('woff');
 }
 
 :root {

@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
 
 // 주문 상세 - Thymeleaf 버전 order/detail.html과 동일 출처(같은 기능, AS-IS 다른 화면들과
 // 일관된 page-title-box/s-contents 스타일로 재현). PG 결제 게이트웨이가 없는 이 MSA는
@@ -49,15 +50,25 @@ async function cancelOrder() {
   if (!confirm('주문을 취소하시겠습니까?')) return
   try {
     await api.post('order', `/api/orders/${orderId}/cancel`)
+    // AS-IS components/ui/modal-order_cancle.vue:360
+    alert('취소신청 되었습니다.')
     await load()
   } catch (e) {
     errorMessage.value = e.message
   }
 }
 
+// AS-IS는 반품/교환/취소를 유형별 모달로 확인받고 각각 다른 완료 문구를 띄운다
+// (modal-return.vue:301 / modal-exchange.vue:286 / modal-order_cancle.vue:360).
+const CLAIM_LABEL = { RETURN: '반품', EXCHANGE: '교환', CANCEL: '취소' }
+const CLAIM_DONE = { RETURN: '반품신청 되었습니다.', EXCHANGE: '교환신청 되었습니다.', CANCEL: '취소신청 되었습니다.' }
+
 async function submitClaim() {
+  const t = claimForm.claimType
+  if (!confirm(`${CLAIM_LABEL[t] ?? ''}을(를) 신청하시겠습니까?`)) return
   try {
-    await api.post('order', `/api/orders/${orderId}/claim`, { claimType: claimForm.claimType, reason: claimForm.reason })
+    await api.post('order', `/api/orders/${orderId}/claim`, { claimType: t, reason: claimForm.reason })
+    alert(CLAIM_DONE[t] ?? '신청 되었습니다.')
     await load()
   } catch (e) {
     errorMessage.value = e.message
@@ -77,6 +88,8 @@ async function confirmReceipt() {
   if (!confirm('해당 답례품을 구매확정 하시겠습니까?')) return
   try {
     await api.post('order', `/api/orders/${orderId}/confirm-receipt`)
+    // AS-IS mypage/orderDetail.html:976
+    alert('구매확정이 완료되었습니다.')
     await load()
   } catch (e) {
     errorMessage.value = e.message
@@ -85,10 +98,6 @@ async function confirmReceipt() {
 
 function writeReview() {
   router.push(`/gifts/${order.value.itemId}?orderCode=${order.value.orderId}`)
-}
-
-function formatN(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
 }
 </script>
 

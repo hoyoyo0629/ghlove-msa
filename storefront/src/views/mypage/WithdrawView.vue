@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
 import { useAuthStore } from '../../stores/auth'
+import { formatN } from '../../utils/format'
 
 // AS-IS users/secede.html(및 Thymeleaf 버전 withdraw.html) 재현. 잔여포인트 표는 point
 // 서비스 "기부포인트 조회"의 지자체별 집계를 그대로 재사용한다(탈퇴 시 이 포인트가 전부
@@ -33,10 +34,6 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-function formatN(n) {
-  return new Intl.NumberFormat('ko-KR').format(n ?? 0)
-}
 
 async function onSubmit() {
   errorMessage.value = ''

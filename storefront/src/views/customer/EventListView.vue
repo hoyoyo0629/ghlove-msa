@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
+import BasePagination from '../../components/BasePagination.vue'
 
 // AS-IS featured/eventList.html 재현(event.css/evt_card.css). 시도/시군구 캐스케이드는
 // /api/events 응답에 이미 선택된 upperLocgovCode 기준 cities가 같이 내려온다.
@@ -134,19 +135,7 @@ function eventImg(e) {
           <img src="/images/icon/cli-icon_no-location.png" alt="이벤트가 없습니다" />
         </div>
 
-        <div class="card-pagination" v-if="data.totalPages > 1">
-          <div class="pagination_ali">
-            <ul class="pagination-frame">
-              <li><a class="fist arrow_btn" href="javascript:void(0)" @click="goPage(1)"><img src="/images/icon/paging_btn-first.png" alt="처음" /></a></li>
-              <li><a class="prev arrow_btn" href="javascript:void(0)" @click="goPage(Math.max(1, page - 1))"><img src="/images/icon/paging_btn-prev.png" alt="이전" /></a></li>
-              <li v-for="p in data.totalPages" :key="p" :class="{ 'selected-page': p === page }">
-                <a class="page-text" href="javascript:void(0)" @click="goPage(p)">{{ p }}</a>
-              </li>
-              <li><a class="next arrow_btn" href="javascript:void(0)" @click="goPage(Math.min(data.totalPages, page + 1))"><img src="/images/icon/paging_btn-next.png" alt="다음" /></a></li>
-              <li><a class="last arrow_btn" href="javascript:void(0)" @click="goPage(data.totalPages)"><img src="/images/icon/paging_btn-last.png" alt="마지막" /></a></li>
-            </ul>
-          </div>
-        </div>
+        <BasePagination card :page="page" :total-pages="data.totalPages" @change="goPage" />
       </div>
     </div>
   </section>

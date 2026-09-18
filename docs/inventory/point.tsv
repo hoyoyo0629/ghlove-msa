@@ -1,0 +1,52 @@
+계층	AS-IS 구분	AS-IS 항목	근거	MSA 대응	판정	비고
+구조	포인트체계	원제품 포인트 (OP_POINT/OP_POINT_USED/OP_POINT_CONFIG)	earnPoint 호출 4곳 전부 원제품 기능	미사용(테이블만 이관)	죽은코드	회원가입/상품평/관리자적립 - 고향사랑e음 기능 아님
+구조	포인트체계	기부포인트 (G_CNTR.CNTR_POINT + G_CNTR_USE_POINT)	mypage-mapper getCntrPointInfo	PT_POINT_LEDGER + PT_POINT_BALANCE	대응있음	RFP SFR-004 "원장과 잔액 테이블 분리" 명시 요건
+구조	적립률	기부금액 대비 적립률	AS-IS는 기부 시 CNTR_POINT 확정	PT_LOCGOV_POINT_RATE	대응있음	RFP:57 30% 기준, 하드코딩 금지 DB관리
+화면	mypage	cntrPoint.html 기부포인트 조회	inbound 12	/ (my.html)	대응있음
+화면	mypage	cntrPointDetail.html 지자체별 상세	inbound 2	/detail (detail.html)	대응있음
+컨트롤러	/api/mypage	GET /getCntrPoint	cntrPoint, cntrPointDetail, orderList	GET /, /api/my/points, /api/balance	대응있음
+컨트롤러	/api/mypage	GET /getCntrPointDetail	cntrPointDetail.html	GET /detail	대응있음
+컨트롤러	/api/mypage/2	GET /points	래퍼 경로 불일치(/2 누락)	-	죽은코드	donation과 동일 원인
+컨트롤러	운영관리	PointManagerController	ghlove-web	/api/admin/point-history 등	부분	admin 도메인 배정 대상
+컨트롤러	운영관리	GivePointManagerController	ghlove-web	/api/admin/point-daily-stats	부분	admin 도메인 배정 대상
+컨트롤러	운영관리	PointCheckManagerController	ghlove-web	없음	확인필요	포인트 점검 기능
+매퍼	starpoint-mapper.xmlx	19건 전부	확장자 .xmlx라 MyBatis 미로딩, 자바 참조 0	-	죽은코드	원제품(일본 SalesOn) 잔재
+매퍼	point-mapper.xml	47건 중 38건 사용	saleson.shop.point.PointMapper	원장 모델로 대체	부분
+매퍼	point-mapper.xml	getPointConfigById	인터페이스 미선언	-	죽은코드	XML 고아
+매퍼	point-mapper.xml	getPointConfigList	인터페이스 미선언	-	죽은코드	XML 고아
+매퍼	point-mapper.xml	updatePointConfig	인터페이스 미선언	-	죽은코드	XML 고아
+매퍼	point-mapper.xml	getAvailablePointListByUserId	호출 0	-	죽은코드
+매퍼	point-mapper.xml	getExpirationPointSendMessage	호출 0	-	죽은코드	만료 예고 메시지
+매퍼	point-mapper.xml	getOrderReturnPointByParam	호출 0	-	죽은코드	실경로는 earnPoint("return")
+매퍼	point-mapper.xml	getOrderReturnPointTargetUsedHistoryByParam	호출 0	-	죽은코드	동상
+매퍼	point-mapper.xml	getReturnPointListByParam	호출 0	-	죽은코드	동상
+매퍼	point-mapper.xml	getPointExpirationDateByPointId	호출 0	-	죽은코드
+매퍼	order-give-point-mapper.xml	16건 전부 사용	order.givepoint.OrderGivePointMapper	order 서비스 포인트 사용	부분	order 도메인과 경계
+매퍼	give-point-mapper.xml	8건 전부 사용	give.givepoint.GivePointMapper	/api/admin/point-history	부분
+매퍼	give-point-expiration-mapper.xml	5건 전부 사용	givepointexpiration.GivePointExpirationMapper	expirePoints() 배치	부분	탈퇴 시 소멸은 미대응
+매퍼	pointcheck-mapper.xml	2건 전부 사용	pointcheck.PointCheckMapper	없음	확인필요
+서비스로직	적립	earnPoint mode=join (회원가입 포인트)	UserServiceImpl:530,575	없음	죽은코드	원제품 기능
+서비스로직	적립	earnPoint mode=admin (운영자 수동적립)	UserManagerController:1399	/api/admin/credit-for-donation	부분	기부 사유 한정
+서비스로직	적립	earnPoint mode=review (상품평 포인트)	ItemServiceImpl:2188	없음	죽은코드	earnPoint의 if/else 분기에 없어 기본경로로 떨어짐
+서비스로직	반환	earnPoint mode=return → processReturnPoint	OrderClaimApplyServiceImpl:1130, OrderServiceImpl:5495	RESTORE 원장행 + lot 잔량 복원	대응있음	모델은 다르나 결과 동일
+서비스로직	집계	CNTR_POINT - SUM(G_CNTR_USE_POINT), 회원+지자체 단위	mypage-mapper:79~127	PT_POINT_BALANCE	대응있음
+서비스로직	집계	CNTR_STTUS_CODE='200' AND DELETE_AT='N' AND STTEMNT_PAY_DE IS NOT NULL	mypage-mapper:104	COMPLETED 기준	확인필요	납부일 조건 등가성 확인
+서비스로직	집계	USER_GRADE (일반/명예기부자)	G_HONOR_CNTRBTR 존재여부	화면 미표시	죽은코드	AS-IS도 쿼리만 있고 화면 미사용
+서비스로직	집계	DETAIL (연계기관 최다 1건 + "등 N건")	mypage-mapper:97~101	donationSourcesByLocgov + LocgovClient.donationSourcesOf	조치완료	Donation.linkInsttCd 매핑 추가. 등 N건 분기 실측 확인
+서비스로직	만료	기부포인트 소멸: POINT_END_DE < 오늘	give-point-expiration-mapper getCntrBlcePointList	EXPIRATION_DATE 기준 expirePoints()	대응있음
+서비스로직	만료	소멸분을 G_CNTR_USE_POINT에 사용이력으로 기록	insertCntrUsePoint	EXPIRE 원장행	대응있음
+서비스로직	만료	원제품 포인트 일배치 expirationPoint() (휴면회원 포함)	PointServiceImpl:359~	해당없음	죽은코드	원제품 체계
+서비스로직	만료	만료일 미설정 시 200년 후로 설정	PointServiceImpl:735~739	미확인	확인필요
+서비스로직	만료	만료 예정 안내	expirationPointSendMessage (쿼리 호출 0)	/api/my/points 만료예정 + pt_rm_expiring_point	대응있음	RFP:61 CQRS ReadModel 명시
+서비스로직	탈퇴	탈퇴 시 잔여 기부포인트 소멸	GeneralCustomerServiceImpl:286~296	PointService.expireAllOnWithdrawal + PointClient	조치완료	본인탈퇴·강제탈퇴 두 경로 모두. 실패 시 탈퇴 중단
+서비스로직	예약	포인트 예약/예약해제	AS-IS 없음	/reservations, /api/my/reservations	대응있음	RFP SFR-004:59 + ISP:160 명시 신규요건
+화면이벤트	cntrPoint.html	paging	mypage/cntrPoint.html	페이징 있음	대응있음
+화면이벤트	cntrPoint.html	closeTableOverlap (가로스크롤 안내 닫기)	mypage/cntrPoint.html	parentElement.style.display='none'	대응있음
+화면이벤트	cntrPoint.html	goToLocgovMall (답례품 몰 가기)	mypage/cntrPoint.html	td.loc_mall 버튼	대응있음
+화면정적	cntrPoint.html	표 열: No/기부지자체/적립/사용/잔여/기부처/답례품	mypage/cntrPoint.html	기부연도·기부금액 2열 추가	근거확인필요	RFP/ISP 근거 확인
+화면이벤트	cntrPointDetail.html	paging / goToList / closeTableOverlap	mypage/cntrPointDetail.html	있음	대응있음
+화면이벤트	cntrPointDetail.html	goOrderInfo (주문번호 → 주문상세)	mypage/cntrPointDetail.html	USE/RESTORE 행에만 order:8085/orders/{id} 링크	조치완료	REF_KEY가 적립 행에서는 기부번호라 유형별 분기
+화면정적	cntrPointDetail.html	표 열에 잔여포인트 포함	mypage/cntrPointDetail.html	PointDetailRow.balance (발생순 누적)	조치완료	AS-IS는 SQL 상관서브쿼리, MSA는 원장 누적 - 값 동일
+MSA전용	조회	/api/balance-by-locgov	-	-	근거확인필요
+MSA전용	조회	/api/ledger/earned-lots	-	-	근거확인필요	order의 lot 단위 차감용
+MSA전용	운영	/api/admin/locgov-point-rate (적립률 이력)	-	-	대응있음	RFP:57 지자체별 DB관리

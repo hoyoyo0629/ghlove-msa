@@ -169,6 +169,46 @@
         </form>
     </div>
 
+    <!-- 제철식품관 지정 (AS-IS opmanager/i18n/item/form.jsp:934~947 "제철 월 선택(최대 3개)").
+         답례품몰 GNB "제철식품관"(/seasonal)이 이 값으로 이번 달 답례품을 고른다 -
+         AS-IS는 답례품 저장에 묻어가지만 여기서는 배송설정과 같이 별도 폼으로 뺐다. -->
+    <div th:if="${item.itemId()} != null" style="margin-top:32px;">
+        <h4>제철식품관</h4>
+        <form th:action="@{'/admin/gift-items/' + ${item.itemId()} + '/season-food-months'}" method="post"
+              onsubmit="return seasonFoodMonthsCheck();">
+            <table class="board_write_table">
+                <colgroup><col style="width:220px;"><col></colgroup>
+                <tbody>
+                <tr>
+                    <td class="label">제철 월 선택<br>(최대 3개)</td>
+                    <td>
+                        <label th:each="m : ${#numbers.sequence(1, 12)}" style="margin-right:12px;">
+                            <input type="checkbox" name="months" th:value="${m}"
+                                   th:checked="${seasonFoodMonths != null and #lists.contains(seasonFoodMonths, m)}">
+                            <span th:text="${m} + '월'">1월</span>
+                        </label>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+            <div class="btn_all btn_right" style="margin-top:8px;">
+                <button type="submit" class="btn btn-dark-gray btn-mini">제철 월 저장</button>
+            </div>
+        </form>
+        <script>
+            // AS-IS item/form.jsp:5151 seasonFoodMonthListOnclick - 화면단 3개 제한.
+            // 서버(GiftService.replaceSeasonFoodMonths)에서도 같은 제한을 건다.
+            function seasonFoodMonthsCheck() {
+                var checked = document.querySelectorAll('input[name="months"]:checked').length;
+                if (checked > 3) {
+                    alert('제철 월 선택은 3개까지 가능합니다.');
+                    return false;
+                }
+                return true;
+            }
+        </script>
+    </div>
+
     <!-- 답례품 옵션 관리 (SFR-005 재검토 라운드 - 원래 코드가 전혀 없던 gap) - 카탈로그
          관리만 다룬다(장바구니/주문에는 아직 반영 안 됨). 신규 등록 화면에서는 답례품ID가
          아직 없어 옵션을 붙일 수 없다. -->

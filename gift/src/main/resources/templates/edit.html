@@ -12,7 +12,6 @@
     <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"></p>
 
     <form th:action="@{'/gifts/' + ${gift.itemId} + '/edit'}" method="post">
-        <input type="hidden" name="sellerId" th:value="${gift.sellerId}">
         <div class="field">
             <label for="itemName">답례품명</label>
             <input type="text" id="itemName" name="itemName" th:value="${gift.itemName}" required>
@@ -59,7 +58,7 @@
     </form>
 
     <div class="links">
-        <a th:href="@{/my(sellerId=${gift.sellerId})}">내 답례품 관리로</a>
+        <a th:href="@{/my}">내 답례품 관리로</a>
     </div>
 </div>
 </body>

@@ -29,6 +29,8 @@ public class ClaimService {
     private static final String ORDER_STATUS_CONFIRMED = "CONFIRMED";
     private static final String ORDER_STATUS_CLAIM_REQUESTED = "CLAIM_REQUESTED";
     private static final String ORDER_STATUS_CANCELLED = "CANCELLED";
+    private static final String CLAIM_TYPE_RETURN = "RETURN";
+    private static final String CLAIM_TYPE_EXCHANGE = "EXCHANGE";
 
     private static final String CLAIM_STATUS_REQUESTED = "REQUESTED";
     private static final String CLAIM_STATUS_APPROVED = "APPROVED";
@@ -38,6 +40,7 @@ public class ClaimService {
     private final ClaimRepository claimRepository;
     private final OrderRepository orderRepository;
     private final OrderSagaPublisher orderSagaPublisher;
+    private final GiftClient giftClient;
 
     public List<Claim> pending() {
         return claimRepository.findByStatusOrderByClaimIdDesc(CLAIM_STATUS_REQUESTED);
@@ -69,6 +72,24 @@ public class ClaimService {
                 .orElseThrow(() -> new ClaimException("주문을 찾을 수 없습니다."));
         if (!ORDER_STATUS_CONFIRMED.equals(order.getOrderStatus())) {
             throw new ClaimException("주문확정 상태인 주문만 반품/교환을 신청할 수 있습니다.");
+        }
+        // 유형별로 가능한 시점이 다르다 (AS-IS mypage/orderList.html:285~345의 버튼 노출 조건).
+        if (CLAIM_TYPE_RETURN.equals(claimType) || CLAIM_TYPE_EXCHANGE.equals(claimType)) {
+            // 교환·반품은 주문상태 35(배송완료)에서만(`:318,321`). 목록 상단 안내도 같다 -
+            // "배송중인 답례품은 교환/반품이 불가합니다. 배송완료 버튼 클릭 후 신청 가능합니다."(`:180`)
+            if (!OrderService.isDelivered(order)) {
+                throw new ClaimException("배송완료된 주문만 반품/교환을 신청할 수 있습니다. 배송중인 주문은 배송완료 처리 후 신청해 주세요.");
+            }
+            // 상품 자체가 반품 대상인지도 본다 (`itemReturnFlag == 'Y' && mobileItemYn == 'N'`).
+            if (!giftClient.fetch(order.getItemId()).returnable()) {
+                throw new ClaimException("이 답례품은 교환·반품이 불가합니다.");
+            }
+        } else {
+            // 주문취소는 반대로 주문상태 10·20(발송 전)에서만 가능하다(`:287`). 발송 이후에는
+            // 취소가 아니라 반품으로 처리해야 한다. 상품의 반품가능 여부와는 무관하다.
+            if (OrderService.isShipped(order)) {
+                throw new ClaimException("이미 발송된 주문은 취소할 수 없습니다. 반품/교환을 신청해 주세요.");
+            }
         }
         if (claimRepository.findByOrderIdAndStatus(orderId, CLAIM_STATUS_REQUESTED).isPresent()) {
             throw new ClaimException("이미 접수된 반품/교환 신청이 있습니다.");

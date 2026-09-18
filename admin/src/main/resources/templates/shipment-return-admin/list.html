@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>반품지관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div class="contents contents_inner">
+    <h3>반품지관리</h3>
+    <p style="color:#666; margin-bottom:16px;">판매자별 반품 회수 주소를 관리합니다. 기본 반품지는 판매자당 하나입니다.</p>
+    <p th:if="${message}" style="color:#1a7f37;" th:text="${message}"></p>
+    <p th:if="${errorMessage}" style="color:#d32f2f;" th:text="${errorMessage}"></p>
+    <form method="get" th:action="@{/admin/shipment-returns}" class="inline-form" style="margin-bottom:12px;">
+        <label>판매자ID <input type="number" name="sellerId" th:value="${sellerId}" placeholder="전체"></label>
+        <button type="submit" class="small-btn">조회</button>
+    </form>
+    <p><a class="btn" th:href="@{/admin/shipment-returns/new(sellerId=${sellerId})}">+ 반품지 등록</a></p>
+    <table class="board_list_table">
+        <thead>
+        <tr><th>ID</th><th>판매자ID</th><th>주소명</th><th>수령인</th><th>연락처</th><th>주소</th><th>기본</th><th>처리</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${returns}">
+            <td th:text="${r.shipmentReturnId()}"></td>
+            <td th:text="${r.sellerId()}"></td>
+            <td><a th:href="@{'/admin/shipment-returns/' + ${r.shipmentReturnId()} + '/edit'}" th:text="${r.addressName()}"></a></td>
+            <td th:text="${r.name()}"></td>
+            <td th:text="${r.telephoneNumber()}"></td>
+            <td th:text="${r.address()} + ' ' + (${r.addressDetail()} ?: '')"></td>
+            <td th:text="${r.defaultAddressFlag() == 'Y' ? '기본' : ''}"></td>
+            <td>
+                <a class="small-btn" th:href="@{'/admin/shipment-returns/' + ${r.shipmentReturnId()} + '/edit'}">수정</a>
+                <form th:action="@{'/admin/shipment-returns/' + ${r.shipmentReturnId()} + '/delete'}" method="post" class="inline-form"
+                      onsubmit="return confirm('삭제하시겠습니까?')">
+                    <input type="hidden" name="sellerId" th:value="${r.sellerId()}">
+                    <button type="submit" class="small-btn danger">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(returns)}">등록된 반품지가 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

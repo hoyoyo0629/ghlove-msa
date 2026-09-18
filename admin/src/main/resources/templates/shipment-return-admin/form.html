@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>반품지 등록/수정 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div class="contents contents_inner">
+    <div class="location"><a th:href="@{/admin/shipment-returns}">반품지관리</a></div>
+    <h3><span th:text="${shipmentReturn} != null ? '반품지 수정' : '반품지 등록'"></span></h3>
+    <div class="board_write">
+        <table class="board_write_table" summary="반품지 등록/수정">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>판매자ID</td>
+                <td>
+                    <input type="number" name="sellerId"
+                           th:value="${shipmentReturn != null ? shipmentReturn.sellerId() : sellerId}"
+                           th:readonly="${shipmentReturn != null}" required form="srForm">
+                </td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>주소명</td>
+                <td><input type="text" name="addressName" th:value="${shipmentReturn?.addressName()}" placeholder="예: 본사 반품센터" required form="srForm"></td>
+            </tr>
+            <tr>
+                <td class="label">수령인</td>
+                <td><input type="text" name="name" th:value="${shipmentReturn?.name()}" form="srForm"></td>
+            </tr>
+            <tr>
+                <td class="label">연락처</td>
+                <td><input type="text" name="telephoneNumber" th:value="${shipmentReturn?.telephoneNumber()}" form="srForm"></td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>우편번호</td>
+                <td><input type="text" name="zipcode" th:value="${shipmentReturn?.zipcode()}" required form="srForm"></td>
+            </tr>
+            <tr>
+                <td class="label">주소</td>
+                <td><input type="text" name="address" th:value="${shipmentReturn?.address()}" style="width:400px;" form="srForm"></td>
+            </tr>
+            <tr>
+                <td class="label">상세주소</td>
+                <td><input type="text" name="addressDetail" th:value="${shipmentReturn?.addressDetail()}" style="width:400px;" form="srForm"></td>
+            </tr>
+            <tr>
+                <td class="label">기본 반품지</td>
+                <td><input type="checkbox" name="defaultAddress" value="true" th:checked="${shipmentReturn != null and shipmentReturn.defaultAddressFlag() == 'Y'}" form="srForm"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <form id="srForm" th:action="${shipmentReturn} != null ? @{'/admin/shipment-returns/' + ${shipmentReturn.shipmentReturnId()}} : @{/admin/shipment-returns}" method="post"></form>
+    <div class="btn_all btn_center">
+        <button type="submit" form="srForm" class="btn btn-dark-gray btn-small">저장</button>
+        <a class="btn" th:href="@{/admin/shipment-returns}">목록</a>
+    </div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

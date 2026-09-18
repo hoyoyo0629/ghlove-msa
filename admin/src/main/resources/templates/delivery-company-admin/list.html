@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>택배사관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div class="contents contents_inner">
+    <h3>택배사관리</h3>
+    <p style="color:#666; margin-bottom:16px;">송장 등록 시 선택할 택배사와 배송조회 URL을 관리합니다.</p>
+    <p th:if="${message}" style="color:#1a7f37;" th:text="${message}"></p>
+    <p th:if="${errorMessage}" style="color:#d32f2f;" th:text="${errorMessage}"></p>
+    <p><a class="btn" th:href="@{/admin/delivery-companies/new}">+ 택배사 등록</a></p>
+    <table class="board_list_table">
+        <thead>
+        <tr><th>ID</th><th>택배사명</th><th>대표연락처</th><th>배송조회 URL</th><th>사용</th><th>처리</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="c : ${companies}">
+            <td th:text="${c.deliveryCompanyId()}"></td>
+            <td><a th:href="@{'/admin/delivery-companies/' + ${c.deliveryCompanyId()} + '/edit'}" th:text="${c.deliveryCompanyName()}"></a></td>
+            <td th:text="${c.telNumber()}"></td>
+            <td th:text="${c.deliveryCompanyUrl()}"></td>
+            <td th:text="${c.useFlag() == 'Y' ? '사용' : '미사용'}"></td>
+            <td>
+                <a class="small-btn" th:href="@{'/admin/delivery-companies/' + ${c.deliveryCompanyId()} + '/edit'}">수정</a>
+                <form th:action="@{'/admin/delivery-companies/' + ${c.deliveryCompanyId()} + '/delete'}" method="post" class="inline-form"
+                      onsubmit="return confirm('삭제하시겠습니까?')">
+                    <button type="submit" class="small-btn danger">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(companies)}">등록된 택배사가 없습니다.</p>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

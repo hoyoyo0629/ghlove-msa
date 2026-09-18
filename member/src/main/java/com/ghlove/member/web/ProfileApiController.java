@@ -51,7 +51,7 @@ public class ProfileApiController {
                 user.getEmail(), profile.getPhoneNumber(), profile.getBirthday(),
                 profile.getPost(), profile.getAddress(), profile.getAddressDetail(),
                 addressRegionOf(profile.getAddress()),
-                "Y".equals(profile.getReceiveEmail()), "Y".equals(profile.getReceiveSms()),
+                "Y".equals(profile.getReceivePbanc()), "Y".equals(profile.getReceiveEmail()), "Y".equals(profile.getReceiveSms()),
                 "Y".equals(profile.getReceiveKakao()),
                 donationClient.interestLocgovsOf(user.getUserId()),
                 locgovs, provinces));
@@ -60,15 +60,15 @@ public class ProfileApiController {
     public record ProfileResponse(Long userId, String loginId, String userName, String userTypeLabel,
                                    boolean mfaEnabled, String email, String phoneNumber, String birthday,
                                    String post, String address, String addressDetail, String addressRegion,
-                                   boolean receiveEmail, boolean receiveSms, boolean receiveKakao,
+                                   boolean receivePbanc, boolean receiveEmail, boolean receiveSms, boolean receiveKakao,
                                    java.util.List<DonationClient.InterestLocgovInfo> interestLocgovs,
                                    java.util.List<DonationClient.LocgovInfo> allLocgovs,
                                    Map<String, String> provinces) {
     }
 
     public record ProfileUpdateRequest(String phoneNumber, String email, String post, String address,
-                                        String addressDetail, boolean receiveEmail, boolean receiveSms,
-                                        boolean receiveKakao) {
+                                        String addressDetail, boolean receivePbanc, boolean receiveEmail,
+                                        boolean receiveSms, boolean receiveKakao) {
     }
 
     @PutMapping("/api/profile")
@@ -80,7 +80,7 @@ public class ProfileApiController {
         }
         try {
             memberService.updateProfile(user.getUserId(), req.phoneNumber(), req.email(), req.post(),
-                    req.address(), req.addressDetail(), req.receiveEmail(), req.receiveSms(), req.receiveKakao(),
+                    req.address(), req.addressDetail(), req.receivePbanc(), req.receiveEmail(), req.receiveSms(), req.receiveKakao(),
                     request.getRemoteAddr());
             return ResponseEntity.ok(Map.of("status", "OK"));
         } catch (MemberException e) {
@@ -109,7 +109,11 @@ public class ProfileApiController {
         if (user == null) {
             return ResponseEntity.status(401).build();
         }
-        if (memberService.verifyPassword(user.getUserId(), body.get("currentPassword"))) {
+        String currentPassword = body.get("currentPassword");
+        if (currentPassword == null || currentPassword.isBlank()) {
+            return ResponseEntity.status(400).build();
+        }
+        if (memberService.verifyPassword(user.getUserId(), currentPassword)) {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.status(400).build();

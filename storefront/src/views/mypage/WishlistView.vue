@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
 
 const router = useRouter()
 
@@ -31,10 +32,6 @@ async function deleteSelected() {
     await api.post('gift', `/wishlist/${itemId}/toggle`)
   }
   await load()
-}
-
-function formatAmount(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
 }
 </script>
 
@@ -92,7 +89,7 @@ function formatAmount(n) {
                       </router-link>
                       <div class="g_info__txt">
                         <div class="info_title"><router-link :to="`/gifts/${w.itemId}`">{{ w.itemName }}</router-link></div>
-                        <div class="g_info__price">{{ formatAmount(w.salePrice) }} P</div>
+                        <div class="g_info__price">{{ formatN(w.salePrice) }} P</div>
                       </div>
                     </td>
                     <td class="date-col sal_status" v-if="w.soldOut"><span>품절</span></td>

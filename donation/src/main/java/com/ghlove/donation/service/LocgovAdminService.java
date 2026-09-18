@@ -106,6 +106,19 @@ public class LocgovAdminService {
         return locgovDeptHistRepository.findByLocgovCodeOrderByDeptHistNoDesc(locgovCode);
     }
 
+    /**
+     * 오늘 기준으로 이 지자체에 걸려 있는 기부제한 - AS-IS ngdonation-mapper.getCntrLmtt
+     * (LMTT_BGN_DE &lt;= CURRENT_DATE &lt;= LMTT_END_DE) 재현. 없으면 비어 있다.
+     * AS-IS는 기부 진입점마다 이걸 먼저 조회해 제한 기간이면 기부를 막는다.
+     */
+    public java.util.Optional<LocgovLmtt> activeLmttOf(String locgovCode) {
+        String today = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+        return locgovLmttRepository
+                .findByLocgovCodeAndLmttBgnDeLessThanEqualAndLmttEndDeGreaterThanEqualOrderByLmttBgnDeAsc(
+                        locgovCode, today, today)
+                .stream().findFirst();
+    }
+
     public List<LocgovLmtt> lmttOf(String locgovCode) {
         return locgovLmttRepository.findByLocgovCodeOrderByLmttBgnDeDesc(locgovCode);
     }

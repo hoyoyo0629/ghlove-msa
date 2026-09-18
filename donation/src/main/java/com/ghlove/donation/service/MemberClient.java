@@ -1,6 +1,7 @@
 package com.ghlove.donation.service;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -37,6 +38,26 @@ public class MemberClient {
                     .body(MemberInfo.class);
         } catch (RestClientException e) {
             throw new DonationException("회원 정보를 조회할 수 없습니다. (userId=" + userId + ")");
+        }
+    }
+
+    /**
+     * 같은 사람(CI 동일)이 <b>올해 탈퇴하면서 남긴 기부액</b> - 연간 한도에서 함께 차감한다.
+     * AS-IS `DonationVerification.isDonationNormalAmount()`의 `getGMberSecsnSumCntrAmt(mberCi)`
+     * 자리다. 탈퇴하면 `USER_ID` 기준 누계가 끊겨 재가입으로 한도를 다시 쓸 수 있게 되는 것을
+     * 막는 장치라, <b>조회에 실패하면 0이 아니라 예외를 던져 기부를 막는다</b> - 실패를 0으로
+     * 삼키면 그 순간이 곧 한도 우회 창구가 된다.
+     */
+    public long withdrawnDonationCarryOver(Long userId) {
+        try {
+            Map<String, Long> body = restClient.get()
+                    .uri("/api/users/{id}/withdrawn-donation-carryover", userId)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<Map<String, Long>>() {});
+            Long amount = body == null ? null : body.get("amount");
+            return amount == null ? 0L : amount;
+        } catch (RestClientException e) {
+            throw new DonationException("기부한도 확인에 필요한 회원 정보를 조회할 수 없습니다. 잠시 후 다시 시도해 주세요.");
         }
     }
 

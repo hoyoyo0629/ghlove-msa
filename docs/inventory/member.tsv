@@ -1,0 +1,166 @@
+계층	AS-IS 구분	AS-IS 항목	근거	MSA 대응	판정	비고
+화면	users	login.html	inbound 110	login.html	대응있음
+화면	users	join.html	inbound 155	signup.html	대응있음
+화면	users	modify.html	inbound 40	profile.html / personal-info.html	대응있음
+화면	users	secede.html	inbound 10	withdraw.html	대응있음
+화면	users	find-idpw.html	inbound 14	find-idpw.html	대응있음
+화면	users	secede-kakao.html	modify.html:1429, secede.html:287	없음	재현누락	카카오 회원 탈퇴 전용
+화면	users	onepass_secede.html	modify.html:983	없음	재현누락	원패스 회원 탈퇴 전용
+화면	users	onepass-join.html	onepass-result.html:113,149	없음	의도적축소	외부연계 미개방
+화면	users	onepass-result.html	AuthController:1663~1717 리다이렉트	없음	의도적축소
+화면	users	mobile-auth-result.html	mobile-auth-callback 리다이렉트	없음	의도적축소
+화면	users	jusoPopup.html	join/modify/onepass-join 팝업	signup.html/profile.html Daum 우편번호 위젯	대응있음	AS-IS 자체 팝업 대신 공개 위젯
+화면	users/sns	naver-callback.html	op.saleson.js:25	/login/naver/callback	대응있음
+화면	users	sign-certificate.html	login.html:1271이 없는 파일 참조	-	죽은코드	AS-IS 오타로 도달불가
+화면	users	login-backup.html	inbound 0	-	죽은코드
+화면	users	login_bak.html	inbound 0	-	죽은코드
+화면	users	login_test.html	inbound 0	-	죽은코드
+화면	users	login_20241115.html	inbound 0	-	죽은코드
+화면	users	join_20241115.html	inbound 0	-	죽은코드
+화면	users	modify-backup.html	inbound 0	-	죽은코드
+화면	users/old	old/*.html 8개	디렉터리 미참조	-	죽은코드
+화면	상수	pages.SLEEP_USER = /users/sleep-user.html	op.saleson.js:80	reactivate.html	참고	AS-IS 파일 없음, 호출부 전부 주석
+화면	상수	pages.CHANGE_PASSWORD = /users/change-password.html	op.saleson.js:81	password.html	참고	AS-IS 파일 없음, 호출부 주석
+컨트롤러	/api/join	POST /entryForm	join.html:1029,1045	없음	재현누락	가입 진입 지자체 목록
+컨트롤러	/api/join	POST /getSubLocGov	join.html:1071	signupForm이 allLocgovs 공급 + 클라이언트 필터	조치완료	상위→하위 지자체
+컨트롤러	/api/join	POST /getUserInfoByUserId	join.html:1122	GET /api/check-login-id	대응있음	금지 아이디 목록까지 대조하도록 보강
+컨트롤러	/api/join	POST /join	join.html:796	POST /signup, /api/auth/signup	부분	서비스로직 갭 참조
+컨트롤러	/api/join	POST /onepassJoin	onepass-join.html	없음	의도적축소
+컨트롤러	/api/join	POST /getPolicyInfo	join/onepass-join	admin API 연결	보류	정책원문 DB이관 보류
+컨트롤러	/api/join	POST /checkMobileAuth	join.html:1297	/signup/mobile-auth (mock)	의도적축소
+컨트롤러	/api/join	POST /checkOnepassMobileAuth	onepass-join.html	없음	의도적축소
+컨트롤러	/api/join	POST /testRandomId	호출처 없음	-	죽은코드
+컨트롤러	/api/auth	POST /token	login/join/modify/find-idpw, financ.js	POST /login, /api/auth/login	부분	서비스로직 갭 참조
+컨트롤러	/api/auth	POST /sns-token	static/js/sns.js	ExternalLoginController	의도적축소
+컨트롤러	/api/auth	POST /sns-join	static/js/sns.js	ExternalLoginService	부분	passwordType P 누락
+컨트롤러	/api/auth	POST /disconnect-sns	static/js/sns.js	없음	재현누락	SNS 연동해지
+컨트롤러	/api/auth	POST /check-sns-join	static/js/sns.js	없음	재현누락
+컨트롤러	/api/auth	GET /sns-info	order/step1.html	없음	재현누락	주문 단계 SNS 정보
+컨트롤러	/api/auth	POST /check-password	secede 3화면	POST /api/password/verify	대응있음
+컨트롤러	/api/auth	GET /mobile-auth	join/modify/find-idpw/onepass-join, auth.vue	mock	의도적축소
+컨트롤러	/api/auth	/mobile-auth-callback	PG 콜백	없음	의도적축소
+컨트롤러	/api/auth	GET /onepass-login	login.html	GET /onepass-login (mock)	의도적축소
+컨트롤러	/api/auth	POST /onepass-callback	온패스 콜백	GET /onepass-callback (mock)	의도적축소
+컨트롤러	/api/auth	POST /onepass-token	onepass-result.html	없음	의도적축소
+컨트롤러	/api/auth	POST /getSimpleAuthResult	login.html	/login/simple-auth (mock)	의도적축소
+컨트롤러	/api/auth	POST /onepass-cancel	login-backup.html(죽은화면)만	-	죽은코드
+컨트롤러	/api/auth	POST /getAccessInfo	login-backup.html(죽은화면)만	-	죽은코드
+컨트롤러	/api/auth	POST /login-statistics	호출처 없음	-	죽은코드
+컨트롤러	/api/auth	GET /me	호출처 없음 (실제 /api/user/getUserInfo)	-	죽은코드
+컨트롤러	/api/auth	POST /me	호출처 없음 (실제 /api/user/modifyUser)	-	죽은코드
+컨트롤러	/api/auth	POST /secede	호출처 없음 (실제 /api/user/secede)	-	죽은코드
+컨트롤러	/api/auth	POST /join	호출처 없음 (실제 /api/join/join)	-	죽은코드
+컨트롤러	/api/auth	POST /send-auth-number	호출처 없음	-	죽은코드
+컨트롤러	/api/auth	POST /check-auth-number	호출처 없음	-	죽은코드
+컨트롤러	/api/auth	POST /find-id	호출처 없음	-	죽은코드
+컨트롤러	/api/auth	POST /find-password-step1	호출처 없음	-	죽은코드
+컨트롤러	/api/auth	POST /find-password-step2	호출처 없음	-	죽은코드
+컨트롤러	/api/auth	POST /change-password	호출처 없음	-	죽은코드
+컨트롤러	/api/auth	POST /delay-change-password	호출처 없음	-	죽은코드
+컨트롤러	/api/auth	POST /recovery	호출처 없음	-	죽은코드
+컨트롤러	/api/auth	GET /saleson-id	호출처 없음	-	죽은코드
+컨트롤러	/api/auth	POST /guest-token	호출처 없음	-	죽은코드
+컨트롤러	/api/auth	GET /auth-me	호출처 없음	-	죽은코드
+컨트롤러	/api/auth	POST /asis-token	호출처 없음	-	죽은코드
+컨트롤러	/api/auth	GET /druh-mig-check	호출처 없음	-	죽은코드
+컨트롤러	/api/auth	GET /session-timeout	호출처 없음	-	죽은코드
+컨트롤러	/api/auth	GET /mobile-auth (1886행) 주석	소스 주석처리	-	죽은코드
+컨트롤러	/api/auth	/mobile-auth-callback (1947행) 주석	소스 주석처리	-	죽은코드
+컨트롤러	/api/user	POST /getUserInfo	modify.html, popup-layer-kakao.vue	GET /api/profile	대응있음
+컨트롤러	/api/user	POST /modifyUser	modify.html	PUT /api/profile	대응있음
+컨트롤러	/api/user	POST /modifyReceive	popup-layer-kakao.vue	POST /profile (receive 4종 RequestParam)	대응있음	profile.html:158~161 라디오 4종
+컨트롤러	/api/user	POST /confirmPresentPassword	modify.html	POST /api/password/verify	대응있음
+컨트롤러	/api/user	POST /changeUserPassword	login/modify/find-idpw	POST /api/password	대응있음
+컨트롤러	/api/user	POST /changeUserPasswordForNoLogin	login/find-idpw	POST /find-idpw/pw/reset	대응있음
+컨트롤러	/api/user	POST /changeUserPasswordLater	login.html	POST /password/postpone	대응있음
+컨트롤러	/api/user	POST /changeUserPwdForSignNoLogin	login/find-idpw	없음	재현누락	전자서명 경유 비번변경
+컨트롤러	/api/user	POST /getSecedeInfo	secede 3화면	GET /api/withdraw-info	대응있음
+컨트롤러	/api/user	POST /secede	secede.html	POST /api/withdraw	대응있음
+컨트롤러	/api/user	POST /modifyMobileAuth	modify.html	없음	재현누락
+컨트롤러	/api/user	POST /checkMobileAuth	login/modify/find-idpw	mock	의도적축소
+컨트롤러	/api/user	POST /checkMobileAuthPwd	find-idpw.html	mock	의도적축소
+컨트롤러	/api/user	POST /checkSign	login/find-idpw	없음	재현누락	전자서명 검증
+컨트롤러	/api/user	POST /financPid	static/js/financ.js	/login/finance-cert (mock)	의도적축소
+컨트롤러	/api/user	POST /getLoginCiInfo	static/js/financ.js	없음	의도적축소
+컨트롤러	/api/user	POST /getNonce	static/js/financ.js	없음	의도적축소
+컨트롤러	/api/user	POST /passwordtype	login/onepass-result/financ.js	없음	재현누락	passwordType 조회
+컨트롤러	/api/user	POST /simpleMberCi	login.html	/login/simple-auth (mock)	의도적축소
+컨트롤러	/api/user	POST /signRegister	sign-certificate.html(도달불가)만	-	죽은코드
+컨트롤러	/api/user	POST /signRemove	sign-certificate.html(도달불가)만	-	죽은코드
+컨트롤러	/api/mypage/2	old 패키지 전체 9개 엔드포인트	프론트가 /2 없이 호출	-	죽은코드	600줄 통째
+매퍼	user-mapper.xml	쿼리 131건 중 119건 사용	saleson.shop.user.UserMapper	JPA Repository	대응있음
+매퍼	user-mapper.xml	getUserListForExcel	인터페이스 미선언	-	죽은코드	XML 고아
+매퍼	user-mapper.xml	deleteUserById	호출 0	-	죽은코드
+매퍼	user-mapper.xml	deleteUserRoleByAuthority	호출 0	-	죽은코드
+매퍼	user-mapper.xml	getConfirmPurchaseRequestUserList	호출 0	-	죽은코드
+매퍼	user-mapper.xml	getConfirmPurchaseUserList	호출 0	-	죽은코드
+매퍼	user-mapper.xml	getPasswordCount	호출 0	-	죽은코드	비밀번호 재사용금지 미작동
+매퍼	user-mapper.xml	getPasswordCountByUser	호출 0	-	죽은코드	동상
+매퍼	user-mapper.xml	getUserCountByUserId	호출 0	-	죽은코드
+매퍼	user-mapper.xml	getUserCountByUserLevel	호출 0	-	죽은코드
+매퍼	user-mapper.xml	getUserRoleListByLoginId	호출 0	-	죽은코드
+매퍼	user-mapper.xml	getUserRoleListByUserId	호출 0	-	죽은코드
+매퍼	user-mapper.xml	mergeUserRole	호출 0	-	죽은코드
+매퍼	mypage-mapper.xml	32건 전부 사용	saleson.shop.mypage.MypageMapper	분산(member/point/order/gift)	부분
+매퍼	generalcustomer-mapper.xml	27건 전부 사용	slaveGeneralCustomerMapper 경유	AdminMemberService	부분
+매퍼	policy-mapper.xml	10건 전부 사용	saleson.shop.policy.PolicyMapper	admin 서비스	보류
+매퍼	user-sns-mapper.xml	9건 전부 사용	saleson.shop.usersns.UserSnsMapper	UserSns 엔티티	부분
+매퍼	join-mapper.xml	8건 전부 사용	saleson.shop.user.JoinMapper	MemberService	부분
+매퍼	userauth-mapper.xml	5건 전부 사용	saleson.common.userauth.UserAuthMapper	-	확인필요
+매퍼	secedeuser-mapper.xml	3건 전부 사용	slaveSecedeUserMapper 경유	/api/admin/secede-users/search	대응있음
+매퍼	sleepuser-mapper.xml	2건 전부 사용	slaveSleepUserMapper 경유	/api/admin/sleep-users/search	대응있음
+서비스로직	가입	mberCi/mberDi/birthdayFull 필수	JoinController:165~170	MemberService.requireVerifiedIdentity()	조치완료	우회 OFF시 차단 확인. 로컬은 identity-verification-bypass=true
+서비스로직	가입	isAuth() 인증플래그 체크	JoinController:182	없음	재현누락
+서비스로직	가입	CI 중복가입 차단 1인1계정	JoinController:186~193	MemberService.requireVerifiedIdentity()	조치완료	CI 있으면 우회여부 무관하게 항상 검사
+서비스로직	가입	금지 아이디 목록 config.deniedId	UserServiceImpl:1755~1785	MemberPolicySettings + loginIdAvailable()	조치완료	ghlove.member.denied-login-ids, 중복확인 API에도 동일 적용
+서비스로직	가입	loginPathCode = 100	JoinController:212	LOGIN_PATH_IDPW = 100	대응있음	값 일치
+서비스로직	가입	OP_USER_PARENT 법정대리인 insert	JoinController:213~241	없음	재현누락	14세 미만
+서비스로직	가입	insertUserDetail이 GENDER를 리터럴 null로 기록	user-mapper.xml insertUserDetail	-	참고	DTO에만 있고 미저장
+서비스로직	가입	UserDetail 컬럼 TEL_NUMBER/FAX_NUMBER/AGE/BUY_COUNT/BUY_PRICE/SITE_FLAG	insertUserDetail	MSA 엔티티에 없음	재현누락
+서비스로직	가입	locGovList 관심지자체	userModifyDataSet:435	signup.html 관심지자체 선택 + donation 등록	조치완료
+서비스로직	가입	rtnpsntList 관심답례품	userModifyDataSet:439	없음	재현누락
+서비스로직	가입후	GA 이벤트 joinUser(userId)	join.html:799	없음	재현누락
+서비스로직	가입후	자동 로그인	join.html:801,806~812	session + cookie 발급	대응있음
+서비스로직	가입후	세션 LOGIN_FIRST=Y	join.html:825	없음	재현누락
+서비스로직	가입후	메인으로 리다이렉트	join.html:840	/signup?completed=1 모달	차이(경미)
+서비스로직	로그인	단일 API가 ROLE_USER/OPMANAGER/SELLER 3역할 분기	AuthController:1191~1250	member/admin 분리	의도적축소	MSA 구조상 분리
+서비스로직	로그인	실패 5회 계정잠금	AuthController:1200	MAX_LOGIN_FAIL_COUNT = 5	대응있음
+서비스로직	로그인	passwordType P(카카오) 존재	AuthController:1199	PASSWORD_TYPE_SNS, ExternalLoginService	조치완료	KAKAO/NAVER 신규연동+재로그인 모두 P 기록
+서비스로직	로그인	카카오 회원 잠금안내 제외	AuthController:1200	checkCredentials justLocked 조건	조치완료
+서비스로직	로그인	카카오 회원 비번만료 제외	AuthController:1232	passwordChangeRequired() P 예외	조치완료	SNS 회원이 만료 대상이 되던 버그 해소
+서비스로직	로그인	PASSWORD_TEMP (T)	AuthController:1235	PASSWORD_TYPE_TEMPORARY	대응있음
+서비스로직	로그인	SLEEP_USER (statusCode 4)	AuthController:1238	STATUS_DORMANT + /reactivate	대응있음	코드체계 상이
+서비스로직	로그인	ONEPASS_USER (userKey + loginPath 300)	AuthController:1241	mock	의도적축소
+서비스로직	로그인	code 우선순위 ONEPASS>SLEEP>TEMP>EXPIRED	순차 대입이라 마지막이 우선	미검증	확인필요
+서비스로직	로그인	ROLE_ADMIN_7/8 사용자페이지 차단	AuthController:1204~1211	MemberService.rejectOfflineManager()	조치완료	AS-IS는 비번확인 前 검사(계정열거 노출) - 비번확인 後로 이동
+서비스로직	로그인	ASIS 인증 API 통신	AuthController:1215	없음	의도적축소	레거시 연계
+서비스로직	로그인	INCORRECT_PASSWORD_LOCK / UNAUTHORIZED_LOCK 분기	AuthController:1277~1282	단일 메시지	부분
+서비스로직	전자서명	checkSign 검증만 live, 등록/삭제 도달불가	sign-certificate.html 오타	없음	죽은코드	이식 대상 아님
+화면이벤트	login.html	setTab(1)(2) 로그인 탭 2개 (setTab(3)은 273행 주석처리)	users/login.html	loginSetTab(1)(2)	대응있음	초판에 "탭 부족"으로 오판했던 항목
+화면이벤트	login.html	submitNaver 네이버 로그인	users/login.html:345	<a th:href="@{/login/naver}"> 버튼	대응있음	초판에 onclick만 grep해 누락 오판
+화면이벤트	login.html	financLogin 금융인증서	users/login.html	/login/finance-cert mock	의도적축소
+화면이벤트	login.html	onepassLoginBefore/changeOnePassId/enterInputOnepass	users/login.html	mock	의도적축소
+화면이벤트	login.html	checkPwd 실시간 비번검사	users/login.html	확인필요	확인필요
+화면이벤트	join.html	checkIdUsedYn 아이디 중복확인	users/join.html	checkLoginId()	대응있음
+화면이벤트	join.html	changeId 변경시 중복확인 초기화	users/join.html	확인필요	확인필요
+화면이벤트	join.html	eyeToggle 비번 보기	users/join.html	eyeToggle('password')	대응있음
+화면이벤트	join.html	emailChange 도메인 선택	users/join.html	onEmailDomainChange()	대응있음
+화면이벤트	join.html	searchAddress 주소검색	users/join.html	signup.html searchAddress() + Daum 우편번호	조치완료	우편번호(post) 필드까지 추가, UserDetail.POST 저장
+화면이벤트	join.html	getSubLocGovList 하위 지자체 로드	users/join.html	signup.html filterAddLocgov()	조치완료	AS-IS는 서버조회, MSA는 전체목록을 받아 클라이언트 필터
+화면이벤트	join.html	addRow/deleteRow 관심지자체 다중행	users/join.html	addSignupLocgov()/removeSignupLocgov()	조치완료	가입완료(쿠키 발급) 후 donation:8082로 등록
+화면이벤트	join.html	수신동의 라디오 4종 전부 주석처리	users/join.html:374~414	체크박스 있으나 미전송	버그(양쪽)	AS-IS 미작동 / MSA 배선끊김
+화면이벤트	modify.html	getMobileAuth name/phone/password 3종	users/modify.html	/coming-soon 대체	의도적축소	Siren24 PCC 유료연동 부재 - profile.html:16~19에 명시
+화면이벤트	modify.html	onepassCancel 원패스 연동해제	users/modify.html	없음	재현누락
+화면이벤트	modify.html	kakaoLinkClear 카카오 연동해제	users/modify.html	없음	재현누락
+화면이벤트	modify.html	checkPresentPwd 현재비번 확인	users/modify.html	/api/password/verify	대응있음
+화면이벤트	modify.html	upperLocgovChange 상위 지자체 변경	users/modify.html	filterAddLocgov()	대응있음	형태 상이
+화면이벤트	modify.html	addRow/deleteRow 관심지자체	users/modify.html	addInterestLocgov/removeInterestLocgov	대응있음
+화면이벤트	secede.html	submitConfirm	users/secede.html	beforeSubmit()	대응있음
+화면이벤트	secede.html	focusTar 접근성 포커스	users/secede.html	없음	확인필요
+화면이벤트	find-idpw.html	swapTab id/password	users/find-idpw.html	setTab('id')/('pw')	대응있음
+화면이벤트	find-idpw.html	findId / findPasswordStep1 / step2	users/find-idpw.html	resetId/authSendCode/authVerify/pwReset	대응있음
+화면이벤트	find-idpw.html	authLayer / authLayerPwd	users/find-idpw.html	openAuthModal('id')/('pw')	대응있음
+MSA전용	가입	WELCOME_SIGNUP 알림톡 발송	MemberService:114	-	근거확인필요	RFP/ISP 대조 대상
+MSA전용	가입	3단계 위저드 goToStep(1)(2)(3)	signup.html	-	근거확인필요	AS-IS도 3단계 구조
+MSA전용	로그인	MFA (mfa-verify)	AuthApiController:105	-	근거확인필요
+MSA전용	개발	authBypass / startMockAuth	find-idpw.html	-	개발우회	운영 제외 대상

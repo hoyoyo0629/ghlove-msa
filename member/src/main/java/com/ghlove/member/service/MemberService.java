@@ -14,11 +14,13 @@ import com.ghlove.member.repository.UserRepository;
 import com.ghlove.member.repository.UserRoleRepository;
 import com.ghlove.member.service.integration.NotificationClient;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -28,10 +30,19 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class MemberService {
 
     private static final String STATUS_ACTIVE = "ACTIVE";
     private static final String STATUS_LOCKED = "LOCKED";
+    /** AS-IS PASSWORD_TYPE - 'N' 정상, 'T' 발급된 임시비밀번호(반드시 변경). */
+    private static final String PASSWORD_TYPE_NORMAL = "N";
+    private static final String PASSWORD_TYPE_TEMPORARY = "T";
+    /** AS-IS passwordType P = SNS(카카오/네이버) 회원. 비밀번호 만료(AuthController:1232,
+     *  JwtTokenAuthenticationFilter:542)와 실패 5회 잠금(AuthController:1200)을 타지 않는다. */
+    private static final String PASSWORD_TYPE_SNS = "P";
+    /** SYSTEM_CONFIG/LIFE_TIME_PASSWORD 미설정 시 AS-IS와 같은 폴백(일). */
+    private static final long DEFAULT_PASSWORD_LIFE_TIME_DAYS = 180L;
     private static final String STATUS_WITHDRAWN = "WITHDRAWN";
     private static final String STATUS_DORMANT = "DORMANT";
     private static final String USER_TYPE_GENERAL = "GENERAL";
@@ -52,6 +63,27 @@ public class MemberService {
     private final com.ghlove.member.repository.UserDataDestructionLogRepository userDataDestructionLogRepository;
     private final PasswordEncoder passwordEncoder;
     private final NotificationClient notificationClient;
+    private final MemberPolicySettings memberPolicySettings;
+    private final DevBypassSettings devBypassSettings;
+    private final DonationClient donationClient;
+    private final PointClient pointClient;
+    private final com.ghlove.member.repository.MberSecsnRepository mberSecsnRepository;
+
+    /**
+     * 아이디를 쓸 수 있는가 - AS-IS `UserServiceImpl.checkDuplication()` 재현.
+     * ①운영설정의 가입 불가 아이디 목록 대조 ②회원 테이블 조회. AS-IS는 둘 중 하나라도
+     * 걸리면 같은 `isOccupiedId`를 돌려주므로, 금지 아이디도 화면에는 "이미 사용중"으로
+     * 보인다(`JoinController.getUserInfoByUserId`가 그 결과를 idCnt로 그대로 내려준다).
+     */
+    public boolean loginIdAvailable(String loginId) {
+        if (loginId == null || loginId.isBlank()) {
+            return false;
+        }
+        if (memberPolicySettings.isDenied(loginId)) {
+            return false;
+        }
+        return userRepository.findByLoginId(loginId).isEmpty();
+    }
 
     /** No-hardcoding principle: code labels always come from OP_COMMON_CODE, never a Java enum/switch. */
     public Map<String, String> codesOf(String codeType) {
@@ -70,17 +102,61 @@ public class MemberService {
     }
 
     @Transactional
+    /**
+     * 본인인증 결과 검사 - AS-IS `JoinController.join()`의 가입 전 관문 두 가지를 옮긴 것.
+     *
+     * <p>①`mberCi`/`mberDi`/생년월일이 하나라도 비면 `BAD_REQUEST`(`JoinController:165~170`).
+     * 즉 AS-IS는 <b>본인인증 없이는 가입이 성립하지 않는다</b>.
+     * ②이미 같은 CI로 가입한 회원이 있으면 `DUPLICATION_CI_JOIN_USER`(`:186~193`) —
+     * 실명 1인당 계정 하나만 허용하는 정책이다.
+     *
+     * <p>이 환경은 본인인증 게이트웨이가 열려 있지 않아 일반 가입 경로로는 CI가 들어오지
+     * 않는다. 그래서 ①은 {@link DevBypassSettings} 우회가 켜진 동안만 건너뛰고(운영 기본값
+     * false에서는 AS-IS와 똑같이 막힌다), ②는 <b>CI가 있을 때 항상</b> 검사한다 - 카카오
+     * 인증서비스처럼 실제로 CI가 들어오는 경로에서는 우회 여부와 무관하게 막아야 한다.
+     */
+    private void requireVerifiedIdentity(SignupForm form) {
+        String ci = trimToNull(form.getMberCi());
+        if (ci != null) {
+            // AS-IS `getUserInfoByCi`는 `status_code = '9'`(정상)인 계정만 조회한다
+            // (`user-mapper.xml`). 상태코드는 1:가입대기 2:차단 3:탈퇴 4:휴면 9:정상
+            // (`GeneralCustomer.java:30`). 즉 <b>탈퇴한 회원의 CI로는 재가입이 가능</b>하며,
+            // 그래야 탈퇴 시 남긴 `G_MBER_SECSN` 기부액을 재가입 계정의 연간 한도에서 빼는
+            // 장치가 의미를 갖는다(그 표의 존재 자체가 재가입을 전제한다).
+            userRepository.findFirstByMberCiAndStatusCodeOrderByUserIdDesc(ci, STATUS_ACTIVE)
+                    .ifPresent(u -> {
+                        throw new MemberException("이미 가입된 본인인증 정보입니다. 아이디 찾기를 이용해 주세요.");
+                    });
+        }
+        if (devBypassSettings.isIdentityVerificationBypass()) {
+            return;
+        }
+        if (ci == null || trimToNull(form.getMberDi()) == null || trimToNull(form.getBirthday()) == null) {
+            throw new MemberException("본인인증을 완료해야 회원가입을 할 수 있습니다.");
+        }
+    }
+
+    private static String trimToNull(String s) {
+        if (s == null) {
+            return null;
+        }
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
+    }
+
     public User signup(SignupForm form) {
         if (!form.getPassword().equals(form.getPasswordConfirm())) {
             throw new MemberException("비밀번호와 비밀번호 확인이 일치하지 않습니다.");
         }
-        userRepository.findByLoginId(form.getLoginId()).ifPresent(u -> {
+        requireVerifiedIdentity(form);
+        if (!loginIdAvailable(form.getLoginId())) {
             throw new MemberException("이미 사용 중인 아이디입니다.");
-        });
+        }
 
         User user = new User();
         user.setLoginId(form.getLoginId());
         user.setPassword(passwordEncoder.encode(form.getPassword()));
+        stampPasswordChanged(user);
         user.setUserName(form.getUserName());
         user.setEmail(form.getEmail());
         user.setStatusCode(STATUS_ACTIVE);
@@ -88,6 +164,10 @@ public class MemberService {
         user.setLoginPathCode(LOGIN_PATH_IDPW);
         user.setLoginCount(0);
         user.setLoginFailCount(0);
+        // 본인인증을 거쳐 온 가입이면 CI/DI를 남긴다 - 이후 가입의 1인 1계정 검사와
+        // SNS 연동 조회가 이 값을 기준으로 돈다(AS-IS userModifyDataSet:441~447).
+        user.setMberCi(trimToNull(form.getMberCi()));
+        user.setMberDi(trimToNull(form.getMberDi()));
         user.setCreatedDate(now());
         user.setUpdatedDate(now());
         User saved = userRepository.save(user);
@@ -99,6 +179,7 @@ public class MemberService {
         // <input type=date>는 yyyy-MM-dd로 넘어오는데 BIRTHDAY 컬럼은 다른 서비스(예: donation의
         // 기부확인증)에서 yyyyMMdd로 파싱하므로 하이픈을 제거해서 저장한다.
         detail.setBirthday(form.getBirthday() != null ? form.getBirthday().replace("-", "") : null);
+        detail.setPost(form.getPost());
         detail.setAddress(form.getAddress());
         detail.setAddressDetail(form.getAddressDetail());
         detail.setUseFlag("Y");
@@ -131,6 +212,9 @@ public class MemberService {
         User user = new User();
         user.setLoginId(loginId);
         user.setPassword(passwordEncoder.encode(tempPassword));
+        // 발급된 임시비밀번호 - 다음 로그인에서 변경을 요구한다(AS-IS PASSWORD_TYPE='T').
+        user.setPasswordExpiredDate(newPasswordExpiredDate());
+        user.setPasswordType(PASSWORD_TYPE_TEMPORARY);
         user.setUserName(userName);
         user.setStatusCode(STATUS_ACTIVE);
         user.setSbscrbSeCode(USER_TYPE_GENERAL);
@@ -185,13 +269,26 @@ public class MemberService {
      * 발송 결과만 돌려준다(완료는 {@link #verifyMfaAndCompleteLogin}에서). MFA를 안 켠
      * 회원은 기존과 동일하게 이 한 번의 호출로 바로 로그인이 끝난다.
      */
-    public record LoginOutcome(User user, boolean mfaRequired, String maskedPhone, String devCode) {
+    public record LoginOutcome(User user, boolean mfaRequired, String maskedPhone, String devCode, boolean dormant,
+                                String passwordChangeCode) {
     }
 
     public LoginOutcome loginWithMfaCheck(String loginId, String rawPassword, String remoteAddr) {
         User user = checkCredentials(loginId, rawPassword, remoteAddr);
+        // AS-IS(op.saleson.js:1169): 본인확인은 끝났으나 휴면회원이면 로그인/MFA를 진행하지 않고
+        // SLEEP_USER로 신호해 로그인 화면에서 휴면해제를 물어본다. completeLogin(최종로그인일/횟수
+        // 갱신)도 아직 하지 않는다 - 해제 후 재로그인 시점에 기록된다.
+        if (STATUS_DORMANT.equals(user.getStatusCode())) {
+            return new LoginOutcome(user, false, null, null, true, null);
+        }
+        // AS-IS(op.saleson.js:1182/1201): 본인확인 후 비밀번호 만료/임시비번이면 로그인/ MFA를 진행하지
+        // 않고 PASSWORD_EXPIRED/PASSWORD_TEMP로 신호해 변경을 요구한다. completeLogin도 아직 하지 않는다.
+        String pwCode = passwordChangeCode(user);
+        if (pwCode != null) {
+            return new LoginOutcome(user, false, null, null, false, pwCode);
+        }
         if (!"Y".equals(user.getMfaEnabled())) {
-            return new LoginOutcome(completeLogin(user, remoteAddr), false, null, null);
+            return new LoginOutcome(completeLogin(user, remoteAddr), false, null, null, false, null);
         }
         UserDetail detail = userDetailRepository.findById(user.getUserId()).orElse(null);
         String phoneNumber = detail != null ? detail.getPhoneNumber() : null;
@@ -199,12 +296,12 @@ public class MemberService {
             // 휴대폰번호가 없으면 MFA를 켜둔 의미가 없다 - 인증수단이 없으니 그냥 통과시킨다
             // (설정 화면에서 휴대폰번호 없이는 MFA를 켤 수 없게 막는 게 근본 해결이지만,
             // 이미 켜둔 상태에서 번호를 지운 경우까지 로그인 자체를 막아버리면 계정이 잠긴다).
-            return new LoginOutcome(completeLogin(user, remoteAddr), false, null, null);
+            return new LoginOutcome(completeLogin(user, remoteAddr), false, null, null, false, null);
         }
         String code = String.format("%06d", new SecureRandom().nextInt(1_000_000));
         notificationClient.sendAlimtalk(phoneNumber, "LOGIN_MFA", Map.of("code", code));
         pendingMfaCodes.put(user.getUserId(), new PendingMfaCode(code, LocalDateTime.now(), remoteAddr));
-        return new LoginOutcome(user, true, maskPhone(phoneNumber), notificationClient.enabled ? null : code);
+        return new LoginOutcome(user, true, maskPhone(phoneNumber), notificationClient.enabled ? null : code, false, null);
     }
 
     /** MFA 2단계 - 인증번호가 맞으면 그제서야 로그인을 완료(로그인횟수/최종로그인일시/성공로그)한다. */
@@ -239,7 +336,12 @@ public class MemberService {
             throw new MemberException("아이디 또는 비밀번호가 올바르지 않습니다.");
         }
 
-        if (!STATUS_ACTIVE.equals(user.getStatusCode())) {
+        // AS-IS(op.saleson.js:1169)는 휴면회원의 로그인을 에러로 막지 않는다 - 아이디/비번으로
+        // 본인확인까지 통과시킨 뒤 로그인 응답에 SLEEP_USER 코드를 실어보내 그 자리에서 휴면해제
+        // 여부를 묻는다. 그래서 휴면(4)만 여기서 막지 않고 비밀번호 검증까지 내려보낸다.
+        // 나머지 차단상태(가입대기/차단/탈퇴/잠금)는 AS-IS와 동일하게 즉시 에러로 막는다.
+        boolean dormant = STATUS_DORMANT.equals(user.getStatusCode());
+        if (!STATUS_ACTIVE.equals(user.getStatusCode()) && !dormant) {
             recordLoginLog(loginId, "N", remoteAddr, "차단된 계정 상태: " + user.getStatusCode());
             throw new MemberException(statusBlockedMessage(user.getStatusCode()));
         }
@@ -250,7 +352,10 @@ public class MemberService {
             user.setLoginTryDate(now());
 
             String memo = "비밀번호 불일치";
-            boolean justLocked = failCount >= MAX_LOGIN_FAIL_COUNT;
+            // AS-IS AuthController:1200 `!"P".equals(passwordType) && failCount >= 5` - SNS 회원은
+            // 잠금 예외를 던지지 않는다. 실패 횟수는 그대로 쌓되 계정을 잠그지는 않는다.
+            boolean justLocked = failCount >= MAX_LOGIN_FAIL_COUNT
+                    && !PASSWORD_TYPE_SNS.equals(user.getPasswordType());
             if (justLocked) {
                 user.setStatusCode(STATUS_LOCKED);
                 memo = "로그인 실패 횟수 초과로 계정 잠금";
@@ -263,7 +368,34 @@ public class MemberService {
             }
             throw new MemberException("아이디 또는 비밀번호가 올바르지 않습니다.");
         }
+        // 휴면회원은 본인확인까지만 하고 로그인/오프라인담당자 검사는 진행하지 않는다 -
+        // loginWithMfaCheck가 이 상태를 보고 SLEEP_USER(휴면해제 확인)로 분기한다.
+        if (dormant) {
+            return user;
+        }
+        rejectOfflineManager(user, remoteAddr);
         return user;
+    }
+
+    /** AS-IS 오프라인 담당자 권한 - 이 계정들은 운영관리(admin)만 쓰고 사용자 페이지로는 들어올 수 없다. */
+    private static final java.util.Set<String> OFFLINE_MANAGER_ROLES =
+            java.util.Set.of("ROLE_ADMIN_7", "ROLE_ADMIN_8");
+
+    /**
+     * 오프라인 담당자(주담당자 ROLE_ADMIN_7 / 부담당자 ROLE_ADMIN_8)의 사용자 페이지 로그인을
+     * 막는다 - AS-IS `AuthController:1204~1212`의 `OFF_ACCESS_FRONT`.
+     *
+     * <p>AS-IS는 이 검사를 비밀번호 확인 <b>전에</b> 수행해서, 비밀번호를 모르는 사람도 응답만
+     * 보고 "그 아이디가 오프라인 담당자다"를 알아낼 수 있다. 차단 결과는 같으므로 여기서는
+     * 비밀번호가 맞은 뒤에 검사한다 - 정상 이용자가 겪는 동작은 동일하다.
+     */
+    private void rejectOfflineManager(User user, String remoteAddr) {
+        List<String> roles = rolesOf(user.getUserId());
+        if (roles.stream().noneMatch(OFFLINE_MANAGER_ROLES::contains)) {
+            return;
+        }
+        recordLoginLog(user.getLoginId(), "N", remoteAddr, "오프라인 담당자 계정의 사용자 페이지 접근");
+        throw new MemberException("오프라인 담당자 계정은 사용자 페이지를 이용할 수 없습니다. 운영관리에서 로그인해 주세요.");
     }
 
     /** 2단계: 로그인 확정(횟수/최종로그인일시 갱신+성공 로그) - MFA 없는 회원은 1단계 직후,
@@ -313,8 +445,32 @@ public class MemberService {
         return sendPhoneVerification(user.getUserId(), phoneNumber);
     }
 
+    /**
+     * 인증번호 단계를 건너뛰는 본인확인 - 이름+휴대폰번호가 일치하는 회원의 userId만 돌려준다.
+     * 우회 스위치가 켜진 환경에서만 호출된다({@link DevBypassSettings}).
+     */
+    public Long verifyIdentityByNameAndPhone(String userName, String phoneNumber) {
+        return userIdByNameAndPhone(userName, phoneNumber);
+    }
+
+    /** 비밀번호 찾기용 - 아이디까지 포함해 startResetPassword와 같은 검사를 하고 발송만 생략한다. */
+    public Long verifyIdentityForReset(String loginId, String userName, String phoneNumber) {
+        User user = userRepository.findByLoginId(loginId)
+                .filter(u -> userName.equals(u.getUserName()))
+                .orElseThrow(() -> new MemberException("일치하는 회원 정보를 찾을 수 없습니다."));
+        if (!user.getUserId().equals(userIdByNameAndPhone(userName, phoneNumber))) {
+            throw new MemberException("일치하는 회원 정보를 찾을 수 없습니다.");
+        }
+        return user.getUserId();
+    }
+
+    /** 입력/저장 형식 차이(하이픈·공백)를 없애고 숫자만 남긴다 - 조회 비교 기준. */
+    private String phoneDigits(String phoneNumber) {
+        return phoneNumber == null ? "" : phoneNumber.replaceAll("[^0-9]", "");
+    }
+
     private Long userIdByNameAndPhone(String userName, String phoneNumber) {
-        return userDetailRepository.findByPhoneNumber(phoneNumber).stream()
+        return userDetailRepository.findByPhoneNumberDigits(phoneDigits(phoneNumber)).stream()
                 .filter(d -> userRepository.findById(d.getUserId())
                         .map(u -> userName.equals(u.getUserName())).orElse(false))
                 .map(UserDetail::getUserId)
@@ -351,6 +507,7 @@ public class MemberService {
 
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setLoginFailCount(0);
+        stampPasswordChanged(user);
         if (STATUS_LOCKED.equals(user.getStatusCode())) {
             user.setStatusCode(STATUS_ACTIVE);
         }
@@ -396,6 +553,7 @@ public class MemberService {
         validatePasswordComplexity(newPassword, user.getLoginId());
 
         user.setPassword(passwordEncoder.encode(newPassword));
+        stampPasswordChanged(user);
         user.setUpdatedDate(now());
         userRepository.save(user);
         recordChangeLog(userId, "PASSWORD_CHANGE", remoteAddr);
@@ -459,8 +617,8 @@ public class MemberService {
      */
     @Transactional
     public void updateProfile(Long userId, String phoneNumber, String email, String post, String address,
-                               String addressDetail, boolean receiveEmail, boolean receiveSms,
-                               boolean receiveKakao, String remoteAddr) {
+                               String addressDetail, boolean receivePbanc, boolean receiveEmail,
+                               boolean receiveSms, boolean receiveKakao, String remoteAddr) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new MemberException("회원 정보를 찾을 수 없습니다."));
         user.setEmail(email);
@@ -477,6 +635,7 @@ public class MemberService {
         detail.setPost(post);
         detail.setAddress(address);
         detail.setAddressDetail(addressDetail);
+        detail.setReceivePbanc(receivePbanc ? "Y" : "N");
         detail.setReceiveEmail(receiveEmail ? "Y" : "N");
         detail.setReceiveSms(receiveSms ? "Y" : "N");
         detail.setReceiveKakao(receiveKakao ? "Y" : "N");
@@ -488,13 +647,99 @@ public class MemberService {
         recordChangeLog(userId, "PROFILE_UPDATE", remoteAddr);
     }
 
+    /**
+     * 마이페이지 "회원 정보 수정 > 개인정보 수정"(이름/생년월일) 저장. AS-IS는 Siren24 PCC
+     * 본인인증 팝업을 통과한 뒤 인증기관이 돌려준 실명/생년월일로만 바뀌는 값이라, 이 MSA는
+     * 그 연계가 없는 동안 화면 자체를 열지 않는 것이 기본이다. 이 메서드는 본인인증 우회
+     * 스위치가 켜진 환경에서만 호출된다({@link DevBypassSettings}) - 검증되지 않은 입력으로
+     * 실명이 바뀌는 경로이므로 호출측(ProfileController)이 그 플래그를 먼저 확인해야 한다.
+     */
     @Transactional
+    public void updatePersonalInfo(Long userId, String userName, String birthday, String remoteAddr) {
+        if (userName == null || userName.isBlank()) {
+            throw new MemberException("이름을 입력해주세요.");
+        }
+        // 화면은 <input type="date">(yyyy-MM-dd)로 받지만 UserDetail.BIRTHDAY는 가입/현장가입과
+        // 같은 yyyyMMdd 8자리로 저장한다.
+        String normalizedBirthday = birthday == null ? "" : birthday.replace("-", "").trim();
+        if (!normalizedBirthday.matches("[0-9]{8}")) {
+            throw new MemberException("생년월일을 정확히 입력해주세요.");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new MemberException("회원 정보를 찾을 수 없습니다."));
+        user.setUserName(userName.trim());
+        user.setUpdatedDate(now());
+        userRepository.save(user);
+
+        UserDetail detail = userDetailRepository.findById(userId).orElseGet(() -> {
+            UserDetail d = new UserDetail();
+            d.setUserId(userId);
+            d.setLevelId(1);
+            d.setUseFlag("Y");
+            return d;
+        });
+        detail.setBirthday(normalizedBirthday);
+        userDetailRepository.save(detail);
+
+        // 실명·생년월일은 본인확인 대상 정보라 PROFILE_UPDATE와 구분되는 파라미터로 남긴다.
+        recordChangeLog(userId, "PERSONAL_INFO_UPDATE", remoteAddr);
+    }
+
+    @Transactional
+    /**
+     * 이 회원의 CI로 <b>올해 탈퇴하며 남긴 기부액 합계</b> (AS-IS `getGMberSecsnSumCntrAmt`).
+     * donation의 연간 한도 계산이 잔여한도에서 빼는 값이다. CI가 없으면 이어붙일 근거가
+     * 없으므로 0.
+     */
+    public long withdrawnDonationCarryOverOf(Long userId) {
+        return userRepository.findById(userId)
+                .map(User::getMberCi)
+                .filter(ci -> ci != null && !ci.isBlank())
+                .map(ci -> mberSecsnRepository.sumCntrAmtByCiAndYear(
+                        ci, String.valueOf(LocalDate.now().getYear())))
+                .orElse(0L);
+    }
+
+    /**
+     * 탈퇴 시 그 해 기부액을 CI 기준으로 스냅샷해 둔다 (AS-IS `G_MBER_SECSN`).
+     *
+     * <p>탈퇴하면 `USER_ID`로 잡히던 올해 기부 누계가 끊겨, 재가입 후 연간 한도를 처음부터
+     * 다시 쓸 수 있게 된다. AS-IS는 이 표를 CI로 조회해 잔여한도에서 빼는 방식으로 막는다
+     * (`DonationVerification.isDonationNormalAmount`). 그 표를 채우는 쪽이 여기다.
+     *
+     * <p>CI가 없는 회원(본인인증 연계가 열리기 전 가입분)은 이어붙일 키가 없으므로 건너뛴다.
+     * donation 조회가 실패해도 탈퇴 자체는 막지 않는다 - 다만 그때는 한도가 이어지지 않으므로
+     * 경고를 남긴다.
+     */
+    void snapshotDonationForLimitCarryOver(User user) {
+        String mberCi = user.getMberCi();
+        if (mberCi == null || mberCi.isBlank()) {
+            return;
+        }
+        try {
+            java.math.BigDecimal thisYear = donationClient.mySummary(user.getUserId()).thisYearAmt();
+            if (thisYear == null || thisYear.signum() <= 0) {
+                return;
+            }
+            String year = String.valueOf(LocalDate.now().getYear());
+            mberSecsnRepository.save(new com.ghlove.member.domain.MberSecsn(
+                    year, user.getUserId(), mberCi, thisYear.intValue()));
+        } catch (RuntimeException e) {
+            log.warn("탈퇴 회원의 올해 기부액 스냅샷 실패 - 연간 한도가 재가입 시 이어지지 않는다. userId={}",
+                    user.getUserId(), e);
+        }
+    }
+
     public void withdraw(Long userId, String password, String leaveCode, String reason, String remoteAddr) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new MemberException("회원 정보를 찾을 수 없습니다."));
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new MemberException("비밀번호가 올바르지 않습니다.");
         }
+
+        snapshotDonationForLimitCarryOver(user);
+        pointClient.expireAllOnWithdrawal(userId);
 
         user.setStatusCode(STATUS_WITHDRAWN);
         user.setLeaveDate(now());
@@ -531,20 +776,23 @@ public class MemberService {
         return targets.size();
     }
 
-    /** 휴면 해제 - 아이디/비밀번호로 본인 확인 후 즉시 정상 전환한다 (로그인 자체는 휴면 상태에서 막혀 있어 별도 절차 필요). */
+    /**
+     * 휴면 해제 (AS-IS UserController.wakeup-user). AS-IS는 로그인 단계(op.saleson.js:1169)에서
+     * 아이디/비밀번호로 이미 본인확인을 마친 뒤 SLEEP_USER 응답의 토큰으로 recovery를 호출하므로,
+     * 여기서는 자격증명을 다시 받지 않고 로그인 때 확인된 userId로 해제한다. 로그인 응답에서
+     * 넘어온 세션의 대기 userId만 이 메서드로 들어온다(AuthApiController.recovery).
+     */
     @Transactional
-    public User reactivate(String loginId, String password, String remoteAddr) {
-        User user = userRepository.findByLoginId(loginId).orElse(null);
-        if (user == null || !passwordEncoder.matches(password, user.getPassword())) {
-            throw new MemberException("아이디 또는 비밀번호가 올바르지 않습니다.");
-        }
+    public User reactivateById(Long userId, String remoteAddr) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new MemberException("회원 정보를 찾을 수 없습니다."));
         if (!STATUS_DORMANT.equals(user.getStatusCode())) {
             throw new MemberException("휴면 상태인 계정만 해제할 수 있습니다.");
         }
         user.setStatusCode(STATUS_ACTIVE);
         user.setUpdatedDate(now());
         User saved = userRepository.save(user);
-        recordChangeLog(user.getUserId(), "DORMANT_RELEASED", remoteAddr);
+        recordChangeLog(userId, "DORMANT_RELEASED", remoteAddr);
         return saved;
     }
 
@@ -676,6 +924,128 @@ public class MemberService {
 
     private static String now() {
         return DATE_FORMAT.format(LocalDateTime.now());
+    }
+
+
+    /**
+     * 비밀번호 유효기간 만료일 계산 - AS-IS `UserServiceImpl.getPasswordExpiredDate()`와 같이
+     * "오늘 + LIFE_TIME_PASSWORD일"이다. 주기는 하드코딩하지 않고 공통코드에서 읽으며,
+     * 설정이 없으면 AS-IS의 폴백과 같은 180일을 쓴다.
+     */
+    private String newPasswordExpiredDate() {
+        return LocalDate.now().plusDays(passwordLifeTimeDays())
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+    }
+
+    private long passwordLifeTimeDays() {
+        return commonCodeRepository.findById(new com.ghlove.member.domain.CommonCodeId("SYSTEM_CONFIG", "ko", "LIFE_TIME_PASSWORD"))
+                .map(com.ghlove.member.domain.CommonCode::getCodeValue)
+                .map(String::trim)
+                .filter(v -> v.matches("[0-9]+"))
+                .map(Long::parseLong)
+                .orElse(DEFAULT_PASSWORD_LIFE_TIME_DAYS);
+    }
+
+    /** 비밀번호를 새로 정한 시점에 만료일을 갱신하고 임시비밀번호 표시를 해제한다. */
+    private void stampPasswordChanged(User user) {
+        user.setPasswordExpiredDate(newPasswordExpiredDate());
+        user.setPasswordType(PASSWORD_TYPE_NORMAL);
+    }
+
+    /**
+     * 로그인 시점의 비밀번호 변경 필요 여부 (SFR-002 "인증토큰/세션 관리 - 만료·재인증 정책").
+     * 만료일이 지났거나 임시비밀번호('T')면 변경을 안내한다. 만료일이 비어 있는 회원(이 정책
+     * 도입 이전 가입자)은 막지 않는다 - 다음 비밀번호 변경 때 자연스럽게 채워진다.
+     */
+    public boolean passwordChangeRequired(User user) {
+        // SNS 회원은 비밀번호로 로그인하지 않으므로 만료 대상이 아니다(AS-IS는 P를 만나면
+        // 만료·임시 검사 자체를 건너뛴다 - JwtTokenAuthenticationFilter:541~545).
+        if (PASSWORD_TYPE_SNS.equals(user.getPasswordType())) {
+            return false;
+        }
+        if (PASSWORD_TYPE_TEMPORARY.equals(user.getPasswordType())) {
+            return true;
+        }
+        String expired = user.getPasswordExpiredDate();
+        if (expired == null || !expired.matches("[0-9]{8}")) {
+            return false;
+        }
+        return expired.compareTo(LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"))) < 0;
+    }
+
+    /**
+     * "나중에 변경" - AS-IS `changeUserPasswordLater`. 비밀번호는 그대로 두고 만료일만
+     * 다음 주기로 미룬다(임시비밀번호는 미룰 수 없다 - 반드시 바꿔야 하는 상태다).
+     */
+    @Transactional
+    public void postponePasswordChange(Long userId, String remoteAddr) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new MemberException("회원 정보를 찾을 수 없습니다."));
+        if (PASSWORD_TYPE_TEMPORARY.equals(user.getPasswordType())) {
+            throw new MemberException("임시 비밀번호는 반드시 변경해야 합니다.");
+        }
+        user.setPasswordExpiredDate(newPasswordExpiredDate());
+        user.setUpdatedDate(now());
+        userRepository.save(user);
+        recordChangeLog(userId, "PASSWORD_CHANGE_POSTPONED", remoteAddr);
+    }
+
+    /**
+     * 로그인 응답 코드 - 비밀번호 변경 필요 사유(AS-IS op.saleson.js:1182/1201). null=정상.
+     * SNS('P')는 비밀번호 로그인이 아니라 제외, 임시('T')는 PASSWORD_TEMP, 만료일 경과는 PASSWORD_EXPIRED.
+     * {@link #passwordChangeRequired}와 같은 규칙을 코드 문자열로 돌려준다.
+     */
+    public String passwordChangeCode(User user) {
+        if (PASSWORD_TYPE_SNS.equals(user.getPasswordType())) {
+            return null;
+        }
+        if (PASSWORD_TYPE_TEMPORARY.equals(user.getPasswordType())) {
+            return "PASSWORD_TEMP";
+        }
+        String expired = user.getPasswordExpiredDate();
+        if (expired != null && expired.matches("[0-9]{8}")
+                && expired.compareTo(LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"))) < 0) {
+            return "PASSWORD_EXPIRED";
+        }
+        return null;
+    }
+
+    /**
+     * 로그인 시점 비밀번호 변경(만료/임시 대응) - AS-IS pwdChangeModal(PASSWORD_EXPIRED) 흐름.
+     * 로그인 단계에서 아이디/비번으로 본인확인을 마친 뒤 새 비밀번호를 정하고 로그인을 완료한다
+     * (완료 시 만료일 갱신·임시표시 해제 = stampPasswordChanged). 방금 로그인에 쓴 현재 비밀번호와
+     * 같은 값은 막는다(마이페이지 changePassword와 동일).
+     */
+    @Transactional
+    public User changePasswordOnLogin(Long userId, String newPassword, String newPasswordConfirm, String remoteAddr) {
+        if (newPassword == null || !newPassword.equals(newPasswordConfirm)) {
+            throw new MemberException("새 비밀번호와 새 비밀번호 확인이 일치하지 않습니다.");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new MemberException("회원 정보를 찾을 수 없습니다."));
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new MemberException("현재 비밀번호와 다른 비밀번호를 입력해 주세요.");
+        }
+        validatePasswordComplexity(newPassword, user.getLoginId());
+        user.setPassword(passwordEncoder.encode(newPassword));
+        stampPasswordChanged(user);
+        user.setUpdatedDate(now());
+        recordChangeLog(userId, "PASSWORD_CHANGE_ON_LOGIN", remoteAddr);
+        return completeLogin(user, remoteAddr);
+    }
+
+    /** "나중에 변경"(만료 대응, 임시비번은 불가) - 만료일만 미루고 로그인을 완료한다(AS-IS delayChangePassword). */
+    @Transactional
+    public User postponePasswordChangeAndLogin(Long userId, String remoteAddr) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new MemberException("회원 정보를 찾을 수 없습니다."));
+        if (PASSWORD_TYPE_TEMPORARY.equals(user.getPasswordType())) {
+            throw new MemberException("임시 비밀번호는 반드시 변경해야 합니다.");
+        }
+        user.setPasswordExpiredDate(newPasswordExpiredDate());
+        user.setUpdatedDate(now());
+        recordChangeLog(userId, "PASSWORD_CHANGE_POSTPONED", remoteAddr);
+        return completeLogin(user, remoteAddr);
     }
 
     private String generateTempPassword() {

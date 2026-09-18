@@ -7,9 +7,17 @@ build/
 # Java
 *.class
 
+# Eclipse/STS 빌드 산출물 - src/main/resources 를 그대로 복사해 두는 디렉터리라
+# 커밋해두면 템플릿·정적자원이 한 벌 더 생겨 "어느 쪽이 진짜인지" 헷갈린다.
+bin/
+**/bin/
+
 # OS
 .DS_Store
 Thumbs.db
 
 # Logs
 *.log
+
+# 로컬 실행 스크립트가 만드는 런타임 산출물 (로그 + 런처 .cmd)
+/logs/

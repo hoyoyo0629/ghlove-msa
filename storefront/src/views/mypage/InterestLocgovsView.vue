@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
 
 // AS-IS mypage/intrstLocGov.html(및 Thymeleaf 버전 interest-locgovs.html) 재현.
 // 추가는 이 화면이 아니라 회원정보수정 화면에서 이뤄진다(AS-IS도 동일 - 여기는 조회+선택삭제만).
@@ -29,10 +30,6 @@ async function deleteSelected() {
     await api.post('donation', `/interest-locgovs/${code}/delete`)
   }
   await load()
-}
-
-function formatAmount(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
 }
 </script>
 
@@ -87,7 +84,7 @@ function formatAmount(n) {
                     </td>
                     <td class="date-col index">{{ locgovs.length - i }}</td>
                     <td class="date-col info_loc">{{ l.locgovName }}</td>
-                    <td class="date-col do_status">{{ formatAmount(l.myTotal) }}</td>
+                    <td class="date-col do_status">{{ formatN(l.myTotal) }}</td>
                     <td class="date-col btn_col">
                       <button type="button" class="formBtn dona" @click="router.push({ path: '/donate', query: { locgovCode: l.locgovCode } })">기부하기</button>
                     </td>

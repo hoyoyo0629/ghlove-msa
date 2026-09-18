@@ -88,6 +88,16 @@ public class OrderService {
      *  쿠폰을 사용처리한다 - POINT_AMOUNT는 할인 반영된 실차감액으로 저장된다. */
     @Transactional
     public Order createOrder(Long userId, Long itemId, Integer quantity, DeliveryInfo deliveryInfo, Integer couponIssueId) {
+        return createOrder(userId, giftClient.fetch(itemId), quantity, deliveryInfo, couponIssueId);
+    }
+
+    /**
+     * 답례품 정보를 이미 조회해 둔 호출자(장바구니 체크아웃)가 같은 상품을 두 번 조회하지
+     * 않도록 재사용하는 오버로드 - 검증/계산 규칙은 위 오버로드와 완전히 동일하다.
+     */
+    @Transactional
+    public Order createOrder(Long userId, GiftItemInfo gift, Integer quantity, DeliveryInfo deliveryInfo,
+                              Integer couponIssueId) {
         if (userId == null || userId <= 0) {
             throw new OrderException("회원 ID를 입력해 주세요.");
         }
@@ -95,7 +105,7 @@ public class OrderService {
             throw new OrderException("수량은 1개 이상이어야 합니다.");
         }
 
-        GiftItemInfo gift = giftClient.fetch(itemId);
+        Long itemId = gift.itemId();
         if (!"APPROVED".equals(gift.dataStatusCode())) {
             throw new OrderException("현재 주문할 수 없는 답례품입니다.");
         }
@@ -117,7 +127,7 @@ public class OrderService {
         if (couponIssueId != null) {
             discount = couponService.applyToOrder(userId, couponIssueId, order.getOrderId(), itemId, lineTotal, quantity);
         }
-        long deliveryFee = calculateDeliveryFee(gift, quantity, lineTotal,
+        long deliveryFee = deliveryFeeOf(gift, quantity, lineTotal,
                 deliveryInfo != null ? deliveryInfo.address() : null);
         order.setDiscountAmount(discount);
         order.setCouponIssueId(couponIssueId);
@@ -150,7 +160,7 @@ public class OrderService {
      * 묶음배송 등 AS-IS의 세부 정책까지는 재현하지 않고, order가 실제로 참조할 수 있는
      * 핵심(무료/조건부무료/개당/고정 + 제주·도서산간 추가배송비)만 다룬다.
      */
-    private long calculateDeliveryFee(GiftItemInfo gift, int quantity, long lineTotal, String address) {
+    public long deliveryFeeOf(GiftItemInfo gift, int quantity, long lineTotal, String address) {
         String shippingType = gift.shippingType();
         long base = gift.shipping() != null ? gift.shipping() : 0;
         long fee;
@@ -177,7 +187,7 @@ public class OrderService {
 
     /** 도서산간 간이 판정 - 전국 완전한 도서지역 목록이 이 프로젝트 어디에도 없어(우편번호
      *  기반 판정표 부재), 주소 문자열에 흔한 도서지역명이 포함되는지만 본다(제주 전용
-     *  {@link #calculateDeliveryFee}의 별도 분기와 동일한 느슨한 문자열 매칭 - donation의
+     *  {@link #deliveryFeeOf}의 별도 분기와 동일한 느슨한 문자열 매칭 - donation의
      *  residenceLocgovOf()와 같은 관행). */
     private boolean isRemoteIsland(String address) {
         return address.contains("울릉") || address.contains("백령") || address.contains("연평")
@@ -233,12 +243,35 @@ public class OrderService {
         if (!STATUS_CONFIRMED.equals(order.getOrderStatus())) {
             throw new OrderException("확정된 주문만 취소할 수 있습니다.");
         }
+        // AS-IS는 "주문취소" 버튼을 주문상태 10(결제완료)·20(배송준비)에서만 보여준다
+        // (mypage/orderList.html:287). 배송이 시작된 30(배송중)부터는 취소가 아니라
+        // 반품/교환으로 처리해야 하므로 여기서도 발송 이후를 막는다 - 막지 않으면
+        // 이미 나간 물건의 재고·포인트가 보상 트랜잭션으로 되돌아가 버린다.
+        if (isShipped(order)) {
+            throw new OrderException("이미 발송된 주문은 취소할 수 없습니다. 반품/교환을 신청해 주세요.");
+        }
         order.setOrderStatus(STATUS_CANCELLED);
         order.setCancelReason("고객 요청 취소");
         order.setUpdatedDate(LocalDateTime.now());
         Order saved = orderRepository.save(order);
         orderSagaPublisher.publishCancelled(saved);
         return saved;
+    }
+
+    /**
+     * 이미 발송된 주문인가 - 배송상태가 SHIPPED 이후(운송중/배송완료/구매확정)면 true.
+     * AS-IS 주문상태로는 30 이상에 해당한다.
+     */
+    public static boolean isShipped(Order order) {
+        String d = order.getDeliveryStatus();
+        return DELIVERY_SHIPPED.equals(d) || DELIVERY_IN_TRANSIT.equals(d)
+                || DELIVERY_DELIVERED.equals(d) || DELIVERY_CONFIRMED.equals(d);
+    }
+
+    /** 배송완료 이후인가 - AS-IS 주문상태 35(배송완료)/58(교환배송완료) 이상. */
+    public static boolean isDelivered(Order order) {
+        String d = order.getDeliveryStatus();
+        return DELIVERY_DELIVERED.equals(d) || DELIVERY_CONFIRMED.equals(d);
     }
 
     /** 송장 등록 (발송 처리) - 확정된 주문에 대해서만, 1회만 가능. */
@@ -285,6 +318,38 @@ public class OrderService {
         if (DELIVERY_DELIVERED.equals(deliveryStatus)) {
             order.setDeliveredDate(LocalDateTime.now());
         }
+        order.setUpdatedDate(LocalDateTime.now());
+        Order saved = orderRepository.save(order);
+        orderSagaPublisher.publishDeliveryUpdated(saved);
+        return saved;
+    }
+
+    /**
+     * 회원이 직접 누르는 "배송완료" (AS-IS `POST /api/order/shpping-complete`).
+     *
+     * <p>AS-IS는 이걸 <b>운영자가 아니라 구매자</b>가 누른다 - 주문목록·상세의 배송중(30) 건에
+     * "배송완료" 버튼이 뜨고(`mypage/orderList.html:305`), 누르면 35(배송완료)로 바뀐다.
+     * 성격은 배송사 상태 갱신이 아니라 <b>수령 확인</b>이고, 그래야 교환/반품이 열린다
+     * (`:180` "배송중인 답례품은 교환/반품이 불가합니다. 배송완료 버튼 클릭 후 신청 가능합니다.").
+     *
+     * <p>운영자용 {@link #updateDeliveryStatus}와 달리 <b>본인 주문만</b> 처리할 수 있고,
+     * 목적지가 배송완료로 고정이다.
+     */
+    @Transactional
+    public Order markDelivered(String orderId, Long userId) {
+        Order order = detail(orderId);
+        if (!order.getUserId().equals(userId)) {
+            throw new OrderException("본인 주문만 배송완료 처리할 수 있습니다.");
+        }
+        if (order.getDeliveryStatus() == null) {
+            throw new OrderException("아직 발송되지 않은 주문입니다.");
+        }
+        if (DELIVERY_DELIVERED.equals(order.getDeliveryStatus())
+                || DELIVERY_CONFIRMED.equals(order.getDeliveryStatus())) {
+            throw new OrderException("이미 배송완료 처리된 주문입니다.");
+        }
+        order.setDeliveryStatus(DELIVERY_DELIVERED);
+        order.setDeliveredDate(LocalDateTime.now());
         order.setUpdatedDate(LocalDateTime.now());
         Order saved = orderRepository.save(order);
         orderSagaPublisher.publishDeliveryUpdated(saved);
@@ -352,6 +417,7 @@ public class OrderService {
             order.setOrderStatus(STATUS_CONFIRMED);
             Order saved = orderRepository.save(order);
             orderSagaPublisher.publishConfirmed(saved);
+            // 쿠폰 구매 트리거 자동발급 - 2026-09-09 중단 (issuePurchaseTriggeredCoupons 주석 참고).
             issuePurchaseTriggeredCoupons(saved);
         } else {
             order.setOrderStatus(STATUS_CANCELLED);
@@ -360,15 +426,27 @@ public class OrderService {
         }
     }
 
-    /** 쿠폰 발행시점(4:상품구매후발행, 5:첫구매) 자동발급 - 이 주문 자신이 확정되는 순간 트리거한다. */
+    /**
+     * 쿠폰 발행시점(4:상품구매후발행, 5:첫구매) 자동발급 - 이 주문 자신이 확정되는 순간 트리거한다.
+     *
+     * <p><b>2026-09-09부터 중단(본문 전체 주석 처리).</b> 쿠폰 기능이 AS-IS에서도 현재
+     * 사용되지 않아 화면 진입점을 감추기로 했고, 발급만 계속되면 회원이 볼 수 없는 쿠폰이
+     * 주문할 때마다 쌓이기 때문이다. 가입/생일/정기발행을 담당하던
+     * {@link CouponBatchScheduler}는 같은 이유로 설정 스위치
+     * (ghlove.coupon.auto-issue.enabled=false)로 이미 꺼져 있고, 배치가 아닌 이 경로는
+     * SAGA 주문확정 흐름 안에 있어 스위치 대신 코드 주석으로 막았다.
+     *
+     * <p>되살리려면 아래 본문 주석만 풀면 된다 - CouponService 쪽 발급 로직과 DB는
+     * 그대로 살아 있다. 상세 경위는 docs/cart-review-2026-09-09.md §4-5.
+     */
     private void issuePurchaseTriggeredCoupons(Order order) {
-        couponService.issueAfterItemPurchase(order.getUserId(), order.getItemId());
-        boolean firstConfirmed = orderRepository.findByUserIdOrderByCreatedDateDesc(order.getUserId()).stream()
-                .filter(o -> STATUS_CONFIRMED.equals(o.getOrderStatus()))
-                .count() <= 1;
-        if (firstConfirmed) {
-            couponService.issueFirstPurchaseCoupons(order.getUserId());
-        }
+        // couponService.issueAfterItemPurchase(order.getUserId(), order.getItemId());
+        // boolean firstConfirmed = orderRepository.findByUserIdOrderByCreatedDateDesc(order.getUserId()).stream()
+        //         .filter(o -> STATUS_CONFIRMED.equals(o.getOrderStatus()))
+        //         .count() <= 1;
+        // if (firstConfirmed) {
+        //     couponService.issueFirstPurchaseCoupons(order.getUserId());
+        // }
     }
 
     private void appendCancelReason(Order order, String reason) {

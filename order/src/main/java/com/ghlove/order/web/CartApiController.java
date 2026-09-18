@@ -36,6 +36,14 @@ public class CartApiController {
     public record AddRequest(Long itemId, Integer quantity) {
     }
 
+    /**
+     * AS-IS items/details-main.html의 "장바구니" 버튼은 화면에 머문 채 비동기로 담고 알림만
+     * 띄운다. 이 MSA는 답례품 상세가 gift(8084), 장바구니가 order(8085)로 갈라져 있어 브라우저
+     * 입장에서 교차 오리진 호출이 된다 - donation의 관심지자체 API가 member 화면(8081)에서
+     * 불릴 때 쓰는 방식과 같이 호출 오리진만 열어준다. GH_AUTH 쿠키를 실어야 하므로
+     * allowCredentials가 필요하다(쿠키 도메인이 localhost라 포트가 달라도 공유된다).
+     */
+    @CrossOrigin(origins = {"http://localhost:8084", "http://localhost:5173"}, allowCredentials = "true")
     @PostMapping("/api/cart/items")
     public ResponseEntity<?> add(@RequestBody AddRequest req, HttpServletRequest request) {
         Long userId = requireUser(request);

@@ -6,7 +6,9 @@ import com.ghlove.admin.service.ItemAdminClient;
 import com.ghlove.admin.service.ItemOptionAdminClient;
 import com.ghlove.admin.service.LocgovClient;
 import com.ghlove.admin.service.ManagerException;
+import com.ghlove.admin.domain.Manager;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Controller;
@@ -66,7 +68,26 @@ public class ItemAdminController {
         populateFormModel(model);
         model.addAttribute("item", itemClient.get(id));
         model.addAttribute("options", itemOptionClient.list(id));
+        model.addAttribute("seasonFoodMonths", itemClient.seasonFoodMonths(id));
         return "gift-items/form";
+    }
+
+    /**
+     * 제철식품관 지정 (AS-IS `opmanager/i18n/item/form.jsp:934~947`의 "제철 월 선택(최대 3개)").
+     * AS-IS는 답례품 저장에 묻어가지만 여기서는 별도 폼으로 뺐다 - 배송비 설정과 같은 방식이다.
+     */
+    @PostMapping("/{id}/season-food-months")
+    public String updateSeasonFoodMonths(@PathVariable Long id,
+                                          @RequestParam(required = false) List<Integer> months,
+                                          HttpSession session, RedirectAttributes redirect) {
+        Manager manager = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
+        try {
+            itemClient.updateSeasonFoodMonths(id, months, manager == null ? null : manager.getUserId());
+            redirect.addFlashAttribute("message", "제철 월이 저장되었습니다.");
+        } catch (ManagerException e) {
+            redirect.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/gift-items/" + id + "/edit";
     }
 
     /** 배송비/택배사 설정 (SFR-005 재검토 라운드 - 원래 코드가 전혀 없던 gap). */

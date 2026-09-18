@@ -36,6 +36,7 @@ public class DonationMyApiController {
     private final DonationService donationService;
     private final com.ghlove.donation.service.PointClient pointClient;
     private final ReceiptService receiptService;
+    private final com.ghlove.donation.service.OfficialReceiptService officialReceiptService;
     private final MemberClient memberClient;
     private final JwtVerifier jwtVerifier;
     private static final int RECEIPT_PAGE_SIZE = 10;
@@ -248,6 +249,24 @@ public class DonationMyApiController {
                     .toList();
             return ResponseEntity.ok(new CertificateDto(c.getUserName(), c.getBirthdayDisplay(), c.getTopLocGovDisplay(),
                     c.getTotalCntrAmt(), c.getTotalCnt(), c.getNowDateDisplay(), rows));
+        } catch (DonationException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // ---- 기부금영수증(단건, 공식) - AS-IS mypage/cntrList.html "영수증 출력". Thymeleaf
+    // receipt-official-print.html을 storefront 프린트 뷰(OfficialReceiptPrintView.vue)로 옮기며
+    // 조회 데이터를 JSON으로 내려준다. 직인(sealImageDataUri)은 항상 null로 내려가고(직인 미전송),
+    // 실제 직인 합성 PDF는 OfficialReceiptController의 GET /receipts/official/{cntrSn}/pdf가 담당한다.
+
+    @GetMapping("/api/my/receipts/official/{cntrSn}")
+    public ResponseEntity<?> officialReceipt(@PathVariable String cntrSn, HttpServletRequest request) {
+        var authUserId = authUserId(request);
+        if (authUserId.isEmpty()) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            return ResponseEntity.ok(officialReceiptService.build(authUserId.get(), cntrSn));
         } catch (DonationException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

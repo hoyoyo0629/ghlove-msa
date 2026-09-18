@@ -3,6 +3,7 @@ package com.ghlove.gift.web;
 import com.ghlove.gift.domain.Gift;
 import com.ghlove.gift.domain.Inquiry;
 import com.ghlove.gift.domain.Review;
+import com.ghlove.gift.service.GiftException;
 import com.ghlove.gift.service.GiftService;
 import com.ghlove.gift.service.InquiryService;
 import com.ghlove.gift.service.JwtVerifier;
@@ -12,7 +13,9 @@ import com.ghlove.gift.service.WishlistService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -151,5 +154,35 @@ public class GiftMyApiController {
                 })
                 .toList();
         return ResponseEntity.ok(rows);
+    }
+
+    /** 마이페이지 "답례품 후기" 행별 삭제 (AS-IS review.html deleteReview). */
+    @DeleteMapping("/api/my/reviews/{itemReviewId}")
+    public ResponseEntity<?> deleteMyReview(@PathVariable Long itemReviewId, HttpServletRequest request) {
+        var authUserId = jwtVerifier.currentUserId(request);
+        if (authUserId.isEmpty()) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            reviewService.deleteMine(itemReviewId, authUserId.get());
+        } catch (GiftException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    /** 마이페이지 "답례품 Q&A" 행별 삭제 (AS-IS inquiryItem.html deleteItemQna). */
+    @DeleteMapping("/api/my/qna/{inquiryId}")
+    public ResponseEntity<?> deleteMyInquiry(@PathVariable Long inquiryId, HttpServletRequest request) {
+        var authUserId = jwtVerifier.currentUserId(request);
+        if (authUserId.isEmpty()) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            inquiryService.deleteMine(inquiryId, authUserId.get());
+        } catch (GiftException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+        return ResponseEntity.noContent().build();
     }
 }

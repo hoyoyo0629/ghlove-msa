@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${event.featuredName} + ' - 지역이벤트 - 고향사랑e음'"></title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/new.css}">
+    <link rel="stylesheet" th:href="@{/css/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+    <link rel="stylesheet" th:href="@{/css/goods_card.css}">
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="icon" th:href="@{/favicon.ico}">
+</head>
+<body>
+<div th:replace="~{fragments/header :: site-header}"></div>
+
+<!-- AS-IS featured/eventDetail.html 재현 (GET /api/event/{featuredUrl} + /api/event/items).
+     AS-IS는 이벤트 댓글(getEventReply/createEventReply)도 갖고 있으나, 그건 게시판 성격이라
+     common 도메인(게시판류)에서 함께 다루는 것이 맞아 이번 범위에서는 제외했다. -->
+<section class="center">
+    <div class="page-title-box">
+        <span class="ali_breadcrumb">
+            <a th:href="@{'http://localhost:8081/'}"><img class="icon-img" th:src="@{/images/icon/cli-icon_home.png}" alt="홈으로"></a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            <span>기부하기</span>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            <a th:href="@{/events}">지역이벤트</a>
+            <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+            <span th:text="${event.featuredName}"></span>
+        </span>
+        <h2 class="page-title-txt" th:text="${event.featuredName}"></h2>
+        <div class="user-grade point">
+            <span class="grade-bg">
+                <span class="blue-txt" th:text="${progression}"></span>
+                <span th:if="${event.startDate != null and event.endDate != null}"
+                      th:text="' · ' + ${event.startDate} + ' ~ ' + ${event.endDate}"></span>
+            </span>
+        </div>
+    </div>
+</section>
+
+<section id="contents" class="center">
+    <div class="event_visual" th:if="${event.featuredImage != null and !#strings.isEmpty(event.featuredImage)}">
+        <img th:src="@{'/uploads/' + ${event.featuredImage}}" th:alt="${event.featuredName}" style="max-width:100%;">
+    </div>
+
+    <!-- 이벤트 본문은 운영자가 등록한 HTML이다 (AS-IS featuredContent와 동일). -->
+    <div class="event_content" th:if="${event.featuredContent != null}" th:utext="${event.featuredContent}"></div>
+
+    <div class="section all_goods" th:if="${not #lists.isEmpty(items)}">
+        <h3 class="s-title">이벤트 답례품</h3>
+        <ul class="goods-list-group">
+            <li class="goods-list-items" th:each="g : ${items}">
+                <div class="list_inner">
+                    <span class="img_frame">
+                        <a class="img_cover_link" th:href="@{'/gifts/' + ${g.itemId}}">
+                            <img class="item_img"
+                                 th:src="${thumbnails.get(g.itemId)} != null ? @{'/uploads/' + ${thumbnails.get(g.itemId)}} : @{/images/thumb.png}"
+                                 th:alt="${g.itemName}">
+                            <img th:if="${g.soldOut == '1'}" th:src="@{/images/goods/goods_sold-out.png}" alt="품절">
+                        </a>
+                    </span>
+                    <a class="card_title" th:href="@{'/gifts/' + ${g.itemId}}"
+                       th:classappend="${g.soldOut == '1'} ? 'grayTxt_so'" th:text="${g.itemName}"></a>
+                    <span class="deepBlue" th:classappend="${g.soldOut == '1'} ? 'grayTxt_so'">
+                        <span class="pointSize" th:text="${#numbers.formatInteger(g.salePrice, 0, 'COMMA')}"></span> P
+                    </span>
+                </div>
+            </li>
+        </ul>
+    </div>
+
+    <div class="btn-box">
+        <button type="button" class="blueBtn u-confirm" th:attr="data-url=@{/events}" onclick="location.href=this.dataset.url">목록으로</button>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: site-footer}"></div>
+</body>
+</html>

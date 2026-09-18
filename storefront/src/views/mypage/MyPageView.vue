@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
 
 // AS-IS mypage/index.html(및 Thymeleaf 버전 mypage.html) 재현 - .row_con/.half_con/
 // .con_wrap/.wrap_items 클래스 그대로. AS-IS는 각 카드가 div @click 네비게이션이지만
@@ -10,10 +11,6 @@ const summary = ref(null)
 onMounted(async () => {
   summary.value = await api.get('member', '/api/mypage/summary')
 })
-
-function formatAmount(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
-}
 </script>
 
 <template>
@@ -40,7 +37,7 @@ function formatAmount(n) {
                 <span class="round-illustBtn_s"><span class="hidden_txt">기부내역 조회 바로가기</span></span>
               </div>
               <div class="data_area">
-                <span class="data_val">{{ formatAmount(summary.donationTotal) }}</span>
+                <span class="data_val">{{ formatN(summary.donationTotal) }}</span>
                 <span class="unit">원</span>
               </div>
             </router-link>
@@ -50,7 +47,7 @@ function formatAmount(n) {
                 <span class="round-illustBtn_s"><span class="hidden_txt">기부포인트 조회 바로가기</span></span>
               </div>
               <div class="data_area">
-                <span class="data_val">{{ formatAmount(summary.pointBalance) }}</span>
+                <span class="data_val">{{ formatN(summary.pointBalance) }}</span>
                 <span class="unit">P</span>
               </div>
             </router-link>
@@ -60,7 +57,7 @@ function formatAmount(n) {
         <div class="half_con intrst">
           <h3 class="deepSubBlue">확인(혜택)증</h3>
           <div class="con_wrap">
-            <router-link class="wrap_items left_list" to="/mypage/donations">
+            <router-link class="wrap_items left_list" to="/mypage/receipts">
               <div class="top_area">
                 <span class="link_tit"><span>기부확인증</span></span>
                 <span class="round-illustBtn_s"><span class="hidden_txt">기부확인증 바로가기</span></span>
@@ -127,10 +124,15 @@ function formatAmount(n) {
             <div class="top_area"><span class="items_label">배송지 관리</span></div>
             <div class="data_area"><span class="data_val count">{{ summary.deliveryCount }}</span><span class="unit">건</span></div>
           </router-link>
+          <!-- 쿠폰함 타일 숨김 (2026-09-09) - 쿠폰 기능이 AS-IS에서도 미사용이라 자동발급을
+               멈추고 화면 진입점을 감췄다. 이 타일이 /my/coupons로 가는 유일한 링크였다.
+               summary.orderSummary.usableCouponCount API는 그대로 살아 있으므로 아래 주석만
+               풀고 router/index.js의 쿠폰 라우트를 되살리면 복구된다.
           <router-link class="wrap_items" to="/my/coupons">
             <div class="top_area"><span class="items_label">쿠폰함</span></div>
             <div class="data_area"><span class="data_val count">{{ summary.orderSummary.usableCouponCount }}</span><span class="unit">건</span></div>
           </router-link>
+          -->
         </div>
       </div>
 

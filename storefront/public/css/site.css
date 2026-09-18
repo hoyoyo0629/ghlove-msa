@@ -38,17 +38,10 @@
 .account-box .logout-link { color: var(--color-primary); text-decoration: none; }
 
 .gift__items, .prj__items { list-style: none; }
-.search-bar form { position: relative; height: 100%; }
-.search-bar .krds-input { border: none; outline: none; }
-.search-bar__btn { position: absolute; right: 1.6rem; top: 50%; transform: translateY(-50%); background: transparent; border: none; cursor: pointer; }
-.search-bar__btn::before {
-    content: "";
-    display: block; width: 2rem; height: 2rem;
-    background-color: var(--color-primary);
-    -webkit-mask-image: url(../images/new/ico_search.svg);
-    mask-image: url(../images/new/ico_search.svg);
-    -webkit-mask-size: contain; mask-size: contain;
-}
+/* 검색바(.search-bar)는 AS-IS main.html 마크업으로 복원했으므로 new.css의 KRDS 스타일
+   (파란 라운드 테두리 + 원형 search-bar__btn + i.ico-search 아이콘)을 그대로 쓴다.
+   과거 MSA 자체 마크업에 맞춰 넣었던 border 제거/버튼 절대배치 오버라이드는 AS-IS와
+   충돌하므로 삭제했다(테두리·검색버튼 위치가 운영과 달라 보이던 원인). */
 .prj__img { background-color: var(--bg-secondary); }
 .prj__img::before {
     content: "";

@@ -2,179 +2,33 @@ package com.ghlove.member.web;
 
 import com.ghlove.member.domain.User;
 import com.ghlove.member.service.AuthCookieSupport;
-import com.ghlove.member.service.BannerClient;
-import com.ghlove.member.service.DonationClient;
+import com.ghlove.member.service.DevBypassSettings;
 import com.ghlove.member.service.MemberException;
 import com.ghlove.member.service.MemberService;
-import com.ghlove.member.service.PointClient;
-import com.ghlove.member.service.SignupForm;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
+/**
+ * 아이디/비밀번호 찾기 AJAX 엔드포인트.
+ *
+ * <p>로그인·회원가입·비밀번호변경·탈퇴 등 서버렌더(Thymeleaf) 화면 흐름은 storefront Vue3 SPA
+ * + {@code /api/*}(AuthApiController 등)로 이관되어 제거됐다(2026-09-17 Thymeleaf 폐기).
+ * 남은 것은 storefront의 아이디/비밀번호 찾기 화면이 직접 호출하는 이 AJAX 엔드포인트들뿐이다.
+ */
 @Controller
 @RequiredArgsConstructor
 public class AuthController {
 
     public static final String SESSION_USER_KEY = "loginUser";
 
-    /** 로그인 필요 화면 진입시 공용 리다이렉트 - 로그인 성공 후 원래 보려던 화면(마이페이지/
-     *  회원정보수정/배송지관리 등)으로 돌아가도록 target을 실어 보낸다. 다른 서비스가 이미
-     *  쓰는 "8081~8086 자기 오리진으로만 리다이렉트 허용" 규칙({@link #safeRedirectTarget})과
-     *  동일한 안전장치를 통과하도록 절대URL로 인코딩한다. */
-    public static String loginRedirect(String returnPath) {
-        return "redirect:/login?target=" + java.net.URLEncoder.encode(
-                "http://localhost:8081" + returnPath, java.nio.charset.StandardCharsets.UTF_8);
-    }
-
     private final MemberService memberService;
-    private final DonationClient donationClient;
-    private final BannerClient bannerClient;
-    private final PointClient pointClient;
     private final AuthCookieSupport authCookieSupport;
-
-    /**
-     * 메인 화면 (AS-IS https://www.ilovegohyang.go.kr/main.html 과 동일하게 로그인 없이도
-     * 공개 열람 가능 - 실제 사이트도 답례품/지정기부사업 둘러보기는 비로그인으로 되고
-     * 기부 신청 시점에만 로그인을 요구한다). 로그인 상태면 개인화 영역만 추가로 보여준다.
-     */
-    @GetMapping("/")
-    public String home(HttpSession session, Model model) {
-        User loginUser = requireLogin(session);
-        if (loginUser != null) {
-            model.addAttribute("user", loginUser);
-            model.addAttribute("userTypeLabel", memberService.codesOf("USER_TYPE").get(loginUser.getSbscrbSeCode()));
-            model.addAttribute("roles", memberService.rolesOf(loginUser.getUserId()));
-            model.addAttribute("roleLabels", memberService.codesOf("ROLE"));
-            model.addAttribute("donationSummary", donationClient.mySummary(loginUser.getUserId()));
-            model.addAttribute("pointBalance", pointClient.balanceOf(loginUser.getUserId()));
-        }
-        // 메인화면은 지정기부사업을 4건까지만 보여준다 (AS-IS main.html과 동일 - 전체
-        // 목록은 별도 화면이 생기면 그쪽으로).
-        var projects = donationClient.openProjects();
-        model.addAttribute("projects", projects.size() > 4 ? projects.subList(0, 4) : projects);
-        model.addAttribute("banners", bannerClient.activeBanners());
-        model.addAttribute("giveState", donationClient.giveState());
-        return "home";
-    }
-
-    /** AS-IS GNB에는 있지만 이 MVP 범위 밖인 화면들(장바구니, FAQ, 이벤트 등)이 공통으로 향하는 안내 페이지. */
-    @GetMapping("/coming-soon")
-    public String comingSoon(HttpSession session, Model model) {
-        User loginUser = requireLogin(session);
-        if (loginUser != null) {
-            model.addAttribute("user", loginUser);
-        }
-        return "coming-soon";
-    }
-
-    @GetMapping("/signup")
-    public String signupForm(Model model) {
-        model.addAttribute("signupForm", new SignupForm());
-        return "signup";
-    }
-
-    /** AS-IS join.html submit() - 가입 저장 성공 즉시 자동 로그인 후 메인 화면으로 보낸다
-     *  (로그인 화면을 다시 거치게 하지 않는다). */
-    @PostMapping("/signup")
-    public String signup(@Valid @ModelAttribute("signupForm") SignupForm form, BindingResult bindingResult, Model model,
-                          HttpSession session, HttpServletResponse response) {
-        if (bindingResult.hasErrors()) {
-            return "signup";
-        }
-        User user;
-        try {
-            user = memberService.signup(form);
-        } catch (MemberException e) {
-            model.addAttribute("errorMessage", e.getMessage());
-            return "signup";
-        }
-        session.setAttribute(SESSION_USER_KEY, user);
-        authCookieSupport.issue(response, user);
-        return "redirect:/";
-    }
-
-    @GetMapping("/login")
-    public String loginForm() {
-        return "login";
-    }
-
-    private static final String SESSION_PENDING_MFA_USER_ID = "pendingMfaUserId";
-    private static final String SESSION_PENDING_MFA_TARGET = "pendingMfaTarget";
-
-    /**
-     * SFR-002 "다중 인증체계(MFA) 선택 적용" - 회원이 마이페이지에서 MFA를 켜둔 경우 아이디/
-     * 비번이 맞아도 곧바로 로그인되지 않고, 휴대폰으로 발송된(모크 - devCode) 인증번호까지
-     * 맞아야 한다({@link #loginMfaVerify}). 기존 login.html 폼 하나에 인증번호 입력 단계만
-     * 조건부로 덧붙인다(같은 화면, 같은 이벤트 흐름 - [[feedback-mock-integration-same-screen]]).
-     */
-    @PostMapping("/login")
-    public String login(@RequestParam String loginId, @RequestParam String password,
-                         @RequestParam(required = false) String target,
-                         HttpServletRequest request, HttpServletResponse response, HttpSession session, Model model) {
-        try {
-            MemberService.LoginOutcome outcome = memberService.loginWithMfaCheck(loginId, password, request.getRemoteAddr());
-            if (outcome.mfaRequired()) {
-                session.setAttribute(SESSION_PENDING_MFA_USER_ID, outcome.user().getUserId());
-                session.setAttribute(SESSION_PENDING_MFA_TARGET, target);
-                model.addAttribute("mfaStep", true);
-                model.addAttribute("maskedPhone", outcome.maskedPhone());
-                model.addAttribute("devCode", outcome.devCode());
-                return "login";
-            }
-            session.setAttribute(SESSION_USER_KEY, outcome.user());
-            authCookieSupport.issue(response, outcome.user());
-            return "redirect:" + safeRedirectTarget(target);
-        } catch (MemberException e) {
-            model.addAttribute("errorMessage", e.getMessage());
-            return "login";
-        }
-    }
-
-    @PostMapping("/login/mfa-verify")
-    public String loginMfaVerify(@RequestParam String code, HttpServletRequest request,
-                                  HttpServletResponse response, HttpSession session, Model model) {
-        Long userId = (Long) session.getAttribute(SESSION_PENDING_MFA_USER_ID);
-        String target = (String) session.getAttribute(SESSION_PENDING_MFA_TARGET);
-        if (userId == null) {
-            return "redirect:/login";
-        }
-        try {
-            User user = memberService.verifyMfaAndCompleteLogin(userId, code);
-            session.removeAttribute(SESSION_PENDING_MFA_USER_ID);
-            session.removeAttribute(SESSION_PENDING_MFA_TARGET);
-            session.setAttribute(SESSION_USER_KEY, user);
-            authCookieSupport.issue(response, user);
-            return "redirect:" + safeRedirectTarget(target);
-        } catch (MemberException e) {
-            model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute("mfaStep", true);
-            return "login";
-        }
-    }
-
-    /** 다른 서비스 화면(장바구니 등)에서 로그인 없이 들어와 /login?target=...으로 넘어온
-     *  경우, 로그인 성공 후 원래 있던 곳으로 돌려보낸다. 임의 사이트로 열린 리다이렉트가
-     *  되지 않도록 이 프로젝트가 아는 로컬 서비스 오리진(8081~8086)으로만 제한한다. */
-    private String safeRedirectTarget(String target) {
-        if (target != null && target.matches("^http://localhost:808[1-6](/.*)?$")) {
-            return target;
-        }
-        return "/";
-    }
-
-    @GetMapping("/logout")
-    public String logout(HttpSession session, HttpServletRequest request, HttpServletResponse response) {
-        session.invalidate();
-        authCookieSupport.clear(request, response);
-        return "redirect:/";
-    }
+    private final DevBypassSettings devBypassSettings;
 
     private static final String SESSION_FIND_ID_USER_ID = "pendingFindIdUserId";
     private static final String SESSION_FIND_ID_CODE = "pendingFindIdCode";
@@ -184,11 +38,6 @@ public class AuthController {
     private static final String SESSION_RESET_ISSUED_AT = "pendingResetIssuedAt";
     private static final String SESSION_RESET_VERIFIED = "pendingResetVerified";
     private static final int VERIFICATION_CODE_VALID_MINUTES = 5;
-
-    @GetMapping("/find-idpw")
-    public String findIdPwForm() {
-        return "find-idpw";
-    }
 
     /** 아이디 찾기 1단계: 이름+휴대폰번호 본인확인, 통과하면 인증번호 발송. */
     @PostMapping("/find-idpw/id/send-code")
@@ -219,6 +68,50 @@ public class AuthController {
         java.util.Map<String, Object> body = result("OK", null, null);
         body.put("loginId", memberService.loginIdOf(userId));
         return body;
+    }
+
+    /**
+     * 아이디 찾기 - 인증번호 단계를 건너뛰고 이름+휴대폰번호만으로 아이디를 알려준다.
+     * 실제 본인인증 게이트웨이가 없는 환경의 테스트용이라 {@link DevBypassSettings}로 막는다.
+     */
+    @PostMapping("/find-idpw/id/bypass")
+    @ResponseBody
+    public java.util.Map<String, Object> findIdBypass(@RequestParam String userName, @RequestParam String phoneNumber) {
+        if (!devBypassSettings.isIdentityVerificationBypass()) {
+            return result("ERROR", "본인인증 우회가 허용되지 않는 환경입니다.", null);
+        }
+        try {
+            Long userId = memberService.verifyIdentityByNameAndPhone(userName, phoneNumber);
+            java.util.Map<String, Object> body = result("OK", null, null);
+            body.put("loginId", memberService.loginIdOf(userId));
+            return body;
+        } catch (MemberException e) {
+            return result("ERROR", e.getMessage(), null);
+        }
+    }
+
+    /**
+     * 비밀번호 찾기 - 인증번호 단계를 건너뛰고 곧바로 "새 비밀번호 설정" 단계로 보낸다.
+     * 아이디+이름+휴대폰번호 일치 검사는 정상 경로와 똑같이 거친다(그마저 없으면 아무 계정이나
+     * 바꿀 수 있게 된다). 그래도 계정 탈취 경로이므로 우회 스위치로 막는다.
+     */
+    @PostMapping("/find-idpw/pw/bypass")
+    @ResponseBody
+    public java.util.Map<String, Object> resetPwBypass(@RequestParam String loginId, @RequestParam String userName,
+                                                         @RequestParam String phoneNumber, HttpSession session) {
+        if (!devBypassSettings.isIdentityVerificationBypass()) {
+            return result("ERROR", "본인인증 우회가 허용되지 않는 환경입니다.", null);
+        }
+        try {
+            Long userId = memberService.verifyIdentityForReset(loginId, userName, phoneNumber);
+            session.setAttribute(SESSION_RESET_USER_ID, userId);
+            session.setAttribute(SESSION_RESET_VERIFIED, Boolean.TRUE);
+            session.removeAttribute(SESSION_RESET_CODE);
+            session.removeAttribute(SESSION_RESET_ISSUED_AT);
+            return result("OK", null, null);
+        } catch (MemberException e) {
+            return result("ERROR", e.getMessage(), null);
+        }
     }
 
     /** 비밀번호 찾기 1단계: 아이디+이름+휴대폰번호 본인확인, 통과하면 인증번호 발송. */
@@ -300,101 +193,5 @@ public class AuthController {
             body.put("devCode", devCode);
         }
         return body;
-    }
-
-    @GetMapping("/password")
-    public String passwordForm(HttpSession session, Model model) {
-        User loginUser = requireLogin(session);
-        if (loginUser == null) {
-            return loginRedirect("/password");
-        }
-        model.addAttribute("loginId", loginUser.getLoginId());
-        return "password";
-    }
-
-    /** "비밀번호 변경" 화면의 "인증" 버튼 (AS-IS checkPresentPwd) - AJAX로 현재 비밀번호만
-     *  먼저 재확인해, 통과해야 새 비밀번호 입력칸이 열린다. */
-    @PostMapping("/password/verify")
-    @ResponseBody
-    public org.springframework.http.ResponseEntity<Void> verifyCurrentPassword(@RequestParam String currentPassword, HttpSession session) {
-        User loginUser = requireLogin(session);
-        if (loginUser == null) {
-            return org.springframework.http.ResponseEntity.status(401).build();
-        }
-        if (memberService.verifyPassword(loginUser.getUserId(), currentPassword)) {
-            return org.springframework.http.ResponseEntity.ok().build();
-        }
-        return org.springframework.http.ResponseEntity.status(400).build();
-    }
-
-    @PostMapping("/password")
-    public String changePassword(@RequestParam String currentPassword, @RequestParam String newPassword,
-                                  @RequestParam String newPasswordConfirm,
-                                  HttpServletRequest request, HttpServletResponse response, HttpSession session, Model model) {
-        User loginUser = requireLogin(session);
-        if (loginUser == null) {
-            return "redirect:/login";
-        }
-        try {
-            memberService.changePassword(loginUser.getUserId(), currentPassword, newPassword, newPasswordConfirm,
-                    request.getRemoteAddr());
-            session.invalidate();
-            authCookieSupport.clear(request, response);
-            return "redirect:/login?passwordChanged=success";
-        } catch (MemberException e) {
-            model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute("loginId", loginUser.getLoginId());
-            return "password";
-        }
-    }
-
-    @GetMapping("/withdraw")
-    public String withdrawForm(HttpSession session, Model model) {
-        User loginUser = requireLogin(session);
-        if (loginUser == null) {
-            return loginRedirect("/withdraw");
-        }
-        model.addAttribute("loginId", loginUser.getLoginId());
-        model.addAttribute("userName", loginUser.getUserName());
-        model.addAttribute("leaveCodeList", memberService.codesOf("LEAVE_CODE"));
-        model.addAttribute("pointSummary", pointClient.locgovSummaryOf(loginUser.getUserId()));
-        return "withdraw";
-    }
-
-    @PostMapping("/withdraw")
-    public String withdraw(@RequestParam String password, @RequestParam(required = false) String leaveCode,
-                            @RequestParam(required = false) String reason,
-                            HttpServletRequest request, HttpServletResponse response, HttpSession session, Model model) {
-        User loginUser = requireLogin(session);
-        if (loginUser == null) {
-            return "redirect:/login";
-        }
-        if (leaveCode == null || leaveCode.isBlank()) {
-            return withdrawFormWithError(loginUser, "탈퇴사유를 선택해 주세요", model);
-        }
-        if (password == null || password.isBlank()) {
-            return withdrawFormWithError(loginUser, "비밀번호를 입력해 주세요", model);
-        }
-        try {
-            memberService.withdraw(loginUser.getUserId(), password, leaveCode, reason, request.getRemoteAddr());
-            session.invalidate();
-            authCookieSupport.clear(request, response);
-            return "redirect:/login?withdrawn=success";
-        } catch (MemberException e) {
-            return withdrawFormWithError(loginUser, e.getMessage(), model);
-        }
-    }
-
-    private String withdrawFormWithError(User loginUser, String errorMessage, Model model) {
-        model.addAttribute("errorMessage", errorMessage);
-        model.addAttribute("loginId", loginUser.getLoginId());
-        model.addAttribute("userName", loginUser.getUserName());
-        model.addAttribute("leaveCodeList", memberService.codesOf("LEAVE_CODE"));
-        model.addAttribute("pointSummary", pointClient.locgovSummaryOf(loginUser.getUserId()));
-        return "withdraw";
-    }
-
-    private User requireLogin(HttpSession session) {
-        return (User) session.getAttribute(SESSION_USER_KEY);
     }
 }

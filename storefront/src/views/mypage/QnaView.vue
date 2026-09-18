@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../../api/http'
+import { useDateRangeSearch } from '../../composables/useDateRangeSearch'
 
 // AS-IS mypage/inquiry.html(및 Thymeleaf 버전 qna/list.html) 재현. 목록은 테이블이 아니라
 // FAQ 아코디언 - 제목을 누르면 그 자리에서 질문 전문과(답변이 있으면) 답변이 펼쳐진다.
@@ -12,8 +13,7 @@ const errorMessage = ref('')
 const openIds = ref(new Set())
 
 const searchDatePreset = ref('')
-const searchStartDate = ref('')
-const searchEndDate = ref('')
+const { searchStartDate, searchEndDate, setRange, clearRange } = useDateRangeSearch()
 
 const qnaGroup = ref('')
 const subject = ref('')
@@ -55,25 +55,11 @@ onMounted(() => {
   refreshCaptcha()
 })
 
-function toDateInput(d) {
-  const pad2 = (n) => (n < 10 ? '0' + n : '' + n)
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
-}
+// select 값이 'week-1' / 'month-3' 형태라 그대로 (단위, 개수)로 쪼개 쓴다.
 function setSearchRange() {
-  const value = searchDatePreset.value
-  if (!value) {
-    searchStartDate.value = ''
-    searchEndDate.value = ''
-    return
-  }
-  const end = new Date()
-  const start = new Date()
-  if (value === 'week-1') start.setDate(start.getDate() - 7)
-  else if (value === 'month-1') start.setMonth(start.getMonth() - 1)
-  else if (value === 'month-3') start.setMonth(start.getMonth() - 3)
-  else if (value === 'month-6') start.setMonth(start.getMonth() - 6)
-  searchStartDate.value = toDateInput(start)
-  searchEndDate.value = toDateInput(end)
+  if (!searchDatePreset.value) return clearRange()
+  const [unit, amount] = searchDatePreset.value.split('-')
+  setRange(unit, Number(amount))
 }
 
 function toggle(qnaId) {

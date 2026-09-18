@@ -28,10 +28,14 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.kafka:spring-kafka'
+
+    // 기부금영수증 서버사이드 PDF 합성(OZ Report + Fasoo DRM 상용SW 대체) - 직인을
+    // 서버에서 래스터로 병합해 단일 이미지 PDF로만 반출한다. 텍스트를 미리 래스터화하므로
+    // PDF 폰트 임베딩이 필요 없다.
+    implementation 'org.apache.pdfbox:pdfbox:2.0.32'
 
     // SFR-010: member 서비스가 발급한 공유 JWT 쿠키를 검증하기 위한 라이브러리.
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
@@ -39,6 +43,10 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 
     runtimeOnly 'org.postgresql:postgresql'
+
+    // 로컬 개발 전용: SQL 로그에 파라미터를 인라인해 "바로 실행 가능한 쿼리" 형태로 찍는다(P6Spy).
+    // developmentOnly = bootRun/IDE 실행 시에만 classpath 에 오르고 운영 bootJar 에는 포함되지 않는다.
+    developmentOnly 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.10.0'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

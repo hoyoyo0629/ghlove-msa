@@ -24,6 +24,7 @@ const emailAddressCustom = ref('')
 const post = ref('')
 const address = ref('')
 const addressDetail = ref('')
+const receivePbanc = ref(false)
 const receiveEmail = ref(false)
 const receiveSms = ref(false)
 const receiveKakao = ref(false)
@@ -43,6 +44,7 @@ async function load() {
   post.value = data.post ?? ''
   address.value = data.address ?? ''
   addressDetail.value = data.addressDetail ?? ''
+  receivePbanc.value = data.receivePbanc
   receiveEmail.value = data.receiveEmail
   receiveSms.value = data.receiveSms
   receiveKakao.value = data.receiveKakao
@@ -92,6 +94,7 @@ async function onSubmit() {
       post: post.value,
       address: address.value,
       addressDetail: addressDetail.value,
+      receivePbanc: receivePbanc.value,
       receiveEmail: receiveEmail.value,
       receiveSms: receiveSms.value,
       receiveKakao: receiveKakao.value,
@@ -248,8 +251,8 @@ async function removeInterestLocgov(locgovCode) {
                 <div class="form-field">
                   <div class="m-field">
                     <span class="s-txt">국민비서 수신동의</span>
-                    <div class="subscribe-select"><input type="radio" id="pbancAgree" disabled /><label for="pbancAgree">동의</label></div>
-                    <div class="subscribe-select"><input type="radio" id="pbancDisAgree" checked disabled /><label for="pbancDisAgree">동의안함</label></div>
+                    <div class="subscribe-select"><input type="radio" id="pbancAgree" :checked="receivePbanc" @change="receivePbanc = true" /><label for="pbancAgree">동의</label></div>
+                    <div class="subscribe-select"><input type="radio" id="pbancDisAgree" :checked="!receivePbanc" @change="receivePbanc = false" /><label for="pbancDisAgree">동의안함</label></div>
                   </div>
                   <div class="m-field">
                     <span class="s-txt">Email 수신동의</span>

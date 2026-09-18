@@ -17,7 +17,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
-    show-sql: true
+    show-sql: false          # SQL은 아래 logging 의 org.hibernate.SQL 로거로 일원화(System.out 중복 출력 방지)
     open-in-view: false
     properties:
       hibernate:
@@ -50,6 +50,17 @@ ghlove:
   # 없거나 다르면 AdminApiAuthInterceptor가 무조건 401로 막는다). AdminApiAuthInterceptor 참고.
   internal:
     admin-secret: "ghlove-msa-local-dev-internal-admin-secret-do-not-expose!!"
+  # 쿠폰 기능 마스터 스위치 (2026-09-09부터 OFF). 쿠폰은 AS-IS에서도 현재 사용되지 않아
+  # 자동발급·회원화면·회원API를 통째로 껐다. 이 하나로 아래가 전부 좌우된다:
+  #   - CouponBatchScheduler        가입/생일/정기발행 자동발급 배치 (빈 미등록)
+  #   - CouponMyApiController       /api/my/coupons, /api/coupons** (빈 미등록 → 404)
+  #   - CouponMyController          Thymeleaf 회원 쿠폰화면 (빈 미등록 → 404)
+  #   - CouponService               체크아웃 쿠폰 노출/할인 적용 차단
+  # 코드·DB·admin 관리API(/api/admin/coupons**)는 그대로 살아 있으므로 이 값을 true로
+  # 되돌리면 전부 복구된다. 주문확정 구매트리거 발급만 별도로 코드 주석 처리돼 있다
+  # (OrderService.issuePurchaseTriggeredCoupons). 경위: docs/cart-review-2026-09-09.md §4-5
+  coupon:
+    enabled: false
   gift-service:
     base-url: http://localhost:8084
   point-service:
@@ -59,6 +70,20 @@ ghlove:
   member-service:
     base-url: http://localhost:8081
 
+# 로컬 개발 전용: P6Spy 가 datasource 를 감싸 파라미터가 인라인된(바로 실행 가능한) SQL 한 줄을
+# 로거 'p6spy' 로 찍는다. developmentOnly 의존성이라 운영 bootJar 에는 P6Spy 자체가 없어 무효.
+decorator:
+  datasource:
+    p6spy:
+      enable-logging: true
+      logging: slf4j
+      multiline: false        # 한 줄로 출력(복붙해서 바로 실행하기 좋게)
+      log-format: "%(executionTime)ms | %(sqlSingleLine)"
+
 logging:
   level:
     com.ghlove.order: DEBUG
+    p6spy: DEBUG                           # P6Spy 가 찍는 인라인 SQL
+    # 아래 Hibernate 로거는 P6Spy 와 중복이라 꺼둔다(P6Spy 없이 순수 Hibernate 로그만 볼 땐 주석 해제)
+    # org.hibernate.SQL: DEBUG
+    # org.hibernate.orm.jdbc.bind: TRACE

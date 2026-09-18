@@ -18,6 +18,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** Read-only JSON API for other services (member's 메인 화면 "특정사업에 기부하기") - not part of any write path. */
@@ -124,6 +125,13 @@ public class DonationApiController {
         return locgovRepository.findByUseAtOrderByLocgovNm("Y").stream()
                 .map(l -> new LocgovDto(l.getLocgovCode(), l.getLocgovNm(), l.getUpperLocgovCode(), l.getUpperLocgovNm()))
                 .toList();
+    }
+
+    /** point의 "기부포인트 조회" 화면 "기부처" 열 - 지자체별 연계기관 표시문구
+     *  (AS-IS `mypage-mapper.xml`의 `DETAIL` 계산). 값이 없는 지자체는 담기지 않는다. */
+    @GetMapping("/api/donation-sources")
+    public Map<String, String> donationSources(@RequestParam Long userId) {
+        return donationService.donationSourcesByLocgov(userId);
     }
 
     /** member "회원 정보 수정" 화면이 현재 등록된 관심지자체 칩 목록을 보여주기 위한 조회. */

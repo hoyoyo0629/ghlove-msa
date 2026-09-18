@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="description" content="" />
+    <meta name="author" content="" />
+  </head>
+  <style>
+[class*="box"] { position: relative; margin-bottom: 40px; }
+[class*="box"] > p { line-height: 29px; }
+[class*="box"] > .box02 { margin: 30px 0px 0px; padding: 30px; }
+.box01 { padding: 30px 35px; border: 1px solid rgb(209, 209, 209); line-height: 25px; }
+.box01.type2 { border: 1px solid rgb(2, 178, 148); }
+.box01.type3 { border: 1px solid rgb(224, 188, 142); }
+.box01.type4 { border: 1px solid rgb(175, 203, 222); }
+.box01.type4 { border: 1px solid rgb(230, 170, 175); }
+.box01.type5 { border: 1px solid rgb(176, 188, 198); }
+.box01.type6 { padding: 20px 25px; }
+.box02 { padding: 23px 20px; border: 1px solid rgb(192, 207, 202); background: rgb(233, 240, 237); line-height: 25px; }
+.box02.type2 { border: 1px dotted rgb(231, 231, 230); background: rgb(248, 248, 248); }
+.box02.type3 { border: 0px none; background: rgb(234, 240, 243); line-height: 25px; }
+.box02.type3.pt { padding: 15px 20px; }
+.box02.type4 { border: 1px dotted rgb(221, 229, 232); background: rgb(247, 248, 249); }
+.box02.type5 { padding: 17px 20px 14px; border: 1px solid rgb(221, 229, 232); background: rgb(247, 248, 249); }
+.box02.type6 { padding: 17px 20px 14px; border: 0px; background: rgb(45, 131, 115); }
+.box02.type6 li, .box02.type6 p, .box02.type6 span { color: rgb(255, 255, 255); }
+.box02.type6 li::before { background: rgb(255, 255, 255); }
+.box01.scroll { height: 300px; margin-bottom: 0px; overflow: hidden; }
+.box01.scroll-y { height: 200px; margin-bottom: 0px; overflow-y: scroll; }
+.box01.scroll iframe { width: 100%; height: 100%; position: relative; overflow-y: scroll; min-height: auto; }
+.box01 .list > li { padding-bottom: 15px; }
+.box03 { border: 1px solid rgb(220, 220, 220); }
+.box03 .tit { line-height: 20px; background: rgb(218, 228, 239); padding: 12px 10px; text-align: center; font-weight: 500; border-bottom: 1px solid rgb(220, 220, 220); }
+.box03 .text { padding: 15px 10px; }
+.tit01 + .box03, .tbl-responsive + .box03 { margin-top: 30px; }
+.box03.pop { border-color: rgb(2, 138, 212); }
+.box03.pop .tit { padding: 12px 15px; text-align: left; background: rgb(7, 113, 170); color: rgb(255, 255, 255); }
+.box01 + .box01 { margin-top: 10px; }
+.box01 + .tab01 { margin-top: 60px; }
+[class*="box"] + .btn_group { padding-top: 10px; }
+.box01.press .img { margin-top: 15px; }
+.box01.exp .img { margin-top: 15px; }
+.tit01.line, .tit01_.line { padding: 0px 0px 15px; margin-bottom: 25px; border-bottom: 1px solid rgb(209, 209, 209); font-weight: 500; }
+.tit01 { padding: 0px 0px 20px; color: rgb(51, 51, 51); font-size: 23px; line-height: 29px; font-weight: 500; }
+.tit01_ { padding: 0px 0px 20px; color: rgb(10, 109, 166); font-size: 20px; line-height: 25px; font-weight: 500; }
+.tit01_.special { font-size: 24px; }
+.tit01 em { margin-left: 10px; padding-left: 10px; border-left: 1px solid rgb(204, 204, 204); color: rgb(85, 85, 85); font-size: 16px; font-style: normal; line-height: 21px; }
+.tit01 .back { float: right; font-size: 17px; margin-right: 5px; }
+.tit02 { position: relative; padding: 0px 0px 15px 20px; color: rgb(51, 51, 51); }
+.tit02::before { content: ""; position: absolute; top: 15px; left: 8px; display: block; width: 4px; height: 4px; margin-top: -6px; background: rgb(55, 149, 204); }
+ul.tit02 { padding-left: 0px; }
+ul.tit02::before { display: none; }
+.tit02 span { display: inline-block; margin-left: 10px; padding-left: 10px; border-left: 1px solid rgb(188, 188, 188); color: rgb(85, 85, 85); font-size: 16px; line-height: 19px; vertical-align: middle; }
+.tit02 > li { position: relative; padding: 0px 0px 10px 20px; }
+.tit02 > li::before { content: ""; position: absolute; top: 9px; left: 8px; display: block; width: 4px; height: 4px; background: rgb(55, 149, 204); vertical-align: middle; }
+.tit02 > li.nobl { position: relative; padding: 0px 0px 7px; font-size: 14px; line-height: 22px; }
+.tit02 > li.nobl::before { background: none; }
+.tit02 > li.nobl > [class*="box"] { margin: 20px 0px; }
+ul.tit02.col2 { width: 100%; overflow: hidden; }
+ul.tit02.col2 li { float: left; width: 45%; line-height: 1.6em; }
+.tit02.type2::before { background: rgb(231, 112, 50); }
+.tit02.type2 em { margin-left: 10px; padding-left: 10px; font-size: 13px; line-height: 16px; color: rgb(194, 85, 29); font-style: normal; border-left: 1px solid rgb(231, 112, 50); }
+.tit02.f_s span { margin: 0px; padding: 0px; font-weight: normal; border: 0px; }
+.tit02.line { padding: 0px 0px 15px 20px; margin-bottom: 25px; border-bottom: 1px solid rgb(209, 209, 209); }
+.tit03 { position: relative; padding: 0px 0px 10px 20px; font-size: 18px; color: rgb(10, 109, 166); }
+.tit03::before { content: ""; display: block; position: absolute; top: 7px; left: 1px; vertical-align: middle; width: 13px; height: 13px; background: url("/kor/images/sub/ico.png") -373px 0px no-repeat; z-index: 10; }
+.tit03.line { padding: 0px 0px 15px 20px; margin-bottom: 20px; border-bottom: 1px solid rgb(209, 209, 209); }
+.tit03.type2 { color: rgb(51, 51, 51); }
+.tit03.type2::before { background: url("/kor/images/sub/ico.png") -386px 0px no-repeat; }
+ul.tit03, ol.tit03 { padding: 0px; }
+ul.tit03::before, ol.tit03::before { display: none; }
+.tit03 em { margin-left: 10px; padding-left: 10px; font-size: 12px; line-height: 21px; color: rgb(85, 85, 85); font-style: normal; border-left: 1px solid rgb(204, 204, 204); }
+.tit03 > li { position: relative; padding: 0px 0px 20px 21px; font-weight: normal; }
+.tit03 > li::before { content: ""; display: block; position: absolute; top: 7px; left: 1px; vertical-align: middle; width: 13px; height: 13px; background: url("/kor/images/sub/ico.png") -373px 0px no-repeat; z-index: 10; }
+.tit03.type2 > li::before { background: url("/kor/images/sub/ico.png") -386px 0px no-repeat; }
+.termsWrap .tit01.ac { margin-top: 50px; }
+.privacy_label { display: inline-block; width: calc(100% + 28px); padding: 0px; margin: 0px -14px 5px; box-sizing: border-box; }
+.privacy_label .label_box { float: left; width: calc(33% - 28px); box-sizing: border-box; margin: 14px; padding: 30px; text-align: center; border: 1px solid rgb(220, 220, 220); }
+.privacy_label .label_box:hover { border: 1px solid rgb(77, 116, 194); box-shadow: rgba(22, 71, 170, 0.2) 0px 0.2rem 0.8rem; }
+.privacy_label .label_box .label_layer { display: none; position: absolute; box-sizing: border-box; border-radius: 8px; background-color: rgb(255, 255, 255); border: 1px solid rgb(204, 216, 230); width: 580px; z-index: 999; box-shadow: rgba(22, 71, 170, 0.2) 0px 0.2rem 0.8rem; }
+.privacy_label .label_box .label_layer .label_desc_top { width: 100%; box-sizing: border-box; padding: 10px; background-color: rgb(82, 111, 170); border-top-right-radius: 8px; border-top-left-radius: 8px; }
+.privacy_label img { height: 90px; }
+.label_desc_top p { color: rgb(255, 255, 255); text-align: left; }
+.label_desc_btm { padding: 15px 20px; text-align: left; }
+.label_desc_btm p { text-align: left; }
+.label_desc_btm .tbl-type01 { position: relative; width: 100%; border-top: 1px solid rgb(94, 107, 131); margin-top: 10px; letter-spacing: -1px; }
+.label_desc_btm .tbl-type01 th { padding: 7px; font-size: 15px; border-left: 1px solid rgb(220, 220, 220); border-bottom: 1px solid rgb(220, 220, 220); background: rgb(245, 245, 245); color: rgb(51, 51, 51); text-align: center; line-height: 1em; }
+.label_desc_btm .tbl-type01 td { padding: 5px; border-bottom: 1px solid rgb(220, 220, 220); border-left: 1px solid rgb(220, 220, 220); }
+.label_desc_btm .tbl-type01 td .desc_tit { font-weight: 500; font-size: 15px; color: rgb(22, 71, 170); word-break: keep-all; letter-spacing: -0.5px; line-height: 1.5rem !important; }
+.label_desc_btm .tbl-type01 td .desc_cnt { color: rgb(51, 51, 51); font-size: 14px; line-height: 1.6rem !important; }
+.desc_wrap { display: flex; flex-flow: row wrap; }
+.desc_box { width: 100%; border-radius: 10px; border: 1px solid rgb(238, 238, 238); box-sizing: border-box; padding: 10px 15px; margin-top: 10px; margin-bottom: 10px; display: flex; flex-flow: row wrap; justify-content: space-between; }
+.desc_tit { width: 30%; font-weight: 500; font-size: 15px; color: rgb(22, 71, 170); word-break: keep-all; letter-spacing: -0.5px; line-height: 1.5rem !important; }
+.desc_cnt { width: 69%; color: rgb(51, 51, 51); font-size: 14px; line-height: 1.6rem !important; }
+.label_desc_btm .tbl-type01 { position: relative; width: 100%; border-top: 1px solid rgb(94, 107, 131); }
+.desc_icon { box-sizing: border-box; padding-left: 30px; }
+.desc_icon.edu { background: url("./kor/images/sub/privacy/icon_edu.png") 0px 50% no-repeat; }
+.desc_icon.dem { background: url("./kor/images/sub/privacy/icon_dem.png") 0px 50% no-repeat; }
+.desc_icon.dec { background: url("./kor/images/sub/privacy/icon_dec.png") 0px 50% no-repeat; }
+.desc_icon.ins { background: url("./kor/images/sub/privacy/icon_ins.png") 0px 50% no-repeat; }
+.desc_icon.pro { background: url("./kor/images/sub/privacy/icon_pro.png") 0px 50% no-repeat; }
+.label_layer.num0 { top: 0px; left: 107%; }
+.label_layer.num1 { top: 180px; left: -2%; }
+.label_layer.num2 { top: 0px; right: 107%; }
+.label_layer.num3 { top: 0px; left: 107%; }
+.label_layer.num4 { top: 180px; left: -2%; }
+.label_layer.num5 { top: 0px; right: 107%; }
+.cnt_list { width: 100%; padding: 40px 5% 20px; margin: 20px auto 0px; display: flex; flex-flow: row wrap; justify-content: space-between; border: 1px solid rgb(217, 217, 217); box-sizing: border-box; }
+.cnt_list li { width: 45%; margin-bottom: 40px; position: relative; box-sizing: border-box; }
+.cnt_list li a { color: rgb(68, 68, 68); font-weight: 400; box-sizing: border-box; padding-left: 30px; height: 25px; display: block; }
+.cnt_list li:first-child a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_object.jpg">http://www.gov.kr/2022/privacy/img/img_object.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_object.jpg</a>">www.gov.kr/2022/privacy/img/img_object.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(2) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_period.jpg">http://www.gov.kr/2022/privacy/img/img_period.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_period.jpg</a>">www.gov.kr/2022/privacy/img/img_period.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(3) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_private.jpg">http://www.gov.kr/2022/privacy/img/img_private.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_private.jpg</a>">www.gov.kr/2022/privacy/img/img_private.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(4) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_11.jpg">http://www.gov.kr/2022/privacy/img/img_11.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_11.jpg</a>">www.gov.kr/2022/privacy/img/img_11.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(5) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_third.jpg">http://www.gov.kr/2022/privacy/img/img_third.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_third.jpg</a>">www.gov.kr/2022/privacy/img/img_third.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(6) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_consign.jpg">http://www.gov.kr/2022/privacy/img/img_consign.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_consign.jpg</a>">www.gov.kr/2022/privacy/img/img_consign.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(7) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_destruction.jpg">http://www.gov.kr/2022/privacy/img/img_destruction.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_destruction.jpg</a>">www.gov.kr/2022/privacy/img/img_destruction.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(8) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_court.jpg">http://www.gov.kr/2022/privacy/img/img_court.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_court.jpg</a>">www.gov.kr/2022/privacy/img/img_court.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(9) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_safe.jpg">http://www.gov.kr/2022/privacy/img/img_safe.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_safe.jpg</a>">www.gov.kr/2022/privacy/img/img_safe.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(10) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_cookie.jpg">http://www.gov.kr/2022/privacy/img/img_cookie.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_cookie.jpg</a>">www.gov.kr/2022/privacy/img/img_cookie.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(11) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_cpo.jpg">http://www.gov.kr/2022/privacy/img/img_cpo.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_cpo.jpg</a>">www.gov.kr/2022/privacy/img/img_cpo.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(12) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_browse.jpg">http://www.gov.kr/2022/privacy/img/img_browse.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_browse.jpg</a>">www.gov.kr/2022/privacy/img/img_browse.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(13) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_help.jpg">http://www.gov.kr/2022/privacy/img/img_help.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_help.jpg</a>">www.gov.kr/2022/privacy/img/img_help.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(14) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_result.jpg">http://www.gov.kr/2022/privacy/img/img_result.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_result.jpg</a>">www.gov.kr/2022/privacy/img/img_result.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(15) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_result.jpg">http://www.gov.kr/2022/privacy/img/img_result.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_result.jpg</a>">www.gov.kr/2022/privacy/img/img_result.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(16) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_result.jpg">http://www.gov.kr/2022/privacy/img/img_result.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_result.jpg</a>">www.gov.kr/2022/privacy/img/img_result.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(17) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_result.jpg">http://www.gov.kr/2022/privacy/img/img_result.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_result.jpg</a>">www.gov.kr/2022/privacy/img/img_result.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(18) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_result.jpg">http://www.gov.kr/2022/privacy/img/img_result.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_result.jpg</a>">www.gov.kr/2022/privacy/img/img_result.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(19) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_result.jpg">http://www.gov.kr/2022/privacy/img/img_result.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_result.jpg</a>">www.gov.kr/2022/privacy/img/img_result.jpg</a></a>") 0px 0px / contain no-repeat; }
+.cnt_list li:nth-child(20) a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_result.jpg">http://www.gov.kr/2022/privacy/img/img_result.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_result.jpg</a>">www.gov.kr/2022/privacy/img/img_result.jpg</a></a>") 0px 0px / contain no-repeat; }
+
+.cnt_list li:last-child a { background: url("https://<a href="<a href="http://www.gov.kr/2022/privacy/img/img_change.jpg">http://www.gov.kr/2022/privacy/img/img_change.jpg</a>"><a href="http://www.gov.kr/2022/privacy/img/img_change.jpg</a>">www.gov.kr/2022/privacy/img/img_change.jpg</a></a>") 0px 0px / contain no-repeat; }
+
+.list_icon { margin-right: 10px; }
+.list_icon img { vertical-align: middle; height: 35px; }
+#privacybg { position: relative; max-width: 400px; }
+#privacybg ul li { width: 100%; overflow: hidden; }
+#privacybg ul li + li { padding-top: 19px; }
+#privacybg ul li .select-style + .btn_s { margin-left: -2px; }
+#privacybg ul li .btn_s { float: left; }
+#privacybg ul li input { vertical-align: middle; }
+#privacybg .btn_s { display: inline-block; background: rgb(108, 126, 144); color: rgb(255, 255, 255); font-size: 16px; line-height: 37px; width: 50px; height: 37px; text-align: center; }
+[class*="tab"] + [class*="tit"], [class*="tit"] + [class*="tit"], [class*="list"] + [class*="tit"], [class*="tbl-responsive"] + [class*="tit"] { margin-top: 30px; }
+.select-style-pv { float: left; border: 1px solid rgb(108, 126, 144); width: 300px; border-radius: 0px; overflow: hidden; }
+.select-style-pv select { padding: 0px 0px 0px 10px; width: 100%; height: 35px; color: rgb(105, 105, 105); font-size: 16px; line-height: 25px; border: none; appearance: none; }
+.select-style-pv select:focus { outline: none; }
+.termsWrap > ol.list03 > li { padding: 0px 0px 10px 15px; text-indent: -15px; }
+.termsWrap > ol.list03 > li > ol, .termsWrap ol.list03 > li > ul { padding: 10px; }
+.termsWrap > ol.list03 > li > ol.list03 > li { padding: 0px 0px 7px 15px; }
+.termsWrap .tbl-responsive, .termsWrap .btn, .termsWrap .list04, .termsWrap .list01.type2, .text_indent_0 { text-indent: 0px !important; }
+.red { color: rgb(184, 22, 19) !important; }
+.al { text-align: left !important; }
+.ac { text-align: center !important; }
+.ar { text-align: right !important; }
+.vt { vertical-align: top !important; }
+.vm { vertical-align: middle !important; }
+.vb { vertical-align: bottom !important; }
+.fl { float: left; }
+.fr { float: right; }
+.p0 { padding: 0px !important; }
+.m0 { margin: 0px !important; }
+.mt50 { margin-top: 50px !important; }
+.mt40 { margin-top: 40px !important; }
+.mt30 { margin-top: 30px !important; }
+.mt25 { margin-top: 25px !important; }
+.mt20 { margin-top: 20px !important; }
+.mt15 { margin-top: 15px !important; }
+.mt10 { margin-top: 10px !important; }
+.mt7 { margin-top: 7px !important; }
+.mt5 { margin-top: 5px !important; }
+.mt3 { margin-top: 3px !important; }
+.mt2 { margin-top: 2px !important; }
+.mt0 { margin-top: 0px !important; }
+.mb50 { margin-bottom: 50px !important; }
+.mb40 { margin-bottom: 40px !important; }
+.mb30 { margin-bottom: 30px !important; }
+.mb25 { margin-bottom: 25px !important; }
+.mb20 { margin-bottom: 20px !important; }
+.mb15 { margin-bottom: 15px !important; }
+.mb10 { margin-bottom: 10px !important; }
+.mb7 { margin-bottom: 7px !important; }
+.mb5 { margin-bottom: 5px !important; }
+.mb0 { margin-bottom: 0px !important; }
+.mr30 { margin-right: 30px !important; }
+.mr20 { margin-right: 20px !important; }
+.mr15 { margin-right: 15px !important; }
+.mr10 { margin-right: 10px !important; }
+.mr5 { margin-right: 5px !important; }
+.ml30 { margin-left: 30px !important; }
+.ml20 { margin-left: 20px !important; }
+.ml15 { margin-left: 15px !important; }
+.ml10 { margin-left: 10px !important; }
+.ml5 { margin-left: 5px !important; }
+.pt30 { padding-top: 30px !important; }
+.pt25 { padding-top: 25px !important; }
+.pt20 { padding-top: 20px !important; }
+.pt15 { padding-top: 15px !important; }
+.pt10 { padding-top: 10px !important; }
+.pt5 { padding-top: 5px !important; }
+.pt2 { padding-top: 2px !important; }
+.pt0 { padding-top: 0px !important; }
+.pr40 { padding-right: 40px !important; }
+.pr35 { padding-right: 35px !important; }
+.pr30 { padding-right: 30px !important; }
+.pr20 { padding-right: 20px !important; }
+.pr10 { padding-right: 10px !important; }
+.pr5 { padding-right: 5px !important; }
+.pl40 { padding-left: 40px !important; }
+.pl35 { padding-left: 35px !important; }
+.pl30 { padding-left: 30px !important; }
+.pl20 { padding-left: 20px !important; }
+.pl15 { padding-left: 15px !important; }
+.pl10 { padding-left: 10px !important; }
+.pl8 { padding-left: 8px !important; }
+.pl5 { padding-left: 5px !important; }
+.pb40 { padding-bottom: 40px !important; }
+.pb30 { padding-bottom: 30px !important; }
+.pb25 { padding-bottom: 25px !important; }
+.pb20 { padding-bottom: 20px !important; }
+.pb12 { padding-bottom: 12px !important; }
+.pb10 { padding-bottom: 10px !important; }
+.pb5 { padding-bottom: 5px !important; }
+.pb0 { padding-bottom: 0px !important; }
+.mt-30 { margin-top: -30px !important; }
+.mt-25 { margin-top: -25px !important; }
+.mt-20 { margin-top: -20px !important; }
+.mt-15 { margin-top: -15px !important; }
+.mt-10 { margin-top: -10px !important; }
+.mt-5 { margin-top: -5px !important; }
+.mt-1 { margin-top: -1px !important; }
+div, th, td, ol, ul, li, a, p, span, input, select, textarea, table td, th { border: 0px; padding: 0px; margin: 0px; background: none; }
+input[type="radio"], input[type="checkbox"] { border: 1px solid; }
+input[type="button"] { appearance: none; }
+img, table { border: none; }
+li { list-style: none; }
+table { width: 100%; table-layout: fixed; border-collapse: collapse; word-break: break-all; }
+form, fieldset { margin: 0px; padding: 0px; border: none; }
+label, input, select, textarea, button { vertical-align: middle; }
+select { min-width: 97px; padding: 5px; height: 37px; line-height: 1em; background: url("./kor/images/sub/privacy/ico_select.png") 100% 0px no-repeat rgb(255, 255, 255); border: 1px solid rgb(193, 194, 195); border-radius: 0px; box-shadow: none; appearance: none; }
+select.wide { min-width: 150px; }
+select.on { background-position: 100% -37px; }
+table { width: 100%; table-layout: fixed; border-collapse: collapse; word-break: break-all; }
+tr.ac td, tr.ac th { text-align: center; }
+tr.ar td { text-align: right; }
+[class*="tbl-type"] td .view { display: inline-block; width: auto; max-width: 95%; line-height: 1.3em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+[class*="tbl-type"] td .view + img { display: inline-block; vertical-align: middle; padding-left: 2px; }
+[class*="tbl-type"] td img.newicon { vertical-align: middle; padding-right: 3px; }
+.tbl-type01 { position: relative; width: 100%; border-top: 1px solid rgb(94, 107, 131); }
+.tbl-type01.type01-1 td { vertical-align: top; }
+.box03 + .tbl-responsive .tbl-type01.type01-1 { border-top: 0px; }
+.tbl-type01.type01-2 { border-top: 2px solid rgb(94, 72, 232); }
+.tbl-type01.type01-2 tr:last-child td { border-bottom: 1px solid rgb(94, 72, 232); }
+.tbl-type01.type01-3 { border-top: 2px solid rgb(79, 98, 128); }
+.tbl-type01.type01-4 { border-top: 2px solid rgb(0, 131, 202); }
+.tbl-type01.type01-4 tr:last-child td { border-bottom: 1px solid rgb(0, 131, 202); }
+.tbl-type01.type01-5 { border-top: 2px solid rgb(150, 183, 30); }
+.tbl-type01.type01-5 tr:last-child td { border-bottom: 1px solid rgb(150, 183, 30); }
+.tbl-type01.type01-6 { border-top: 2px solid rgb(2, 175, 203); }
+.tbl-type01.type01-6 tr:last-child td { border-bottom: 1px solid rgb(2, 175, 203); }
+.tbl-type01.type01-7 { border-top: 2px solid rgb(224, 126, 40); }
+.tbl-type01.type01-7 tr:last-child td { border-bottom: 1px solid rgb(224, 126, 40); }
+.tbl-type01.type01-8 { border-top: 2px solid rgb(198, 95, 66); }
+.tbl-type01.type01-8 tr:last-child td { border-bottom: 1px solid rgb(198, 95, 66); }
+.tbl-type01 th { padding: 20px 10px 19px; border-left: 1px solid rgb(220, 220, 220); border-bottom: 1px solid rgb(220, 220, 220); background: rgb(245, 245, 245); color: rgb(51, 51, 51); text-align: center; line-height: 1em; }
+.tbl-type01 th.bgno { background: rgb(255, 255, 255); }
+.tbl-type01 td { padding: 17px 10px 16px; border-bottom: 1px solid rgb(220, 220, 220); border-left: 1px solid rgb(220, 220, 220); }
+.tbl-type01 th:last-child, .tbl-type01 td:last-child { border-right: 1px solid rgb(220, 220, 220); }
+.tbl-type01 tr.bg01 td, .tbl-type01 tr.bg01 th { background: rgb(231, 242, 245); font-weight: 500; }
+.tbl-type01 tr.bg02 td { background: rgb(245, 245, 245); font-weight: 500; }
+.tbl-type01 tr.bg03 td { background: rgb(226, 244, 234); font-weight: 500; }
+.tbl-type01 tr.bg04 td { background: rgb(245, 248, 216); }
+.tbl-type01 a.link { color: rgb(10, 109, 166); text-decoration: underline; word-break: break-all; }
+.tbl-type01.bl_none th, .tbl-type01.bl_none td { border-left: 0px; }
+.tbl-type01.bl_none th:last-child, .tbl-type01.bl_none td:last-child { border-right: 0px; }
+.tbl-type02 { position: relative; width: 100%; border-top: 1px solid rgb(181, 181, 181); }
+.tbl-type02 th { background: rgb(245, 245, 245); font-weight: normal; text-align: left; }
+.tbl-type02 th, .tbl-type02 td { padding: 13px 20px; border: 1px solid rgb(220, 220, 220); }
+.tbl-type02 td { }
+.tbl-type02 tr.bg01 td, .tbl-type02 tr.bg01 th { background: rgb(231, 242, 245); }
+.tbl-type01 .line { border: 1px solid rgb(203, 203, 203); }
+table.budget td { padding-top: 20px; }
+.tbl-type01 ol li { padding-left: 20px; text-indent: -8px; }
+a.link { text-decoration: underline; }
+.pop-wrap .pop-inner .pop-close2 {position: absolute; bottom: 0; left: 0; width: 100%; padding: 10px 0; background: #f4f4f4; text-align: right; }
+.s-contents { padding: 35px; }
+@media (max-width: 800px) {
+  table td label { font-size: 13px !important; }
+  .tbl-type01 th, .tbl-type01 td { padding: 12px 10px; letter-spacing: -0.6px; }
+  .tbl-type01 .line { width: 100%; }
+  [class*="tbl-type"] td .view.line2 { max-width: 100%; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; max-height: 2.4rem; line-height: 20px; white-space: normal; }
+  .tbl-responsive { width: 100%; overflow: scroll !important; }
+  .tbl-responsive table { min-width: 600px; overflow-x: scroll; }
+  .tbl-type02 th, .tbl-type02 td { padding: 5px; }
+  .tbl-type02 td input[type="text"] + .btn, .tbl-type02 td input[type="text"] + .btn + .btn, .tbl-type02 td input[type="text"] + .btn + .btn + .btn, .tbl-type02 td input[type="text"] + input[type="text"] { margin: 5px 0px 0px; }
+}
+@media (max-width: 512px) {
+  [class*="tbl-type"] td .view { max-width: calc(95% - 21px); }
+  [class*="tbl-type"] td img.newicon { width: 25px; }
+  .tbl-type02 td input[type="text"] { width: 100%; }
+  .tbl-type02 th { font-size: 13px; }
+  .tbl-type01.type01-1 .ac td > img { width: 100%; }
+  .tbl-type01 .noline { width: 100%; }
+}
+@media (max-width: 1232px) {
+  .label_layer.num0 { top: 185px; left: 0%; }
+  .label_layer.num1 { top: 185px; left: 50%; transform: translateX(-50%); }
+  .label_layer.num2 { top: 185px; right: -1%; }
+  .label_layer.num3 { top: 185px; left: 0%; }
+  .label_layer.num4 { top: 185px; left: 50%; transform: translateX(-50%); }
+  .label_layer.num5 { top: 185px; right: -1%; }
+}
+@media (max-width: 800px) {
+  .termsWrap .tit01.ac { margin-top: 30px; }
+  .privacy_label { display: inline-block; width: calc(100% + 18px); padding: 0px; margin: 0px -7px 5px; box-sizing: border-box; }
+  .privacy_label .label_box { float: left; display: inline-block; width: calc(33% - 14px); box-sizing: border-box; margin: 7px; padding: 30px; text-align: center; border: 1px solid rgb(220, 220, 220); }
+  [class*="tab"] + [class*="tit"], [class*="tit"] + [class*="tit"], [class*="list"] + [class*="tit"], [class*="tbl-responsive"] + [class*="tit"], [class*="box"] + [class*="tit"] { margin-top: 20px; }
+  .termsWrap .tit01.ac { margin-top: 30px; }
+  .privacy_label { display: inline-block; width: calc(100% + 18px); padding: 0px; margin: 0px -7px 5px; box-sizing: border-box; }
+  .privacy_label .label_box { float: left; display: inline-block; width: calc(33% - 14px); box-sizing: border-box; margin: 7px; padding: 30px; text-align: center; border: 1px solid rgb(220, 220, 220); }
+}
+@media (max-width: 672px) {
+  .privacy_label_wrap { display: none; }
+  .cnt_list li { width: 100%; }
+  .select-style-pv { width: calc(100% - 70px); }
+}
+@media (max-width: 800px) {
+  [class*="box"] { margin-bottom: 20px; font-size: 14px; line-height: 22px; }
+  [class*="box"] > p { line-height: 22px; }
+  .box01, .box02.type5, .box02 { padding: 15px; font-size: 14px; }
+  .box01.scroll { padding: 10px; height: 200px; }
+  .box01 > p { font-size: 14px; line-height: 22px; }
+  .box03 .tit { padding: 7px 10px; font-size: 13px; }
+  .box03 .text { padding: 10px; }
+  .box03 .text .tit02, .box03 .text .tit02 li, .box03 .tit02 li { font-size: 13px; }
+  .boxWrap .box { float: none; width: 100% !important; }
+  .boxWrap .box:first-child { margin: 0px 0px 10px; }
+  .box01.scroll { overflow: scroll !important; }
+}
+@media (max-width: 800px) {
+  .cnt_list li { margin-bottom: 20px; }
+  [class*="list"] > li { line-height: 29px; padding: 0px 0px 10px; }
+  [class*="tab"] + [class*="tit"], [class*="tit"] + [class*="tit"], [class*="list"] + [class*="tit"], [class*="tbl-responsive"] + [class*="tit"], [class*="box"] + [class*="tit"] { margin-top: 20px; }
+  [class*="list"] > li { line-height: 23px; font-size: 14px; }
+  .tit01, .tit01_ { padding: 0px 0px 10px; font-size: 17px; }
+  .tit01::before { width: 5px; height: 5px; }
+  .tit01 em { font-size: 13px; }
+  .tit02 { padding: 0px 0px 10px 16px; font-size: 14px; line-height: 20px; }
+  p.list02::before { top: 8px; left: 4px; }
+  .list02 > li::before { top: 14px; left: 4px; }
+  .tit02.line { margin-bottom: 10px; }
+  .tit02 > li { font-size: 14px; line-height: 21px; }
+  .tit03 { font-size: 14px; }
+  .tit03.line { padding: 0px 0px 10px 20px; margin-bottom: 15px; }
+  .tit03::before { top: 3px; left: 0px; }
+  .list01 > li, p.list01, .list02 > li, p.list02 { padding: 5px 0px 0px 16px; }
+  .list01 > li::before, p.list01::before { top: 14px; left: 4px; }
+  .list03 > li, .box01 > .list03 > li, .list03 { padding-bottom: 5px; }
+  .list04 > li { padding: 0px 0px 5px 13px; }
+  .list04 > li::before { top: 10px; }
+  li .list04 { padding-top: 5px; }
+  .tit01 .back { font-size: 14px; }
+  mediawrap.col2 li .list04, li .list03 { padding-top: 0px; }
+  .tit03 > li::before { content: ""; display: block; position: absolute; top: 3px; left: 1px; }
+}
+@media (max-width: 512px) {
+  .tit01_.special { font-size: 20px; }
+  p.list03.special { font-size: 16px; line-height: 1.6rem; }
+  .list02.col3 > li { width: 50%; }
+  .tit02.type2 em { font-size: 13px; }
+}
+@media (max-width: 800px) {
+  body, form, h1, h2, h3, h4, h5, h6, ul, ul li, p, div, th, td, ol, ul, li, p, span, label, input, select, button, textarea, table td, th { font-size: 14px; }
+  .m { display: block !important; }
+  .m_only { display: none !important; }
+  tr.m, tr.only_tablet { display: table-row !important; }
+  .pc { display: none !important; }
+  iframe { width: 100%; }
+  select { height: 28px; padding: 0px 5px; line-height: 28px; background-position: 100% -4px; }
+  .until_tablet { display: block !important; }
+  .only_tablet { display: block !important; }
+}
+@media (max-width: 512px) {
+  .m_ { display: block !important; }
+  br.m_ { line-height: 0; }
+  .m_only { display: block !important; }
+  tr.m_only { display: table-row !important; }
+  .until_tablet { display: none !important; }
+  .only_tablet { display: none !important; }
+  tr.only_tablet { display: none !important; }
+}
+.contentWrap { position: relative; width: 100%; max-width: 1200px; margin: 0px auto; padding: 60px 0px; font-size: 17px; }
+.contentWrap .privacy-history { display: block; margin-top: 40px; text-align: right; }
+@media (max-width: 1232px) {
+  .contentWrap { width: calc(100% - 20px); margin: 0px auto; box-sizing: border-box; }
+}
+@media (max-width: 800px) {
+  .contentWrap { width: 100%; padding: 0px 10px 30px; box-sizing: border-box; }
+}
+</style>
+  <body>
+    <div class="termsWrap" style="border: 0px; background: none;">
+	<p class="0" style="line-height: 130%; text-autospace: none">
+                <span style="
+                    font-family: 나눔고딕;
+                    font-weight: bold;
+                    font-size: 14pt;
+                  ">고향사랑</span><span lang="EN-US" style="
+                    font-family: 나눔고딕;
+                    letter-spacing: 0pt;
+                    font-weight: bold;
+                    font-size: 14pt;
+                  ">e</span><span style="
+                    font-family: 나눔고딕;
+                    font-weight: bold;
+                    font-size: 14pt;
+                  ">음개인정보처리방침(2024.12.04 ~ 2025.03.23.적용)</span>
+              </p>
+	<p class="box01" style="border: 1px solid rgb(209, 209, 209); background: none; position: relative; line-height: 25px;">행정안전부('https://<a href="http://www.ilovegohyang.go.kr/" style="border: 0px; padding: 0px; margin: 0px; background: none;">www.ilovegohyang.go.kr/</a>', '고향사랑e음')는 「개인정보 보호법」 제30조에 따라 정보주체에게 개인정보 처리에 관한 절차 및 기준을 안내하고, 이와 관련한 고충을 신속하고 원활하게 처리할 수 있도록 하기 위하여 다음과 같이 개인정보 처리방침을 수립·공개합니다.</p>
+	<h4 class="tit01 ac">
+		<p>&nbsp;</p>목  차</h4>
+	<p>「개인정보 처리방침」은 다음과 같은 내용으로 구성되어있습니다.</p>
+	<p class="pt10">
+		<small style="opacity: 0.7;">※ 목차 클릭 시 해당 조문으로 이동합니다.</small>
+	</p>
+	<ul class="cnt_list">
+		<li>
+			<a href="#list_num01" title="제1조 개인정보의 처리목적">
+									제1조 개인정보의 처리목적
+								</a>
+		</li>
+		<li>
+			<a href="#list_num03" title="제2조 개인정보파일 등록 현황">
+									제2조 개인정보파일 등록 현황
+								</a>
+		</li>
+		<li>
+			<a href="#list_num16" title="제3조 14세 미만 아동의 개인정보 처리에 관한 사항">
+									제3조 14세 미만 아동의 개인정보 처리에 관한 사항
+								</a>
+		</li>
+		<li>
+			<a href="#list_num04" title="제4조 개인정보 영향평가 수행 결과">
+									제4조 개인정보 영향평가 수행 결과
+                                                                </a>
+		</li>
+		<li>
+			<a href="#list_num05" title="제5조 개인정보의 처리 및 보유 기간">
+									제5조 개인정보의 처리 및 보유 기간
+								</a>
+		</li>
+		<li>
+			<a href="#list_num06" title="제6조 개인정보의 파기 절차 및 방법에 관한 사항">
+									제6조 개인정보의 파기 절차 및 방법에 관한 사항
+								</a>
+		</li>
+		<li>
+			<a href="#list_num07" title="제7조 개인정보의 제3자 제공에 관한 사항">
+									제7조 개인정보의 제3자 제공에 관한 사항
+								</a>
+		</li>
+		<li>
+			<a href="#list_num08" title="제8조 추가적인 이용·제공이 지속적으로발생 시 판단 기준">
+									제8조 추가적인 이용·제공이 지속적으로발생 시 판단 기준
+								</a>
+		</li>
+		<li>
+			<a href="#list_num09" title="제9조 개인정보 처리업무의 위탁에 관한 사항">
+									제9조 개인정보 처리업무의 위탁에 관한 사항
+								</a>
+		</li>
+		<li>
+			<a href="#list_num10" title="제10조 개인정보의 안전성 확보조치에 관한 사항">
+									제10조 개인정보의 안전성 확보조치에 관한 사항
+								</a>
+		</li>
+		<li>
+			<a href="#list_num11" title="제11조 민감정보의 공개 가능성 및 비공개를 선택하는 방법">
+									제11조 개인정보 보호책임자에 관한 사항
+								</a>
+		</li>
+		<li>
+			<a href="#list_num12" title="제12조 가명정보 처리에 관한 사항">
+									제12조 가명정보 처리에 관한 사항
+								</a>
+		</li>
+		<li>
+			<a href="#list_num13" title="제13조 개인정보를 자동으로 수집하는 장치의 설치·운영 및 그 거부에 관한 사항">
+									제13조 개인정보를 자동으로 수집하는 장치의 설치·운영 및 그 거부에 관한 사항
+								</a>
+		</li>
+		<li>
+			<a href="#list_num14" title="제14조 정보주체와 법정대리인의 권리·의무 및 행사방법에 관한 사항">
+									제14조 정보주체와 법정대리인의 권리·의무 및 행사방법에 관한 사항
+								</a>
+		</li>
+		<li>
+			<a href="#list_num15" title="제15조 개인정보 보호(분야별)책임자의 성명 또는 개인정보 업무 담당부서 및 고충사항을 처리하는 부서에 관한 사항">
+									제15조 개인정보 보호(분야별)책임자의 성명 또는 개인정보 업무 담당부서 및 고충사항을 처리하는 부서에 관한 사항
+								</a>
+		</li>
+		<li>
+			<a href="#list_num16" title="제16조 정보주체의 권익침해에 대한구제방법">
+									제16조 정보주체의 권익침해에 대한구제방법
+								</a>
+		</li>
+		<li>
+			<a href="#list_num17" title="제17조 개인정보 보호수준 평가 결과">
+									제17조 개인정보 보호수준 평가 결과
+								</a>
+		</li>
+		<li>
+			<a href="#list_num18" title="제18조 고정형 영상정보처리기기 운영·관리에 관한 사항">
+									제18조 고정형 영상정보처리기기 운영·관리에 관한 사항
+								</a>
+		</li>
+		<li>
+			<a href="#list_num19" title="제19조 그밖에 개인정보처리자가 개인정보처리 기준 및 보호조치 등에 관하여 자율적으로 개인정보 처리방침에 포함하여 정한 사항">
+									제19조 그밖에 개인정보처리자가 개인정보처리 기준 및 보호조치 등에 관하여 자율적으로 개인정보 처리방침에 포함하여 정한 사항
+								</a>
+		</li>
+		<li>
+			<a href="#list_num20" title="제20조 개인정보 처리방침의 변경에 관한 사항">
+									제20조 개인정보 처리방침의 변경에 관한 사항
+								</a>
+		</li>
+
+	</ul>
+	<h5 class="tit01_" id="list_num01" style="margin-top: 30px; padding-bottom: 20px; font-weight: 500; line-height: 25px; color: rgb(10, 109, 166); font-size: 20px;">
+		<span class="list_icon" style="border: 0px; padding: 0px; margin: 0px 10px 0px 0px; background: none;">
+			<img src="https://www.gov.kr//2022/privacy/img/img_object.jpg" alt="제1조 개인정보의 처리 목적" style="border-width: initial; height: 35px;">제1조. 개인정보의 처리목적</span></h5>
+		<ol class="list03" style="border: 0px; background: none;">
+			<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">
+				① 행정안전부는 대국민 서비스 제공 및 민원처리, 소관업무 수행 등의 목적으로 필요에 의한 최소한으로 개인정보를 처리하고 있습니다.
+			</li>
+			<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">
+				② 제1항에 대한 사항은 각 부서에서 운영하는 소관 누리집에 게재하여 정보주체가 확인할 수 있도록 안내를 하고 있습니다.
+			</li>
+			<li style="margin-top: 5px; padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">
+				※ 행정안전부 소관 개인정보파일 및 소관 누리집 목록(클릭) [붙임 참고]
+			</li>
+		</ol>
+
+		<h5 class="tit01_" id="list_num03" style="margin-top: 30px; padding-bottom: 20px; font-weight: 500; line-height: 25px; color: rgb(10, 109, 166); font-size: 20px;">
+			<span class="list_icon" style="border: 0px; padding: 0px; margin: 0px 10px 0px 0px; background: none;">
+				<img src="https://www.gov.kr//2022/privacy/img/img_period.jpg" alt="제2조 제2조 개인정보 수집항목" style="border-width: initial; height: 35px;">제2조 개인정보파일 등록 현황</span></h5>
+			<ol class="list03" style="border: 0px; background: none;">
+				<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">
+					① 행정안전부가 처리하는 개인정보는 소관업무 및 법령에서 정한 최소한의 개인정보를 수집·이용하는 등 개인정보처리방침에서 명시한 범위 내에서 처리하고 있으며, 「개인정보 보호법」 제32조에 따라 개인정보파일을 운영하고 있습니다.
+				</li>
+				<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px; color:#0000FF;">
+					② 개인정보파일의 처리목적・보유기간 및 항목은 개인정보파일의 특성에 따라 달리 규정하고 있으며, 개인정보파일별 상세한 내용은 개인정보보호위원회 개인정보 포털(‘개인서비스&gt;개인정보 열람등요구&gt;개인정보파일 검색’에서 기관명 “행정안전부” 로 조회)을 통해 확인하시기 바랍니다.
+				</li>
+				<li style="margin-top: 5px; padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">
+					 <a href="https://www.privacy.go.kr/front/wcp/dcl/per/personalInfoFileSrhList.do?searchInsttCode=1740000&amp;searchInsttNm=행정안전부" target="_blank" title="※ 개인정보파일 검색 새창열림" class="link" style="text-decoration-line: underline; border: 0px; padding: 0px; margin: 0px; background: none;">※ 개인정보파일 검색 링크</a>
+				</li>
+			</ol>
+			<h5 class="tit01_" id="list_num16" style="margin-top: 30px; padding-bottom: 20px; font-weight: 500; line-height: 25px; color: rgb(10, 109, 166); font-size: 20px;">
+				<span class="list_icon" style="border: 0px; padding: 0px; margin: 0px 10px 0px 0px; background: none;">
+					<img src="https://www.gov.kr//2022/privacy/img/img_private.jpg" alt="제3조 개인정보 영향평가 수행 결과" style="border-width: initial; height: 35px;">제3조 개인정보 영향평가 수행 결과</span></h5>
+				<ol class="list03" style="border: 0px; background: none;">
+					<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">① 행정안전부는 운영하고 있는 개인정보 처리시스템이 정보주체의 개인정보파일에 미칠 영향에 대해 조사, 분석, 평가하기 위해 「개인정보 보호법」 제33조에 따라 “개인정보 영향평가”를 받고 있습니다.</li>
+					<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">② 행정안전부는 다음 개인정보파일에 대해 영향평가를 수행하였습니다.</li>
+					<table class="tbl-type01 type01-1 mt10 text_indent_0" style="width: 1200px; border-top: 1px solid rgb(94, 107, 131); border-right: none; border-bottom: none; border-left: none; border-image: initial; table-layout: fixed; border-collapse: collapse; word-break: break-all; position: relative; text-indent: 0px !important;">
+						<caption>개인정보파일의 명칭, 개인정보 파일에 기록되는 개인정보의 항목, 영향평가 수행연도</caption>
+						<colgroup>
+							<col style="width: 239.797px;">
+								<col>
+									<col style="width: 179.844px;">
+									</colgroup><thead>
+										<tr>
+											<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">개인정보파일의 명칭</th>
+											<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">개인정보 파일에 기록되는 개인정보의 항목</th>
+											<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">영향평가<br>수행연도</th>
+											</tr>
+										</thead>
+										<tbody>
+											<tr>
+												<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">고향사랑e음 회원정보</td>
+												<td style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top;">이름, 생년월일, CI, 집주소, 휴대폰번호, 이메일주소</td>
+												<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">2023</td>
+											</tr>
+										</tbody>
+									</table>
+								</ol>
+								<h5 class="tit01_" id="list_num04" style="margin-top: 30px; padding-bottom: 20px; font-weight: 500; line-height: 25px; color: rgb(10, 109, 166); font-size: 20px;">
+									<span class="list_icon" style="border: 0px; padding: 0px; margin: 0px 10px 0px 0px; background: none;">
+										<img src="https://www.gov.kr//2022/privacy/img/img_11.jpg" alt="제4조 개인정보의 제3자 제공에 관한 사항" style="border-width: initial; height: 35px;">제4조 개인정보의 제3자 제공에 관한 사항</span></h5>
+									<ol class="list03" style="border: 0px; background: none;">
+										<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">① 행정안전부는 정보주체의 개인정보를 제1조(개인정보의 처리 목적)에서 명시한 범위 내에서만 처리하며, 정보주체의 동의, 법률의 특별한 규정 등 ｢개인정보 보호법｣ 제17조 및 제18조에 해당하는 경우에만 개인정보를 제3자에게 제공합니다.</li>
+										<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">② 행정안전부는 다음과 같이 개인정보를 제3자에게 제공하고 있습니다.</li>
+									</ol>
+									<table class="tbl-type01 type01-1 mt10 text_indent_0" style="width: 1200px; border-top: 1px solid rgb(94, 107, 131); border-right: none; border-bottom: none; border-left: none; border-image: initial; table-layout: fixed; border-collapse: collapse; word-break: break-all; position: relative; text-indent: 0px !important;">
+										<caption>위탁처리 기관</caption>
+										<colgroup>
+											<col style="width: 59.9688px;">
+												<col style="width: 179.922px;">
+													<col style="width: 299.875px;">
+														<col style="width: 299.875px;">
+															<col style="width: 359.844px;">
+																<col>
+																</colgroup><thead>
+																	<tr>
+																		<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">순번</th>
+																		<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">개인정보를제공받는 자</th>
+																		<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">제공하는개인정보 항목</th>
+																		<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">제공받는 자의개인정보 이용목적</th>
+																		<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">제공받는 자의 보유·이용기간</th>
+																	</tr>
+																</thead>
+																<tbody>
+																	<tr>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">1</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">행정안전부행정정보공동이용센터</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">
+																			<p style="border: 0px; background: none;">성명, 주민등록번호</p>
+																			<p style="border: 0px; background: none;">※ 주민등록번호는 유효성 확인후 저장하지 않음.</p>
+																		</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">기부자 행정거주지 조회, 고향사랑 기부금 납부</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">행정정보 공동이용 지침 제30조(개인정보 보호대책 마련 등) 3항 해당 행정정보의 이용목적을 달성한 때 또는 법령에 따라 지정된 보존기간이 만료된 때</td>
+																	</tr>
+																	<tr>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">2</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">세외수입 시스템</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">성명,연계정보(CI),휴대폰</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">고향사랑 기부금 납부, 결제 연계</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">고향사랑 개인정보 처리 지침에 따라 서비스 해지시까지</td>
+																	</tr>
+																	<tr>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">3</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">국세청 홈택스</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">연계정보(CI)</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">고향사랑 기부금 연말정산간소화(자동세액공제) 서비스 제공</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">공공기록물 관리에 관한 법률 시행령 제26조 제1항 별표1(처리과 수준의 주요한 업무와 관련된 파일), 5년</td>
+																	</tr>
+																	<tr>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">4</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">고향사랑e음 답례품제공자</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">주문자 정보(성명, 주소, 휴대폰번호, 이메일)수령자 정보(성명, 주소, 휴대폰번호)</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">답례품 배송/반품/환불 및 고객상담에 대한 정보통신 서비스 제공을 위해 필요한 업무 처리</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">고향사랑 개인정보 처리 지침에 따라 서비스 해지시까지</td>
+																	</tr>
+																	<tr>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">5</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">행정안전부국민비서 알림서비스</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">CI, 성명, 휴대폰번호</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">고향사랑e음 업무처리 진행사항 안내·알림</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">국민비서 개인정보처리지침 제1조 제1항 라.보유기간 : 서비스 해지시까지</td>
+																	</tr>
+																	<tr>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">6</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">카카오간편로그인</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">CI, 성명, 휴대폰번호</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">고향사랑 로그인</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">고향사랑 개인정보처리지침에 따라 서비스 해지시까지</td>
+																	</tr>
+																	<tr>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">7</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">농협카드</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">기부여부</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">농협카드 서비스</td>
+																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">농협카드 서비스 해지시까지</td>
+																	</tr>
+																</tbody>
+															</table>
+															<br>
+																<h5 class="tit01_" id="list_num05" style="padding-bottom: 20px; font-weight: 500; line-height: 25px; color: rgb(10, 109, 166); font-size: 20px;">
+																	<span class="list_icon" style="border: 0px; padding: 0px; margin: 0px 10px 0px 0px; background: none;">
+																		<img src="https://www.gov.kr//2022/privacy/img/img_third.jpg" alt="제5조 개인정보 처리업무의 위탁에 관한 사항" style="border-width: initial; height: 35px;">제5조 개인정보 처리업무의 위탁에 관한 사항</span></h5>
+																	<ol class="list03" style="border: 0px; background: none;">
+																		<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">① 행정안전부는 원활한 개인정보 업무처리를 위하여 다음과 같이 개인정보 처리업무를 위탁하고 있습니다.<br>
+																			</li><li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">가. 위탁처리 기관</li>
+																			<table class="tbl-type01 type01-1 mt10 text_indent_0" style="width: 1200px; border-top: 1px solid rgb(94, 107, 131); border-right: none; border-bottom: none; border-left: none; border-image: initial; table-layout: fixed; border-collapse: collapse; word-break: break-all; position: relative; text-indent: 0px !important;">
+																				<caption>수탁기관명</caption>
+																				<colgroup>
+																					<col style="width: 263.766px;">
+																						<col style="width: 263.766px;">
+																							<col style="width: 179.844px;">
+																								<col style="width: 155.859px;">
+																									<col>
+																									</colgroup><thead>
+																										<tr>
+																											<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">수탁기관명</th>
+																											<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">주소</th>
+																											<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">전화</th>
+																											<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">근무시간</th>
+																											<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">위탁 업무</th>
+																										</tr>
+																									</thead>
+																									<tbody>
+																										<tr>
+																											<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">한국지역정보개발원</td>
+																											<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">서울특별시 마포구 성암로 301(상암동)</td>
+																											<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">02-2031-9100</td>
+																											<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">09:00~18:00</td>
+																											<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">고향사랑e음 시스템 구축·유지관리 및 고향사랑 기부 관련 상담·안내</td>
+																										</tr>
+																									</tbody>
+																								</table>
+																								<br>
+																									<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">나. 위탁처리 수행업체</li>
+																									<table class="tbl-type01 type01-1 mt10 text_indent_0" style="width: 1200px; border-top: 1px solid rgb(94, 107, 131); border-right: none; border-bottom: none; border-left: none; border-image: initial; table-layout: fixed; border-collapse: collapse; word-break: break-all; position: relative; text-indent: 0px !important;">
+																										<caption>수탁업체명 연락처, 근무시간</caption>
+																										<colgroup>
+																											<col style="width: 263.766px;">
+																												<col style="width: 263.766px;">
+																													<col style="width: 179.844px;">
+																														<col style="width: 155.859px;">
+																															<col>
+																															</colgroup><thead>
+																																<tr>
+																																	<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">수탁업체명</th>
+																																	<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">주소</th>
+																																	<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">전화</th>
+																																	<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">근무시간</th>
+																																	<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">위탁 업무</th>
+																																</tr>
+																															</thead>
+																															<tbody>
+																																<tr>
+																																	<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">아이티아이즈 컨소시엄</td>
+																																	<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">서울특별시 중구 세종대로 13, 고향사랑e음 유지관리사업단</td>
+																																	<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">1522-2431</td>
+																																	<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">09:00~18:00</td>
+																																	<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">고향사랑e음 시스템 유지관리 및 고향사랑 기부 관련 상담·안내</td>
+																																</tr>
+																															</tbody>
+																														</table>
+																														<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">② 위탁계약 체결 시 ｢개인정보 보호법｣ 제26조에 따라 위탁업무 수행목적 외 개인정보 처리금지, 기술적․관리적 보호조치, 재위탁 제한, 수탁자에 대한 관리․감독, 손해배상 등 책임에 관한 사항을 계약서 등 문서에 명시하고, 수탁자가 개인정보를 안전하게 처리하는지를 감독하고 있습니다.</li>
+																														<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">③ 위탁업무의 내용이나 수탁자가 변경될 경우에는 지체없이 본 개인정보 처리방침을 통하여 공개하도록 하겠습니다.</li>
+																													</ol>
+																													<h5 class="tit01_" id="list_num06" style="margin-top: 30px; padding-bottom: 20px; font-weight: 500; line-height: 25px; color: rgb(10, 109, 166); font-size: 20px;">
+																														<span class="list_icon" style="border: 0px; padding: 0px; margin: 0px 10px 0px 0px; background: none;">
+																															<img src="https://www.gov.kr//2022/privacy/img/img_consign.jpg" alt="제6조 개인정보의 파기 절차 및 방법" style="border-width: initial; height: 35px;">제6조 개인정보의 파기 절차 및 방법</span></h5>
+																														<ol class="list03" style="border: 0px; background: none;">
+																															<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">① 행정안전부는 개인정보 보유기간의 경과, 처리목적 달성 등 개인정보가 불필요하게 되었을 때에는 지체없이 해당 개인정보를 파기합니다.</li>
+																															<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">② 개인정보 파기의 절차 및 방법은 다음과 같습니다.<ol class="list03" style="padding: 10px; border: 0px; background: none;">
+																																	<li style="padding-bottom: 7px; padding-left: 15px; border: 0px; background: none;">가. 파기절차 : 행정안전부는 파기 사유가 발생한 개인정보를 선정하고, 행정안전부의 개인정보 분야별책임자의 승인을 받아 개인정보를 파기합니다.</li>
+																																	<li style="padding-bottom: 7px; padding-left: 15px; border: 0px; background: none;">나. 파기방법 : 행정안전부는 전자적 파일 형태로 기록․저장된 개인정보는 기록을 재생할 수 없도록 파기하며, 종이 문서에 기록․저장된 개인정보는 분쇄기로 분쇄하거나 소각하여 파기합니다.</li>
+																																</ol>
+																															</li>
+																														</ol>
+																														<h5 class="tit01_" id="list_num07" style="margin-top: 30px; padding-bottom: 20px; font-weight: 500; line-height: 25px; color: rgb(10, 109, 166); font-size: 20px;">
+																															<span class="list_icon" style="border: 0px; padding: 0px; margin: 0px 10px 0px 0px; background: none;">
+																																<img src="https://www.gov.kr//2022/privacy/img/img_destruction.jpg" alt="제7조 정보주체와 법정대리인의 권리·의무 및 행사방법에 관한 사항" style="border-width: initial; height: 35px;">제7조 정보주체와 법정대리인의 권리·의무 및 행사방법에 관한 사항</span></h5>
+																															<ol class="list03" style="border: 0px; background: none;">
+																																<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">① 정보주체는 행정안전부에 대해 언제든지 개인정보 열람·정정·삭제·처리정지 요구 등의 권리를 행사할 수 있습니다.</li>
+																																<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">② 제1항에 따른 권리 행사는 행정안전부에 대해 「개인정보 보호법」 시행령 제41조 제1항에 따라 서면, 전자우편, 팩스 등을 통하여 하실 수 있으며 행정안전부는 이에 대해 지체 없이 조치하겠습니다.</li>
+																																<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">③ 제1항에 따른 권리 행사는 정보주체의 법정대리인이나 위임을 받은 자 등 대리인을 통하여 하실 수도 있습니다. 이 경우 “개인정보 처리 방법에 관한 고시” 별지 제11호 서식에 따른 위임장을 제출하셔야 합니다.</li>
+																																<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">&nbsp;※ 만 14세 미만 아동에 관한 개인정보의 열람등 요구는 법정대리인이 직접 해야 하며, 만 14세 이상의 미성년자인 정보주체는 정보주체의 개인정보에 관하여 미성년자 본인이 권리를 행사하거나 법정대리인을 통하여 권리를 행사할 수도 있습니다</li>
+																																<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">④ 개인정보 열람 및 처리정지 요구는 「개인정보 보호법」 제35조 제4항, 제37조 제2항에 의하여 정보주체의 권리가 제한 될 수 있습니다.</li>
+																																<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">⑤ 개인정보의 정정 및 삭제 요구는 다른 법령에서 그 개인정보가 수집 대상으로 명시되어 있는 경우에는 그 삭제를 요구할 수 없습니다.</li>
+																																<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">⑥ 행정안전부는 정보주체 권리에 따른 열람의 요구, 정정·삭제의 요구, 처리 정지의 요구 시 열람 등 요구를 한 자가 본인이거나 정당한 대리인인지를 확인합니다.</li>
+																															</ol>
+																															<h5 class="tit01_" id="list_num08" style="margin-top: 30px; padding-bottom: 20px; font-weight: 500; line-height: 25px; color: rgb(10, 109, 166); font-size: 20px;">
+																																<span class="list_icon" style="border: 0px; padding: 0px; margin: 0px 10px 0px 0px; background: none;">
+																																	<img src="https://www.gov.kr//2022/privacy/img/img_court.jpg" alt="제8조 개인정보의 안전성 확보조치에 관한 사항" style="border-width: initial; height: 35px;">제8조 개인정보의 안전성 확보조치에 관한 사항</span></h5>
+																																<p class="list03" style="border: 0px; background: none;">행정안전부는 개인정보의 안전성 확보를 위해 다음과 같은 조치를 취하고 있습니다.</p>
+																																<ol class="list03 pt10" style="border: 0px; background: none;">
+																																	<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">1. 내부관리계획의 수립 및 시행 : 개인정보의 안전한 처리를 위하여 내부관리계획을 수립하고 시행하고 있습니다.</li>
+																																	<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">2. 개인정보 취급직원의 최소화 및 교육 : 개인정보를 취급하는 직원은 반드시 필요한 인원에 한하여 지정·관리하고 있으며 취급직원을 대상으로 안전한 관리를 위한 교육을 실시하고 있습니다.</li>
+																																	<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">3. 정기적인 자체 지도 실시 : 개인정보 취급 관련 안정성 확보를 위해 매년 자체 개인정보 보호 관리수준 진단을 실시하고 있습니다.</li>
+																																	<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">4. 개인정보에 대한 접근 제한 : 개인정보를 처리하는 개인정보처리시스템에 대한 접근권한의 부여·변경·말소를 통하여 개인정보에 대한 접근통제를 위한 필요한 조치를 하고 있으며 침입차단시스템을 이용하여 외부로부터의 무단 접근을 통제하고 있습니다.</li>
+																																	<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">5. 접속기록의 보관 : 개인정보처리시스템에 접속한 기록을 1년 이상 보관·관리하고 있습니다. 다만, 5만명 이상의 정보주체에 관하여 개인정보를 처리하거나, 고유식별정보 또는 민감정보를 처리하는 개인정보처리시스템의 경우에는 2년 이상 보관·관리하고 있습니다.</li>
+																																	<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">6. 개인정보의 암호화 : 개인정보는 암호화 등을 통해 안전하게 저장 및 관리되고 있습니다. 또한, 중요한 데이터는 저장 및 전송 시 암호화하여 사용하는 등의 별도 보안기능을 사용하고 있습니다.</li>
+																																	<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">7. 해킹 등에 대비한 기술적 대책 : 행정안전부('고향사랑e음')는 해킹이나 컴퓨터 바이러스 등에 의한 개인정보 유출 및 훼손을 막기 위하여 보안프로그램을 설치하고 주기적으로 갱신·점검하고 있습니다.</li>
+																																	<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">8. 비인가자에 대한 출입 통제 : 개인정보를 보관하고 있는 개인정보처리시스템의 물리적 보관 장소를 별도로 두고 이에 대해 출입통제 절차를 수립·운영하고 있습니다.</li>
+																																</ol>
+																																<h5 class="tit01_" id="list_num09" style="margin-top: 30px; padding-bottom: 20px; font-weight: 500; line-height: 25px; color: rgb(10, 109, 166); font-size: 20px;">
+																																	<span class="list_icon" style="border: 0px; padding: 0px; margin: 0px 10px 0px 0px; background: none;">
+																																		<img src="https://www.gov.kr//2022/privacy/img/img_safe.jpg" alt="제9조 개인정보를 자동으로 수집하는 장치의 설치·운영 및 그 거부에 관한 사항" style="border-width: initial; height: 35px;">제9조 개인정보를 자동으로 수집하는 장치의 설치·운영 및 그 거부에 관한 사항</span></h5>
+																																	<ol class="list03" style="border: 0px; background: none;">
+																																		<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">행정안전부는 정보주체의 이용정보를 저장하고 수시로 불러오는 ‘쿠키(cookie)’를 사용하지 않습니다.</li>
+																																	</ol>
+																																	<h5 class="tit01_" id="list_num10" style="margin-top: 30px; padding-bottom: 20px; font-weight: 500; line-height: 25px; color: rgb(10, 109, 166); font-size: 20px;">
+																																		<span class="list_icon" style="border: 0px; padding: 0px; margin: 0px 10px 0px 0px; background: none;">
+																																			<img src="https://www.gov.kr//2022/privacy/img/img_cookie.jpg" alt="제10조 추가적인 이용·제공 관련 판단 기준" style="border-width: initial; height: 35px;">제10조 추가적인 이용·제공 관련 판단 기준</span></h5>
+																																		<ol class="list03" style="border: 0px; background: none;">
+																																			<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">① 행정안전부는 「개인정보 보호법」 제15조제3항 및 제17조제4항에 따라 「개인정보 보호법」 시행령 제14조의2에 따른 사항을 고려하여 정보주체의 동의 없이 개인정보를 추가적으로 이용·제공할 수 있습니다.</li>
+																																			<table class="tbl-type01 type01-1 mt10 text_indent_0" style="width: 1200px; border-top: 1px solid rgb(94, 107, 131); border-right: none; border-bottom: none; border-left: none; border-image: initial; table-layout: fixed; border-collapse: collapse; word-break: break-all; position: relative; text-indent: 0px !important;">
+																																				<caption>추가적인 이용·제공 관련 판단 기준</caption>
+																																				<colgroup>
+																																					<col style="width: 239.797px;">
+																																						<col>
+																																							<col style="width: 359.688px;">
+																																							</colgroup><thead>
+																																								<tr>
+																																									<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">항목</th>
+																																									<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">이용·제공 목적</th>
+																																									<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">보유 및 이용기간</th>
+																																								</tr>
+																																							</thead>
+																																							<tbody>
+																																								<tr>
+																																									<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">이름, 연락처, 주소</td>
+																																									<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">고향사랑e음 서비스 관련 유/무선 문의사항 응대</td>
+																																									<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">목적 달성 즉시파기</td>
+																																								</tr>
+																																							</tbody>
+																																						</table>
+																																						<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">② 이에 따라 행정안전부는 정보주체의 동의 없이 추가적인 이용·제공을 하기 위해서 다음과 같은 사항을 고려하였습니다.<ol class="list03" style="padding: 10px; border: 0px; background: none;">
+																																								<li style="padding-bottom: 7px; padding-left: 15px; border: 0px; background: none;">‣ 개인정보를 추가적으로 이용·제공하려는 목적이 당초 수집 목적과 관련성이 있는지 여부</li>
+																																								<li style="padding-bottom: 7px; padding-left: 15px; border: 0px; background: none;">‣ 개인정보를 수집한 정황 또는 처리 관행에 비추어 볼 때 추가적인 이용·제공에 대한 예측 가능성이 있는지 여부</li>
+																																								<li style="padding-bottom: 7px; padding-left: 15px; border: 0px; background: none;">‣ 개인정보의 추가적인 이용·제공이 정보주체의 이익을 부당하게 침해하는지 여부</li>
+																																								<li style="padding-bottom: 7px; padding-left: 15px; border: 0px; background: none;">‣ 가명처리 또는 암호화 등 안전성 확보에 필요한 조치를 하였는지 여부</li>
+																																							</ol>
+																																						</li>
+																																					</ol>
+																																					<h5 class="tit01_" id="list_num11" style="margin-top: 30px; padding-bottom: 20px; font-weight: 500; line-height: 25px; color: rgb(10, 109, 166); font-size: 20px;">
+																																						<span class="list_icon" style="border: 0px; padding: 0px; margin: 0px 10px 0px 0px; background: none;">
+																																							<img src="https://www.gov.kr//2022/privacy/img/img_cpo.jpg" alt="제 11조 개인정보 보호(분야별)책임자에 관한 사항" style="border-width: initial; height: 35px;">제11조 개인정보 보호(분야별)책임자에 관한 사항</span></h5>
+																																						<ol class="list03" style="border: 0px; background: none;">
+																																							<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">① 행정안전부는 개인정보 처리에 관한 업무를 총괄해서 책임지고, 개인정보 처리와 관련한 정보주체의 불만처리 및 피해구제 등을 위하여 아래와 같이 개인정보 보호(분야별)책임자를 지정하고 있습니다.<table class="tbl-type01 type01-1 mt10 text_indent_0" style="width: 1185px; border-top: 1px solid rgb(94, 107, 131); border-right: none; border-bottom: none; border-left: none; border-image: initial; table-layout: fixed; border-collapse: collapse; word-break: break-all; position: relative; text-indent: 0px !important;">
+																																									<caption>개인정보 보호책임자 구분, 부서, 성명, 연락처, 전자우편</caption>
+																																									<colgroup>
+																																										<col style="width: 296px;">
+																																											<col style="width: 296px;">
+																																												<col style="width: 296px;">
+																																													<col style="width: 296px;">
+																																													</colgroup><thead>
+																																														<tr>
+																																															<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">구분</th>
+																																															<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">부서</th>
+																																															<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">성명</th>
+																																															<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">연락처</th>
+																																														</tr>
+																																													</thead>
+																																													<tbody>
+																																														<tr>
+																																															<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">개인정보보호 책임자</td>
+																																															<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">정책기획관</td>
+																																															<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">정창성</td>
+																																															<td class="ac" rowspan="3" style="padding: 17px 10px 16px; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">※ 담당부서로 연결됩니다.<br>전화 044-205-3541<br>팩스 044-204-8911<br>전자우편 &nbsp;hena97@korea.kr</td>
+																																																	</tr>
+																																																	<tr>
+																																																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">개인정보보호 분야별 책임자</td>
+																																																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">균형발전진흥과장</td>
+																																																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">송정아</td>
+																																																		<td style="padding: 17px 10px 16px; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top;">
+																																																	</td></tr>
+																																																	<tr>
+																																																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">개인정보보호 분야별 담당자</td>
+																																																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">균형발전진흥과</td>
+																																																		<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">정혜정</td>
+																																																		<td style="padding: 17px 10px 16px; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top;">
+																																																	</td></tr>
+																																																</tbody>
+																																															</table>
+																																														</li>
+																																														<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">② 정보주체께서는 행정안전부의 서비스를 이용하시면서 발생한 모든 개인정보 보호 관련 문의, 불만처리, 피해구제 등에 관한 사항을 개인정보 분야별 담당부서로 문의하실 수 있습니다. 행정안전부는 정보주체의 문의에 대해 지체 없이 답변 및 처리해드릴 것입니다.</li>
+																																													</ol>
+																																													<h5 class="tit01_" id="list_num12" style="margin-top: 30px; padding-bottom: 20px; font-weight: 500; line-height: 25px; color: rgb(10, 109, 166); font-size: 20px;">
+																																														<span class="list_icon" style="border: 0px; padding: 0px; margin: 0px 10px 0px 0px; background: none;">
+																																															<img src="https://www.gov.kr//2022/privacy/img/img_browse.jpg" alt="제12조 개인정보의 열람청구를 접수·처리하는 부서" style="border-width: initial; height: 35px;">제12조 개인정보의 열람청구를 접수·처리하는 부서</span></h5>
+																																														<ol class="list03" style="border: 0px; background: none;">
+																																															<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">① 정보주체는 「개인정보 보호법」 제35조에 따른 개인정보의 열람 청구를 아래의 부서에 할 수 있으며, 행정안전부는 정보주체의 개인정보 열람청구가 신속하게 처리되도록 노력 하겠습니다.<ul class="list03" style="padding: 10px; border: 0px; background: none;">
+																																																	<li style="border: 0px; background: none;">‣ 개인정보 열람청구 분야별 접수·처리 부서<table class="tbl-type01 type01-1 mt10 text_indent_0" style="width: 1165px; border-top: 1px solid rgb(94, 107, 131); border-right: none; border-bottom: none; border-left: none; border-image: initial; table-layout: fixed; border-collapse: collapse; word-break: break-all; position: relative; text-indent: 0px !important;">
+																																																			<caption>개인정보의 열람청구를 접수·처리하는 부서</caption>
+																																																			<colgroup>
+																																																				<col>
+																																																					<col style="width: 232.797px;">
+																																																						<col style="width: 174.594px;">
+																																																							<col style="width: 256.078px;">
+																																																								<col style="width: 174.594px;">
+																																																								</colgroup><thead>
+																																																									<tr>
+																																																										<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">분야별 담당부서</th>
+																																																										<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">담당자</th>
+																																																										<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">전화</th>
+																																																										<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">전자우편</th>
+																																																										<th scope="col" style="padding: 20px 10px 19px; line-height: 1em; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: rgb(245, 245, 245); text-align: center;">팩스</th>
+																																																									</tr>
+																																																								</thead>
+																																																								<tbody>
+																																																									<tr>
+																																																										<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">균형발전진흥과</td>
+																																																										<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">정혜정</td>
+																																																										<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">044-205-3541</td>
+																																																										<td class="ac" style="padding: 17px 10px 16px; font-size: 16.15px; border-width: 0px 0px 1px 1px; border-top-style: initial; border-right-style: initial; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: initial; border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">&nbsp;hena97@korea.kr</td>
+																																																										<td class="ac" style="padding: 17px 10px 16px; border-width: 0px 1px 1px; border-top-style: initial; border-right-style: solid; border-bottom-style: solid; border-left-style: solid; border-top-color: initial; border-right-color: rgb(220, 220, 220); border-bottom-color: rgb(220, 220, 220); border-left-color: rgb(220, 220, 220); border-image: initial; background: none; vertical-align: top; text-align: center !important;">044-204-8911</td>
+																																																									</tr>
+																																																								</tbody>
+																																																							</table>
+																																																						</li>
+																																																					</ul>
+																																																				</li>
+																																																				<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">② 정보주체께서는 제1항의 열람청구 접수·처리부서 이외에 ‘개인정보 포털’ 누리집(<a href="http://www.privacy.go.kr/" target="_blank" title="개인정보보호 종합포털 새창열림" class="link" style="text-decoration-line: underline; border: 0px; padding: 0px; margin: 0px; background: none;">www.privacy.go.kr</a>)을 통하여서도 개인정보 열람청구를 하실 수 있습니다.<br>※ 개인정보 포털→ 민원서비스 → 정보주체 권리행사 → 개인정보 열람 등 요구(본인인증 필요)</li>
+																																																				</ol>
+																																																				<h5 class="tit01_" id="list_num13" style="margin-top: 30px; padding-bottom: 20px; font-weight: 500; line-height: 25px; color: rgb(10, 109, 166); font-size: 20px;">
+																																																					<span class="list_icon" style="border: 0px; padding: 0px; margin: 0px 10px 0px 0px; background: none;">
+																																																						<img src="https://www.gov.kr//2022/privacy/img/img_help.jpg" alt="제13조 정보주체의 권익침해에 대한 구제방법" style="border-width: initial; height: 35px;">제13조 정보주체의 권익침해에 대한 구제방법</span></h5>
+																																																					<ol class="list03" style="border: 0px; background: none;">
+																																																						<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">① 정보주체는 개인정보침해로 인한 구제를 받기 위하여 개인정보분쟁조정위원회, 한국인터넷진흥원, 개인정보침해신고센터 등에 분쟁해결이나 상담 등을 신청할 수 있습니다. 이 밖에 기타 개인정보침해의 신고, 상담에 대하여는 아래의 기관에 문의하시기 바랍니다.<ul class="list03 pt20" style="padding: 10px; border: 0px; background: none;">
+																																																								<li style="border: 0px; background: none;">가. 개인정보분쟁조정위원회 : (국번없이) 1833-6972 (<a href="http://www.kopico.go.kr/" target="_blank" title="개인정보분쟁조정위원회 새창열림" class="link" style="text-decoration-line: underline; border: 0px; padding: 0px; margin: 0px; background: none;">www.kopico.go.kr</a>)</li>
+																																																								<li style="border: 0px; background: none;">나. 개인정보침해신고센터 : (국번없이) 118 (<a href="http://privacy.kisa.or.kr/" target="_blank" title="개인정보침해신고센터 새창열림" class="link" style="text-decoration-line: underline; border: 0px; padding: 0px; margin: 0px; background: none;">privacy.kisa.or.kr</a>)</li>
+																																																								<li style="border: 0px; background: none;">다. 대검찰청 : (국번없이) 1301 (<a href="http://www.spo.go.kr/" target="_blank" title="대검찰청 새창열림" class="link" style="text-decoration-line: underline; border: 0px; padding: 0px; margin: 0px; background: none;">www.spo.go.kr</a>)</li>
+																																																								<li style="border: 0px; background: none;">라. 경찰청 : (국번없이) 182 (<a href="http://ecrm.cyber.go.kr/" target="_blank" title="경찰청 새창열림" class="link" style="text-decoration-line: underline; border: 0px; padding: 0px; margin: 0px; background: none;">ecrm.cyber.go.kr</a>)</li>
+																																																							</ul>
+																																																						</li>
+																																																						<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">② 「개인정보 보호법」 제35조(개인정보의 열람), 제36조(개인정보의 정정·삭제), 제37조(개인정보의 처리정지 등)의 규정에 의한 요구에 대하여 공공기관의 장이 행한 처분 또는 부작위로 인하여 권리 또는 이익의 침해를 받은 자는 행정심판법이 정하는 바에 따라 행정심판을 청구할 수 있습니다.<ul class="list03 pt20" style="padding: 10px; border: 0px; background: none;">
+																																																								<li style="border: 0px; background: none;">‣ 중앙행정심판위원회 : (국번없이) 110 (<a href="https://www.simpan.go.kr/" target="_blank" title="중앙행정심판위원회 새창열림" class="link" style="text-decoration-line: underline; border: 0px; padding: 0px; margin: 0px; background: none;">www.simpan.go.kr</a>)</li>
+																																																							</ul>
+																																																						</li>
+																																																					</ol>
+																																																					<h5 class="tit01_" id="list_num14" style="margin-top: 30px; padding-bottom: 20px; font-weight: 500; line-height: 25px; color: rgb(10, 109, 166); font-size: 20px;">
+																																																						<span class="list_icon" style="border: 0px; padding: 0px; margin: 0px 10px 0px 0px; background: none;">
+																																																							<img src="https://www.gov.kr//2022/privacy/img/img_result.jpg" alt="제14조 개인정보 관리수준진단 결과" style="border-width: initial; height: 35px;">제14조 개인정보 관리수준진단 결과</span></h5>
+																																																						<ol class="list03" style="border: 0px; background: none;">
+																																																							<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">① 행정안전부는 정보주체의 개인정보를 안전하게 관리하기 위해 「개인정보 보호법」 제11조에 따라 매년 개인정보보호위원회에서 실시하는 “공공기관 개인정보 관리수준진단”을 받고 있습니다.</li>
+																																																							<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">② 행정안전부는 2022년도 개인정보 관리수준진단 평가 결과 ’S‘ 등급을 획득하였습니다.</li>
+																																																						</ol>
+																																																						<h5 class="tit01_" id="list_num15" style="margin-top: 30px; padding-bottom: 20px; font-weight: 500; line-height: 25px; color: rgb(10, 109, 166); font-size: 20px;">
+																																																							<span class="list_icon" style="border: 0px; padding: 0px; margin: 0px 10px 0px 0px; background: none;">
+																																																								<img src="https://www.gov.kr//2022/privacy/img/img_change.jpg" alt="제15조 개인정보 처리방침의 변경에 관한 사항" style="border-width: initial; height: 35px;">제15조 개인정보 처리방침의 변경에 관한 사항</span></h5>
+																																																							<ol class="list03 mt0" style="border: 0px; background: none;">
+																																																								<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">① 본 개인정보 처리방침은 2024. 12. 04. 부터 적용됩니다.</li>
+																																																								<li style="padding-bottom: 10px; padding-left: 15px; border: 0px; background: none; text-indent: -15px;">② 이전의 개인정보 처리방침은 아래에서 확인하실 수 있습니다.</li>
+																																																							</ol>
+																																																						</div>
+		<div class="privacy-history" style="margin-left: 30px; border: 0px; background: none; text-align: left;">
+		<ul style="border: 0px; background: none;">
+			<li style="border: 0px; background: none;">
+				<a "window.open('="" policy="" privacy-form20241203.html',="" 'form20241203',="" 'width="600," height="950," toolbar="no," scrollbars="yes," resizable="yes," menubar="no');return" false;"="" href="/policy/privacy-form20241203.html" target="_blank" style="border: 0px; padding: 0px; margin: 0px; background: none;">2024. 08. 09 ~ 2024. 12. 03.</a>
+				<br>
+			</li>
+			<li style="border: 0px; background: none;">
+				<a "window.open('="" policy="" privacy-form20240808.html',="" 'form20240808',="" 'width="600," height="950," toolbar="no," scrollbars="yes," resizable="yes," menubar="no');return" false;"="" href="/policy/privacy-form20240808.html" target="_blank" style="border: 0px; padding: 0px; margin: 0px; background: none;">2024. 02. 20 ~ 2024. 08. 08.</a>
+				<br>
+			</li>
+			<li style="border: 0px; background: none;">
+				<a "window.open('="" policy="" privacy-form20240219.html',="" 'form20240219',="" 'width="600," height="950," toolbar="no," scrollbars="yes," resizable="yes," menubar="no');return" false;"="" href="/policy/privacy-form20240219.html" target="_blank" style="border: 0px; padding: 0px; margin: 0px; background: none;">2023. 10. 27 ~ 2024. 02. 19.</a>
+				<br>
+			</li>
+			<li style="border: 0px; background: none;">
+				<a "window.open('="" policy="" privacy-form20231026.html',="" 'form20231026',="" 'width="600," height="950," toolbar="no," scrollbars="yes," resizable="yes," menubar="no');return" false;"="" href="/policy/privacy-form20231026.html" target="_blank" style="border: 0px; padding: 0px; margin: 0px; background: none;">2023. 07. 19 ~ 2023. 10. 26.</a>
+				<br>
+			</li>
+			<li style="border: 0px; background: none;">
+				<a "window.open('="" policy="" privacy-form20230719.html',="" 'form20230719',="" 'width="600," height="950," toolbar="no," scrollbars="yes," resizable="yes," menubar="no');return" false;"="" href="/policy/privacy-form20230719.html" target="_blank" style="border: 0px; padding: 0px; margin: 0px; background: none;">2023. 06. 12 ~ 2023. 07. 18.</a>
+				<br>
+			</li>
+			<li style="border: 0px; background: none;">
+				<a "window.open('="" policy="" privacy-form20230101.html','from20230101','width="730," height="500," toolbar="no," scrollbars="yes," resizable="yes," menubar="no');return" false;"="" href="/policy/privacy-form20230101.html" target="_blank" style="border: 0px; padding: 0px; margin: 0px; background: none;">2023. 01. 01 ~ 2023. 06. 11.</a>
+			</li>
+		</ul>
+	</div>
+
+  </body>
+</html>

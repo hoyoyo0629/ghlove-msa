@@ -36,6 +36,17 @@ public class SignupForm {
      * 외부 인증 연계가 없어 직접 입력받는다 (SSR/no-gateway 상 의도적인 차이). */
     private String birthday;
 
+    /** 우편번호. AS-IS `userModifyDataSet:392`가 `userDetail.setPost()`로 넣는 값이며
+     * `insertUserDetail`의 POST 컬럼에 저장된다. 주소찾기 위젯이 채운다. */
+    private String post;
+
     private String address;
     private String addressDetail;
+
+    /** 본인인증 결과(연계기관 CI/DI). AS-IS `UserDomainInfo.mberCi/mberDi`에 대응하며,
+     * 화면이 입력받는 값이 아니라 본인인증 단계가 채워 넣는 값이다. 이 환경은 인증
+     * 게이트웨이가 열려 있지 않아 비어 오지만, 값이 있으면 CI 중복가입 검사가 걸린다
+     * ({@link MemberService#signup}). */
+    private String mberCi;
+    private String mberDi;
 }

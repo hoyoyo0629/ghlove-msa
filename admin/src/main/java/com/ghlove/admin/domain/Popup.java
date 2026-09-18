@@ -42,8 +42,31 @@ public class Popup {
     @Column(name = "START_DATE")
     private String startDate;
 
+    /** 노출 시작 시각(HH) - AS-IS displayPopupList가 CONCAT(START_DATE, START_TIME)로 비교한다. */
+    @Column(name = "START_TIME")
+    private String startTime;
+
     @Column(name = "END_DATE")
     private String endDate;
+
+    @Column(name = "END_TIME")
+    private String endTime;
+
+    /** 레이어 팝업 위치·크기·배경 (AS-IS popup-layer.vue가 이 값으로 스타일을 만든다). */
+    @Column(name = "WIDTH")
+    private Integer width;
+
+    @Column(name = "HEIGHT")
+    private Integer height;
+
+    @Column(name = "TOP_POSITION")
+    private Integer topPosition;
+
+    @Column(name = "LEFT_POSITION")
+    private Integer leftPosition;
+
+    @Column(name = "BACKGROUND_COLOR")
+    private String backgroundColor;
 
     @Column(name = "POPUP_IMAGE")
     private String popupImage;

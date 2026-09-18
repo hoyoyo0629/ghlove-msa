@@ -1,8 +1,6 @@
 package com.ghlove.gift.web;
 
 import com.ghlove.gift.domain.Gift;
-import com.ghlove.gift.domain.Inquiry;
-import com.ghlove.gift.domain.Review;
 import com.ghlove.gift.service.GiftException;
 import com.ghlove.gift.service.GiftService;
 import com.ghlove.gift.service.InquiryService;
@@ -21,13 +19,21 @@ import org.springframework.web.multipart.MultipartFile;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
- * sellerId 기반 판매자 화면(내 답례품 관리/문의 답변/재고 조정 등)은 이 라운드의 "본인 확인"
- * 범위 밖 - 아직 이 MSA에 판매자 로그인 모델이 없다. 구매자 자신을 식별하는 화면(리뷰
- * 작성/문의 작성/관심답례품)만 SFR-010에 따라 userId를 로그인 JWT 쿠키에서 가져온다.
+ * 답례품몰 제공자(판매자) 화면 + 구매자 라이브 AJAX.
+ *
+ * <p>구매자 서버렌더 화면(답례품 목록/상세, 관심답례품, 내 후기/Q&A: list·detail·wishlist·
+ * my-reviews·my-qna.html)은 storefront Vue3 SPA(GiftListView/GiftDetailView/WishlistView/
+ * GiftReviewsView/GiftQnaView) + {@code /api/*}로 이관되어 제거됐다(2026-09-17 Thymeleaf 폐기).
+ * 남은 구매자 흐름은 SPA가 직접 호출하는 관심답례품 토글 AJAX({@link #toggleWishlist})와,
+ * AS-IS 상품평 좋아요·재입고 알림 엔드포인트뿐이다.
+ *
+ * <p>제공자(판매자) 화면(내 답례품 관리/등록·수정·판매중지·재고조정/문의 답변)은 아직 SPA로
+ * 이관되지 않아 서버렌더로 남는다(판매자 포털은 PL 그룹 결정 대기). <b>요청이 주장하는 신원을
+ * 믿지 않는다</b> - 같은 JWT의 userId로 {@code OP_SELLER.MEMBER_USER_ID}를 찾아 sellerId를
+ * <b>서버가 결정한다</b>({@link #currentSellerId}). 서비스 계층(GiftService.stop/adjustStock,
+ * InquiryService.answer)에도 소유권 검사를 함께 넣어, 컨트롤러를 우회해도 막히도록 했다.
  */
 @Controller
 @RequiredArgsConstructor
@@ -40,118 +46,56 @@ public class GiftController {
     private final WishlistService wishlistService;
     private final LocgovClient locgovClient;
     private final JwtVerifier jwtVerifier;
+    private final com.ghlove.gift.repository.SellerRepository sellerRepository;
+    private final com.ghlove.gift.service.RestockNoticeService restockNoticeService;
+
+    /**
+     * 로그인한 회원과 연결된 판매자 ID. <b>판매자 화면의 모든 쓰기·조회는 이 값만 쓴다.</b>
+     * 요청이 무엇을 주장하든(쿼리파라미터/hidden input) 믿지 않고, GH_AUTH JWT → userId →
+     * {@code OP_SELLER.MEMBER_USER_ID}로 서버가 스스로 판매자를 결정한다.
+     *
+     * @return 연결된 판매자가 없으면 비어 있음 (로그인은 했으나 판매자 계정이 아닌 경우 포함)
+     */
+    private java.util.Optional<Long> currentSellerId(HttpServletRequest request) {
+        return jwtVerifier.currentUserId(request)
+                .flatMap(sellerRepository::findByMemberUserId)
+                .map(com.ghlove.gift.domain.Seller::getSellerId);
+    }
 
     private static String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
-    }
-
-    private java.time.LocalDate parseDate(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        try {
-            return java.time.LocalDate.parse(value);
-        } catch (java.time.format.DateTimeParseException e) {
-            return null;
-        }
     }
 
     private String loginRedirect(String returnPath) {
         return "redirect:http://localhost:8081/login?target=" + encode("http://localhost:8084" + returnPath);
     }
 
-    @GetMapping("/")
-    public String list(@RequestParam(required = false) String categoryCode,
-                        @RequestParam(required = false) String q,
-                        @RequestParam(required = false) String locgovCode,
-                        HttpServletRequest request, Model model) {
-        List<Gift> gifts = giftService.publicGifts(categoryCode, q, locgovCode);
-        model.addAttribute("selectedCategory", categoryCode);
-        model.addAttribute("q", q);
-        model.addAttribute("locgovCode", locgovCode);
-        populateListModel(gifts, request, model);
-        return "list";
-    }
-
-    /** 답례품몰 GNB "제철식품관" (AS-IS /event/seasonList.html). */
-    @GetMapping("/seasonal")
-    public String seasonal(HttpServletRequest request, Model model) {
-        model.addAttribute("pageTitle", "제철식품관");
-        populateListModel(giftService.seasonalGifts(), request, model);
-        return "list";
-    }
-
-    /** 답례품몰 GNB "마을기업관" (AS-IS /community-business/communityList-main.html). */
-    @GetMapping("/community-business")
-    public String communityBusiness(HttpServletRequest request, Model model) {
-        model.addAttribute("pageTitle", "마을기업관");
-        populateListModel(giftService.communityBusinessGifts(), request, model);
-        return "list";
-    }
-
-    /** AS-IS goods/index-main.html의 goods-list-group 카드 그리드에 공통으로 필요한 데이터
-     *  (썸네일/카테고리 아이콘/지자체명/관심답례품 여부/신규 배지)를 모아 넣는다. */
-    private void populateListModel(List<Gift> gifts, HttpServletRequest request, Model model) {
-        List<Long> itemIds = gifts.stream().map(Gift::getItemId).toList();
-        model.addAttribute("gifts", gifts);
-        model.addAttribute("categories", giftService.codesOf("GIFT_CATEGORY"));
-        model.addAttribute("categoryIcons", CATEGORY_ICONS);
-        model.addAttribute("thumbnails", giftService.thumbnailsOf(itemIds));
-        model.addAttribute("locgovNames", locgovClient.namesByCode());
-        model.addAttribute("newItemIds", giftService.newItemIds(itemIds));
-
-        var authUserId = jwtVerifier.currentUserId(request);
-        model.addAttribute("wishlistedItemIds", authUserId.isPresent()
-                ? wishlistService.wishlistedItemIds(authUserId.get(), itemIds)
-                : java.util.Set.of());
-    }
-
-    /** GIFT_CATEGORY 6개 대분류(TOUR/AGRI/SEAFOOD/PROCESSED/LIVING/VOUCHER, ordering순)에
-     *  대응하는 AS-IS 아이콘(goods/cli-icon_category01~06.png)을 순서대로 매핑한다. */
-    private static final Map<String, String> CATEGORY_ICONS = Map.of(
-            "TOUR", "cli-icon_category01.png",
-            "AGRI", "cli-icon_category02.png",
-            "SEAFOOD", "cli-icon_category03.png",
-            "PROCESSED", "cli-icon_category04.png",
-            "LIVING", "cli-icon_category05.png",
-            "VOUCHER", "cli-icon_category06.png");
-
-    @GetMapping("/gifts/{itemId}")
-    public String detail(@PathVariable Long itemId,
-                          @RequestParam(required = false) String errorMessage,
-                          HttpServletRequest request, Model model) {
-        model.addAttribute("errorMessage", errorMessage);
-        Gift gift = giftService.detail(itemId);
-        model.addAttribute("gift", gift);
-        model.addAttribute("categories", giftService.codesOf("GIFT_CATEGORY"));
-        model.addAttribute("statusLabels", giftService.codesOf("GIFT_STATUS"));
-        model.addAttribute("images", giftService.imagesOf(itemId));
-        model.addAttribute("locgovName", locgovClient.namesByCode().get(gift.getLocgovCode()));
-        model.addAttribute("seller", giftService.sellerOf(gift.getSellerId()));
-
-        var authUserId = jwtVerifier.currentUserId(request);
-        model.addAttribute("wishlisted", authUserId.isPresent()
-                && wishlistService.wishlistedItemIds(authUserId.get(), List.of(itemId)).contains(itemId));
-
-        List<Review> reviews = reviewService.reviewsOf(itemId);
-        model.addAttribute("reviews", reviews);
-        model.addAttribute("reviewImages", reviewService.imagesOf(reviews));
-        model.addAttribute("averageScore", reviewService.averageScore(reviews));
-
-        model.addAttribute("inquiries", inquiryService.inquiriesOf(itemId));
-        model.addAttribute("inquiryStatusLabels", giftService.codesOf("GIFT_INQUIRY_STATUS"));
-        return "detail";
+    /**
+     * 판매자 화면에 들어올 자격이 없을 때의 처리. 로그인 자체가 없으면 로그인으로 보내고,
+     * 로그인은 했으나 연결된 판매자 계정이 없으면 안내 화면을 보여준다(어느 쪽인지 알려주지
+     * 않으면 로그인 무한루프가 된다).
+     */
+    private String sellerGate(HttpServletRequest request, String returnPath, Model model) {
+        if (jwtVerifier.currentUserId(request).isEmpty()) {
+            return loginRedirect(returnPath);
+        }
+        model.addAttribute("notSeller", true);
+        return "seller-dashboard";
     }
 
     @GetMapping("/register")
-    public String registerForm(Model model) {
+    public String registerForm(HttpServletRequest request, Model model) {
+        var sellerId = currentSellerId(request);
+        if (sellerId.isEmpty()) {
+            return sellerGate(request, "/register", model);
+        }
         model.addAttribute("categories", giftService.codesOf("GIFT_CATEGORY"));
         model.addAttribute("displayTypes", giftService.codesOf("GIFT_DISPLAY_TYPE"));
         return "register";
     }
 
     @PostMapping("/register")
-    public String register(@RequestParam Long sellerId, @RequestParam String itemName,
+    public String register(HttpServletRequest request, @RequestParam String itemName,
                             @RequestParam(required = false) String itemSummary,
                             @RequestParam(required = false) String detailContent,
                             @RequestParam String categoryCode, @RequestParam String locgovCode,
@@ -160,7 +104,13 @@ public class GiftController {
                             @RequestParam(required = false) String displayStartDate,
                             @RequestParam(required = false) String displayEndDate,
                             @RequestParam(required = false) Integer minDonationAmount,
-                            @RequestParam(required = false) List<MultipartFile> images, Model model) {
+                            @RequestParam(required = false) List<MultipartFile> images,
+                            Model model) {
+        var seller = currentSellerId(request);
+        if (seller.isEmpty()) {
+            return sellerGate(request, "/register", model);
+        }
+        Long sellerId = seller.get();
         try {
             var gift = giftService.register(sellerId, itemName, itemSummary, detailContent,
                     categoryCode, locgovCode, salePrice, stockQuantity,
@@ -169,7 +119,7 @@ public class GiftController {
             // 같은 트랜잭션 안에서 호출하면 별도 스레드가 아직 안 보이는 ITEM_IMAGE 행을 조회하게 됨.
             giftService.imagesOf(gift.getItemId())
                     .forEach(img -> thumbnailService.generateThumbnails(img.getItemImageId(), img.getImageName()));
-            return "redirect:/my?sellerId=" + sellerId + "&registered=" + gift.getItemId();
+            return "redirect:/my?registered=" + gift.getItemId();
         } catch (GiftException e) {
             model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute("categories", giftService.codesOf("GIFT_CATEGORY"));
@@ -179,10 +129,14 @@ public class GiftController {
     }
 
     @GetMapping("/gifts/{itemId}/edit")
-    public String editForm(@PathVariable Long itemId, @RequestParam Long sellerId, Model model) {
+    public String editForm(@PathVariable Long itemId, HttpServletRequest request, Model model) {
+        var seller = currentSellerId(request);
+        if (seller.isEmpty()) {
+            return sellerGate(request, "/gifts/" + itemId + "/edit", model);
+        }
         Gift gift = giftService.detail(itemId);
-        if (!gift.getSellerId().equals(sellerId)) {
-            return "redirect:/my?sellerId=" + sellerId;
+        if (!gift.getSellerId().equals(seller.get())) {
+            return "redirect:/my";
         }
         model.addAttribute("gift", gift);
         model.addAttribute("categories", giftService.codesOf("GIFT_CATEGORY"));
@@ -191,7 +145,7 @@ public class GiftController {
     }
 
     @PostMapping("/gifts/{itemId}/edit")
-    public String edit(@PathVariable Long itemId, @RequestParam Long sellerId, @RequestParam String itemName,
+    public String edit(@PathVariable Long itemId, HttpServletRequest request, @RequestParam String itemName,
                         @RequestParam(required = false) String itemSummary,
                         @RequestParam(required = false) String detailContent,
                         @RequestParam String categoryCode, @RequestParam Integer salePrice,
@@ -199,10 +153,15 @@ public class GiftController {
                         @RequestParam(required = false) String displayStartDate,
                         @RequestParam(required = false) String displayEndDate,
                         @RequestParam(required = false) Integer minDonationAmount, Model model) {
+        var seller = currentSellerId(request);
+        if (seller.isEmpty()) {
+            return sellerGate(request, "/gifts/" + itemId + "/edit", model);
+        }
+        Long sellerId = seller.get();
         try {
             giftService.edit(itemId, sellerId, itemName, itemSummary, detailContent, categoryCode, salePrice,
                     displayType, displayStartDate, displayEndDate, minDonationAmount);
-            return "redirect:/my?sellerId=" + sellerId + "&edited=" + itemId;
+            return "redirect:/my?edited=" + itemId;
         } catch (GiftException e) {
             model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute("gift", giftService.detail(itemId));
@@ -213,134 +172,28 @@ public class GiftController {
     }
 
     @PostMapping("/gifts/{itemId}/discontinue")
-    public String discontinue(@PathVariable Long itemId, @RequestParam Long sellerId, Model model) {
-        try {
-            giftService.discontinue(itemId, sellerId);
-        } catch (GiftException e) {
-            return "redirect:/my?sellerId=" + sellerId + "&errorMessage=" + encode(e.getMessage());
-        }
-        return "redirect:/my?sellerId=" + sellerId;
-    }
-
-    @PostMapping("/gifts/{itemId}/reviews")
-    public String writeReview(@PathVariable Long itemId,
-                               @RequestParam(required = false) String userName,
-                               @RequestParam(required = false) String orderCode,
-                               @RequestParam String subject, @RequestParam String content,
-                               @RequestParam Integer score,
-                               @RequestParam(required = false, defaultValue = "false") boolean recommend,
-                               @RequestParam(required = false) List<MultipartFile> images,
-                               HttpServletRequest request) {
-        var authUserId = jwtVerifier.currentUserId(request);
-        if (authUserId.isEmpty()) {
-            return loginRedirect("/gifts/" + itemId);
+    public String discontinue(@PathVariable Long itemId, HttpServletRequest request, Model model) {
+        var seller = currentSellerId(request);
+        if (seller.isEmpty()) {
+            return sellerGate(request, "/my", model);
         }
         try {
-            var gift = giftService.detail(itemId);
-            reviewService.write(itemId, gift.getSellerId(), authUserId.get(), userName, orderCode,
-                    subject, content, score, recommend, images);
-            return "redirect:/gifts/" + itemId;
+            giftService.discontinue(itemId, seller.get());
         } catch (GiftException e) {
-            return "redirect:/gifts/" + itemId + "?errorMessage=" + encode(e.getMessage());
+            return "redirect:/my?errorMessage=" + encode(e.getMessage());
         }
-    }
-
-    @PostMapping("/gifts/{itemId}/inquiries")
-    public String askInquiry(@PathVariable Long itemId, @RequestParam String question,
-                              @RequestParam(required = false, defaultValue = "false") boolean secret,
-                              HttpServletRequest request) {
-        var authUserId = jwtVerifier.currentUserId(request);
-        if (authUserId.isEmpty()) {
-            return loginRedirect("/gifts/" + itemId);
-        }
-        try {
-            inquiryService.ask(itemId, authUserId.get(), question, secret);
-            return "redirect:/gifts/" + itemId;
-        } catch (GiftException e) {
-            return "redirect:/gifts/" + itemId + "?errorMessage=" + encode(e.getMessage());
-        }
-    }
-
-    /** 마이페이지 "답례품 후기" - 본인이 작성한 리뷰 목록. AS-IS mypage/review.html과
-     *  동일하게 기간/답례품명으로 필터링한다(시드 규모가 작아 인메모리 처리). */
-    @GetMapping("/my/reviews")
-    public String myReviews(@RequestParam(required = false) String searchStartDate,
-                             @RequestParam(required = false) String searchEndDate,
-                             @RequestParam(required = false) String itemName,
-                             HttpServletRequest request, Model model) {
-        var authUserId = jwtVerifier.currentUserId(request);
-        if (authUserId.isEmpty()) {
-            return loginRedirect("/my/reviews");
-        }
-        List<Review> reviews = reviewService.myReviews(authUserId.get());
-        Map<Long, Gift> giftsById = giftService.giftsOf(reviews.stream().map(Review::getItemId).distinct().toList())
-                .stream().collect(Collectors.toMap(Gift::getItemId, java.util.function.Function.identity()));
-
-        var start = parseDate(searchStartDate);
-        var end = parseDate(searchEndDate);
-        var filtered = reviews.stream()
-                .filter(r -> start == null || !r.getCreatedDate().toLocalDate().isBefore(start))
-                .filter(r -> end == null || !r.getCreatedDate().toLocalDate().isAfter(end))
-                .filter(r -> {
-                    if (itemName == null || itemName.isBlank()) {
-                        return true;
-                    }
-                    Gift g = giftsById.get(r.getItemId());
-                    return g != null && g.getItemName() != null && g.getItemName().contains(itemName);
-                })
-                .toList();
-
-        model.addAttribute("reviews", filtered);
-        model.addAttribute("giftsById", giftsById);
-        model.addAttribute("thumbnails", giftService.thumbnailsOf(giftsById.keySet().stream().toList()));
-        model.addAttribute("searchStartDate", searchStartDate);
-        model.addAttribute("searchEndDate", searchEndDate);
-        model.addAttribute("itemName", itemName);
-        return "my-reviews";
-    }
-
-    /** 마이페이지 "답례품Q&A" - 본인이 작성한 상품문의 목록 (판매자용 /my/inquiries와 다름).
-     *  AS-IS mypage/orderList.html류와 동일한 기간/답례품명 필터를 쓴다. */
-    @GetMapping("/my/qna")
-    public String myQna(@RequestParam(required = false) String searchStartDate,
-                         @RequestParam(required = false) String searchEndDate,
-                         @RequestParam(required = false) String itemName,
-                         HttpServletRequest request, Model model) {
-        var authUserId = jwtVerifier.currentUserId(request);
-        if (authUserId.isEmpty()) {
-            return loginRedirect("/my/qna");
-        }
-        List<Inquiry> inquiries = inquiryService.myInquiries(authUserId.get());
-        Map<Long, Gift> giftsById = giftService.giftsOf(inquiries.stream().map(Inquiry::getItemId).distinct().toList())
-                .stream().collect(Collectors.toMap(Gift::getItemId, java.util.function.Function.identity()));
-
-        var start = parseDate(searchStartDate);
-        var end = parseDate(searchEndDate);
-        var filtered = inquiries.stream()
-                .filter(q -> start == null || !q.getCreatedDate().toLocalDate().isBefore(start))
-                .filter(q -> end == null || !q.getCreatedDate().toLocalDate().isAfter(end))
-                .filter(q -> {
-                    if (itemName == null || itemName.isBlank()) {
-                        return true;
-                    }
-                    Gift g = giftsById.get(q.getItemId());
-                    return g != null && g.getItemName() != null && g.getItemName().contains(itemName);
-                })
-                .toList();
-
-        model.addAttribute("inquiries", filtered);
-        model.addAttribute("giftsById", giftsById);
-        model.addAttribute("searchStartDate", searchStartDate);
-        model.addAttribute("searchEndDate", searchEndDate);
-        model.addAttribute("itemName", itemName);
-        model.addAttribute("statusLabels", giftService.codesOf("GIFT_INQUIRY_STATUS"));
-        return "my-qna";
+        return "redirect:/my";
     }
 
     @GetMapping("/my/inquiries")
-    public String myInquiries(@RequestParam(required = false) Long sellerId, Model model) {
+    public String myInquiries(HttpServletRequest request, Model model) {
+        var seller = currentSellerId(request);
+        if (seller.isEmpty()) {
+            return sellerGate(request, "/my/inquiries", model);
+        }
+        Long sellerId = seller.get();
         model.addAttribute("sellerId", sellerId);
-        if (sellerId != null) {
+        {
             model.addAttribute("inquiries", inquiryService.inquiriesForSeller(sellerId));
             model.addAttribute("statusLabels", giftService.codesOf("GIFT_INQUIRY_STATUS"));
         }
@@ -348,20 +201,30 @@ public class GiftController {
     }
 
     @PostMapping("/inquiries/{inquiryId}/answer")
-    public String answerInquiry(@PathVariable Long inquiryId, @RequestParam Long sellerId,
-                                 @RequestParam String answer) {
-        try {
-            inquiryService.answer(inquiryId, answer);
-        } catch (GiftException e) {
-            return "redirect:/my/inquiries?sellerId=" + sellerId + "&errorMessage=" + encode(e.getMessage());
+    public String answerInquiry(@PathVariable Long inquiryId, HttpServletRequest request,
+                                 @RequestParam String answer, Model model) {
+        var seller = currentSellerId(request);
+        if (seller.isEmpty()) {
+            return sellerGate(request, "/my/inquiries", model);
         }
-        return "redirect:/my/inquiries?sellerId=" + sellerId;
+        try {
+            inquiryService.answer(inquiryId, seller.get(), answer);
+        } catch (GiftException e) {
+            return "redirect:/my/inquiries?errorMessage=" + encode(e.getMessage());
+        }
+        // 판매자 문의답변 완료 - AS-IS 업무Web 화면이라 대응 문구가 없어 일반 문구를 쓴다.
+        return Done.redirect("/my/inquiries", "답변이 등록되었습니다.");
     }
 
     @GetMapping("/my")
-    public String myGifts(@RequestParam(required = false) Long sellerId, Model model) {
+    public String myGifts(HttpServletRequest request, Model model) {
+        var seller = currentSellerId(request);
+        if (seller.isEmpty()) {
+            return sellerGate(request, "/my", model);
+        }
+        Long sellerId = seller.get();
         model.addAttribute("sellerId", sellerId);
-        if (sellerId != null) {
+        {
             model.addAttribute("gifts", giftService.myGifts(sellerId));
             model.addAttribute("statusLabels", giftService.codesOf("GIFT_STATUS"));
             model.addAttribute("categories", giftService.codesOf("GIFT_CATEGORY"));
@@ -370,28 +233,36 @@ public class GiftController {
     }
 
     @PostMapping("/gifts/{itemId}/stop")
-    public String stop(@PathVariable Long itemId, @RequestParam Long sellerId) {
-        giftService.stop(itemId);
-        return "redirect:/my?sellerId=" + sellerId;
+    public String stop(@PathVariable Long itemId, HttpServletRequest request, Model model) {
+        var seller = currentSellerId(request);
+        if (seller.isEmpty()) {
+            return sellerGate(request, "/my", model);
+        }
+        try {
+            giftService.stop(itemId, seller.get());
+        } catch (GiftException e) {
+            return "redirect:/my?errorMessage=" + encode(e.getMessage());
+        }
+        return "redirect:/my";
     }
 
     @PostMapping("/gifts/{itemId}/stock")
-    public String adjustStock(@PathVariable Long itemId, @RequestParam Long sellerId, @RequestParam int quantity) {
-        giftService.adjustStock(itemId, quantity);
-        return "redirect:/my?sellerId=" + sellerId;
-    }
-
-    @PostMapping("/wishlist")
-    public String addWishlist(@RequestParam Long itemId, HttpServletRequest request) {
-        var authUserId = jwtVerifier.currentUserId(request);
-        if (authUserId.isEmpty()) {
-            return loginRedirect("/gifts/" + itemId);
+    public String adjustStock(@PathVariable Long itemId, HttpServletRequest request,
+                              @RequestParam int quantity, Model model) {
+        var seller = currentSellerId(request);
+        if (seller.isEmpty()) {
+            return sellerGate(request, "/my", model);
         }
-        wishlistService.add(authUserId.get(), itemId);
-        return "redirect:/gifts/" + itemId;
+        try {
+            giftService.adjustStock(itemId, seller.get(), quantity);
+        } catch (GiftException e) {
+            return "redirect:/my?errorMessage=" + encode(e.getMessage());
+        }
+        return "redirect:/my";
     }
 
-    /** 답례품 목록 카드의 하트 아이콘 클릭 (AS-IS goods/index-main.html addToWishList, AJAX). */
+    /** 답례품 목록 카드/상세의 하트 아이콘 클릭 (AS-IS goods/index-main.html addToWishList) -
+     *  storefront SPA(GiftListView/GiftDetailView/WishlistView)가 직접 호출하는 라이브 AJAX. */
     @PostMapping("/wishlist/{itemId}/toggle")
     @ResponseBody
     public org.springframework.http.ResponseEntity<?> toggleWishlist(@PathVariable Long itemId, HttpServletRequest request) {
@@ -403,31 +274,52 @@ public class GiftController {
         return org.springframework.http.ResponseEntity.ok(java.util.Map.of("wishlisted", wishlisted));
     }
 
-    @GetMapping("/wishlist")
-    public String wishlist(HttpServletRequest request, Model model) {
-        var authUserId = jwtVerifier.currentUserId(request);
-        if (authUserId.isEmpty()) {
-            return loginRedirect("/wishlist");
+    /**
+     * 상품평 좋아요 (AS-IS `POST /api/item/review/add-like/{id}`, `ItemController:899`).
+     *
+     * <p>AS-IS는 <b>비로그인도 IP 기준으로</b> 누를 수 있고 취소는 없다. 그 동작을 그대로 옮겼다 -
+     * 응답의 `liked`가 false면 "이미 누른 상태"라는 뜻이지 실패가 아니다.
+     */
+    @PostMapping("/reviews/{itemReviewId}/like")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<?> likeReview(@PathVariable Integer itemReviewId,
+                                                                  HttpServletRequest request) {
+        Long userId = jwtVerifier.currentUserId(request).orElse(null);
+        try {
+            boolean liked = reviewService.like(itemReviewId, userId, clientIp(request));
+            return org.springframework.http.ResponseEntity.ok(java.util.Map.of("liked", liked));
+        } catch (GiftException e) {
+            return org.springframework.http.ResponseEntity.badRequest()
+                    .body(java.util.Map.of("message", e.getMessage()));
         }
-        List<WishlistService.WishlistItemView> wishlist = wishlistService.wishlistOf(authUserId.get());
-        model.addAttribute("wishlist", wishlist);
-        model.addAttribute("thumbnails", giftService.thumbnailsOf(
-                wishlist.stream().map(w -> w.gift().getItemId()).toList()));
-        model.addAttribute("locgovNames", locgovClient.namesByCode());
-        return "wishlist";
     }
 
-    @PostMapping("/wishlist/delete")
-    public String removeWishlist(@RequestParam(required = false) List<Integer> wishlistIds,
-                                  HttpServletRequest request) {
-        var authUserId = jwtVerifier.currentUserId(request);
-        if (authUserId.isEmpty()) {
-            return loginRedirect("/wishlist");
+    /** AS-IS `CommonUtils.getClientIp()` - 프록시 경유 시 X-Forwarded-For의 첫 주소를 쓴다. */
+    private static String clientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
         }
-        if (wishlistIds != null && !wishlistIds.isEmpty()) {
-            wishlistService.removeAll(wishlistIds, authUserId.get());
-        }
-        return "redirect:/wishlist";
+        return request.getRemoteAddr();
     }
 
+    /**
+     * 재입고 알림 신청 (AS-IS `POST /api/item/restock`, `ItemController:879`).
+     * 품절 답례품 상세화면(storefront GiftDetailView)의 "재입고 알림" 버튼이 직접 호출하는 AJAX.
+     */
+    @PostMapping("/gifts/{itemId}/restock-notice")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<?> requestRestockNotice(@PathVariable Long itemId, HttpServletRequest request) {
+        var authUserId = jwtVerifier.currentUserId(request);
+        if (authUserId.isEmpty()) {
+            return org.springframework.http.ResponseEntity.status(401).body(java.util.Map.of("message", "로그인이 필요합니다."));
+        }
+        try {
+            restockNoticeService.request(itemId.intValue(), authUserId.get());
+            // AS-IS items/details-main.html
+            return org.springframework.http.ResponseEntity.ok(java.util.Map.of("message", "재입고 시 알려드리겠습니다."));
+        } catch (GiftException e) {
+            return org.springframework.http.ResponseEntity.badRequest().body(java.util.Map.of("message", e.getMessage()));
+        }
+    }
 }

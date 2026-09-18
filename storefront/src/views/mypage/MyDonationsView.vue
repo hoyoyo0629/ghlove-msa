@@ -2,6 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
+import { formatN } from '../../utils/format'
+import { isMobile } from '../../utils/device'
 
 const router = useRouter()
 
@@ -74,8 +76,15 @@ async function cancel(cntrSn) {
   }
 }
 
-function formatAmount(n) {
-  return new Intl.NumberFormat('ko-KR').format(Math.floor(n ?? 0))
+// AS-IS mypage/cntrList.html:578 goReceiptPrint - 모바일은 영수증 출력을 막고(PC 전용), PC는
+// 팝업 창(window.open, 이름/옵션 지정)으로 연다. 팝업이라 프린트 뷰가 에러 시 스스로 창을 닫을
+// 수 있다(OfficialReceiptPrintView, AS-IS self.close()).
+function openOfficialReceipt(cntrSn) {
+  if (isMobile()) {
+    window.alert('영수증 출력은 PC에서 확인 부탁드립니다.')
+    return
+  }
+  window.open(`/print/official-receipt/${encodeURIComponent(cntrSn)}`, 'receipt', 'toolbar=no,location=no')
 }
 </script>
 
@@ -108,7 +117,7 @@ function formatAmount(n) {
                   <span class="label-title"> 총 기부금액</span>
                 </label>
                 <span class="m-field">
-                  <input type="text" id="totalAmt" readonly :value="formatAmount(totalCntrAmt)" /><span class="s_txt">원</span>
+                  <input type="text" id="totalAmt" readonly :value="formatN(totalCntrAmt)" /><span class="s_txt">원</span>
                 </span>
                 <span class="s_txt">(실 납부액 기준)</span>
               </div>
@@ -187,15 +196,15 @@ function formatAmount(n) {
               <tr class="result-row" v-for="(d, i) in donations" :key="d.cntrSn">
                 <td>{{ i + 1 }}</td>
                 <td>{{ d.locgovName }}</td>
-                <td>{{ formatAmount(d.cntrAmt) }}</td>
+                <td>{{ formatN(d.cntrAmt) }}</td>
                 <td>{{ d.cntrDe }}</td>
-                <td>{{ formatAmount(d.earnedPoints ?? 0) }}</td>
+                <td>{{ formatN(d.earnedPoints ?? 0) }}</td>
                 <td style="white-space: normal; word-break: break-all; max-width: 120px">{{ d.bugaNo ?? '-' }}</td>
                 <td>{{ d.sunapDate ? d.sunapDate.slice(0, 10) : '-' }}</td>
                 <td>{{ d.projectTitle }}</td>
                 <td>고향사랑e음</td>
                 <td>
-                  <a v-if="d.statusCode === 'COMPLETED'" :href="`http://localhost:8082/receipts/official/${d.cntrSn}`" target="_blank">영수증출력</a>
+                  <a v-if="d.statusCode === 'COMPLETED'" href="#" @click.prevent="openOfficialReceipt(d.cntrSn)">영수증출력</a>
                   <span v-else>{{ d.statusLabel ?? d.statusCode }}</span>
                 </td>
                 <td>
