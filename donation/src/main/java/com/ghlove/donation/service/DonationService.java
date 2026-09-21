@@ -646,6 +646,14 @@ public class DonationService {
         interestLocgovRepository.deleteByLocgovCodeInAndUserId(locgovCodes, userId);
     }
 
+    /** 회원 탈퇴 시 이 회원의 관심지자체(AS-IS G_INTRST_LOCGOV) 전량 삭제 - member의 탈퇴
+     * 처리가 내부 API로 호출한다. AS-IS `GeneralCustomerServiceImpl:261`
+     * deleteSecedeGeneralCustomerIntrstLocgov와 같은 자리다. */
+    @Transactional
+    public void removeAllInterestLocgovsOnWithdrawal(Long userId) {
+        interestLocgovRepository.deleteByUserId(userId);
+    }
+
     /**
      * 기부 취소. REQUESTED(신청 취소)와 COMPLETED(환불) 모두 취소 가능. COMPLETED 상태였던
      * 건만 취소 이벤트를 발행한다 - REQUESTED는 애초에 완료 이벤트가 발행된 적이 없어

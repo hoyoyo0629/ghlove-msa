@@ -67,7 +67,9 @@ public class MemberService {
     private final DevBypassSettings devBypassSettings;
     private final DonationClient donationClient;
     private final PointClient pointClient;
+    private final GiftClient giftClient;
     private final com.ghlove.member.repository.MberSecsnRepository mberSecsnRepository;
+    private final com.ghlove.member.repository.UserCiRepository userCiRepository;
 
     /**
      * 아이디를 쓸 수 있는가 - AS-IS `UserServiceImpl.checkDuplication()` 재현.
@@ -731,6 +733,7 @@ public class MemberService {
         }
     }
 
+    @Transactional
     public void withdraw(Long userId, String password, String leaveCode, String reason, String remoteAddr) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new MemberException("회원 정보를 찾을 수 없습니다."));
@@ -738,19 +741,63 @@ public class MemberService {
             throw new MemberException("비밀번호가 올바르지 않습니다.");
         }
 
+        // 크로스 서비스 처리(포인트 소멸·관심답례품/관심지자체 삭제)를 개인정보 삭제보다 먼저
+        // 한다 - 이들이 실패하면 아직 개인정보가 안 지워진 상태에서 예외로 중단되어 안전하게
+        // 재시도할 수 있다(MSA는 서비스 경계를 넘는 롤백이 불가하므로 순서로 안전성을 보장).
+        // mberCi를 지우기 전에 스냅샷을 먼저 떠야 한다(연간 한도 이어붙임 근거).
         snapshotDonationForLimitCarryOver(user);
         pointClient.expireAllOnWithdrawal(userId);
+        giftClient.deleteWishlistOnWithdrawal(userId);          // AS-IS 관심답례품 삭제
+        donationClient.deleteInterestLocgovOnWithdrawal(userId); // AS-IS 관심지자체 삭제
 
+        // AS-IS insertSecedeCustomer 재현 - MBER_CI를 NULL로 지우기 전에 OP_USER_CI로 백업한다
+        // (탈퇴 이후에도 CI 기반 조회가 가능하도록). 중복 탈퇴는 상위에서 막히므로 PK 충돌 없음.
+        userCiRepository.save(new com.ghlove.member.domain.UserCi(userId, user.getMberCi()));
+
+        // AS-IS updateSecedeGeneralCustomer(generalcustomer-mapper) 재현 - 탈퇴 즉시 OP_USER의
+        // 개인식별정보를 NULL로 지운다(30일 후 배치 파기가 아니라 탈퇴 시점에 바로). LOGIN_ID는
+        // 남긴다(탈퇴한 아이디 재가입 방지). 재로그인이 불가하도록 PASSWORD도 함께 지운다.
         user.setStatusCode(STATUS_WITHDRAWN);
         user.setLeaveDate(now());
+        user.setPassword(null);
+        user.setUserName(null);
+        user.setEmail(null);
+        user.setMberCi(null);
+        user.setMberDi(null);
+        user.setMberDn(null);
+        user.setKakaoUserKey(null);
+        user.setLoginCount(null);
+        user.setLoginDate(null);
+        user.setLoginFailCount(0);
+        user.setLoginTryDate(null);
+        user.setPasswordType("N");
+        user.setPasswordExpiredDate(null);
+        user.setSbscrbSeCode(null);
+        user.setLoginPathCode(null);
         user.setUpdatedDate(now());
         userRepository.save(user);
 
+        // AS-IS updateSecedeGeneralCustomerDetail 재현 - OP_USER_DETAIL의 개인정보도 즉시 NULL.
         userDetailRepository.findById(userId).ifPresent(detail -> {
+            detail.setPhoneNumber(null);
+            detail.setAddress(null);
+            detail.setAddressDetail(null);
+            detail.setGender(null);
+            detail.setBirthday(null);
+            detail.setPost(null);
+            detail.setReceiveEmail(null);
+            detail.setReceiveSms(null);
+            detail.setReceiveKakao(null);
+            detail.setReceivePbanc(null);
+            detail.setLevelId(0);
+            detail.setUseFlag("N");
             detail.setLeaveCode(leaveCode);
             detail.setLeaveReason(reason);
             userDetailRepository.save(detail);
         });
+
+        // AS-IS deleteSecedeUserRole 재현 - 탈퇴 회원의 권한(OP_USER_ROLE)을 삭제한다.
+        userRoleRepository.deleteByUserId(userId);
 
         recordChangeLog(userId, "WITHDRAW" + (reason == null || reason.isBlank() ? "" : ": " + reason), remoteAddr);
     }
@@ -1017,12 +1064,17 @@ public class MemberService {
      * 같은 값은 막는다(마이페이지 changePassword와 동일).
      */
     @Transactional
-    public User changePasswordOnLogin(Long userId, String newPassword, String newPasswordConfirm, String remoteAddr) {
+    public User changePasswordOnLogin(Long userId, String currentPassword, String newPassword, String newPasswordConfirm, String remoteAddr) {
         if (newPassword == null || !newPassword.equals(newPasswordConfirm)) {
             throw new MemberException("새 비밀번호와 새 비밀번호 확인이 일치하지 않습니다.");
         }
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new MemberException("회원 정보를 찾을 수 없습니다."));
+        // AS-IS pwdChangeModal은 기존 비밀번호(userPW)를 다시 받아 검증한다. 로그인 단계에서 이미
+        // 비번을 맞췄더라도 화면 충실도를 위해 재확인한다(임시비번 사용자 등 방어에도 유효).
+        if (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new MemberException("기존 비밀번호가 올바르지 않습니다.");
+        }
         if (passwordEncoder.matches(newPassword, user.getPassword())) {
             throw new MemberException("현재 비밀번호와 다른 비밀번호를 입력해 주세요.");
         }

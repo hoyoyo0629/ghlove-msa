@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
@@ -24,7 +25,7 @@ const pwRules = ref({ all: false, r1: false, r2: false, r3: false, r4: false })
 
 async function checkPresentPwd() {
   if (!currentPassword.value) {
-    alert('현재 사용중인 비밀번호를 입력해주세요.')
+    modalAlert('현재 사용중인 비밀번호를 입력해주세요.')
     return
   }
   try {
@@ -33,7 +34,7 @@ async function checkPresentPwd() {
     presentPwdMsg.value = '인증 완료되었습니다.'
     presentPwdOk.value = true
   } catch {
-    alert('현재 사용중인 비밀번호가 아닙니다. 다시 입력해주세요.')
+    modalAlert('현재 사용중인 비밀번호가 아닙니다. 다시 입력해주세요.')
   }
 }
 
@@ -64,15 +65,15 @@ function ruleIcon(ok) {
 async function onSubmit() {
   errorMessage.value = ''
   if (!confirmed.value) {
-    alert('현재 비밀번호 인증을 먼저 진행해 주세요.')
+    modalAlert('현재 비밀번호 인증을 먼저 진행해 주세요.')
     return
   }
   if (!newPassword.value) {
-    alert('비밀번호를 설정해주세요.')
+    modalAlert('비밀번호를 설정해주세요.')
     return
   }
   if (!newPasswordConfirm.value || newPassword.value !== newPasswordConfirm.value) {
-    alert('비밀번호를 확인해주세요.')
+    modalAlert('비밀번호를 확인해주세요.')
     return
   }
   try {

@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
@@ -87,9 +88,9 @@ function noticePage(p) {
 async function addInterestLocgov() {
   try {
     const added = await api.postUrlEncoded('donation', '/interest-locgovs', { locgovCode: locgovCode.value })
-    alert(`${added.locgovName ?? ''} 이(가) 관심 지자체로 등록되었습니다.`)
+    modalAlert(`${added.locgovName ?? ''} 이(가) 관심 지자체로 등록되었습니다.`)
   } catch (e) {
-    alert(e.message)
+    modalAlert(e.message)
   }
 }
 

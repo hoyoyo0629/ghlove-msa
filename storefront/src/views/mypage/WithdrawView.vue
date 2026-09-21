@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
@@ -38,20 +39,23 @@ onMounted(async () => {
 async function onSubmit() {
   errorMessage.value = ''
   if (!leaveCode.value) {
-    alert('탈퇴사유를 선택해 주세요')
+    modalAlert('탈퇴사유를 선택해 주세요')
     return
   }
   if (!password.value) {
-    alert('비밀번호를 입력해 주세요')
+    modalAlert('비밀번호를 입력해 주세요')
     return
   }
-  if (!confirm('회원 탈퇴 시 회원 서비스를 모두 사용할 수 없습니다.\n정말 탈퇴하시겠습니까?')) {
+  if (!(await modalConfirm('회원 탈퇴 시 회원 서비스를 모두 사용할 수 없습니다. 정말 탈퇴하시겠습니까?'))) {
     return
   }
   try {
     await api.post('member', '/api/withdraw', { password: password.value, leaveCode: leaveCode.value, reason: reason.value })
+    // 서버가 이미 session.invalidate()+쿠키 clear 했으므로 store도 비운다(로그아웃 상태 확정).
     await auth.fetchMe()
-    router.push('/login?withdrawn=success')
+    // 완료 알림 확인 후 로그아웃된 메인화면으로 이동(modalAlert는 non-blocking이라 await 필수).
+    await modalAlert('정상적으로 탈퇴처리 되었습니다.')
+    router.push('/')
   } catch (e) {
     errorMessage.value = e.message
   }
@@ -169,4 +173,29 @@ async function onSubmit() {
 
 <style>
 @import '/css/change-pw.css';
+
+/* AS-IS secede.html의 페이지 인라인 <style>(잔여포인트 표)을 그대로 이식 - 외부 CSS엔 없음 */
+.table-container {
+  margin-bottom: 24px;
+}
+.result-title {
+  background-color: var(--gray5);
+}
+.result-title th {
+  color: var(--gray2);
+  font-weight: 500;
+  border: 1px solid var(--gray4);
+  padding: calc(var(--margin-padding-8) * 2) calc(var(--margin-padding-8) * 3);
+  white-space: nowrap;
+  text-align: center;
+  font-size: 14px;
+}
+.result-row td {
+  color: var(--gray3);
+  border: 1px solid var(--gray4);
+  padding: calc(var(--margin-padding-8) * 2) calc(var(--margin-padding-8) * 3);
+  white-space: nowrap;
+  text-align: center;
+  font-size: 14px;
+}
 </style>

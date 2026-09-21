@@ -14,5 +14,7 @@ public interface InterestLocgovRepository extends JpaRepository<InterestLocgov, 
 
     void deleteByLocgovCodeInAndUserId(List<String> locgovCodes, Long userId);
 
+    void deleteByUserId(Long userId);
+
     boolean existsByLocgovCodeAndUserId(String locgovCode, Long userId);
 }

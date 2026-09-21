@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
@@ -64,11 +65,11 @@ function onAmountInput(e) {
 async function submit() {
   errorMessage.value = ''
   if (!locgovCode.value) {
-    alert('기부 지자체를 선택해 주세요.')
+    modalAlert('기부 지자체를 선택해 주세요.')
     return
   }
   if (amount.value < 1) {
-    alert('기부금액을 입력해 주세요.')
+    modalAlert('기부금액을 입력해 주세요.')
     return
   }
   try {

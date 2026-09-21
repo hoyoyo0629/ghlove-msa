@@ -1,4 +1,5 @@
 import { createApp } from 'vue'
+import { modalAlert } from './composables/useModal'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import { router } from './router'
@@ -23,7 +24,7 @@ setUnauthorizedHandler(() => {
   } catch {
     // 스토어 접근 실패해도 리다이렉트는 진행한다.
   }
-  window.alert('로그인 후 이용이 가능합니다.')
+  modalAlert('로그인 후 이용이 가능합니다.')
   const target = router.currentRoute.value.fullPath
   router.push({ path: '/login', query: { target } }).finally(() => {
     redirectingToLogin = false

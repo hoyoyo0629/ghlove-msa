@@ -45,6 +45,11 @@ CREATE TABLE IF NOT EXISTS G_CNTR_USE_POINT (
     PRIMARY KEY (CNTR_SN, USE_SN)
 );
 
+-- USE_SN 발번용 시퀀스. PK는 (CNTR_SN, USE_SN) 복합키지만 USE_SN을 전역 유일하게 발번해
+-- JPA에는 USE_SN 단독 식별자로 매핑한다(GCntrUsePoint). 마이페이지 기부포인트 현황 상세의
+-- "답례품 주문번호"를 위해 포인트 소비 시(consumeLots) 사용이력을 이 테이블에 쌓는다.
+CREATE SEQUENCE IF NOT EXISTS SEQ_G_CNTR_USE_POINT AS INTEGER START 1;
+
 CREATE TABLE IF NOT EXISTS G_CNTR_USE_POINT_HISTORY (
     CNTR_SN                      VARCHAR(50) NOT NULL,
     POINT_USE_DE                 VARCHAR(8) NOT NULL,

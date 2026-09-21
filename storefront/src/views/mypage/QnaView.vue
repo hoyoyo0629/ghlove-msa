@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { onMounted, ref } from 'vue'
 import { api } from '../../api/http'
 import { useDateRangeSearch } from '../../composables/useDateRangeSearch'
@@ -68,8 +69,8 @@ function toggle(qnaId) {
   openIds.value = next
 }
 
-function clearForm() {
-  if (!confirm('1:1문의를 취소하시겠습니까?')) return
+async function clearForm() {
+  if (!(await modalConfirm('1:1문의를 취소하시겠습니까?'))) return
   qnaGroup.value = ''
   subject.value = ''
   question.value = ''

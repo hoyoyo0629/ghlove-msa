@@ -5,6 +5,7 @@ import com.ghlove.gift.domain.GiftOrderStock;
 import com.ghlove.gift.domain.GiftSubcategory;
 import com.ghlove.gift.domain.GiftSubcategoryItem;
 import com.ghlove.gift.domain.ItemImage;
+import com.ghlove.gift.domain.SeasonFood;
 import com.ghlove.gift.domain.SeasonFoodItem;
 import com.ghlove.gift.domain.Seller;
 import com.ghlove.gift.event.GiftLifecyclePublisher;
@@ -67,6 +68,7 @@ public class GiftService {
     private final FileStorageService fileStorageService;
     private final GiftLifecyclePublisher giftLifecyclePublisher;
     private final SeasonFoodItemRepository seasonFoodItemRepository;
+    private final com.ghlove.gift.repository.SeasonFoodRepository seasonFoodRepository;
     private final SellerRepository sellerRepository;
     private final GiftSubcategoryRepository giftSubcategoryRepository;
     private final GiftSubcategoryItemRepository giftSubcategoryItemRepository;
@@ -166,10 +168,11 @@ public class GiftService {
         }
     }
 
-    /** 답례품몰 GNB "제철식품관" - AS-IS G_SEASON_FOOD_ITEM에서 이번 달로 등록된 답례품. */
-    public List<Gift> seasonalGifts() {
-        int thisMonth = LocalDate.now().getMonthValue();
-        List<Long> itemIds = seasonFoodItemRepository.findBySeasonFoodMonth(thisMonth).stream()
+    /** 답례품몰 GNB "제철식품관" - AS-IS G_SEASON_FOOD_ITEM에서 지정 월(없으면 이번 달)로 등록된 답례품.
+     *  locgovCode(시도/시군구)로 추가 필터한다(AS-IS seasonList의 시도·시군구 검색). */
+    public List<Gift> seasonalGifts(Integer month, String locgovCode) {
+        int targetMonth = (month != null && month >= 1 && month <= 12) ? month : LocalDate.now().getMonthValue();
+        List<Long> itemIds = seasonFoodItemRepository.findBySeasonFoodMonth(targetMonth).stream()
                 .map(com.ghlove.gift.domain.SeasonFoodItem::getItemId).toList();
         if (itemIds.isEmpty()) {
             return List.of();
@@ -177,11 +180,44 @@ public class GiftService {
         return giftRepository.findAllById(itemIds).stream()
                 .filter(g -> STATUS_APPROVED.equals(g.getDataStatusCode()) && DISPLAY_ON.equals(g.getDisplayFlag()))
                 .filter(this::withinDisplayPeriod)
+                .filter(g -> matchesLocgov(g, locgovCode))
                 .toList();
     }
 
+    /** locgovCode 필터 - 빈값이면 전체, 시도코드(끝 000)면 앞 2자리로, 시군구코드면 정확히 매칭. */
+    private boolean matchesLocgov(Gift g, String locgovCode) {
+        if (locgovCode == null || locgovCode.isBlank()) {
+            return true;
+        }
+        String gc = g.getLocgovCode();
+        if (gc == null) {
+            return false;
+        }
+        if (locgovCode.endsWith("000") && locgovCode.length() >= 2 && gc.length() >= 2) {
+            return gc.substring(0, 2).equals(locgovCode.substring(0, 2));
+        }
+        return gc.equals(locgovCode);
+    }
+
+    /** 제철식품관 첫 화면의 월별 키워드 카드(1~12월). AS-IS는 데이터가 있는 월만 내려주지만, 화면이
+     *  12개월 카드를 그리므로 없는 달은 빈 키워드로 채워 1~12월을 모두 반환한다. */
+    public List<SeasonFoodKeyword> seasonFoodKeywords() {
+        Map<Integer, String> byMonth = new java.util.HashMap<>();
+        for (SeasonFood sf : seasonFoodRepository.findAllByOrderBySeasonFoodMonthAscRegSeqAsc()) {
+            byMonth.putIfAbsent(sf.getSeasonFoodMonth(), sf.getSeasonFoodKeyword());
+        }
+        List<SeasonFoodKeyword> result = new java.util.ArrayList<>();
+        for (int m = 1; m <= 12; m++) {
+            result.add(new SeasonFoodKeyword(m, byMonth.getOrDefault(m, "")));
+        }
+        return result;
+    }
+
+    public record SeasonFoodKeyword(int month, String keyword) {
+    }
+
     /** 답례품몰 GNB "마을기업관" - AS-IS OP_SELLER.COMMUNITY_BUSINESS_YN='Y'인 판매자의 답례품. */
-    public List<Gift> communityBusinessGifts() {
+    public List<Gift> communityBusinessGifts(String locgovCode) {
         List<Long> sellerIds = sellerRepository.findByCommunityBusinessYn("Y").stream()
                 .map(Seller::getSellerId).toList();
         if (sellerIds.isEmpty()) {
@@ -191,6 +227,7 @@ public class GiftService {
                 .flatMap(sellerId -> giftRepository.findBySellerIdOrderByItemIdDesc(sellerId).stream())
                 .filter(g -> STATUS_APPROVED.equals(g.getDataStatusCode()) && DISPLAY_ON.equals(g.getDisplayFlag()))
                 .filter(this::withinDisplayPeriod)
+                .filter(g -> matchesLocgov(g, locgovCode))
                 .toList();
     }
 

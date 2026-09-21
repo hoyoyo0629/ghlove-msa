@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../composables/useModal'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api/http'
@@ -51,8 +52,8 @@ function onAdChildChange() {
 /** 필수약관 2건 - 다음 단계로 넘어갈 때와 카카오톡/네이버 인증으로 넘어갈 때 모두 검사한다
  *  (AS-IS agree.vue nextStep()/submitKakao()/submitNaver()가 각각 같은 검사를 했다). */
 function requiredTermsAgreed() {
-  if (!terms.agreeTerms) { alert('이용약관에 동의해주세요'); return false }
-  if (!terms.agreePrivacy) { alert('개인정보 수집·이용에 동의해주세요'); return false }
+  if (!terms.agreeTerms) { modalAlert('이용약관에 동의해주세요'); return false }
+  if (!terms.agreePrivacy) { modalAlert('개인정보 수집·이용에 동의해주세요'); return false }
   return true
 }
 
@@ -188,8 +189,8 @@ function ruleIcon(ok) {
 
 async function onSubmit() {
   errorMessage.value = ''
-  if (!idChecked.value) { alert('아이디 중복확인을 해주세요.'); return }
-  if (form.password !== form.passwordConfirm) { alert('비밀번호와 비밀번호 확인이 일치하지 않습니다.'); return }
+  if (!idChecked.value) { modalAlert('아이디 중복확인을 해주세요.'); return }
+  if (form.password !== form.passwordConfirm) { modalAlert('비밀번호와 비밀번호 확인이 일치하지 않습니다.'); return }
 
   const domain = emailDomain.value || emailAddressCustom.value
   const payload = {

@@ -74,9 +74,9 @@
     display: inline-flex; align-items: center; justify-content: center;
 }
 
-/* 사이트맵 모달: AS-IS는 JS로 .shown/.in 클래스를 붙였다 떼지만, 이 프로젝트는 JS 없이
-   :target 만으로 동일한 최종 상태(표시+불투명)를 낸다. */
-#modal_sitemap:target {
+/* 사이트맵 모달: Vue 상태(useSitemap)로 .is-open 클래스를 토글해 여닫는다(메뉴 클릭 후 확실히
+   닫히도록 - :target 방식은 router 이동으로 갱신 안 됨). */
+#modal_sitemap.is-open {
     display: block;
     z-index: 10000;
     opacity: 1;

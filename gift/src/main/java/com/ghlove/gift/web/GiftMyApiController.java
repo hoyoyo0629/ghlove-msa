@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -61,6 +62,15 @@ public class GiftMyApiController {
                     locgovNames.get(g.getLocgovCode()), thumbnails.get(g.getItemId()));
         }).toList();
         return ResponseEntity.ok(rows);
+    }
+
+    /** 회원 탈퇴 시 관심답례품 전량 삭제 - member의 탈퇴 처리가 호출하는 내부 전용 API
+     * (/api/admin/**는 X-Internal-Secret으로 보호됨). AS-IS의 탈퇴 트랜잭션 안 관심답례품
+     * 삭제(deleteSecedeGeneralCustomerIntrstRtnpsnt)에 대응. */
+    @PostMapping("/api/admin/wishlist/delete-on-withdrawal")
+    public ResponseEntity<Map<String, Object>> deleteWishlistOnWithdrawal(@RequestParam Long userId) {
+        wishlistService.deleteAllOnWithdrawal(userId);
+        return ResponseEntity.ok(Map.of("userId", userId, "deleted", true));
     }
 
     private static LocalDate parseDate(String value) {

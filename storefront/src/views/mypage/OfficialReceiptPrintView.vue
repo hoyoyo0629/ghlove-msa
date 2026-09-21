@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../../api/http'
@@ -19,7 +20,7 @@ onMounted(async () => {
     // 띄우고 이 팝업 창을 그대로 닫는다(self.close()). 서버가 내려주는 "영수증 정보가 없습니다."
     // 문구도 AS-IS와 동일하다(OfficialReceiptService.ownedCompletedDonation).
     errorMessage.value = e.message || '영수증 정보가 없습니다.'
-    window.alert(errorMessage.value)
+    modalAlert(errorMessage.value)
     window.close()
   }
 })

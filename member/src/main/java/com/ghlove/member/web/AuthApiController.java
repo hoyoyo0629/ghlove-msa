@@ -135,7 +135,7 @@ public class AuthApiController {
         }
     }
 
-    public record PasswordChangeOnLoginRequest(String newPassword, String newPasswordConfirm) {
+    public record PasswordChangeOnLoginRequest(String currentPassword, String newPassword, String newPasswordConfirm) {
     }
 
     /**
@@ -152,8 +152,8 @@ public class AuthApiController {
             return statusBody("ERROR", "비밀번호 변경 대상이 없습니다. 다시 로그인해 주세요.", Map.of());
         }
         try {
-            User user = memberService.changePasswordOnLogin(userId, req.newPassword(), req.newPasswordConfirm(),
-                    request.getRemoteAddr());
+            User user = memberService.changePasswordOnLogin(userId, req.currentPassword(), req.newPassword(),
+                    req.newPasswordConfirm(), request.getRemoteAddr());
             session.removeAttribute(SESSION_PENDING_PWCHANGE_USER_ID);
             session.setAttribute(SESSION_USER_KEY, user);
             authCookieSupport.issue(response, user);

@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { onMounted, ref } from 'vue'
 import { api } from '../../api/http'
 import { useDateRangeSearch } from '../../composables/useDateRangeSearch'
@@ -29,13 +30,13 @@ onMounted(load)
 // AS-IS inquiryItem.html의 행별 삭제 버튼(deleteItemQna). AS-IS와 동일하게 버튼 자체는 항상
 // 두고, 답변완료 건이면 서버가 거부한 메시지("답변완료된 문의는 삭제할 수 없습니다.")를 띄운다.
 async function remove(inquiryId) {
-  if (!confirm('해당 게시물을 삭제 하시겠습니까?')) return
+  if (!(await modalConfirm('해당 게시물을 삭제 하시겠습니까?'))) return
   try {
     await api.delete('gift', `/api/my/qna/${inquiryId}`)
     await load()
-    alert('삭제되었습니다.')  // AS-IS inquiryItem.html:358
+    modalAlert('삭제되었습니다.')  // AS-IS inquiryItem.html:358
   } catch (e) {
-    alert(e.message)
+    modalAlert(e.message)
   }
 }
 

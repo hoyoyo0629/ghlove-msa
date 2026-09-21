@@ -1,8 +1,8 @@
 <script setup>
-// AS-IS footer_ali.vue 마크업/클래스를 그대로 재현(Thymeleaf 버전 fragments/footer.html과 동일
-// 출처). 사이트맵 모달은 AS-IS와 동일하게 CSS :target(#modal_sitemap)으로 여닫는다 - 헤더의
-// "사이트맵" 버튼(href="#modal_sitemap")과 이 컴포넌트의 닫기 버튼(href="#")만으로 동작하고
-// 별도 JS/컴포넌트 상태가 필요 없다.
+// AS-IS footer_ali.vue 마크업/클래스를 그대로 재현(Thymeleaf 버전 fragments/footer.html과 동일 출처).
+// 사이트맵 모달은 공유 상태(useSitemap)로 여닫는다 - AS-IS의 CSS :target 방식은 router 이동/
+// replaceState로 브라우저가 :target을 갱신하지 않아 메뉴 클릭 후에도 안 닫히는 문제가 있었다.
+import { sitemapOpen, openSitemap, closeSitemap } from '../composables/useSitemap'
 </script>
 
 <template>
@@ -34,7 +34,7 @@
             <li><router-link class="krds-btn text point" to="/policy/privacy">개인정보처리방침</router-link></li>
             <li><router-link class="krds-btn text" to="/policy/copyright">저작권정책</router-link></li>
             <li><router-link class="krds-btn text" to="/policy/auth">이용약관</router-link></li>
-            <li><a class="krds-btn text open-modal" href="#modal_sitemap">사이트맵</a></li>
+            <li><a class="krds-btn text open-modal" href="#modal_sitemap" @click.prevent="openSitemap">사이트맵</a></li>
             <li><router-link class="krds-btn text" to="/notices">공지사항</router-link></li>
           </ul>
           <p class="f-copy">© Ministry of the Interior and Safety. All rights reserved.</p>
@@ -45,14 +45,15 @@
       </div>
     </footer>
 
-    <section id="modal_sitemap" class="krds-modal" role="dialog" data-type="full">
+    <section id="modal_sitemap" class="krds-modal" :class="{ 'is-open': sitemapOpen }" role="dialog" data-type="full">
       <div class="modal-dialog">
         <div class="modal-content sitemap">
           <div class="modal-header">
             <h2 class="modal-title sitemap__tit">사이트맵</h2>
+            <button type="button" class="btn-close" @click="closeSitemap"><span class="sr-only">사이트맵 닫기</span></button>
           </div>
           <div class="modal-conts">
-            <nav class="sitemap__nav" aria-label="사이트맵">
+            <nav class="sitemap__nav" aria-label="사이트맵" @click="closeSitemap">
               <div class="sitemap__grid">
                 <div class="sitemap__col sitemap__col--donation">
                   <h3 class="sitemap__title">기부</h3>

@@ -1,7 +1,8 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { openSitemap } from '../composables/useSitemap'
 
 // AS-IS header_ali.vue 마크업/클래스를 그대로 재현한다(Thymeleaf 버전 fragments/header.html과
 // 동일 출처). 스타일은 new.css/output.css 캐스케이드가 담당하므로 여기서는 구조/클래스만
@@ -10,6 +11,7 @@ const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
+const headerWrap = ref(null)
 const openIndex = ref(null)
 function toggleMenu(i) {
   openIndex.value = openIndex.value === i ? null : i
@@ -19,6 +21,15 @@ function closeMenu() {
 }
 // AS-IS와 동일하게 하위메뉴를 클릭해 화면이 이동하면 GNB를 닫는다(라우트 변경 감지).
 watch(() => route.fullPath, closeMenu)
+
+// GNB가 펼쳐진 상태에서 헤더 바깥(페이지 본문)을 클릭하면 닫는다. 헤더 내부 클릭은 header-wrap의
+// closeMenu/nav의 @click.stop이 처리하므로, 여기서는 header-wrap을 벗어난 클릭만 닫는다.
+function onDocumentClick(e) {
+  if (openIndex.value === null) return
+  if (headerWrap.value && !headerWrap.value.contains(e.target)) closeMenu()
+}
+onMounted(() => document.addEventListener('click', onDocumentClick))
+onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
 
 // member 서비스에서 아직 Vue로 이관되지 않은 화면(마이페이지 등)은 계속 옛 Thymeleaf
 // 화면(8081)으로 보낸다 - 라운드가 진행되며 하나씩 내부 라우트로 바뀐다.
@@ -31,7 +42,7 @@ async function onLogout() {
 </script>
 
 <template>
-  <div id="header-wrap" @click="closeMenu">
+  <div id="header-wrap" ref="headerWrap" @click="closeMenu">
     <div id="krds-skip-link"><a href="#contents">본문 바로가기</a></div>
 
     <div id="krds-masthead">
@@ -153,23 +164,44 @@ async function onLogout() {
                   <div class="gnb-main-list inner">
                     <div class="gnb-sub-list single-list">
                       <div class="gnb-sub-content">
+        <!-- AS-IS header_ali.vue 마이페이지 서브메뉴 그대로: 5열(column) 구조·14개 항목.
+                             AS-IS엔 없는 비밀번호변경/회원정보수정/역할신청/승인함은 GNB에서 제외(각 화면은
+                             라우트로 직접 접근 가능). 회원정보수정·비밀번호변경은 마이페이지 안에서 진입. -->
                         <ul class="type-description">
-                          <li><strong class="tit"><router-link to="/mypage/donations">기부내역 조회</router-link></strong><p class="txt">내 기부내역을 확인할 수 있어요</p></li>
-                          <li><strong class="tit"><router-link to="/mypage/points">기부포인트 조회</router-link></strong><p class="txt">내 포인트 잔액/내역을 확인할 수 있어요</p></li>
-                          <li><strong class="tit"><router-link to="/orders">주문조회</router-link></strong><p class="txt">내 답례품 주문내역을 확인할 수 있어요</p></li>
-                          <li><strong class="tit"><router-link to="/cart">장바구니</router-link></strong><p class="txt">담아둔 답례품을 확인할 수 있어요</p></li>
-                          <li><strong class="tit"><router-link to="/claims/my">취소반품교환</router-link></strong><p class="txt">주문 취소/반품/교환 내역을 확인할 수 있어요</p></li>
-                          <li><strong class="tit"><router-link to="/mypage/delivery">배송지 관리</router-link></strong><p class="txt">배송지 목록을 관리할 수 있어요</p></li>
-                          <li><strong class="tit"><router-link to="/mypage/receipts">기부확인증 보기</router-link></strong><p class="txt">기부확인증을 발급받을 수 있어요</p></li>
-                          <li><strong class="tit"><router-link to="/mypage/honor-certificates">기부혜택증 보기</router-link></strong><p class="txt">세액공제 예상액을 확인할 수 있어요</p></li>
-                          <li><strong class="tit"><router-link to="/mypage/qna">1:1 문의</router-link></strong><p class="txt">궁금한 점을 문의할 수 있어요</p></li>
-                          <li><strong class="tit"><router-link to="/mypage/profile">회원정보수정</router-link></strong><p class="txt">회원 정보를 수정할 수 있어요</p></li>
-                          <li><strong class="tit"><router-link to="/mypage/interest-locgovs">관심지자체</router-link></strong><p class="txt">관심있는 지자체를 관리할 수 있어요</p></li>
-                          <li><strong class="tit"><router-link to="/mypage/wishlist">관심답례품</router-link></strong><p class="txt">찜한 답례품을 관리할 수 있어요</p></li>
-                          <li><strong class="tit"><router-link to="/mypage/password">비밀번호 변경</router-link></strong><p class="txt">비밀번호를 변경할 수 있어요</p></li>
-                          <li><strong class="tit"><router-link to="/mypage/role-request">지자체담당자·제공자 역할 신청</router-link></strong><p class="txt">추가 역할을 신청할 수 있어요</p></li>
-                          <li><strong class="tit"><router-link to="/mypage/role-queue">역할신청 승인함</router-link></strong><p class="txt">역할 신청 승인 대기 목록을 확인할 수 있어요</p></li>
-                          <li><strong class="tit"><router-link to="/mypage/withdraw">회원탈퇴</router-link></strong><p class="txt">회원 탈퇴를 진행할 수 있어요</p></li>
+                          <li>
+                            <ul class="type-description--sub">
+                              <li><strong class="tit"><router-link to="/mypage/donations">기부내역 조회</router-link></strong><p class="txt">내가 기부한 내역을 확인할 수 있어요</p></li>
+                              <li><strong class="tit"><router-link to="/mypage/points">기부포인트 조회</router-link></strong><p class="txt">나의 기부포인트를 확인할 수 있어요</p></li>
+                            </ul>
+                          </li>
+                          <li>
+                            <ul class="type-description--sub">
+                              <li><strong class="tit"><router-link to="/orders">주문조회</router-link></strong><p class="txt">나의 주문내역을 조회할 수 있어요</p></li>
+                              <li><strong class="tit"><router-link to="/cart">장바구니</router-link></strong><p class="txt">내가 담은 답례품을 확인할 수 있어요</p></li>
+                              <li><strong class="tit"><router-link to="/claims/my">취소반품교환</router-link></strong><p class="txt">나의 취소반품교환내역을 확인할 수 있어요</p></li>
+                              <li><strong class="tit"><router-link to="/mypage/delivery">배송지 관리</router-link></strong><p class="txt">나의 배송지를 관리할 수 있어요</p></li>
+                            </ul>
+                          </li>
+                          <li>
+                            <ul class="type-description--sub">
+                              <li><strong class="tit"><router-link to="/mypage/receipts">기부확인증 보기</router-link></strong><p class="txt">내가 기부한 내역을 확인할 수 있어요</p></li>
+                              <li><strong class="tit"><router-link to="/mypage/honor-certificates">기부혜택증 보기</router-link></strong><p class="txt">내가 기부한 고향에서 제공하는 혜택을 확인할 수 있어요</p></li>
+                            </ul>
+                          </li>
+                          <li>
+                            <ul class="type-description--sub">
+                              <li><strong class="tit"><router-link to="/mypage/gift-qna">답례품 Q&amp;A</router-link></strong><p class="txt">답례품에 대해 궁금한 사항에 대한 상담을 받을 수 있어요</p></li>
+                              <li><strong class="tit"><router-link to="/mypage/gift-reviews">답례품 후기</router-link></strong><p class="txt">내가 남긴 답례품 후기를 확인할 수 있어요</p></li>
+                            </ul>
+                          </li>
+                          <li>
+                            <ul class="type-description--sub">
+                              <li><strong class="tit"><router-link to="/mypage/qna">1:1 문의</router-link></strong><p class="txt">고향사랑e음 이용 중 궁금한 사항에 대한 상담을 받을 수 있어요</p></li>
+                              <li><strong class="tit"><router-link to="/mypage/interest-locgovs">관심지자체</router-link></strong><p class="txt">내가 관심있는 지역을 확인할 수 있어요</p></li>
+                              <li><strong class="tit"><router-link to="/mypage/wishlist">관심답례품</router-link></strong><p class="txt">내가 관심있는 답례품을 확인할 수 있어요</p></li>
+                              <li><strong class="tit"><router-link to="/mypage/withdraw">회원탈퇴</router-link></strong><p class="txt">회원탈퇴를 할 수 있어요</p></li>
+                            </ul>
+                          </li>
                         </ul>
                       </div>
                     </div>
@@ -178,7 +210,7 @@ async function onLogout() {
               </li>
             </ul>
 
-            <a href="#modal_sitemap" class="gnb-all-btn open-modal"><span class="sr-only">사이트맵</span></a>
+            <a href="#modal_sitemap" class="gnb-all-btn open-modal" @click.prevent="openSitemap"><span class="sr-only">사이트맵</span></a>
           </div>
         </nav>
       </div>

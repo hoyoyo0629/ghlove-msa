@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
@@ -22,10 +23,10 @@ function toggleAll(e) {
 
 async function deleteSelected() {
   if (selected.value.length === 0) {
-    alert('선택된 지자체가 없습니다.')
+    modalAlert('선택된 지자체가 없습니다.')
     return
   }
-  if (!confirm('정보를 수정 하시겠습니까?')) return
+  if (!(await modalConfirm('정보를 수정 하시겠습니까?'))) return
   for (const code of selected.value) {
     await api.post('donation', `/interest-locgovs/${code}/delete`)
   }

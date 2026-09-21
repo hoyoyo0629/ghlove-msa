@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../composables/useModal'
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api/http'
@@ -26,10 +27,38 @@ const maskedPhone = ref('')
 const devCode = ref('')
 const mfaCode = ref('')
 
-// 비밀번호 만료(PASSWORD_EXPIRED) 시 로그인 화면에서 띄우는 변경 모달 상태 (AS-IS pwdChangeModal).
+// 비밀번호 만료(PASSWORD_EXPIRED) 시 로그인 화면에서 띄우는 변경 팝업 상태 (AS-IS pwdChangeModal).
+// AS-IS는 기존 비밀번호(userPW)+새 비밀번호+확인 3필드와 실시간 검증 체크리스트를 갖춘 오버레이 팝업이다.
 const pwExpiredStep = ref(false)
+const currentPw = ref('')
 const newPw = ref('')
 const newPwC = ref('')
+// 비밀번호 규칙 실시간 체크(AS-IS checkPwd/isContinued - PasswordChangeView와 동일 로직).
+const pwRules = ref({ all: false, r1: false, r2: false, r3: false, r4: false })
+
+function isContinued(str) {
+  for (let i = 0; i < str.length - 2; i++) {
+    const a = str.charCodeAt(i)
+    const b = str.charCodeAt(i + 1)
+    const c = str.charCodeAt(i + 2)
+    if ((b - a === 1 && c - b === 1) || (b - a === -1 && c - b === -1)) return true
+  }
+  return false
+}
+function checkPwd() {
+  const pwd = newPwC.value
+  const hasDigit = /[0-9]/.test(pwd)
+  const hasLetter = /[a-zA-Z]/.test(pwd)
+  const hasSymbol = /[{}[\]/?.,;:|)*~`!^\-_+<>@#$%&\\=('"]/.test(pwd)
+  const rule1 = hasDigit && hasLetter && hasSymbol
+  const rule2 = !isContinued(pwd) && !/(\w)\1\1/.test(pwd)
+  const rule3 = pwd.indexOf(loginId.value ?? '') === -1
+  const rule4 = pwd.length >= 9 && pwd.length <= 20
+  pwRules.value = { r1: rule1, r2: rule2, r3: rule3, r4: rule4, all: rule1 && rule2 && rule3 && rule4 }
+}
+function ruleIcon(ok) {
+  return ok ? '/images/icon/pw-available.png' : '/images/icon/pw-unavailable.png'
+}
 
 const target = typeof route.query.target === 'string' ? route.query.target : null
 
@@ -112,7 +141,7 @@ async function onSubmit() {
       await onReactivateConfirm()
     } else if (data.status === 'PASSWORD_TEMP') {
       // AS-IS(op.saleson.js:1201): 임시비밀번호 사용자는 비밀번호찾기로 보내 새 비번을 설정하게 한다.
-      alert('임시 비밀번호 사용자 입니다.')
+      modalAlert('임시 비밀번호 사용자 입니다.')
       router.push('/find-idpw')
     } else if (data.status === 'PASSWORD_EXPIRED') {
       // AS-IS(op.saleson.js:1182): 비밀번호 만료 - 로그인 화면에서 변경 모달을 띄운다.
@@ -131,7 +160,7 @@ async function onSubmit() {
  *  단계에서 이미 본인확인을 마쳤으므로 recovery는 자격증명을 다시 받지 않고, 해제 후에는
  *  AS-IS와 동일하게 재로그인을 유도한다. */
 async function onReactivateConfirm() {
-  if (!window.confirm('휴면해제 하시겠습니까?')) {
+  if (!(await modalConfirm('휴면해제 하시겠습니까?'))) {
     return
   }
   try {
@@ -152,7 +181,11 @@ async function onReactivateConfirm() {
 async function changeExpiredPassword() {
   errorMessage.value = ''
   try {
-    const res = await api.post('member', '/api/auth/change-password', { newPassword: newPw.value, newPasswordConfirm: newPwC.value })
+    const res = await api.post('member', '/api/auth/change-password', {
+      currentPassword: currentPw.value,
+      newPassword: newPw.value,
+      newPasswordConfirm: newPwC.value,
+    })
     if (res.status === 'OK') {
       await auth.fetchMe()
       afterLoginSuccess()
@@ -249,31 +282,62 @@ async function onMfaSubmit() {
           </a>
         </div>
 
-        <div v-if="pwExpiredStep">
-          <div class="login-title-box">
-            <img src="/images/icon/cli-icon-bullet.png" alt="" />
-            <h2 class="login-title">비밀번호 <strong>변경</strong></h2>
+        <!-- 비밀번호 만료 팝업 (AS-IS login.html #pwdChangeModal 재현: 오버레이 + 기존/새/확인
+             3필드 + 실시간 검증 체크리스트 + [다음에변경(6개월)]/[본인인증 후 변경] 버튼). -->
+        <div class="black-bg show" id="pwdChangeModal" v-if="pwExpiredStep">
+          <div class="overlayer">
+            <div class="overlayer-header">비밀번호 변경</div>
+            <div class="overlayer-body">
+              <h2>안전한 개인정보 보호를 위해<br />지금 비밀번호를 변경해 주세요.</h2>
+              <p>
+                회원님께서는 장기간 비밀번호를 변경하지 않고 동일한 비밀번호를 사용 중<br />
+                이십니다. 정기적인 비밀번호 변경으로 회원님의 개인정보를 보호해 주세요.
+              </p>
+              <p class="error" v-if="errorMessage">{{ errorMessage }}</p>
+              <div class="line"></div>
+              <form @submit.prevent="changeExpiredPassword">
+                <div class="info-field-group">
+                  <div class="info-field-items newpw">
+                    <label for="userPW" class="flied-title">기존 비밀번호 입력</label>
+                    <input type="password" id="userPW" v-model="currentPw" autocomplete="current-password" minlength="8" maxlength="20" required autofocus />
+                  </div>
+                  <div class="info-field-items newpw">
+                    <label for="userNewPW" class="flied-title">새 비밀번호 입력</label>
+                    <input type="password" id="userNewPW" v-model="newPw" autocomplete="new-password" minlength="8" maxlength="20" required />
+                  </div>
+                  <div class="info-field-items newpw">
+                    <label for="userNewPwConfirm" class="flied-title">새 비밀번호 확인</label>
+                    <input type="password" id="userNewPwConfirm" v-model="newPwC" autocomplete="new-password" minlength="8" maxlength="20" required @input="checkPwd" />
+                  </div>
+                  <div class="info-field-items">
+                    <div class="pw-validation-area">
+                      <ul>
+                        <li>
+                          <span class="pw-validation"><img :src="ruleIcon(pwRules.all)" alt="" /></span>
+                          <span class="txt_box">
+                            <span class="txt_items">비밀번호 보안도 <strong class="pointRed">{{ pwRules.all ? '강함' : '약함' }}</strong></span>
+                            <span class="txt_items">( 4가지 체크 완료 시 V 표시 )</span>
+                          </span>
+                        </li>
+                        <li><span class="pw-validation"><img :src="ruleIcon(pwRules.r1)" alt="" /></span>1. 숫자, 기호, 영문자 포함</li>
+                        <li><span class="pw-validation"><img :src="ruleIcon(pwRules.r2)" alt="" /></span>2. 3개 이상 연속 문자/숫자 제외</li>
+                        <li><span class="pw-validation"><img :src="ruleIcon(pwRules.r3)" alt="" /></span>3. 아이디를 포함할 수 없음</li>
+                        <li><span class="pw-validation"><img :src="ruleIcon(pwRules.r4)" alt="" /></span>4. 최소 9~20자</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <div class="btn-box">
+                  <button type="button" class="blueBtn cancellation" @click="delayExpiredPassword">
+                    다음에변경(6개월)<span><img src="/images/icon/cli-icon_btn-hover-arrow.png" alt="" /></span>
+                  </button>
+                  <button type="submit" class="blueBtn u-confirm">
+                    본인인증 후 변경<span><img src="/images/icon/cli-icon_btn-hover-arrow.png" alt="" /></span>
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-          <p class="s-txt">비밀번호를 변경한 지 오래되었습니다. 안전을 위해 새 비밀번호로 변경해 주세요.</p>
-          <p class="error" v-if="errorMessage">{{ errorMessage }}</p>
-          <form @submit.prevent="changeExpiredPassword">
-            <div class="login-field-group">
-              <span class="login-field-items">
-                <input type="password" placeholder="새 비밀번호" v-model="newPw" required autofocus />
-              </span>
-              <span class="login-field-items">
-                <input type="password" placeholder="새 비밀번호 확인" v-model="newPwC" required />
-              </span>
-            </div>
-            <div class="login-field-group">
-              <button class="login" type="submit">변경하고 로그인</button>
-            </div>
-            <div class="login-field-group">
-              <div class="login-check-wrap">
-                <span class="find-wrap"><a href="#" @click.prevent="delayExpiredPassword">나중에 변경</a></span>
-              </div>
-            </div>
-          </form>
         </div>
 
         <div v-if="mfaStep">

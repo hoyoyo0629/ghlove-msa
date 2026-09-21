@@ -113,4 +113,20 @@ public class DonationClient {
 
     public record LocgovInfo(String locgovCode, String locgovNm, String upperLocgovCode, String upperLocgovNm) {
     }
+
+    /**
+     * 탈퇴 시 관심지자체 전량 삭제 (AS-IS deleteSecedeGeneralCustomerIntrstLocgov).
+     * 실패하면 member가 탈퇴를 중단해야 하므로(관심지자체가 orphan으로 남지 않도록)
+     * 예외를 삼키지 않는다.
+     */
+    public void deleteInterestLocgovOnWithdrawal(Long userId) {
+        try {
+            restClient.post()
+                    .uri("/api/admin/interest-locgov/delete-on-withdrawal?userId={userId}", userId)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RestClientException e) {
+            throw new MemberException("관심지자체 삭제 처리에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+        }
+    }
 }

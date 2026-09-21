@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
@@ -128,30 +129,30 @@ async function submit() {
   // AS-IS order/step1.html:1562~1667 - 결제 직전 배송지/받는분 필드와 포인트 잔액을 각각 확인한다.
   // (입력칸의 required는 폼 submit이 아니라 발동하지 않으므로 여기서 직접 막는다.)
   if (!form.receiverName.trim()) {
-    alert('받으시는 분을 입력해 주세요.')
+    modalAlert('받으시는 분을 입력해 주세요.')
     return
   }
   if (!form.receiverPhone.trim()) {
-    alert('연락처를 입력해 주세요.')
+    modalAlert('연락처를 입력해 주세요.')
     return
   }
   if (!form.post.trim() || !form.address.trim()) {
-    alert('배송지 주소를 입력해 주세요.')
+    modalAlert('배송지 주소를 입력해 주세요.')
     return
   }
   if (!form.addressDetail.trim()) {
-    alert('배송지 상세주소를 입력해 주세요.')
+    modalAlert('배송지 상세주소를 입력해 주세요.')
     return
   }
   const short = groups.value.find((g) => insufficient(g))
   if (short) {
     // AS-IS order/step1.html:1425
-    alert(`${short.locgovNm || short.locgovCode} 포인트가 부족합니다.`)
+    modalAlert(`${short.locgovNm || short.locgovCode} 포인트가 부족합니다.`)
     return
   }
   if (!form.agree) {
     // AS-IS order/step1.html:1578
-    alert('구매에 동의해주시기 바랍니다.')
+    modalAlert('구매에 동의해주시기 바랍니다.')
     return
   }
   submitting.value = true

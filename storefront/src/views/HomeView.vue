@@ -259,22 +259,30 @@ onBeforeUnmount(() => {
       <router-link class="banner-half__regular" to="/donate">
         <i class="ico_banner_heart"></i>
         <div class="banner-half__text">
-          <div>
-            <div class="banner-half__tit">자치단체에 기부하기</div>
-            <div class="banner-half__sub">거주지 외 원하는 지자체를 선택해 자유롭게 기부합니다.</div>
-          </div>
-          <span>일반기부</span>
+          <p class="banner-half__tit">
+								자치단체에
+								<br class="mob-only" />
+								기부하기
+							</p>
+							<p class="banner-half__sub">
+								일반기부
+								<i class="ico_arrow_right_gray"></i>
+							</p>
         </div>
         <i class="ico_arrow_right_gray"></i>
       </router-link>
       <router-link class="banner-half__designated" to="/designated-donation">
         <i class="ico_banner_hand"></i>
         <div class="banner-half__text">
-          <div>
-            <div class="banner-half__tit">특정사업에 기부하기</div>
-            <div class="banner-half__sub">지자체가 추진하는 특정 사업을 선택해 목적있는 기부를 합니다.</div>
-          </div>
-          <span>지정기부</span>
+          <p class="banner-half__tit">
+								특정사업에
+								<br class="mob-only" />
+								기부하기
+							</p>
+							<p class="banner-half__sub">
+								지정기부
+								<i class="ico_arrow_right_gray"></i>
+							</p>
         </div>
         <i class="ico_arrow_right_gray"></i>
       </router-link>

@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
@@ -19,22 +20,22 @@ onMounted(load)
 
 async function setDefault() {
   if (!selectedId.value) {
-    alert('배송지를 선택해주세요.')
+    modalAlert('배송지를 선택해주세요.')
     return
   }
-  if (!confirm('정보를 수정 하시겠습니까?')) return
+  if (!(await modalConfirm('정보를 수정 하시겠습니까?'))) return
   await api.post('member', `/api/delivery/${selectedId.value}/default`)
   await load()
 }
 
 async function remove() {
   if (!selectedId.value) {
-    alert('배송지를 선택해주세요.')
+    modalAlert('배송지를 선택해주세요.')
     return
   }
   const selected = deliveries.value.find((d) => d.userDeliveryId === selectedId.value)
   const message = selected?.defaultFlag ? '기본배송지입니다. 삭제하시겠습니까?' : '선택하신 배송지를 삭제 하시겠습니까?'
-  if (!confirm(message)) return
+  if (!(await modalConfirm(message))) return
   await api.delete('member', `/api/delivery/${selectedId.value}`)
   await load()
 }

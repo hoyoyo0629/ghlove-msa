@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
@@ -51,15 +52,18 @@ async function toggleWishlist() {
   if (!auth.loggedIn) return requireLogin()
   const res = await api.post('gift', `/wishlist/${props.itemId}/toggle`)
   detail.value.wishlisted = res.wishlisted
+  // 운영은 선택/해제 각각 알림 모달을 띄운다(확인만).
+  modalAlert(res.wishlisted ? '관심답례품에 추가 되었습니다.' : '해당 답례품이 관심답례품에서 삭제되었습니다.')
 }
 
 async function addToCart() {
   if (!auth.loggedIn) return requireLogin()
   try {
     await api.post('order', '/api/cart/items', { itemId: Number(props.itemId), quantity: 1 })
-    if (confirm('장바구니에 담았습니다. 장바구니로 이동할까요?')) router.push('/cart')
+    // 운영은 이동 여부를 묻지 않고 단순 알림(확인만)만 띄운다.
+    modalAlert('장바구니에 담았습니다.')
   } catch (e) {
-    alert(e.message)
+    modalAlert(e.message)
   }
 }
 
@@ -72,7 +76,7 @@ async function buyNow() {
     if (!line) throw new Error('장바구니 담기에 실패했습니다.')
     router.push({ path: '/checkout', query: { cartItemId: [line.cartItemId] } })
   } catch (e) {
-    alert(e.message)
+    modalAlert(e.message)
   }
 }
 
@@ -80,7 +84,7 @@ async function submitReview() {
   if (!auth.loggedIn) return requireLogin()
   const f = reviewForm.value
   if (!f.subject.trim() || !f.content.trim()) {
-    alert('제목과 내용을 입력해 주세요.')
+    modalAlert('제목과 내용을 입력해 주세요.')
     return
   }
   const form = new FormData()
@@ -104,14 +108,14 @@ async function submitInquiry() {
   if (!auth.loggedIn) return requireLogin()
   const f = inquiryForm.value
   if (!f.question.trim()) {
-    alert('문의 내용을 입력해 주세요.')
+    modalAlert('문의 내용을 입력해 주세요.')
     return
   }
   try {
     await api.post('gift', `/api/gifts/${props.itemId}/inquiries`, { question: f.question, secret: f.secret })
     inquiryForm.value = { question: '', secret: false }
     // AS-IS items/details-main.html:2612
-    alert('답례품Q&A가 등록되었습니다.')
+    modalAlert('답례품Q&A가 등록되었습니다.')
     await load()
   } catch (e) {
     errorMessage.value = e.message
@@ -120,25 +124,25 @@ async function submitInquiry() {
 
 async function reportReview(review) {
   if (!auth.loggedIn) return requireLogin()
-  if (review.reportedByMe) { alert('이미 신고한 리뷰입니다.'); return }
-  if (!confirm('이 리뷰를 신고하시겠습니까?')) return
+  if (review.reportedByMe) { modalAlert('이미 신고한 리뷰입니다.'); return }
+  if (!(await modalConfirm('이 리뷰를 신고하시겠습니까?'))) return
   try {
     await api.post('gift', `/api/gifts/${props.itemId}/reviews/${review.itemReviewId}/report`, {})
     await load()
   } catch (e) {
-    alert(e.message)
+    modalAlert(e.message)
   }
 }
 
 async function reportInquiry(inquiry) {
   if (!auth.loggedIn) return requireLogin()
-  if (inquiry.reportedByMe) { alert('이미 신고한 문의입니다.'); return }
-  if (!confirm('이 문의를 신고하시겠습니까?')) return
+  if (inquiry.reportedByMe) { modalAlert('이미 신고한 문의입니다.'); return }
+  if (!(await modalConfirm('이 문의를 신고하시겠습니까?'))) return
   try {
     await api.post('gift', `/api/gifts/${props.itemId}/inquiries/${inquiry.inquiryId}/report`, {})
     await load()
   } catch (e) {
-    alert(e.message)
+    modalAlert(e.message)
   }
 }
 
@@ -148,9 +152,9 @@ async function requestRestock() {
   try {
     const res = await api.post('gift', `/gifts/${props.itemId}/restock-notice`)
     detail.value.restockRequested = true
-    alert(res.message || '재입고 시 알려드리겠습니다.')
+    modalAlert(res.message || '재입고 시 알려드리겠습니다.')
   } catch (e) {
-    alert(e.message)
+    modalAlert(e.message)
   }
 }
 
@@ -163,7 +167,7 @@ async function likeReview(r) {
       r.likedByMe = true
     }
   } catch (e) {
-    alert(e.message)
+    modalAlert(e.message)
   }
 }
 </script>
@@ -283,7 +287,7 @@ async function likeReview(r) {
           <div class="buyBtn_box" v-if="detail.gift.dataStatusCode === 'APPROVED' && detail.gift.soldOut !== '1'">
             <div class="btn_wrap">
               <button class="buyBtn addToCart" type="button" @click="addToCart">장바구니</button>
-              <button class="buyBtn buyOrder" type="button" @click="buyNow">포인트로 주문하기</button>
+              <button class="buyBtn buyOrder" type="button" @click="buyNow">바로선택</button>
               <button
                 type="button"
                 class="wishBtn addToWishList hidden_txt"

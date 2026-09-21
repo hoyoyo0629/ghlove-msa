@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { onMounted, ref } from 'vue'
 import { api } from '../../api/http'
 import { useDateRangeSearch } from '../../composables/useDateRangeSearch'
@@ -28,13 +29,13 @@ onMounted(load)
 
 // AS-IS review.html의 행별 삭제 버튼(deleteReview) - 확인 문구까지 AS-IS 그대로.
 async function remove(itemReviewId) {
-  if (!confirm('해당 게시물을 삭제 하시겠습니까?')) return
+  if (!(await modalConfirm('해당 게시물을 삭제 하시겠습니까?'))) return
   try {
     await api.delete('gift', `/api/my/reviews/${itemReviewId}`)
     await load()
-    alert('삭제되었습니다.')  // AS-IS review.html:498
+    modalAlert('삭제되었습니다.')  // AS-IS review.html:498
   } catch (e) {
-    alert(e.message)
+    modalAlert(e.message)
   }
 }
 

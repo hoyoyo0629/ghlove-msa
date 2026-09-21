@@ -42,6 +42,14 @@ public class WishlistService {
         wishlistRepository.deleteByWishlistIdInAndUserId(wishlistIds, userId);
     }
 
+    /** 회원 탈퇴 시 이 회원의 관심답례품(AS-IS G_INTRST_RTNPSNT) 전량 삭제 -
+     * member의 탈퇴 처리가 내부 API로 호출한다. AS-IS `GeneralCustomerServiceImpl:264`
+     * deleteSecedeGeneralCustomerIntrstRtnpsnt와 같은 자리다. */
+    @Transactional
+    public void deleteAllOnWithdrawal(Long userId) {
+        wishlistRepository.deleteByUserId(userId);
+    }
+
     /** 답례품 목록 카드의 하트 아이콘 토글(AS-IS goods/index-main.html addToWishList).
      * @return 토글 후 상태 - true면 관심답례품에 추가된 상태. */
     @Transactional

@@ -87,6 +87,15 @@ public class DonationApiController {
         return donationService.backfillLevy();
     }
 
+    /** 회원 탈퇴 시 관심지자체 전량 삭제 - member의 탈퇴 처리가 호출하는 내부 전용 API
+     * (/api/admin/**는 X-Internal-Secret으로 보호됨). AS-IS의 탈퇴 트랜잭션 안 관심지자체
+     * 삭제(deleteSecedeGeneralCustomerIntrstLocgov)에 대응. */
+    @org.springframework.web.bind.annotation.PostMapping("/api/admin/interest-locgov/delete-on-withdrawal")
+    public Map<String, Object> deleteInterestLocgovOnWithdrawal(@RequestParam Long userId) {
+        donationService.removeAllInterestLocgovsOnWithdrawal(userId);
+        return Map.of("userId", userId, "deleted", true);
+    }
+
     /** admin "연계 로그 관리" 화면의 시도 이력(성공/실패 모두) 조회용 - DONATION_LEVY(현재
      *  상태)와 달리 G_RELAY_LOG는 호출마다 append되는 감사 이력이다. */
     @GetMapping("/api/admin/relay-log")

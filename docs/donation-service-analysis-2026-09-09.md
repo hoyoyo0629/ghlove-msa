@@ -62,8 +62,13 @@ ISP 대조:
 ### 3-2. 기부 납부 시 답례품 선택 없음 (요구사항 미충족, 중)
 RFP가 **"기부금 납부 시 답례품 선택 기능 추가 등 기부 프로세스 통합 개선"**을 명시적으로 요구한다(AS-IS에 없던 개선 요구). 현재는 기부 완료 후 마이페이지/포인트 화면에서 별도로 답례품몰로 이동하는 분리된 흐름이다. `donate.html`에 답례품 관련 UI가 전혀 없다.
 
-### 3-3. point 연계에 동기 호출 경로가 남아 있음 (원칙 위반, 소)
-정상 기부 완료는 이벤트(`DonationCompletedEvent`)로 처리된다 ✅. 다만 **기부금 변경신청(give-reqmng) 승인 경로**가 `PointClient.creditForDonation()`으로 point의 적립 로직을 **동기 REST로 직접 호출**한다. RFP는 point 연계를 ★이벤트로 명시하고 "동기 호출 금지"를 별도 항목으로 둔다. `earnedPointsByCntrSn`·`earnLotOf`는 조회성이라 다른 서비스의 조회 예외 패턴과 같지만, `creditForDonation`은 **쓰기 호출**이라 성격이 다르다.
+### 3-3. ~~point 연계에 동기 호출 경로가 남아 있음~~ → **조치 완료 (2026-09-21)**
+정상 기부 완료는 이벤트(`DonationCompletedEvent`)로 처리된다 ✅. 남아 있던 유일한 예외인 **기부금 변경신청(give-reqmng) 승인의 "포인트생성"**이 `PointClient.creditForDonation()` 동기 REST 쓰기를 쓰고 있었는데, 정상 완료 경로와 똑같이 `donationEventPublisher.publishCompleted()`로 `donation.lifecycle` COMPLETED 이벤트를 재발행하도록 전환했다(`CntrReqmngService.approve`, TYPE_POINT_CREATE 분기). donation의 `PointClient.creditForDonation` 쓰기 메서드는 제거하고 조회 전용으로 축소했다. 이로써 **donation→point 동기 쓰기호출이 완전히 사라져** RFP SFR-003 "동기 호출 금지"/SFR-004 ★를 충족한다.
+
+- **안전 근거**: `donation.lifecycle` COMPLETED 소비자가 point(`DonationEventListener`→`creditForDonation`, `existsByRefKeyAndTxnType(cntrSn,EARN)` 멱등)와 admin 통계(`DonationStatsListener`→`onDonationCompleted`, `stat_donation_ledger` cntrSn PK upsert) 둘뿐이고 **둘 다 멱등**이라 재발행해도 중복 적립·중복 집계가 없다.
+- **유지**: point 엔드포인트 `/api/admin/credit-for-donation` 자체는 admin `ResyncService`(운영 백필)가 여전히 사용하므로 남겨 둔다. 제거한 것은 donation 쪽 클라이언트 호출뿐이다.
+- **트레이드오프**: 동기는 실패 시 승인 자체가 실패(재시도 유도)했으나, 이벤트는 승인 즉시 성공하고 적립은 결과적 정합성으로 수렴한다 — 이는 mainline `completeDonation()`과 **동일한 성격**이라 오히려 일관성이 맞다.
+- **E2E 실측(2026-09-21)**: Kafka·point(8083)·admin(8085) 기동 상태에서 시드 기부건(`DTESTRQMNG00001`, user 1063, 11230, 50000) 대상으로 give-reqmng 포인트생성 신청→승인. `Published COMPLETED event ... offset=36` → point EARN **15000**(30%) 생성 + admin `stat_donation_ledger` COMPLETED 반영 확인. 2차 신청·승인으로 재발행해도 point EARN 1건·15000, admin 1건 유지(멱등 확인). 검증 후 시드·원장·통계·잔액을 물리 정리해 원상복구(1063 잔액 137000→122000).
 
 ### 3-4. ISP 조회모델 없음 (요구사항 미충족, 중)
 ISP 조회모델 "기부요약/영수증/한도, 결제상태/대사뷰". 별도 조회 모델 없이 원본 테이블 직접 집계. point·member와 같은 유형의 갭.
@@ -71,10 +76,17 @@ ISP 조회모델 "기부요약/영수증/한도, 결제상태/대사뷰". 별도
 ### 3-5. 기부 상태코드 (사실상 충족 — 기록용)
 AS-IS `G_CNTR.CNTR_STTUS_CODE`는 `100`(신청/결제대기) `200`(납부완료) `300`(취소, `giveCancelProcess`) `900`(수납배치 완료, 서울 세외수입 `updateSunapBatchCompleted`) 4종. MSA는 `REQUESTED`/`COMPLETED`/`CANCELLED` 3종으로 **900만 없다** — 900은 서울 세외수입 수납배치에 종속된 상태라 그 연계(비활성)와 함께 묶이는 의도적 축소로 본다. RFP 문구의 "결제대기/환불"은 AS-IS에도 별도 코드가 없어(100이 결제대기 겸용, 300이 취소·환불 겸용) 추가 대응 불필요.
 
-### 3-6. 기부하기에서 지도로 지자체 선택 불가 (재현 누락, 소)
-AS-IS `map-select.html`은 단순 팝업이 아니라 **지자체 선택 전용 화면**이다 — 지도에서 시·도를 고르고 지자체를 선택하면 그 지자체의 예산·인구·홈페이지 등 상세정보를 보여준 뒤 기부하기로 넘긴다(`donation-main.html`의 `goToBack`이 `flag=map`이면 이 화면으로 돌아간다). MSA `donate.html`은 시·도 → 시·군·구 셀렉트만 제공한다.
+### 3-6. ~~기부하기에서 지도로 지자체 선택 불가~~ → **오판, 철회 (2026-09-21 재검증)**
+최초 분석은 AS-IS `map-select.html` **파일이 존재**하는 것을 보고 "재현 누락"으로 적었으나 **틀렸다**. 운영 도달 가능성을 검증하지 않은 것이 원인이다(guide3·기부완료모달과 같은 유형의 오판).
 
-최초 분석에서 "기존 지도 컴포넌트를 재사용해 붙이는 수준"이라고 적었으나 **과소평가였다** — `designated-list.html`의 지도는 지정기부사업 목록을 거르는 필터용이라, 지자체 상세정보 패널과 기부 진입 흐름은 새로 만들어야 한다.
+실제로는 **AS-IS 프론트엔드 어디에도 `map-select.html`로 진입하는 순방향 버튼·링크·메뉴가 없다**:
+- 모든 `location.href="/donation/map-select.html"` 참조가 `goToBack`(뒤로가기, `flag=='map'`일 때만) 안에 있다 — 순방향 진입 0곳. `flag`은 URL 파라미터(`getParameter("flag")`)로만 설정된다.
+- 콘텐츠관리 메뉴에서 명시적으로 제외(`opmanager/.../cntnts-stsfdg/list.jsp`의 `c:if`가 `map-select.html`·`guide4.html`을 거른다).
+- `list-select.html`의 지도 안내 이미지(`1.지도에서 지역 선택하기...`)는 **"고객 요청: 해당 이미지 삭제"**로 주석처리됐다.
+- `donation-main.html`의 LNB 지도탭 하이라이트 로직(line 1034)도 주석처리.
+- header의 `@show-map-select`(`components/layouts/header_g.vue` 등)는 답례품몰(goods)·장바구니·주문의 **지역필터용 별개 팝업**(`map.vue`)이라 기부 플로우와 무관하다.
+
+즉 **지도선택은 파일만 남은 死화면(retired)이고, AS-IS 운영도 목록선택(`list-select.html`)만 노출**한다. MSA는 이미 목록선택(`ListSelectView.vue`)을 구현했으므로 **운영 AS-IS와 동등하다** — 착수할 갭이 아니다. (사용자가 라이브 AS-IS 화면 `localhost:3000/donation/donation-main.html`에서 "지도에서 보기" 버튼이 없음을 발견해 정정)
 
 ---
 
@@ -105,9 +117,9 @@ AS-IS `map-select.html`은 단순 팝업이 아니라 **지자체 선택 전용 
 | # | 항목 | 규모 / 필요한 결정 |
 |---|---|---|
 | 3-2 | 납부 시 답례품 선택 | **RFP 신규 요구**라 AS-IS 참고본이 없다. 기부↔답례품 흐름 통합 설계 결정 필요 |
-| 3-3 | `creditForDonation` 동기 호출 | 이벤트 전환 시 give-reqmng 승인 흐름의 보상 처리까지 같이 설계해야 함 |
+| ~~3-3~~ | ~~`creditForDonation` 동기 호출~~ | **완료(2026-09-21)** — give-reqmng 승인을 `publishCompleted` 이벤트 재발행으로 전환, 동기 쓰기 제거. E2E 실측 완료. 위 §3-3 참고 |
 | 3-4 | ISP 조회모델(기부요약/영수증/한도, 결제상태/대사뷰) | point ReadModel이 DB 설계 대기 중이라 같은 시점에 판단 |
-| 3-6 | 기부하기 지도 선택 | 화면 단위 신규 작업. 지자체 상세정보(예산·인구·홈페이지) 출처 확인 선행 |
+| ~~3-6~~ | ~~기부하기 지도 선택~~ | **철회(2026-09-21)** — AS-IS 운영도 미노출인 死화면. MSA 목록선택으로 이미 동등. 위 §3-6 참고 |
 | — | 결제/PG 연계 화면·ISP 결제 이벤트(결제세션생성/승인요청/정산캡처) | 방화벽·PG 계약 개방 후 착수 |
 | — | `/honor` 경로명 | 기능 갭 아님. 정리한다면 `/guide3` 추가 + `/honor` 리다이렉트 수준 |
 

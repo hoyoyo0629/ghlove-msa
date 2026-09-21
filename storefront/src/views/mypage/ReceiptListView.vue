@@ -1,9 +1,11 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { onMounted, ref } from 'vue'
 import { api } from '../../api/http'
 import { useDateRangeSearch } from '../../composables/useDateRangeSearch'
 import { formatN } from '../../utils/format'
 import BasePagination from '../../components/BasePagination.vue'
+import MypageLnb from '../../components/MypageLnb.vue'
 
 // AS-IS mypage/receiptList.html(및 Thymeleaf 버전 receipts.html/certificate.html) 재현.
 // AS-IS 원본은 Vue SPA라 "기부확인증 보기"를 목록 화면 위 모달로 띄운다(components/ui/
@@ -59,7 +61,7 @@ function certQuery() {
 async function viewCertificate() {
   errorMessage.value = ''
   if (!selected.value.length) {
-    alert('선택한 기부내역이 없습니다.\n선택한 기부내역만 기부확인증에 출력됩니다.')
+    modalAlert('선택한 기부내역이 없습니다.\n선택한 기부내역만 기부확인증에 출력됩니다.')
     return
   }
   try {
@@ -72,7 +74,7 @@ async function viewCertificate() {
 
 function printCertificate() {
   if (!selected.value.length) {
-    alert('선택한 기부내역이 없습니다.\n선택한 기부내역만 기부확인증에 출력됩니다.')
+    modalAlert('선택한 기부내역이 없습니다.\n선택한 기부내역만 기부확인증에 출력됩니다.')
     return
   }
   window.open(`/print/receipt-certificate?${certQuery()}`, '_blank')
@@ -84,6 +86,7 @@ function closeModal() {
 </script>
 
 <template>
+  <MypageLnb current="receipts" />
   <section>
     <div class="page-title-box">
       <span class="ali_breadcrumb">

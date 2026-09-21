@@ -3,6 +3,11 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
 import { formatN } from '../../utils/format'
+import { koreanAmount, koreanAmountShort } from '../../utils/koreanNumber'
+import { modalAlert } from '../../composables/useModal'
+
+// 개인 최대 기부 한도(연) 기본값 - 서버가 값을 안 주면 AS-IS와 동일하게 연 2천만원으로 안내한다.
+const DEFAULT_ANNUAL_LIMIT = 20000000
 
 // AS-IS donation-main.html 재현(donation 서비스 donate.html과 동일 출처, GNB "기부 > 자치단체에
 // 기부하기"). 의도적 축소: 거주지 확인은 행정정보공동이용센터 연계가 없어(다른 외부연계와 동일한
@@ -70,11 +75,16 @@ const selectedLocgov = computed(() => (form.value?.locgovs ?? []).find((l) => l.
 const selectedLocgovName = computed(() =>
   selectedLocgov.value ? `${selectedLocgov.value.upperLocgovNm ?? ''} ${selectedLocgov.value.locgovNm}`.trim() : '',
 )
-const pointEstimateTxt = computed(() => {
-  if (presentType.value !== '100' || pointRatePercent.value == null || !amount.value) return ''
-  const points = Math.floor((amount.value * pointRatePercent.value) / 100)
-  return `( ${formatN(points)} 포인트 적립예상 )`
+// AS-IS: "기부금은 [한글금액] 원 입니다." (0원이면 "영")
+const amountKoreanTxt = computed(() => koreanAmount(amount.value))
+// AS-IS: 답례품 받음(presentType=100)이면 금액이 0이어도 "( 0 포인트 적립예상 )"을 항상 보여준다.
+const estimatedPoints = computed(() => {
+  if (presentType.value !== '100') return 0
+  const rate = pointRatePercent.value ?? 0
+  return Math.floor((amount.value * rate) / 100)
 })
+// AS-IS: 개인 최대 기부 한도(연). 서버 값이 없으면 기본 2천만원.
+const annualLimitDisplay = computed(() => form.value?.annualLimit ?? DEFAULT_ANNUAL_LIMIT)
 
 function onProvinceChanged() {
   locgovCode.value = ''
@@ -103,7 +113,7 @@ function goProjectDetail() {
 
 async function verifyResidence() {
   if (!locgovCode.value) {
-    alert('기부지자체를 먼저 선택해 주세요.')
+    modalAlert('기부지자체를 먼저 선택해 주세요.')
     return
   }
   try {
@@ -112,13 +122,13 @@ async function verifyResidence() {
     psitnLocgovCode.value = res.psitnLocgovCode
     selectedRegionTxt.value = selectedLocgovName.value
     userRegionTxt.value = res.userRegion
-    alert(`귀하는 ${selectedLocgovName.value}에 납부가 가능합니다.`)
+    modalAlert(`귀하는 ${selectedLocgovName.value}에\n납부가 가능합니다.`)
   } catch (e) {
     if (e.message.includes('로그인')) {
       router.push({ path: '/login', query: { target: route.fullPath } })
       return
     }
-    alert(e.message)
+    modalAlert(e.message)
   }
 }
 
@@ -141,27 +151,27 @@ function toggleAllAgree(e) {
 async function submit() {
   errorMessage.value = ''
   if (!locgovCode.value) {
-    alert('기부지자체 시·군·구가 선택되지 않았습니다.')
+    modalAlert('기부지자체 시·군·구가 선택되지 않았습니다.')
     return
   }
   if (!residenceVerified.value) {
-    alert('거주지 확인이 되지 않았습니다.')
+    modalAlert('거주지 확인이 되지 않았습니다.')
     return
   }
   if (!checkA.value) {
-    alert('고용관계 기부 납부여부 항목을 체크해주시기 바랍니다.')
+    modalAlert('고용관계 기부 납부여부 항목을 체크해주시기 바랍니다.')
     return
   }
   if (!checkB.value) {
-    alert('기부자 확인사항을 체크해주시기 바랍니다.')
+    modalAlert('기부자 확인사항을 체크해주시기 바랍니다.')
     return
   }
   if (amount.value < 100) {
-    alert('기부금액은 최소 100원입니다.')
+    modalAlert('기부금액은 최소 100원입니다.')
     return
   }
   if (amount.value % 100 !== 0) {
-    alert('기부 금액 단위는 100원 단위입니다.')
+    modalAlert('기부 금액 단위는 100원 단위입니다.')
     return
   }
   try {
@@ -329,7 +339,8 @@ async function submit() {
                           :value="amountDisplay" @input="onAmountInput" aria-label="기부액" autocomplete="off" />
                       </span>
                     </div>
-                    <span class="num_txt">{{ pointEstimateTxt }}</span>
+                    <span class="num_txt">"기부금은 <strong class="pointDg">{{ amountKoreanTxt }}</strong> 원 입니다."</span>
+                    <span class="num_txt" v-if="presentType === '100'">( <strong class="pointDg">{{ formatN(estimatedPoints) }}</strong> 포인트 적립예상 )</span>
                   </div>
                 </div>
                 <div class="info-field-items">
@@ -340,7 +351,7 @@ async function submit() {
                         <input id="doLimit" class="price" type="text" readonly aria-label="기부가능한도" :value="formatN(form.remainingLimit)" />
                       </span>
                     </div>
-                    <span class="s-txt text-right" v-if="form.annualLimit != null">( 개인 최대 기부 한도 금액 : 연 {{ formatN(form.annualLimit) }}원 )</span>
+                    <span class="s-txt text-right">( 개인 최대 기부 한도 금액 : 연 {{ koreanAmountShort(annualLimitDisplay) }}원 )</span>
                   </div>
                 </div>
               </div>

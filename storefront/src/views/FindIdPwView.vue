@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../composables/useModal'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api/http'
@@ -49,7 +50,7 @@ function resetPw() {
 
 function openAuthModal(flow) {
   if (flow === 'pw' && (!pwUserName.value || !pwLoginId.value)) {
-    alert('이름과 아이디를 입력하세요.')
+    modalAlert('이름과 아이디를 입력하세요.')
     return
   }
   authFlow.value = flow
@@ -281,16 +282,16 @@ function ruleIcon(ok) {
                     <div class="pw-validation-area">
                       <ul>
                         <li>
-                          <span class="pw-validation"><img :src="ruleIcon(pwRules.all)" alt="" /></span>
+                          <span class="pw-validation"></span>
                           <span class="txt_box">
                             <span class="txt_items">비밀번호 보안도 <strong class="pointRed">{{ pwRules.all ? '강함' : '약함' }}</strong></span>
                             <span class="txt_items">( 4가지 체크 완료 시 V 표시 )</span>
                           </span>
                         </li>
-                        <li><span class="pw-validation"><img :src="ruleIcon(pwRules.r1)" alt="" /></span>1. 숫자, 기호, 영문자 포함</li>
-                        <li><span class="pw-validation"><img :src="ruleIcon(pwRules.r2)" alt="" /></span>2. 3개 이상 연속 문자/숫자 제외</li>
-                        <li><span class="pw-validation"><img :src="ruleIcon(pwRules.r3)" alt="" /></span>3. 아이디를 포함할 수 없음</li>
-                        <li><span class="pw-validation"><img :src="ruleIcon(pwRules.r4)" alt="" /></span>4. 최소 9~20자</li>
+                        <li><span class="pw-validation"></span>1. 숫자, 기호, 영문자 포함</li>
+                        <li><span class="pw-validation"></span>2. 3개 이상 연속 문자/숫자 제외</li>
+                        <li><span class="pw-validation"></span>3. 아이디를 포함할 수 없음</li>
+                        <li><span class="pw-validation"></span>4. 최소 9~20자</li>
                       </ul>
                     </div>
                   </div>

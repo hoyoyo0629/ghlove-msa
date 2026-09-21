@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
 import { formatN } from '../../utils/format'
+import MypageLnb from '../../components/MypageLnb.vue'
 
 // AS-IS mypage/cntrPoint.html(및 Thymeleaf 버전 point/my.html) 재현.
 const router = useRouter()
@@ -33,6 +34,7 @@ async function usePoints() {
 </script>
 
 <template>
+  <MypageLnb current="points" />
   <section v-if="data">
     <div class="page-title-box">
       <span class="ali_breadcrumb">
@@ -109,12 +111,19 @@ async function usePoints() {
                 <th>시·도</th>
                 <th>시·군·구</th>
               </tr>
-              <tr class="result-row" v-for="(row, i) in data.locgovSummary" :key="row.locgovCode">
-                <td>{{ data.locgovSummary.length - i }}</td>
+              <tr class="result-row" v-for="(row, i) in data.yearLocgovSummary" :key="row.year + '-' + row.locgovCode">
+                <td>{{ data.yearLocgovSummary.length - i }}</td>
                 <td>{{ row.upperLocgovNm }}</td>
                 <td>{{ row.locgovNm }}</td>
                 <td>{{ formatN(row.earned) }}</td>
-                <td>{{ formatN(row.used) }}</td>
+                <td>
+                  {{ formatN(row.used) }}
+                  <!-- AS-IS cntrPoint.html:122 short_icon - 사용포인트 칸에서 기부건별 상세로 진입 -->
+                  <a href="#" class="short_icon" title="상세내역보기"
+                     @click.prevent="router.push({ name: 'mypage-point-detail', query: { locgovCode: row.locgovCode } })">
+                    <img class="icon-img" src="/images/icon/btn-shorcut_viewmore.png" alt="상세내역보기" />
+                  </a>
+                </td>
                 <td>{{ formatN(row.remaining) }}</td>
                 <td>고향사랑e음</td>
                 <td class="loc_mall">
@@ -124,7 +133,7 @@ async function usePoints() {
                   </button>
                 </td>
               </tr>
-              <tr v-if="!data.locgovSummary.length">
+              <tr v-if="!data.yearLocgovSummary.length">
                 <td colspan="8" class="empty">기부포인트 내역이 없습니다.</td>
               </tr>
             </table>

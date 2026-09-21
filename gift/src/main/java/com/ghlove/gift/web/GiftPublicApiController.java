@@ -59,21 +59,29 @@ public class GiftPublicApiController {
                                 List<GiftCardDto> gifts) {
     }
 
+    /** 제철식품관 첫 화면의 월별 키워드 카드(1~12월). 각 월을 클릭하면 /api/gifts?mode=seasonal&month=N 으로
+     *  그 달의 제철 답례품을 조회한다(AS-IS seasonList의 dataList + monthClick 흐름). */
+    @GetMapping("/api/season-food")
+    public List<GiftService.SeasonFoodKeyword> seasonFood() {
+        return giftService.seasonFoodKeywords();
+    }
+
     /** mode: null(전체 목록/카테고리/검색/지자체몰), "seasonal"(제철식품관), "community-business"(마을기업관). */
     @GetMapping("/api/gifts")
     public ListResponse list(@RequestParam(required = false) String categoryCode,
                               @RequestParam(required = false) String q,
                               @RequestParam(required = false) String locgovCode,
                               @RequestParam(required = false) String mode,
+                              @RequestParam(required = false) Integer month,
                               HttpServletRequest request) {
         String pageTitle = null;
         List<Gift> gifts;
         if ("seasonal".equals(mode)) {
             pageTitle = "제철식품관";
-            gifts = giftService.seasonalGifts();
+            gifts = giftService.seasonalGifts(month, locgovCode);
         } else if ("community-business".equals(mode)) {
             pageTitle = "마을기업관";
-            gifts = giftService.communityBusinessGifts();
+            gifts = giftService.communityBusinessGifts(locgovCode);
         } else {
             gifts = giftService.publicGifts(categoryCode, q, locgovCode);
         }

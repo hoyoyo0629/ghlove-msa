@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { api } from '../../api/http'
+import MypageLnb from '../../components/MypageLnb.vue'
 
 // AS-IS mypage/honorList.html(및 Thymeleaf 버전 honor-certificates.html) 재현 - 별도
 // 발급 신청 없이 완료된 기부가 쌓일 때마다 자동으로 등급이 산정되는 화면.
@@ -12,6 +13,7 @@ onMounted(async () => {
 </script>
 
 <template>
+  <MypageLnb current="honor" />
   <section>
     <div class="page-title-box">
       <span class="ali_breadcrumb">

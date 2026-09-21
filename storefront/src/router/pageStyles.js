@@ -12,10 +12,11 @@ const PAGE_STYLES = {
   // 메인/목록 (AS-IS main.html, goods/index-main.html)
   home: ['main.css', 'goods_card.css', 'event.css', 'joind-agf.css', 'lclgv-map.css'],
   'gift-list': ['main.css', 'goods_card.css', 'event.css', 'joind-agf.css', 'lclgv-map.css'],
-  'gift-seasonal': ['main.css', 'goods_card.css', 'event.css', 'joind-agf.css', 'lclgv-map.css'],
-  'gift-community-business': ['main.css', 'goods_card.css', 'event.css', 'joind-agf.css', 'lclgv-map.css'],
-  // 답례품 상세 (AS-IS items/details-main.html — main/event 미로드)
-  'gift-detail': ['item.css', 'joind-agf.css', 'lclgv-map.css'],
+  // 제철식품관(event/seasonList)·마을기업관(community) = 이벤트 카드형 목록 (AS-IS: evt_card·goods_card, main 없음)
+  'gift-seasonal': ['event.css', 'evt_card.css', 'goods_card.css', 'joind-agf.css', 'lclgv-map.css'],
+  'gift-community-business': ['event.css', 'evt_card.css', 'goods_card.css', 'joind-agf.css', 'lclgv-map.css'],
+  // 답례품 상세 (AS-IS items/details-main.html — main/event 미로드, order-modal 사용)
+  'gift-detail': ['item.css', 'joind-agf.css', 'lclgv-map.css', 'order-modal.css'],
 
   // 기부 (AS-IS donation/donation-main.html)
   donate: ['donation_doak.css', 'event.css', 'joind-ag.css', 'joind-agf.css', 'main.css', 'notice-box.css'],
@@ -39,9 +40,10 @@ const PAGE_STYLES = {
   cart: ['order_ali.css', 'joind-agf.css', 'lclgv-map.css'],
   checkout: ['order_ali.css', 'favo_info.css', 'main.css', 'event.css'],
   'checkout-done': ['order_ali.css', 'favo_info.css', 'main.css', 'event.css'],
-  orders: ['order_ali.css', 'favo_info.css', 'main.css', 'event.css'],
-  'order-detail': ['order_ali.css', 'favo_info.css', 'main.css', 'event.css'],
-  'claims-my': ['order_ali.css', 'favo_info.css', 'main.css', 'event.css'],
+  // 주문목록/상세 (AS-IS mypage/orderList.html·orderDetail.html — order_ali가 아니라 mypage-order(-details))
+  orders: ['mypage-order.css', 'order-modal.css', 'favo_info.css', 'main.css', 'event.css'],
+  'order-detail': ['mypage-order-details.css', 'order-modal.css', 'main.css', 'event.css'],
+  'claims-my': ['mypage-order.css', 'order-modal.css', 'favo_info.css', 'main.css', 'event.css'],
 
   // 고객센터 (AS-IS notice/list.html · faq/list.html · qna/qna-form.html)
   notices: ['ct_nov.css', 'research-box.css', 'main.css', 'event.css'],
@@ -52,19 +54,21 @@ const PAGE_STYLES = {
   'qna-board-detail': ['data_v.css', 'main.css', 'event.css'],
   faqs: ['ct_nov.css', 'research-box.css', 'main.css', 'event.css'],
 
-  // 이벤트 (AS-IS event/seasonList-main.html)
-  events: ['event.css', 'evt_card.css', 'evt_detail.css', 'goods_card.css', 'joind-agf.css', 'lclgv-map.css'],
-  'event-detail': ['event.css', 'evt_card.css', 'evt_detail.css', 'goods_card.css', 'joind-agf.css', 'lclgv-map.css'],
+  // 고객 이벤트 목록/상세 (AS-IS featured/eventList.html · eventDetail.html)
+  events: ['evt_card.css', 'event.css'],
+  'event-detail': ['event.css', 'evt_detail.css', 'goods_card.css', 'main.css'],
   'survey-active': ['data_v.css', 'main.css', 'event.css'],
   'survey-detail': ['data_v.css', 'main.css', 'event.css'],
 
   // 안내/정책 (AS-IS donation/guide1.html · policy/privacy.html)
-  'honor-guide': ['donation_guge.css', 'event.css', 'main.css', 'research-box.css'],
+  // 연말정산 세액공제 안내 (AS-IS donation/guide3.html — donation_doak 추가)
+  'honor-guide': ['donation_doak.css', 'donation_guge.css', 'event.css', 'main.css', 'research-box.css'],
   'guide-donation': ['donation_guge.css', 'event.css', 'main.css', 'research-box.css'],
   'guide-online-method': ['donation_guge.css', 'event.css', 'main.css', 'research-box.css'],
   'guide-offline-method': ['donation_guge.css', 'event.css', 'main.css', 'research-box.css'],
   'guide-caution': ['donation_guge.css', 'event.css', 'main.css', 'research-box.css'],
-  'list-select': ['donation_guge.css', 'event.css', 'main.css', 'research-box.css'],
+  // 기금사업 소개 (AS-IS donation/list-select.html — donation_liemt/selmt·goods_card·joind-agf)
+  'list-select': ['donation_liemt.css', 'donation_selmt.css', 'goods_card.css', 'joind-agf.css', 'event.css', 'main.css', 'research-box.css'],
   policy: ['donation_guge.css'],
 
   // 영수증/확인증 인쇄(meta.bare) — 사이트 크롬 없이 인쇄 콘텐츠 전용 스타일만

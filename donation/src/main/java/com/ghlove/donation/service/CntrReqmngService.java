@@ -2,6 +2,7 @@ package com.ghlove.donation.service;
 
 import com.ghlove.donation.domain.CntrReqmng;
 import com.ghlove.donation.domain.Donation;
+import com.ghlove.donation.event.DonationEventPublisher;
 import com.ghlove.donation.repository.CntrReqmngRepository;
 import com.ghlove.donation.repository.DonationRepository;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +10,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestClientException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,8 +18,10 @@ import java.util.List;
 /**
  * 기부금 변경신청 관리 (AS-IS opmanager/give/give-reqmng, GiveStateManagerController의
  * reqmng-list/req_form/reqReg/approveReq/cancelReq). 실제 도메인효과(기부취소=
- * DonationService.cancelDonation, 포인트생성=PointClient.creditForDonation)는 이미 있는
- * 기능을 그대로 재사용한다 - 승인 시점에만 트리거되는 새 워크플로 계층일 뿐이다.
+ * DonationService.cancelDonation, 포인트생성=donation.lifecycle COMPLETED 이벤트 재발행)는
+ * 이미 있는 기능을 그대로 재사용한다 - 승인 시점에만 트리거되는 새 워크플로 계층일 뿐이다.
+ * 포인트생성은 point 서비스로 동기 REST 쓰기를 하지 않고 정상 완료 경로와 똑같이
+ * 이벤트를 발행한다(SFR-003 "동기 호출 금지", SFR-004 ★ 이벤트 기반 적립).
  *
  * AS-IS 원본 Java는 신청(reqReg)에서 등록과 승인을 같은 요청 안에서 연달아 처리하지만,
  * 화면(list.jsp/list_locgov.jsp)은 REQ_STATUS_CODE=100(요청/대기) 상태에 대해 별도의
@@ -41,6 +43,7 @@ public class CntrReqmngService {
     private final DonationService donationService;
     private final PointClient pointClient;
     private final MemberClient memberClient;
+    private final DonationEventPublisher donationEventPublisher;
 
     public List<CntrReqmng> listAll() {
         return cntrReqmngRepository.findAllByOrderByFrstRegistPnttmDesc();
@@ -139,12 +142,12 @@ public class CntrReqmngService {
             donationService.cancelDonation(reqmng.getCntrSn());
         } else if (TYPE_POINT_CREATE.equals(reqmng.getCntrReqmngCode())) {
             Donation donation = donationOf(reqmng.getCntrSn());
-            try {
-                pointClient.creditForDonation(donation.getCntrSn(), donation.getUserId(),
-                        donation.getCntrLocgovCode(), donation.getCntrAmt(), donation.getCntrDe());
-            } catch (RestClientException e) {
-                throw new DonationException("포인트 생성 처리 중 오류가 발생했습니다.");
-            }
+            // 포인트 적립은 point로 직접 동기 호출하지 않고, 정상 완료 경로와 동일하게
+            // donation.lifecycle COMPLETED 이벤트를 재발행한다. 소비자가 전부 멱등이라
+            // (point: cntrSn+EARN 가드, admin 통계: cntrSn PK upsert) 재발행해도 중복
+            // 적립·중복 집계가 없다. 동기 호출과 달리 승인은 즉시 성공하고 적립은 결과적
+            // 정합성으로 수렴한다 - mainline completeDonation()과 동일한 성격이다.
+            donationEventPublisher.publishCompleted(donation);
         }
 
         reqmng.setReqStatusCode(STATUS_APPROVED);

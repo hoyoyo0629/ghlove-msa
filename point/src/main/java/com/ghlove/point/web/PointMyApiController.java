@@ -51,9 +51,25 @@ public class PointMyApiController {
                                     long earned, long used, long remaining) {
     }
 
+    /** AS-IS getGivePointList와 같은 (기부연도+지자체) 단위 요약. 기부금액(cntrAmt) 포함. */
+    public record YearLocgovSummaryDto(String year, String locgovCode, String upperLocgovNm, String locgovNm,
+                                        long cntrAmt, long earned, long used, long remaining) {
+    }
+
     public record MyPointResponse(String userName, long balance, long reservedAmount, long availableBalance,
                                    long totalEarned, long totalUsed, List<LedgerRowDto> ledger,
-                                   List<ExpiringLotDto> upcomingExpirations, List<LocgovSummaryDto> locgovSummary) {
+                                   List<ExpiringLotDto> upcomingExpirations, List<LocgovSummaryDto> locgovSummary,
+                                   List<YearLocgovSummaryDto> yearLocgovSummary, List<String> years) {
+    }
+
+    /** 기부포인트 현황 상세 한 행. type=EARN(적립/기부 행): cntrAmt/earned 채움, used/orderCode null.
+     *  type=USE(사용/구매 행): used/orderCode 채움, cntrAmt/earned null. remaining은 그 시점 러닝잔액. */
+    public record PointDetailRowDto(String type, String cntrSn, String cntrDe, Long cntrAmt, Long earned,
+                                     Long used, long remaining, String orderCode) {
+    }
+
+    public record PointDetailResponse(String upperLocgovNm, String locgovNm, long earnedTotal, long usedTotal,
+                                       long remainingTotal, List<PointDetailRowDto> rows) {
     }
 
     @GetMapping("/api/my/points")
@@ -76,6 +92,16 @@ public class PointMyApiController {
                 })
                 .toList();
 
+        // AS-IS 기부포인트 조회 목록 - (기부연도, 지자체) 단위. 목록 화면은 이걸로 그린다.
+        List<YearLocgovSummaryDto> yearLocgovSummary = pointService.ledgerSummaryByYearAndLocgov(userId, null, null).stream()
+                .map(s -> {
+                    LocgovClient.LocgovInfo l = locgovsByCode.get(s.locgovCode());
+                    return new YearLocgovSummaryDto(s.year(), s.locgovCode(),
+                            l != null ? l.upperLocgovNm() : null, l != null ? l.locgovNm() : s.locgovCode(),
+                            s.cntrAmt(), s.earned(), s.used(), s.remaining());
+                })
+                .toList();
+
         return ResponseEntity.ok(new MyPointResponse(
                 member != null ? member.userName() : null,
                 pointService.balanceOf(userId), pointService.reservedAmountOf(userId),
@@ -85,7 +111,27 @@ public class PointMyApiController {
                 pointService.upcomingExpirations(userId).stream()
                         .map(l -> new ExpiringLotDto(l.getRemainingAmount(), l.getExpirationDate(), l.getLocgovCode()))
                         .toList(),
-                locgovSummary));
+                locgovSummary, yearLocgovSummary, pointService.ledgerYearsOf(userId)));
+    }
+
+    /** AS-IS mypage/cntrPointDetail.html - 한 지자체(+연도)의 기부건별 포인트 현황 상세. */
+    @GetMapping("/api/my/points/detail")
+    public ResponseEntity<PointDetailResponse> myPointDetail(HttpServletRequest request,
+            @org.springframework.web.bind.annotation.RequestParam String locgovCode) {
+        var authUserId = jwtVerifier.currentUserId(request);
+        if (authUserId.isEmpty()) {
+            return ResponseEntity.status(401).build();
+        }
+        var detail = pointService.pointDetail(authUserId.get(), locgovCode);
+        LocgovClient.LocgovInfo l = locgovClient.allLocgovs().stream()
+                .filter(x -> x.locgovCode().equals(locgovCode)).findFirst().orElse(null);
+        List<PointDetailRowDto> rows = detail.rows().stream()
+                .map(r -> new PointDetailRowDto(r.type(), r.cntrSn(), r.cntrDe(), r.cntrAmt(), r.earned(),
+                        r.used(), r.remaining(), r.orderCode()))
+                .toList();
+        return ResponseEntity.ok(new PointDetailResponse(
+                l != null ? l.upperLocgovNm() : null, l != null ? l.locgovNm() : locgovCode,
+                detail.earnedTotal(), detail.usedTotal(), detail.remainingTotal(), rows));
     }
 
     public record ReservationDto(Long reservationId, String locgovCode, String locgovNm, long amount,

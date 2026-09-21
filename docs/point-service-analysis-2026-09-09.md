@@ -192,3 +192,43 @@ AS-IS는 애초에 이 문제가 생길 수 없는 구조다.
 
 ### 남은 판단거리 (미조치)
 admin **"일별 포인트 현황"**(`point-history/daily.html`)은 `EARN_TYPES={EARN, RESTORE}` / `USE_TYPES={USE, REVERSE}`로 집계한다. 취소 복원이 그날의 "발생포인트"로, 기부취소 회수가 "사용포인트"로 잡힌다는 뜻이다. **일별 증감 리포트로 읽으면 맞고, "그날 발행된 포인트"로 읽으면 부풀려진 값**이다. 마이페이지와 달리 누적 잔액이 아니라 일자별 움직임을 보는 화면이라 성격이 달라 손대지 않았다 — admin 분석 때 어느 의미로 쓸지 정해야 한다.
+
+---
+
+## 10. 기부포인트 조회+상세 AS-IS 재현 (2026-09-21) → 조치 완료
+
+§3-4(상세화면 누락)·§3-5(연도 차원 없음)·§3-6(기부금액 미표시)를 한 묶음으로 구현했다. AS-IS `mypage/cntrPoint.html`(목록)+`cntrPointDetail.html`(상세) 재현.
+
+### 목록 (MyPointsView) — §3-5, §3-6
+- `/api/my/points`에 **(기부연도+지자체) 그룹 요약**(`yearLocgovSummary`, 기부금액 포함)과 `years`를 추가. 목록을 지자체-only(`ledgerSummaryByLocgov`)에서 (연도,지자체)(`ledgerSummaryByYearAndLocgov`)로 전환 — AS-IS `getGivePointList`와 같은 단위(연도 DESC). 백엔드 메서드는 이미 있었고 API 노출·SPA 배선만 했다.
+- 사용포인트 칸에 **상세 진입 아이콘**(AS-IS `short_icon`) 추가 → 상세화면으로.
+- AS-IS처럼 연도 컬럼은 화면에 표시하지 않는다(행만 연도별로 분리).
+
+### 상세 (MyPointDetailView, 신규) — §3-4
+- 라우트 `/mypage/points/detail?locgovCode=`(연도 없음), 신규 API `/api/my/points/detail`.
+- **거래 원장 구조**(AS-IS `getCntrPointDetail`의 UNION ALL 재현): 적립(기부) 행과 사용(구매) 행을 **각각** 시간순(DESC)으로 나열하고, 각 행에 **그 시점까지의 러닝 잔액**(누적적립−누적사용)을 매긴다.
+  - **적립 행** = EARN 원장: 발생일자·기부액(CNTR_AMT)·적립 채움, 사용·주문번호 빈칸. 취소(REVERSE)된 기부 제외.
+  - **사용 행** = USE 원장 + 소멸(EXPIRE): 발생일자·사용·**답례품 주문번호(REF_KEY)** 채움, 기부액·적립 빈칸. 취소(RESTORE)된 주문의 USE 제외.
+- **소스는 실제 원장 `PT_POINT_LEDGER`**다. 목록(`ledgerSummary`)과 같은 원장을 itemize하므로 목록의 적립·사용·잔여 합계와 **정확히 일치**한다. 답례품 주문번호는 USE 원장행의 REF_KEY(주문차감=orderId)에 이미 들어 있다.
+- 상단 적립/사용/잔여 총합 카드. 연도 필터 없이 지자체 단위(AS-IS 상세 링크도 locgovCode만).
+
+- **정정 이력(2026-09-21)**:
+  1. 최초 "기부건별 1행 집계"로 잘못 구현 → 사용자 지적으로 AS-IS 매퍼 재분석 후 거래원장 구조로 재작성.
+  2. 그 재작성이 사용행을 신규 `g_cntr_use_point`에서만 읽어 **과거 사용분이 안 보이는 버그** + 과거 EARN의 기부액 NULL 문제 발생(사용자 재지적). **상세를 원장 직접 읽기로 다시 수정**(위)하고, 과거 EARN의 `cntr_amt`는 `donation.g_cntr`에서 백필(superuser cross-schema UPDATE 16행, e2e-* 시드행은 실제 기부건 없어 NULL 유지). 이로써 목록↔상세 합계 일치·과거분 표시 확인(user 1000/강남구: 적립665,000·사용326,500·잔여338,500).
+  3. 결과적으로 **`g_cntr_use_point` 추적 인프라는 상세화면에 불필요**해졌다(USE 원장 refKey에 주문번호가 이미 있음). 쓰기 자체는 남아 있으나 보조 기록이다. [[point-use-tracking-g-cntr-use-point]]
+
+### 마이페이지 기부 서브메뉴바(lnb-bar_3dep) — 신규
+AS-IS `mypage-lnb`의 3뎁스 서브메뉴가 TO-BE에 없어서 신설. 공통 컴포넌트 `MypageDonationNav.vue`(기부내역현황=`/mypage/donations`, 기부포인트현황=`/mypage/points`, 기부확인증=`/mypage/receipts`, 기부혜택증(지자체별)=`/mypage/honor-certificates`, 활성 클래스 `currentP`)를 만들어 5개 화면(MyDonations/MyPoints/MyPointDetail/ReceiptList/HonorCertificates)에 얹었다. `.lnb-bar_3dep` CSS는 이미 default_ali.css에 있었다.
+
+### 답례품 주문번호 링크 추적 (신규 인프라)
+AS-IS는 `G_CNTR_USE_POINT`에 "어느 기부건 포인트를 어느 주문이 썼는지"를 남겨 상세의 주문번호를 채운다. MSA 활성 모델(`pt_point_ledger`)은 이 링크를 추적하지 않아 **사용자 결정으로 추적 인프라를 신설**했다.
+- `consumeLots`가 FIFO로 소진하는 **적립 lot마다**(EARN 원장행, REF_KEY=기부건번호) `g_cntr_use_point`에 (cntr_sn, order_code, 사용액, 지자체) 한 행씩 기록. 3개 소진 경로(주문차감 `deductForOrder`, 수동사용 `usePoints`, 예약확정 `confirmReservation`) 전부에 orderCode를 전달.
+- 주문취소 복원 `restoreForOrder`가 `deleteByOrderCode`로 그 주문의 사용이력을 삭제(AS-IS `deleteGiveUsePoint`) — 취소분은 상세의 기부건별 사용에서 사라진다.
+- 신규: `GCntrUsePoint` 엔티티(USE_SN 시퀀스 발번, PK는 DB상 (CNTR_SN,USE_SN) 복합), `GCntrUsePointRepository`, `SEQ_G_CNTR_USE_POINT` 시퀀스(DDL 기록).
+- **한계**: 소멸(EXPIRE)은 `g_cntr_use_point`에 안 남으므로 상세의 기부건별 '사용'은 소멸분을 포함하지 않는다(AS-IS도 동일 — 소멸은 G_CNTR_USE_POINT에 없다). 요약카드의 '사용'(원장 usedOf, 소멸 포함)과는 소멸 발생 시에만 차이가 나며, 정상/취소 경로에서는 일치한다.
+
+### E2E 실측 (2026-09-21, user 1063 / 11230 강남구)
+- 상세 baseline: 적립30000/사용0/잔여30000, 취소된 기부(D…4070)는 제외 확인.
+- 5000P 사용(orderCode=TESTORDER-PD-1) → `g_cntr_use_point` 1행 기록, 상세 사용5000/잔여25000 + 주문번호 노출.
+- `order.saga` ORDER_CANCELLED 발행 → `restoreForOrder` → `g_cntr_use_point` 삭제(0), 잔액 122000 복원, 상세 사용0 복귀.
+- 검증 후 잔재 물리 정리(원본 lot 30000·잔액 122000 원상복구).

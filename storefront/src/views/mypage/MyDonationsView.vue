@@ -1,9 +1,11 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
 import { formatN } from '../../utils/format'
 import { isMobile } from '../../utils/device'
+import MypageLnb from '../../components/MypageLnb.vue'
 
 const router = useRouter()
 
@@ -81,7 +83,7 @@ async function cancel(cntrSn) {
 // 수 있다(OfficialReceiptPrintView, AS-IS self.close()).
 function openOfficialReceipt(cntrSn) {
   if (isMobile()) {
-    window.alert('영수증 출력은 PC에서 확인 부탁드립니다.')
+    modalAlert('영수증 출력은 PC에서 확인 부탁드립니다.')
     return
   }
   window.open(`/print/official-receipt/${encodeURIComponent(cntrSn)}`, 'receipt', 'toolbar=no,location=no')
@@ -89,6 +91,7 @@ function openOfficialReceipt(cntrSn) {
 </script>
 
 <template>
+  <MypageLnb current="donations" />
   <section>
     <div class="page-title-box">
       <span class="ali_breadcrumb">

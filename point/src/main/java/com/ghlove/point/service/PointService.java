@@ -1,6 +1,7 @@
 package com.ghlove.point.service;
 
 import com.ghlove.point.domain.CommonCodeId;
+import com.ghlove.point.domain.GCntrUsePoint;
 import com.ghlove.point.domain.PointBalance;
 import com.ghlove.point.domain.PointLedger;
 import com.ghlove.point.domain.PointReservation;
@@ -56,6 +57,7 @@ public class PointService {
     private final PointReservationRepository pointReservationRepository;
     private final PointLedgerPublisher pointLedgerPublisher;
     private final com.ghlove.point.event.PointReservationPublisher pointReservationPublisher;
+    private final com.ghlove.point.repository.GCntrUsePointRepository gCntrUsePointRepository;
 
     public Map<String, String> codesOf(String codeType) {
         return commonCodeRepository.findByCodeTypeAndLanguageAndUseYnOrderByOrdering(codeType, "ko", "Y").stream()
@@ -198,6 +200,91 @@ public class PointService {
                 .sorted(java.util.Comparator.comparing(PointLedger::getCreatedDate,
                         java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
                 .toList();
+    }
+
+    /** 상세 한 행 - 적립(EARN) 행이면 cntrAmt/earned 채우고 used/orderCode는 null,
+     *  사용(USE) 행이면 used/orderCode 채우고 cntrAmt/earned는 null. remaining은 그 시점 러닝잔액. */
+    public record PointDetailRow(String type, String cntrSn, String cntrDe, Long cntrAmt, Long earned,
+                                  Long used, long remaining, String orderCode) {
+    }
+
+    public record PointDetailResult(long earnedTotal, long usedTotal, long remainingTotal,
+                                     List<PointDetailRow> rows) {
+    }
+
+    private static final DateTimeFormatter DOT_DATE = DateTimeFormatter.ofPattern("yyyy.MM.dd");
+
+    /**
+     * 마이페이지 "기부포인트 현황 상세"(AS-IS cntrPointDetail.html) - 한 지자체의 포인트
+     * <b>거래 원장</b>. AS-IS getCntrPointDetail의 UNION ALL을 그대로 재현하되, 소스는
+     * <b>실제 원장 PT_POINT_LEDGER</b>이다(과거 데이터까지 전부 나오게):
+     * <ul>
+     *   <li><b>적립(기부) 행</b> = EARN: 발생일자·기부액(CNTR_AMT)·적립 표시, 사용·주문번호 빈칸.
+     *       취소된 기부(REVERSE 달린 것)는 제외 - AS-IS는 완료(200)만 센다.</li>
+     *   <li><b>사용(구매) 행</b> = USE + 소멸(EXPIRE): 발생일자·사용·<b>답례품 주문번호(REF_KEY)</b> 표시,
+     *       기부액·적립 빈칸. 취소된 주문(RESTORE 달린 USE)은 제외 - AS-IS는 취소 사용이력을 지운다.</li>
+     * </ul>
+     * 두 종류를 시간순(CREATED_DATE)으로 합쳐 각 행마다 <b>그 시점까지의 러닝 잔액</b>
+     * (누적적립 − 누적사용)을 매기고, 화면에는 최신순(DESC)으로 보여준다. 연도 필터 없이
+     * 지자체 단위로만 본다(AS-IS와 동일 - 목록의 상세 링크도 locgovCode만 넘긴다).
+     *
+     * <p>이렇게 목록(ledgerSummary)과 같은 원장을 itemize하므로 목록의 적립·사용·잔여 합계와
+     * 정확히 일치한다. 답례품 주문번호는 USE 행의 REF_KEY(주문차감=orderId)에 이미 들어 있다.
+     */
+    public PointDetailResult pointDetail(Long userId, String locgovCode) {
+        List<PointLedger> ledger = ledgerOf(userId).stream()
+                .filter(l -> locgovCode == null || locgovCode.isBlank() || locgovCode.equals(l.getLocgovCode()))
+                .toList();
+        // 취소된 기부(REVERSE)·취소된 주문(RESTORE)의 원본 행을 지운 것과 같게 하려고 refKey로 제외한다.
+        java.util.Set<String> reversedEarn = ledger.stream().filter(l -> TXN_REVERSE.equals(l.getTxnType()))
+                .map(PointLedger::getRefKey).filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+        java.util.Set<String> restoredUse = ledger.stream().filter(l -> TXN_RESTORE.equals(l.getTxnType()))
+                .map(PointLedger::getRefKey).filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+
+        // (타임스탬프, 상세행) 쌍을 모아 시간 오름차순으로 러닝 잔액을 계산한다.
+        List<java.util.Map.Entry<LocalDateTime, PointDetailRow>> events = new java.util.ArrayList<>();
+        for (PointLedger l : ledger) {
+            LocalDateTime ts = l.getCreatedDate() != null ? l.getCreatedDate() : LocalDateTime.MIN;
+            String de = l.getCreatedDate() != null ? DOT_DATE.format(l.getCreatedDate().toLocalDate()) : null;
+            if (TXN_EARN.equals(l.getTxnType())) {
+                if (l.getRefKey() != null && reversedEarn.contains(l.getRefKey())) {
+                    continue; // 취소된 기부
+                }
+                Long cntrAmt = l.getCntrAmt() != null ? l.getCntrAmt().longValue() : null;
+                events.add(java.util.Map.entry(ts,
+                        new PointDetailRow("EARN", l.getRefKey(), de, cntrAmt, l.getPointAmount(), null, 0, null)));
+            } else if (TXN_USE.equals(l.getTxnType())) {
+                if (l.getRefKey() != null && restoredUse.contains(l.getRefKey())) {
+                    continue; // 취소된 주문의 사용
+                }
+                long used = l.getPointAmount() != null ? -l.getPointAmount() : 0;
+                events.add(java.util.Map.entry(ts,
+                        new PointDetailRow("USE", l.getRefKey(), de, null, null, used, 0, l.getRefKey())));
+            } else if (TXN_EXPIRE.equals(l.getTxnType())) {
+                long used = l.getPointAmount() != null ? -l.getPointAmount() : 0;
+                events.add(java.util.Map.entry(ts,
+                        new PointDetailRow("EXPIRE", l.getRefKey(), de, null, null, used, 0, null)));
+            }
+            // REVERSE/RESTORE 자체는 행으로 표시하지 않는다(취소분은 사라진다).
+        }
+
+        events.sort(java.util.Comparator.comparing(java.util.Map.Entry::getKey));
+
+        long runEarned = 0, runUsed = 0;
+        List<PointDetailRow> asc = new java.util.ArrayList<>();
+        for (var e : events) {
+            PointDetailRow r = e.getValue();
+            if (r.earned() != null) {
+                runEarned += r.earned();
+            }
+            if (r.used() != null) {
+                runUsed += r.used();
+            }
+            asc.add(new PointDetailRow(r.type(), r.cntrSn(), r.cntrDe(), r.cntrAmt(), r.earned(),
+                    r.used(), runEarned - runUsed, r.orderCode()));
+        }
+        java.util.Collections.reverse(asc); // 화면은 최신순
+        return new PointDetailResult(runEarned, runUsed, runEarned - runUsed, asc);
     }
 
     /** 회원이 실제로 갖고 있는 기부연도 목록 (검색 셀렉트박스용, 내림차순). */
@@ -366,7 +453,7 @@ public class PointService {
         pointLedgerRepository.save(ledger);
         pointLedgerPublisher.publish(ledger);
 
-        consumeLots(userId, pointAmount, locgovCode);
+        consumeLots(userId, pointAmount, locgovCode, orderId);
         adjustBalance(userId, -pointAmount);
         return true;
     }
@@ -399,6 +486,10 @@ public class PointService {
         pointLedgerPublisher.publish(ledger);
 
         adjustBalance(original.getUserId(), restoreAmount);
+
+        // AS-IS deleteGiveUsePoint - 취소된 주문의 사용이력을 지운다. 그래야 기부포인트 현황
+        // 상세의 기부건별 '사용'이 취소분만큼 줄고 '잔여'가 원상 복구된다(취소분은 사라진다).
+        gCntrUsePointRepository.deleteByOrderCode(orderId);
     }
 
     /**
@@ -437,7 +528,7 @@ public class PointService {
         pointLedgerRepository.save(ledger);
         pointLedgerPublisher.publish(ledger);
 
-        consumeLots(userId, amount, locgovCode);
+        consumeLots(userId, amount, locgovCode, orderCode);
         adjustBalance(userId, -amount);
     }
 
@@ -545,12 +636,13 @@ public class PointService {
         ledger.setTxnType(TXN_USE);
         ledger.setPointAmount(-reservation.getAmount());
         ledger.setReason("포인트 예약 확정" + (reservation.getReason() != null ? " (" + reservation.getReason() + ")" : ""));
-        ledger.setRefKey(reservation.getRefKey() != null ? reservation.getRefKey() : "RESV-" + reservation.getReservationId());
+        String refKey = reservation.getRefKey() != null ? reservation.getRefKey() : "RESV-" + reservation.getReservationId();
+        ledger.setRefKey(refKey);
         ledger.setCreatedDate(LocalDateTime.now());
         pointLedgerRepository.save(ledger);
         pointLedgerPublisher.publish(ledger);
 
-        consumeLots(reservation.getUserId(), reservation.getAmount(), locgovCode);
+        consumeLots(reservation.getUserId(), reservation.getAmount(), locgovCode, refKey);
         adjustBalance(reservation.getUserId(), -reservation.getAmount());
 
         reservation.setStatus(RESV_CONFIRMED);
@@ -767,12 +859,17 @@ public class PointService {
     }
 
     /** 차감액을 만료 임박한 lot부터 순서대로 소비한다 (FIFO). locgovCode가 있으면 그
-     * 지자체로 적립된 lot만 대상으로 한다 - 다른 지자체 기부 포인트로는 소비되지 않는다. */
-    private void consumeLots(Long userId, long debitAmount, String locgovCode) {
+     * 지자체로 적립된 lot만 대상으로 한다 - 다른 지자체 기부 포인트로는 소비되지 않는다.
+     *
+     * <p>소비된 lot(=EARN 원장행, REF_KEY=기부건번호)마다 G_CNTR_USE_POINT에 한 행씩 남겨
+     * "어느 기부건 포인트를 이 주문이 얼마 썼는지"를 추적한다 - 마이페이지 기부포인트 현황
+     * 상세의 답례품 주문번호가 여기서 나온다. orderCode(참조)를 함께 기록한다. */
+    private void consumeLots(Long userId, long debitAmount, String locgovCode, String orderCode) {
         long remaining = debitAmount;
         List<PointLedger> lots = pointLedgerRepository
                 .findByUserIdAndRemainingAmountGreaterThanOrderByExpirationDateAsc(userId, 0L);
 
+        String today = DATE_FORMAT.format(LocalDate.now());
         for (PointLedger lot : lots) {
             if (remaining <= 0) {
                 break;
@@ -784,9 +881,32 @@ public class PointService {
             lot.setRemainingAmount(lot.getRemainingAmount() - consumed);
             pointLedgerRepository.save(lot);
             remaining -= consumed;
+
+            recordUsePoint(userId, lot, consumed, locgovCode, orderCode, today);
         }
         // 잔여 lot보다 차감액이 큰 경우(과거 미추적 lot 등) 남은 만큼은 조용히 무시한다 -
         // 잔액(PT_POINT_BALANCE) 자체는 항상 정확하게 별도로 갱신되므로 사용자 잔액에는 영향 없음.
+    }
+
+    /** 소비된 한 lot에 대한 사용이력 1행. lot의 REF_KEY(기부건번호)를 CNTR_SN으로 남긴다.
+     *  주문취소 복원 시 orderCode로 삭제되므로, 참조 없는(orderCode=null) 사용은 삭제 대상이
+     *  될 수 없어 건너뛴다(수동 테스트 사용 등). */
+    private void recordUsePoint(Long userId, PointLedger lot, long consumed, String locgovCode,
+                                 String orderCode, String today) {
+        if (orderCode == null || orderCode.isBlank()) {
+            return;
+        }
+        GCntrUsePoint use = new GCntrUsePoint();
+        use.setCntrSn(lot.getRefKey());
+        use.setPointUseDe(today);
+        use.setCntrUsePoint(consumed);
+        use.setUserId(userId);
+        use.setPsitnLocgovCode("");
+        use.setCntrLocgovCode(locgovCode != null ? locgovCode : lot.getLocgovCode());
+        use.setUseSeCode("1");
+        use.setOrderCode(orderCode);
+        use.setFrstRegistPnttm(LocalDateTime.now());
+        gCntrUsePointRepository.save(use);
     }
 
     private void adjustBalance(Long userId, long delta) {

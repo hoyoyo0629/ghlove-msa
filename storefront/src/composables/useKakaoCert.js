@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { modalAlert } from './useModal'
 import { api } from '../api/http'
 
 /**
@@ -70,7 +71,7 @@ export function useKakaoCert() {
       busy.value = false
       // AS-IS isKakaoInit() 실패 시 문구와 동일하게 안내한다.
       errorMessage.value = '카카오 기능 불러오기에 실패했습니다.\n새로고침 후 다시 진행해주세요.\n지속 문제 발생시 고객센터로 문의바랍니다.'
-      alert(errorMessage.value)
+      modalAlert(errorMessage.value)
     }
   }
 
@@ -88,13 +89,13 @@ export function useKakaoCert() {
       const data = await api.post('member', '/api/external-auth/kakao/verify', { code: String(code), type })
       if (data.status !== 'OK') {
         errorMessage.value = data.errMsg || '카카오톡 인증 로그인에 실패했습니다.'
-        alert(errorMessage.value)
+        modalAlert(errorMessage.value)
         return null
       }
       return data
     } catch (e) {
       errorMessage.value = e.message
-      alert(errorMessage.value)
+      modalAlert(errorMessage.value)
       return null
     } finally {
       busy.value = false

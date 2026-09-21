@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
@@ -72,7 +73,7 @@ function insufficient(g) {
 async function changeQuantity(line) {
   const qty = Number(qtyEdits[line.cartItemId])
   if (!qty || qty < 1) {
-    alert('수량을 확인해 주세요.')
+    modalAlert('수량을 확인해 주세요.')
     return
   }
   try {
@@ -86,24 +87,24 @@ async function changeQuantity(line) {
 async function deleteSelected() {
   const ids = [...selected]
   if (ids.length === 0) {
-    alert('삭제할 답례품을 선택해 주세요.')
+    modalAlert('삭제할 답례품을 선택해 주세요.')
     return
   }
   await api.post('order', '/api/cart/items/delete', { cartItemId: ids })
   // AS-IS cart/index.html:552
-  alert('해당 답례품이 장바구니에서 삭제되었습니다.')
+  modalAlert('해당 답례품이 장바구니에서 삭제되었습니다.')
   await load()
 }
 
 function goCheckout() {
   const ids = [...selected]
   if (ids.length === 0) {
-    alert('답례품을 선택해 주세요.')
+    modalAlert('답례품을 선택해 주세요.')
     return
   }
   for (const g of groups.value) {
     if (g.lines.some((l) => selected.has(l.cartItemId)) && insufficient(g)) {
-      alert(g.locgovNm + '의 포인트가 부족합니다.')
+      modalAlert(g.locgovNm + '의 포인트가 부족합니다.')
       return
     }
   }

@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
@@ -113,18 +114,18 @@ async function toggleMfa() {
 
 async function addInterestLocgov() {
   if (!addLocgovCode.value) {
-    alert('관심 지자체를 선택해 주세요.')
+    modalAlert('관심 지자체를 선택해 주세요.')
     return
   }
   if (interestLocgovs.value.some((l) => l.locgovCode === addLocgovCode.value)) {
-    alert('이미 추가된 지자체입니다.')
+    modalAlert('이미 추가된 지자체입니다.')
     return
   }
   try {
     const added = await api.postUrlEncoded('donation', '/interest-locgovs', { locgovCode: addLocgovCode.value })
     interestLocgovs.value.push(added)
   } catch (e) {
-    alert(e.message || '추가에 실패했습니다.')
+    modalAlert(e.message || '추가에 실패했습니다.')
   }
 }
 
@@ -133,7 +134,7 @@ async function removeInterestLocgov(locgovCode) {
     await api.post('donation', `/interest-locgovs/${locgovCode}/delete`)
     interestLocgovs.value = interestLocgovs.value.filter((l) => l.locgovCode !== locgovCode)
   } catch {
-    alert('삭제에 실패했습니다.')
+    modalAlert('삭제에 실패했습니다.')
   }
 }
 </script>

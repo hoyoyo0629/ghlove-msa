@@ -10,8 +10,8 @@ export const router = createRouter({
   routes: [
     { path: '/', name: 'home', component: HomeView },
     { path: '/gifts', name: 'gift-list', component: () => import('../views/gift/GiftListView.vue') },
-    { path: '/gifts/seasonal', name: 'gift-seasonal', component: () => import('../views/gift/GiftListView.vue') },
-    { path: '/gifts/community-business', name: 'gift-community-business', component: () => import('../views/gift/GiftListView.vue') },
+    { path: '/gifts/seasonal', name: 'gift-seasonal', component: () => import('../views/gift/SeasonalView.vue') },
+    { path: '/gifts/community-business', name: 'gift-community-business', component: () => import('../views/gift/CommunityView.vue') },
     { path: '/gifts/:itemId', name: 'gift-detail', component: () => import('../views/gift/GiftDetailView.vue'), props: true },
     { path: '/donate', name: 'donate', component: () => import('../views/donation/DonateView.vue'), meta: { requiresAuth: true } },
     { path: '/donate/gift-select', name: 'donate-gift-select', component: () => import('../views/donation/DonateGiftSelectView.vue'), meta: { requiresAuth: true } },
@@ -48,6 +48,7 @@ export const router = createRouter({
     { path: '/mypage/gift-reviews', name: 'mypage-gift-reviews', component: () => import('../views/mypage/GiftReviewsView.vue'), meta: { requiresAuth: true } },
     { path: '/mypage/gift-qna', name: 'mypage-gift-qna', component: () => import('../views/mypage/GiftQnaView.vue'), meta: { requiresAuth: true } },
     { path: '/mypage/points', name: 'mypage-points', component: () => import('../views/mypage/MyPointsView.vue'), meta: { requiresAuth: true } },
+    { path: '/mypage/points/detail', name: 'mypage-point-detail', component: () => import('../views/mypage/MyPointDetailView.vue'), meta: { requiresAuth: true } },
     { path: '/mypage/points/reservations', name: 'mypage-points-reservations', component: () => import('../views/mypage/PointReservationsView.vue'), meta: { requiresAuth: true } },
     { path: '/mypage/qna', name: 'mypage-qna', component: () => import('../views/mypage/QnaView.vue'), meta: { requiresAuth: true } },
     { path: '/cart', name: 'cart', component: () => import('../views/order/CartView.vue'), meta: { requiresAuth: true } },

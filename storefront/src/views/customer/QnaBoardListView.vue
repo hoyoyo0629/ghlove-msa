@@ -1,4 +1,5 @@
 <script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
@@ -53,7 +54,7 @@ function goPage(p) {
   router.push({ path: '/qna/board', query: { ...route.query, page: String(p) } })
 }
 function lockedClick() {
-  alert('비밀글입니다.')
+  modalAlert('비밀글입니다.')
 }
 </script>
 

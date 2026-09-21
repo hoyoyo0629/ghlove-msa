@@ -17,8 +17,30 @@ public class GiftClient {
 
     private final RestClient restClient;
 
-    public GiftClient(@Value("${ghlove.gift-service.base-url}") String giftServiceBaseUrl) {
-        this.restClient = RestClient.create(giftServiceBaseUrl);
+    public GiftClient(@Value("${ghlove.gift-service.base-url}") String giftServiceBaseUrl,
+                      @Value("${ghlove.internal.admin-secret}") String adminSecret) {
+        // gift의 /api/admin/*(탈퇴 시 관심답례품 삭제)는 내부 전용이라 공유 시크릿을 실어야 통과한다.
+        // 나머지 조회(/api/my-summary)는 시크릿을 요구하지 않지만 함께 실어도 무방하다.
+        this.restClient = RestClient.builder()
+                .baseUrl(giftServiceBaseUrl)
+                .defaultHeader("X-Internal-Secret", adminSecret)
+                .build();
+    }
+
+    /**
+     * 탈퇴 시 관심답례품 전량 삭제 (AS-IS deleteSecedeGeneralCustomerIntrstRtnpsnt).
+     * 실패하면 member가 탈퇴를 중단해야 하므로(관심답례품이 orphan으로 남지 않도록)
+     * 예외를 삼키지 않는다.
+     */
+    public void deleteWishlistOnWithdrawal(Long userId) {
+        try {
+            restClient.post()
+                    .uri("/api/admin/wishlist/delete-on-withdrawal?userId={userId}", userId)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RestClientException e) {
+            throw new MemberException("관심답례품 삭제 처리에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+        }
     }
 
     public GiftSummaryInfo mySummary(Long userId) {

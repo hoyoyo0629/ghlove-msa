@@ -4,6 +4,7 @@ import com.ghlove.order.domain.Order;
 import com.ghlove.order.service.ClaimException;
 import com.ghlove.order.service.ClaimService;
 import com.ghlove.order.service.JwtVerifier;
+import com.ghlove.order.service.LocgovClient;
 import com.ghlove.order.service.OrderException;
 import com.ghlove.order.service.OrderService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,6 +26,7 @@ public class OrderMyApiController {
     private final OrderService orderService;
     private final ClaimService claimService;
     private final JwtVerifier jwtVerifier;
+    private final LocgovClient locgovClient;
 
     private Long requireUser(HttpServletRequest request) {
         return jwtVerifier.currentUserId(request).orElse(null);
@@ -64,7 +66,11 @@ public class OrderMyApiController {
                                   Long pointAmount, Long deliveryFee, String orderStatus, String orderStatusLabel,
                                   String cancelReason, String deliveryStatus, String deliveryStatusLabel,
                                   String carrierCode, String carrierLabel, String invoiceNo, String deliveryAddress,
-                                  String deliveryAddressDetail, List<CodeOption> claimTypes, List<CodeOption> carriers) {
+                                  String deliveryAddressDetail, List<CodeOption> claimTypes, List<CodeOption> carriers,
+                                  // AS-IS orderDetail.html 재현용 - 주문일자/지자체/배송지 정보/결제 포인트
+                                  java.time.LocalDateTime createdDate, String locgovCode, String locgovName,
+                                  String receiverName, String receiverPhone, String requestNote,
+                                  long orderPoint, long cancelPoint, long totalPoint) {
     }
 
     @GetMapping("/api/orders/{orderId}")
@@ -88,6 +94,14 @@ public class OrderMyApiController {
         List<CodeOption> claimTypes = toOptions(orderService.codesOf("CLAIM_TYPE"));
         List<CodeOption> carriers = toOptions(carrierLabels);
 
+        String locgovName = (order.getLocgovCode() == null || order.getLocgovCode().isBlank())
+                ? "지자체 미지정" : locgovClient.nameOf(order.getLocgovCode());
+        long orderPoint = order.getPointAmount() != null ? order.getPointAmount() : 0L;
+        long fee = order.getDeliveryFee() != null ? order.getDeliveryFee() : 0L;
+        boolean cancelled = "CANCELLED".equals(order.getOrderStatus());
+        long cancelPoint = cancelled ? orderPoint : 0L;
+        long totalPoint = cancelled ? 0L : orderPoint + fee;
+
         return ResponseEntity.ok(new OrderDetailDto(order.getOrderId(), order.getItemId(), order.getItemName(), order.getQuantity(),
                 order.getUnitPrice(), order.getPointAmount(), order.getDeliveryFee(), order.getOrderStatus(),
                 statusLabels.getOrDefault(order.getOrderStatus(), order.getOrderStatus()), order.getCancelReason(),
@@ -95,7 +109,10 @@ public class OrderMyApiController {
                 order.getDeliveryStatus() == null ? null : deliveryStatusLabels.getOrDefault(order.getDeliveryStatus(), order.getDeliveryStatus()),
                 order.getCarrierCode(),
                 order.getCarrierCode() == null ? null : carrierLabels.getOrDefault(order.getCarrierCode(), order.getCarrierCode()),
-                order.getInvoiceNo(), order.getDeliveryAddress(), order.getDeliveryAddressDetail(), claimTypes, carriers));
+                order.getInvoiceNo(), order.getDeliveryAddress(), order.getDeliveryAddressDetail(), claimTypes, carriers,
+                order.getCreatedDate(), order.getLocgovCode(), locgovName,
+                order.getReceiverName(), order.getReceiverPhone(), order.getRequestNote(),
+                orderPoint, cancelPoint, totalPoint));
     }
 
     private List<CodeOption> toOptions(Map<String, String> labels) {

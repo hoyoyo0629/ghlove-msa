@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -63,22 +62,10 @@ public class PointClient {
         }
     }
 
-    /** give-reqmng 승인(포인트생성) 처리 - point 서비스의 정상 적립 로직을 그대로 호출한다
-     *  (REF_KEY+EARN 멱등 체크 포함, 이미 적립된 건이면 point 쪽에서 credited=false로
-     *  알려준다). 실패 시 예외를 던져 승인 자체가 실패했음을 호출자에게 알린다. */
-    public boolean creditForDonation(String cntrSn, Long userId, String locgovCode, BigDecimal cntrAmt, String cntrDe) {
-        Map<String, Object> body = Map.of(
-                "cntrSn", cntrSn, "userId", userId, "locgovCode", locgovCode,
-                "cntrAmt", cntrAmt, "cntrDe", cntrDe);
-        Map<String, Object> result = restClient.post()
-                .uri("/api/admin/credit-for-donation")
-                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
-                .body(body)
-                .retrieve()
-                .body(new ParameterizedTypeReference<Map<String, Object>>() {
-                });
-        return result != null && Boolean.TRUE.equals(result.get("credited"));
-    }
+    // 포인트 적립(쓰기)은 이 클라이언트에서 동기 REST로 호출하지 않는다 - give-reqmng
+    // 승인의 "포인트생성"도 CntrReqmngService가 donation.lifecycle COMPLETED 이벤트를
+    // 재발행하는 방식으로 처리한다(SFR-003 "동기 호출 금지", SFR-004 ★ 이벤트 기반 적립).
+    // 이 클라이언트는 조회 전용으로만 남긴다.
 
     public record EarnLot(String cntrSn, Long earnedAmount, Long remainingAmount) {
     }
