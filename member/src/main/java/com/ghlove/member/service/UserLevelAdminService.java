@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * D11 회원등급 관리 (AS-IS UserLevelManagerController, docs/as-is-admin-gap-deep-audit-part2.md
+ * D11 회원등급 관리 (AS-IS UserLevelManagerController, docs/as-is-parity.md §8
  * D11 참고). GROUP_CODE 라이브 데이터가 전부 'default' 단일값이라 그룹 CRUD는 스코프아웃하고
  * 등급 CRUD만 구현한다(UserLevel.DEFAULT_GROUP_CODE로 고정).
  */

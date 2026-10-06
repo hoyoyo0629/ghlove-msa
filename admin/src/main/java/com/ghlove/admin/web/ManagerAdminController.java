@@ -15,7 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /** D2 매니저(admin 로그인계정) CRUD (AS-IS opmanager/user/manager - UserManagerController,
- *  docs/as-is-admin-gap-deep-audit-part2.md 배치D 참고). */
+ *  docs/as-is-parity.md §8 배치D 참고). */
 @Controller
 @RequestMapping("/admin/managers")
 @RequiredArgsConstructor

@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
 /**
  * 품목 = AS-IS ITEM_SEQUENCE. 한 출고({@link Shipment}) 안의 답례품 한 줄이며,
- * <b>부분취소/부분반품/교환의 단위(정본)</b>다(설계안 docs/order-multiitem-redesign-plan.md
+ * <b>부분취소/부분반품/교환의 단위(정본)</b>다(설계안 docs/design-decisions.md §5
  * §2-2). 옵션 스냅샷(optionName/optionPrice)이 여기로 귀속된다 - 단일품목 모델의
  * {@link Order#getOptionName()} 등이 재설계 시 이 엔티티로 이동한다.
  *

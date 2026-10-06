@@ -15,7 +15,7 @@ import java.util.Set;
 /**
  * D6/D9 관리자 사후관리 - 지자체담당자(ROLE_ADMIN_5/6, LocgovPersonInChargeManagerController)와
  * 운영담당자(ROLE_ADMIN_1~4, OperPersonInChargeManagerController)를 하나의 화면(탭)으로 통합
- * 구현한다(docs/as-is-admin-gap-deep-audit-part2.md D6/D9 권장사항). 이미 있는
+ * 구현한다(docs/as-is-parity.md §8 D6/D9 권장사항). 이미 있는
  * {@link ManagerAdminService}(범용 계정 CRUD, 등록 포함)와 별개로, 이 서비스는 AS-IS의
  * 특수 업무규칙(주담당자 인원제한, 중지상태 자동강등, 삭제 허용권한 제한)만 다룬다 - 신규
  * 계정 등록은 여전히 {@link ManagerRequestController}(승인요청 큐) 또는 ManagerAdminController를

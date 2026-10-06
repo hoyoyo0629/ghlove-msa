@@ -469,7 +469,7 @@ public class OrderService {
      * SAGA 주문확정 흐름 안에 있어 스위치 대신 코드 주석으로 막았다.
      *
      * <p>되살리려면 아래 본문 주석만 풀면 된다 - CouponService 쪽 발급 로직과 DB는
-     * 그대로 살아 있다. 상세 경위는 docs/cart-review-2026-09-09.md §4-5.
+     * 그대로 살아 있다. 상세 경위는 docs/archive/cart-review-2026-09-09.md §4-5.
      */
     private void issuePurchaseTriggeredCoupons(Order order) {
         // couponService.issueAfterItemPurchase(order.getUserId(), order.getItemId());

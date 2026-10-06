@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * D2 매니저(admin 로그인계정) 사후 조회/수정/삭제 (AS-IS opmanager/user/manager -
- * UserManagerController, docs/as-is-admin-gap-deep-audit-part2.md 배치D 참고). 이미 있는
+ * UserManagerController, docs/as-is-parity.md §8 배치D 참고). 이미 있는
  * ManagerRequestController(승인요청 큐)는 신규 계정 발급 절차이고, 이 화면은 이미 발급된
  * OP_MANAGER 행을 관리자가 직접 검색/수정/삭제하고 임시비밀번호를 재발급하는 별개 기능이다.
  */

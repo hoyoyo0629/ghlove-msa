@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 /**
  * 출고 = AS-IS ORDER_SEQUENCE. 한 주문({@link Order}) 안의 <b>지자체(+판매자) 그룹</b>이며,
  * 포인트 차감이 지자체 단위라 <b>출고가 SAGA·정산의 기본 단위</b>다(설계안
- * docs/order-multiitem-redesign-plan.md §2·§3, 선택지 A). 하위에 여러 {@link OrderItem}(품목)을
+ * docs/design-decisions.md §5 §2·§3, 선택지 A). 하위에 여러 {@link OrderItem}(품목)을
  * 갖는다.
  *
  * <p>Phase 1(가산적 신설) 단계에서는 테이블만 만들어 두고 아직 어떤 경로도 이 엔티티에

@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * D11 회원등급 관리 (docs/as-is-admin-gap-deep-audit-part2.md 배치D D11) - member 서비스의
+ * D11 회원등급 관리 (docs/as-is-parity.md §8 배치D D11) - member 서비스의
  * /api/admin/user-levels를 호출한다(MemberAdminClient와 동일한 패턴). 아이콘 이미지는 admin
  * 콘솔에서 받은 MultipartFile을 그대로 member 서비스로 멀티파트 전달한다.
  */

@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * admin 콘솔 회원관리 API (docs/as-is-admin-gap-deep-audit-part2.md 배치D D2~D5) - admin
+ * admin 콘솔 회원관리 API (docs/as-is-parity.md §8 배치D D2~D5) - admin
  * 서비스의 MemberAdminClient가 호출하는 관리자 전용 엔드포인트. 브라우저에 직접 노출되지
  * 않고 admin 콘솔의 OP_MANAGER 로그인+메뉴RBAC이 실제 게이트다(offgive의 /api/users/walk-in과
  * 동일한 관행). 휴면전환/데이터파기 배치 트리거도 원래 member 자체 Thymeleaf 페이지로

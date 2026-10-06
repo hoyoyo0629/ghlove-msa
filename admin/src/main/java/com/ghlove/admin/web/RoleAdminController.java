@@ -141,7 +141,7 @@ public class RoleAdminController {
             return "role-admin/matrix";
         }
         var role = roleAdminService.get(authority);
-        model.addAttribute("list", roleAdminService.adminRoleRows());
+        model.addAttribute("list", roleAdminService.matrixRoleRows());
         model.addAttribute("matrix", roleAdminService.matrixFor(authority));
         model.addAttribute("role", role);
         model.addAttribute("authority", authority);

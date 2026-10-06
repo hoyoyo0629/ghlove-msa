@@ -165,7 +165,7 @@ public class Gift {
     @Column(name = "ADMIN_ORDERING")
     private Integer adminOrdering;
 
-    // ── 옵션 다형 체계 (AS-IS OP_ITEM 옵션/각인 컬럼, docs/gift-option-redesign-plan.md) ──
+    // ── 옵션 다형 체계 (AS-IS OP_ITEM 옵션/각인 컬럼, docs/design-decisions.md §4) ──
 
     /** 옵션 사용여부 (Y/N). AS-IS itemOptionFlag. */
     @Column(name = "ITEM_OPTION_FLAG")

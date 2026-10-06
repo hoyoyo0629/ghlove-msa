@@ -5,8 +5,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/** 관리자 권한 라벨 (AS-IS OP_ROLE) - AS-IS는 ROLE_ADMIN_1~8(시스템·행안부·지자체·오프라인
- *  4그룹 × 정·부담당자)이고, 이 프로젝트는 그중 1~6만 구현했다(7·8 오프라인담당자 미구현). */
+/** 관리자 권한 라벨 (AS-IS OP_ROLE) - AS-IS 개발DB에는 <b>ROLE_ADMIN_1~10 열 행</b>이 있다
+ *  (시스템·행안부·지자체·오프라인 4그룹 × 정·부담당자 8 + 9 답례품관리자 + 10 지정기부사업자).
+ *  ROLE_EXCEL·ROLE_ISMS·ROLE_MD는 목록 조회 조건에는 들어 있지만 AS-IS OP_ROLE에 행이 없다.
+ *  {@code role_seq}는 AS-IS에 없는 TO-BE 전용 컬럼이다(정렬 동순위 안정화용). */
 @Entity
 @Table(name = "OP_ROLE")
 @Getter

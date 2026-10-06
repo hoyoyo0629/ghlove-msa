@@ -8,7 +8,7 @@ import lombok.Setter;
 /**
  * 추가구성(추가상품) - AS-IS OP_ITEM_ADDITION. 본품(itemId)에 함께 담을 수 있는 별도
  * 부가 답례품(additionItemId)을 편성한다. 구매 시 본품과 독립된 주문 라인(OrderItem)으로
- * 담긴다(docs/gift-option-redesign-plan.md §2). AS-IS 판매자 등록폼의 편성 UI 노출 여부는
+ * 담긴다(docs/design-decisions.md §4 §2). AS-IS 판매자 등록폼의 편성 UI 노출 여부는
  * Phase 1 말에 form.jsp 확인 후 Phase 2에 반영한다.
  */
 @Entity

@@ -19,7 +19,7 @@ import java.util.List;
 /**
  * 답례품 옵션 카탈로그 관리 (SFR-005) - {@link com.ghlove.gift.domain.GiftOption} 참고.
  * AS-IS와 동일하게 선택형(S)/조합형(S2·S3)/텍스트형(T) + 각인(필수 추가정보) + 추가구성을
- * 전부 지원한다(docs/gift-option-redesign-plan.md). 판매자 화면에서 S2·T 숨김은 화면단 책임이고
+ * 전부 지원한다(docs/design-decisions.md §4). 판매자 화면에서 S2·T 숨김은 화면단 책임이고
  * 서비스는 전 형태를 처리한다.
  */
 @Service

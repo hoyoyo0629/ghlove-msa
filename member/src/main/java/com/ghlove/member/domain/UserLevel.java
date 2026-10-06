@@ -7,7 +7,7 @@ import lombok.Setter;
 
 /**
  * 회원등급 (AS-IS OP_USER_LEVEL) - D11 UserLevelManagerController,
- * docs/as-is-admin-gap-deep-audit-part2.md 배치D D11 참고. GROUP_CODE는 라이브 데이터가
+ * docs/as-is-parity.md §8 배치D D11 참고. GROUP_CODE는 라이브 데이터가
  * 전부 'default' 단일값이라(그룹관리 자체가 실질적으로 미사용) 이번 라운드는 그룹 CRUD는
  * 스코프아웃하고 등급(LEVEL) CRUD만 구현한다 - 화면/API에는 GROUP_CODE를 그대로 저장하되
  * 항상 "default"로 고정한다.

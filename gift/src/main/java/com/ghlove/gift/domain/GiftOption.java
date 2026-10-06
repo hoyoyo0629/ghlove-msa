@@ -8,7 +8,7 @@ import lombok.Setter;
 /**
  * 답례품 옵션 (SFR-005 "카탈로그 관리: 카테고리, 옵션, 규격/구성..."). AS-IS
  * OP_ITEM_OPTION은 선택형(S)/조합형(S2·S3)/텍스트형(T)을 지원하며, MSA도 AS-IS와
- * 동일하게 전 옵션형태를 구현한다(docs/gift-option-redesign-plan.md). 판매자 등록화면에서
+ * 동일하게 전 옵션형태를 구현한다(docs/design-decisions.md §4). 판매자 등록화면에서
  * S2·T는 AS-IS처럼 숨김 처리하지만 데이터/서비스/구매흐름은 전부 동작한다.
  * 조합형은 optionName1/2/3 조합 한 줄이 한 옵션행(itemOptionId)이 된다.
  */

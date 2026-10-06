@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 /**
  * admin 콘솔 회원관리 콘솔 (AS-IS opmanager/user/* - UserManagerController/
  * GeneralCustomerManagerController/SecedeUserManagerController/SleepUserManagerController,
- * docs/as-is-admin-gap-deep-audit-part2.md 배치D 참고). admin 서비스는 회원 데이터를 직접
+ * docs/as-is-parity.md §8 배치D 참고). admin 서비스는 회원 데이터를 직접
  * 갖고 있지 않아(MSA 서비스 경계) admin/service/MemberAdminClient가 여기 REST API를 호출한다.
  *
  * 검색 화면들은 전부 저트래픽(관리자 콘솔)이라 OffgiveController와 동일한 관행으로 날짜범위만

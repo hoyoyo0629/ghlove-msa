@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * admin 회원관리 콘솔(docs/as-is-admin-gap-deep-audit-part2.md 배치D D2~D5) - member
+ * admin 회원관리 콘솔(docs/as-is-parity.md §8 배치D D2~D5) - member
  * 서비스의 /api/admin/members, /api/admin/secede-users, /api/admin/sleep-users를 호출한다.
  * 실제 데이터/도메인효과는 member 서비스에 있고, 여기는 admin 콘솔의 로그인/RBAC과 화면만
  * 담당한다(OffgiveClient와 동일한 패턴).

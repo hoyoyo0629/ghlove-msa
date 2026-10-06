@@ -85,9 +85,12 @@
             </thead>
             <tbody id="targetTb">
 
-                <!-- AS-IS도 '지정기부사업자'는 이 목록에서 제외한다 -->
+                <!-- AS-IS도 '지정기부사업자'는 이 목록에서 제외한다. 다만 AS-IS는 그 걸러내기를
+                     JSP에서 하고 번호는 그려진 행만 세는 별도 변수(rowNum)로 찍는데, Thymeleaf의
+                     th:each + th:if는 건너뛴 행도 i.count에 포함해 첫 행이 2번부터 시작한다.
+                     그래서 걸러낸 목록을 서버에서 받는다(RoleAdminService.matrixRoleRows). -->
               <tr class="dyTr" onclick="fnGroupSearch($(this))"
-                  th:each="row, i : ${list}" th:if="${row.role.roleName != '지정기부사업자'}">
+                  th:each="row, i : ${list}">
                     <input type="hidden" th:value="${row.role.authority}" />
                         <td th:text="${i.count}">1</td>
                         <td th:text="${row.role.roleName}"></td>
@@ -118,17 +121,19 @@
 
                     <div id="blog-landing" class="input_wrap col-w-7" style="height: 100vh;">
 
+                      <!-- 트리는 AS-IS getAllMenuList가 내려준 그대로 3단으로 중첩돼 온다
+                           (미사용 메뉴·빈 묶음은 쿼리 단계에서 이미 빠져 있다 - 화면에서 걸러내지 않는다). -->
                       <div class="section" th:each="menu1 : ${matrix != null} ? ${matrix.topMenus} : ${#lists.toList({})}">
                         <div  class="menu1">
                           <label><input type="checkbox" class="check-all" /> <span th:text="${menu1.menuName}"></span></label>
                         </div>
                         <ul>
-                          <li th:each="menu2 : ${matrix.childrenByParent.containsKey(menu1.menuId)} ? ${matrix.childrenByParent.get(menu1.menuId)} : ${#lists.toList({})}">
+                          <li th:each="menu2 : ${menu1.children}">
                             <span class="menu2">
                               <label><input type="checkbox" class="check-all" /> <span th:text="${menu2.menuName}"></span></label>
                             </span>
 
-                            <span class="menu3" th:each="menu3 : ${matrix.childrenByParent.containsKey(menu2.menuId)} ? ${matrix.childrenByParent.get(menu2.menuId)} : ${#lists.toList({})}">
+                            <span class="menu3" th:each="menu3 : ${menu2.children}">
                               <label><input type="checkbox" name="menuIds" th:value="${menu3.menuId}"
                                             th:checked="${matrix.checkedMenuIds.contains(menu3.menuId)}" /> <span th:text="${menu3.menuName}"></span></label>
                             </span>

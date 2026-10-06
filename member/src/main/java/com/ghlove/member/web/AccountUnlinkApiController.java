@@ -24,7 +24,7 @@ import java.util.Map;
  * <p>외부 연계해지 API(원패스 InterLockRelease / 카카오 톡키트 unlink)는 실연계가 열려야 실제로
  * 호출되고, 지금은 로그인과 마찬가지로 꺼져 있어 각 client가 통과시킨다 - 내부 탈퇴 처리는 항상
  * 수행된다. 응답 형태는 AS-IS 프론트가 읽던 그대로 맞춘다(info.value / result / errMsg).
- * 자세한 매핑은 docs/member-social-unlink-parity-audit.md.
+ * 자세한 매핑은 docs/as-is-parity.md §11.
  */
 @RestController
 @RequiredArgsConstructor

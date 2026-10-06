@@ -19,7 +19,7 @@ import java.util.List;
  * 브로커 장애가 사용자 흐름을 막지 않는다(현재 다른 서비스 발행자와 동일한 정책).
  *
  * <p>지금은 소비자(admin 회원통계/감사 ReadModel)가 아직 없다 - publish-only 단계이며,
- * 소비 ReadModel 구축은 DA 설계 후 Phase B로 미뤄져 있다(docs/member-event-publishing-design.md).
+ * 소비 ReadModel 구축은 DA 설계 후 Phase B로 미뤄져 있다(docs/design-decisions.md §3).
  */
 @Component
 @RequiredArgsConstructor

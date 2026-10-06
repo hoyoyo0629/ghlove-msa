@@ -10,7 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
- * D11 회원등급 관리 (AS-IS UserLevelManagerController, docs/as-is-admin-gap-deep-audit-part2.md
+ * D11 회원등급 관리 (AS-IS UserLevelManagerController, docs/as-is-parity.md §8
  * D11 참고). 실제 데이터는 member 서비스에 있고(UserLevelAdminClient), 여기는 admin 콘솔의
  * 로그인/RBAC과 화면만 담당한다(MemberAdminController와 동일한 패턴).
  */

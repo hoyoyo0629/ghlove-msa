@@ -46,7 +46,7 @@ public class ProfileApiController {
 
         // AS-IS modify.html의 연동해지 버튼 표시조건 재현 - userKeyYN(원패스 연동)은 MSA에서
         // 원패스 가입경로(loginPathCode 300), kakaoUserKeyYN(카카오 연동)은 카카오 가입경로(500)
-        // 또는 카카오 유저키 보유로 판정한다(docs/member-social-unlink-parity-audit.md §2).
+        // 또는 카카오 유저키 보유로 판정한다(docs/as-is-parity.md §11 §2).
         String loginPathCode = user.getLoginPathCode();
         String userKeyYN = "300".equals(loginPathCode) ? "Y" : "N";
         String kakaoUserKeyYN = ("500".equals(loginPathCode)

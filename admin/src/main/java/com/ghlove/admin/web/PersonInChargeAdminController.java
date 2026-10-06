@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets;
 /**
  * D6/D9 관리자 사후관리(지자체담당자/운영담당자) - AS-IS LocgovPersonInChargeManagerController +
  * OperPersonInChargeManagerController를 탭 하나로 통합했다
- * (docs/as-is-admin-gap-deep-audit-part2.md 배치D D6/D9 권장사항 반영).
+ * (docs/as-is-parity.md §8 배치D D6/D9 권장사항 반영).
  */
 @Controller
 @RequestMapping("/admin/person-in-charge")

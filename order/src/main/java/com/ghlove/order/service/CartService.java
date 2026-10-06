@@ -82,7 +82,7 @@ public class CartService {
      * 옵션 선택형 담기 - itemOptionId가 있으면 gift에서 옵션명·추가금액을 스냅샷한다.
      * 같은 답례품이라도 옵션·각인이 다르면 별도 장바구니 행으로 담긴다(AS-IS 동일).
      * 각인(textOption)은 필수 추가정보 입력값(제목별 값을 '||'로 연결), 추가구성(additionItemIds)은
-     * 본품과 별도 라인으로 함께 담긴다(docs/gift-option-redesign-plan.md Phase 4).
+     * 본품과 별도 라인으로 함께 담긴다(docs/design-decisions.md §4 Phase 4).
      */
     public void add(Long userId, Long itemId, Integer quantity, Long itemOptionId, String textOption,
                     List<Long> additionItemIds) {
@@ -525,7 +525,7 @@ public class CartService {
     // ==================== 멀티아이템 결제 (출고 단위 SAGA, 선택지 A) ====================
 
     /**
-     * AS-IS처럼 <b>한 번의 결제 = 주문 1건</b>으로 만든다(설계안 docs/order-multiitem-redesign-plan.md
+     * AS-IS처럼 <b>한 번의 결제 = 주문 1건</b>으로 만든다(설계안 docs/design-decisions.md §5
      * §2·§3). 장바구니 선택분을 지자체별 <b>출고(Shipment)</b>로 묶고, 각 출고 아래에 <b>품목
      * (OrderItem)</b>을 담아 주문 헤더 1건 + 출고 N + 품목 M을 저장한 뒤 출고마다
      * {@code SHIPMENT_CREATED}를 발행해 출고 단위 SAGA를 개시한다.

@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * admin 콘솔 회원등급 관리 API (docs/as-is-admin-gap-deep-audit-part2.md 배치D D11) -
+ * admin 콘솔 회원등급 관리 API (docs/as-is-parity.md §8 배치D D11) -
  * admin 서비스의 UserLevelAdminClient가 호출하는 관리자 전용 엔드포인트(AdminMemberApiController와
  * 동일한 관행 - 브라우저에 직접 노출되지 않고 admin 콘솔의 로그인+메뉴RBAC이 실제 게이트다).
  */
