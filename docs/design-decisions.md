@@ -1,23 +1,23 @@
-# ì¤ê³ ê²°ì Â·ì¬ì¤ê³ ê³í
+# 설계 결정·재설계 계획
 
-> 2026-10-06 íµí©. ìì§ ì´ì ìë ì¤ê³ ë¬¸ì 7ê°ë¥¼ í©ì¹ ê²ì´ë¤(ìë£ë 1íì± ë¦¬í¬í¸ë `docs/archive/`).
-> ê²°ì  ìì²´ì ìµì  ìíë ë©ëª¨ë¦¬(`*-decision`, `defer-*`)ê° ì ë³¸ì´ê³ , ì´ ë¬¸ìë **ê·¼ê±°ì ì íì§**ë¥¼ ë´ëë¤.
+> 2026-10-06 통합. 아직 살아 있는 설계 문서 7개를 합친 것이다(완료된 1회성 리포트는 `docs/archive/`).
+> 결정 자체의 최신 상태는 메모리(`*-decision`, `defer-*`)가 정본이고, 이 문서는 **근거와 선택지**를 담는다.
 
-## ëª©ì°¨
+## 목차
 
-- [1. ê³ì  ëª¨ë¸ ì¤ê³](#1-ê³ì -ëª¨ë¸-ì¤ê³) â `account-model-design.md`
-- [2. ìë¹ì¤ ê° í¸ëì­ì í¨í´ (API vs Kafka)](#2-ìë¹ì¤-ê°-í¸ëì­ì-í¨í´-api-vs-kafka) â `cross-service-transaction-patterns.md`
-- [3. member ì´ë²¤í¸ ë°í ì¤ê³](#3-member-ì´ë²¤í¸-ë°í-ì¤ê³) â `member-event-publishing-design.md`
-- [4. gift ìµì ë¤í ì²´ê³ ì¬ì¤ê³](#4-gift-ìµì-ë¤í-ì²´ê³-ì¬ì¤ê³) â `gift-option-redesign-plan.md`
-- [5. order ë©í°ìì´í ì¬ì¤ê³](#5-order-ë©í°ìì´í-ì¬ì¤ê³) â `order-multiitem-redesign-plan.md`
-- [6. B5 í¹ì ì¬ì ìë³ íµê³ ëªì¸](#6-b5-í¹ì ì¬ì-ìë³-íµê³-ëªì¸) â `b5-designated-month-stats-spec.md`
-- [7. Thymeleaf íê¸° ë§µ](#7-thymeleaf-íê¸°-ë§µ) â `thymeleaf-decommission-map.md`
+- [1. 계정 모델 설계](#1-계정-모델-설계) — `account-model-design.md`
+- [2. 서비스 간 트랜잭션 패턴 (API vs Kafka)](#2-서비스-간-트랜잭션-패턴-api-vs-kafka) — `cross-service-transaction-patterns.md`
+- [3. member 이벤트 발행 설계](#3-member-이벤트-발행-설계) — `member-event-publishing-design.md`
+- [4. gift 옵션 다형 체계 재설계](#4-gift-옵션-다형-체계-재설계) — `gift-option-redesign-plan.md`
+- [5. order 멀티아이템 재설계](#5-order-멀티아이템-재설계) — `order-multiitem-redesign-plan.md`
+- [6. B5 특정사업 월별 통계 명세](#6-b5-특정사업-월별-통계-명세) — `b5-designated-month-stats-spec.md`
+- [7. Thymeleaf 폐기 맵](#7-thymeleaf-폐기-맵) — `thymeleaf-decommission-map.md`
 
 ---
 
-## 1. ê³ì  ëª¨ë¸ ì¤ê³
+## 1. 계정 모델 설계
 
-> íµí© ì  íì¼: `docs/account-model-design.md`
+> 통합 전 파일: `docs/account-model-design.md`
 
 ## 계정 모델 설계 — 개인계정/업무계정 분리
 
@@ -342,9 +342,9 @@ ROLE_ADMIN_5·6에 각 17개)과 1:1 대조가 가능하다 — 이행 작업 #9
 
 ---
 
-## 2. ìë¹ì¤ ê° í¸ëì­ì í¨í´ (API vs Kafka)
+## 2. 서비스 간 트랜잭션 패턴 (API vs Kafka)
 
-> íµí© ì  íì¼: `docs/design-decisions.md` §2
+> 통합 전 파일: `docs/cross-service-transaction-patterns.md`
 
 ## 크로스서비스 데이터 일관성 패턴 — 여러 서비스에 걸친 쓰기를 어떻게 안전하게 하나
 
@@ -523,9 +523,9 @@ point  : (차감분 있으면) 환불     ← 보상
 
 ---
 
-## 3. member ì´ë²¤í¸ ë°í ì¤ê³
+## 3. member 이벤트 발행 설계
 
-> íµí© ì  íì¼: `docs/member-event-publishing-design.md`
+> 통합 전 파일: `docs/member-event-publishing-design.md`
 
 ## member 이벤트 발행 설계 (소비처 포함)
 
@@ -629,9 +629,9 @@ member가 이미 LoginLog/UserActionLog를 로컬 보관하므로, 운영관리�
 
 ---
 
-## 4. gift ìµì ë¤í ì²´ê³ ì¬ì¤ê³
+## 4. gift 옵션 다형 체계 재설계
 
-> íµí© ì  íì¼: `docs/gift-option-redesign-plan.md`
+> 통합 전 파일: `docs/gift-option-redesign-plan.md`
 
 ## gift 옵션 다형 체계 재설계 계획 (AS-IS 동일 재현)
 
@@ -758,9 +758,9 @@ member가 이미 LoginLog/UserActionLog를 로컬 보관하므로, 운영관리�
 
 ---
 
-## 5. order ë©í°ìì´í ì¬ì¤ê³
+## 5. order 멀티아이템 재설계
 
-> íµí© ì  íì¼: `docs/order-multiitem-redesign-plan.md`
+> 통합 전 파일: `docs/order-multiitem-redesign-plan.md`
 
 ## 주문(order) 도메인 멀티아이템 재설계 설계안
 
@@ -928,9 +928,9 @@ Order (주문 헤더)                      = AS-IS ORDER_CODE
 
 ---
 
-## 6. B5 í¹ì ì¬ì ìë³ íµê³ ëªì¸
+## 6. B5 특정사업 월별 통계 명세
 
-> íµí© ì  íì¼: `docs/b5-designated-month-stats-spec.md`
+> 통합 전 파일: `docs/b5-designated-month-stats-spec.md`
 
 ## B5 — 지정기부 월별통계(특정사업 월별통계) AS-IS 완전 재현 스펙
 
@@ -989,9 +989,9 @@ campaign 91건(비율 25/24/24/26=100), amountraised 모금액합 16,662,000(시
 
 ---
 
-## 7. Thymeleaf íê¸° ë§µ
+## 7. Thymeleaf 폐기 맵
 
-> íµí© ì  íì¼: `docs/thymeleaf-decommission-map.md`
+> 통합 전 파일: `docs/thymeleaf-decommission-map.md`
 
 ## 대민 Thymeleaf → storefront SPA 커버리지 매핑 (폐기 대상 판정)
 

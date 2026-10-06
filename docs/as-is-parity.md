@@ -1,39 +1,39 @@
-# AS-IS â TO-BE ëì¡° ìì¥
+# AS-IS ↔ TO-BE 대조 원장
 
-> 2026-10-06ì docs/ ìµìì .md 46ê°ë¥¼ 6ê°ë¡ íµí©íë¤. ì´ íì¼ì **AS-IS ëì¡°Â·ê°­Â·ì»¤ë²ë¦¬ì§ ë¬¸ì 21ê°**ë¥¼ í©ì¹ ê²ì´ê³ ,
-> ê° ì  ë¨¸ë¦¬ì `íµí© ì  íì¼`ì´ ìë íì¼ëªì´ë¤(ë´ì©ì ê·¸ëë¡ ì®ê¸°ê³  í¤ë©ë§ í ë¨ê³ ë´ë ¸ë¤ - git ì´ë ¥ì¼ë¡ ìë³¸ ì¶ì  ê°ë¥).
-> êµ¬ì± ìì: ê³µíµ ì»¤ë²ë¦¬ì§ â admin â member â donation â gift â order â point.
-> ì§ì² ìíë ì´ ë¬¸ìê° ìëë¼ ë©ëª¨ë¦¬ ìì¥(`admin-*-area-port-progress` ë±)ì´ ì ë³¸ì´ë¤.
+> 2026-10-06에 docs/ 최상위 .md 46개를 6개로 통합했다. 이 파일은 **AS-IS 대조·갭·커버리지 문서 21개**를 합친 것이고,
+> 각 절 머리의 `통합 전 파일`이 원래 파일명이다(내용은 그대로 옮기고 헤딩만 한 단계 내렸다 - git 이력으로 원본 추적 가능).
+> 구성 순서: 공통 커버리지 → admin → member → donation → gift → order → point.
+> 진척 상태는 이 문서가 아니라 메모리 원장(`admin-*-area-port-progress` 등)이 정본이다.
 
-## ëª©ì°¨
+## 목차
 
-- [1. ì ì²´ ì»¤ë²ë¦¬ì§ ë§µ (ì´ë íë©´ì´ ì´ë ì¸ë²¤í ë¦¬ì)](#1-ì ì²´-ì»¤ë²ë¦¬ì§-ë§µ-ì´ë-íë©´ì´-ì´ë-ì¸ë²¤í ë¦¬ì) â `as-is-coverage-map.md`
-- [2. ì ì ì»¤ë²ë¦¬ì§ ìì¥ (íì¼ ë¨ì, ëë½ 0 ëª©í)](#2-ì ì-ì»¤ë²ë¦¬ì§-ìì¥-íì¼-ë¨ì-ëë½-0-ëª©í) â `coverage-ledger.md`
-- [3. ëë¯¼ SPA ì¶©ì¤ë ê°ì¬](#3-ëë¯¼-spa-ì¶©ì¤ë-ê°ì¬) â `as-is-fidelity-audit-2026-09-17.md`
-- [4. admin ê¸°ë¥ ëì¡°](#4-admin-ê¸°ë¥-ëì¡°) â `as-is-feature-audit-admin.md`
-- [5. admin parity ê°ì¬](#5-admin-parity-ê°ì¬) â `admin-parity-audit.md`
-- [6. admin ë©ë´í¸ë¦¬ parity](#6-admin-ë©ë´í¸ë¦¬-parity) â `admin-menu-tree-parity.md`
-- [7. admin ê°­ ì¬ì¸µê°ì¬ part1](#7-admin-ê°­-ì¬ì¸µê°ì¬-part1) â `as-is-admin-gap-deep-audit-part1.md`
-- [8. admin ê°­ ì¬ì¸µê°ì¬ part2 (ë°°ì¹D)](#8-admin-ê°­-ì¬ì¸µê°ì¬-part2-ë°°ì¹d) â `as-is-admin-gap-deep-audit-part2.md`
-- [9. ìë¡ë íì¼ ê·ì¹ parity (íì¥ìÂ·ì©ëÂ·íì¼ì­ì )](#9-ìë¡ë-íì¼-ê·ì¹-parity-íì¥ìÂ·ì©ëÂ·íì¼ì­ì ) â `upload-file-parity-audit.md`
-- [10. member ê¸°ë¥ ëì¡°](#10-member-ê¸°ë¥-ëì¡°) â `as-is-feature-audit-member.md`
-- [11. member ìì ì°ëí´ì§ parity](#11-member-ìì-ì°ëí´ì§-parity) â `member-social-unlink-parity-audit.md`
-- [12. donation ê¸°ë¥ ëì¡°](#12-donation-ê¸°ë¥-ëì¡°) â `as-is-feature-audit-donation.md`
-- [13. donation parity ê°ì¬](#13-donation-parity-ê°ì¬) â `donation-parity-audit.md`
-- [14. gift ê¸°ë¥ ëì¡°](#14-gift-ê¸°ë¥-ëì¡°) â `as-is-feature-audit-gift.md`
-- [15. gift ìµì ì²´ê³ parity](#15-gift-ìµì-ì²´ê³-parity) â `gift-option-parity-audit.md`
-- [16. gift ì¹´íê³ ë¦¬ 3ë¨ í¸ë¦¬ parity](#16-gift-ì¹´íê³ ë¦¬-3ë¨-í¸ë¦¬-parity) â `gift-category-tree-parity-audit.md`
-- [17. gift ê²ìì´ ê´ë¦¬ parity](#17-gift-ê²ìì´-ê´ë¦¬-parity) â `gift-search-keyword-parity-audit.md`
-- [18. gift ë°°ì¡ë¹ ì ì± parity](#18-gift-ë°°ì¡ë¹-ì ì±-parity) â `gift-delivery-fee-parity-audit.md`
-- [19. gift íë§¤ì ìíìë¹ì¤ parity](#19-gift-íë§¤ì-ìíìë¹ì¤-parity) â `gift-seller-selfservice-parity-audit.md`
-- [20. order ê¸°ë¥ ëì¡°](#20-order-ê¸°ë¥-ëì¡°) â `as-is-feature-audit-order.md`
-- [21. point ê¸°ë¥ ëì¡°](#21-point-ê¸°ë¥-ëì¡°) â `as-is-feature-audit-point.md`
+- [1. 전체 커버리지 맵 (어느 화면이 어느 인벤토리에)](#1-전체-커버리지-맵-어느-화면이-어느-인벤토리에) — `as-is-coverage-map.md`
+- [2. 전수 커버리지 원장 (파일 단위, 누락 0 목표)](#2-전수-커버리지-원장-파일-단위-누락-0-목표) — `coverage-ledger.md`
+- [3. 대민 SPA 충실도 감사](#3-대민-spa-충실도-감사) — `as-is-fidelity-audit-2026-09-17.md`
+- [4. admin 기능 대조](#4-admin-기능-대조) — `as-is-feature-audit-admin.md`
+- [5. admin parity 감사](#5-admin-parity-감사) — `admin-parity-audit.md`
+- [6. admin 메뉴트리 parity](#6-admin-메뉴트리-parity) — `admin-menu-tree-parity.md`
+- [7. admin 갭 심층감사 part1](#7-admin-갭-심층감사-part1) — `as-is-admin-gap-deep-audit-part1.md`
+- [8. admin 갭 심층감사 part2 (배치D)](#8-admin-갭-심층감사-part2-배치d) — `as-is-admin-gap-deep-audit-part2.md`
+- [9. 업로드 파일 규칙 parity (확장자·용량·파일삭제)](#9-업로드-파일-규칙-parity-확장자용량파일삭제) — `upload-file-parity-audit.md`
+- [10. member 기능 대조](#10-member-기능-대조) — `as-is-feature-audit-member.md`
+- [11. member 소셜 연동해지 parity](#11-member-소셜-연동해지-parity) — `member-social-unlink-parity-audit.md`
+- [12. donation 기능 대조](#12-donation-기능-대조) — `as-is-feature-audit-donation.md`
+- [13. donation parity 감사](#13-donation-parity-감사) — `donation-parity-audit.md`
+- [14. gift 기능 대조](#14-gift-기능-대조) — `as-is-feature-audit-gift.md`
+- [15. gift 옵션 체계 parity](#15-gift-옵션-체계-parity) — `gift-option-parity-audit.md`
+- [16. gift 카테고리 3단 트리 parity](#16-gift-카테고리-3단-트리-parity) — `gift-category-tree-parity-audit.md`
+- [17. gift 검색어 관리 parity](#17-gift-검색어-관리-parity) — `gift-search-keyword-parity-audit.md`
+- [18. gift 배송비 정책 parity](#18-gift-배송비-정책-parity) — `gift-delivery-fee-parity-audit.md`
+- [19. gift 판매자 셀프서비스 parity](#19-gift-판매자-셀프서비스-parity) — `gift-seller-selfservice-parity-audit.md`
+- [20. order 기능 대조](#20-order-기능-대조) — `as-is-feature-audit-order.md`
+- [21. point 기능 대조](#21-point-기능-대조) — `as-is-feature-audit-point.md`
 
 ---
 
-## 1. ì ì²´ ì»¤ë²ë¦¬ì§ ë§µ (ì´ë íë©´ì´ ì´ë ì¸ë²¤í ë¦¬ì)
+## 1. 전체 커버리지 맵 (어느 화면이 어느 인벤토리에)
 
-> íµí© ì  íì¼: `docs/as-is-parity.md §1`
+> 통합 전 파일: `docs/as-is-coverage-map.md`
 
 ## AS-IS 전체 커버리지 맵 — 어느 화면이 어느 인벤토리에 들어가는가
 
@@ -126,9 +126,9 @@
 
 ---
 
-## 2. ì ì ì»¤ë²ë¦¬ì§ ìì¥ (íì¼ ë¨ì, ëë½ 0 ëª©í)
+## 2. 전수 커버리지 원장 (파일 단위, 누락 0 목표)
 
-> íµí© ì  íì¼: `docs/coverage-ledger.md`
+> 통합 전 파일: `docs/coverage-ledger.md`
 
 ## AS-IS → TO-BE 전수 커버리지 원장 (누락 0 목표)
 
@@ -418,9 +418,9 @@ static: notices/faq/data-board 라우트 CSS(ct_nov·research-box·main·event) 
 
 ---
 
-## 3. ëë¯¼ SPA ì¶©ì¤ë ê°ì¬
+## 3. 대민 SPA 충실도 감사
 
-> íµí© ì  íì¼: `docs/as-is-fidelity-audit-2026-09-17.md`
+> 통합 전 파일: `docs/as-is-fidelity-audit-2026-09-17.md`
 
 ## AS-IS 충실도 감사 (대민 SPA 전환분)
 
@@ -589,9 +589,9 @@ AS-IS `designated-donation/index-main.html`·`details.html` 대조. 상태/정�
 
 ---
 
-## 4. admin ê¸°ë¥ ëì¡°
+## 4. admin 기능 대조
 
-> íµí© ì  íì¼: `docs/as-is-feature-audit-admin.md`
+> 통합 전 파일: `docs/as-is-feature-audit-admin.md`
 
 ## AS-IS 기능 감사 - admin(운영관리) 서비스
 
@@ -781,9 +781,9 @@ AS-IS `UserLoginBannerManagerController`(`/opmanager/user-login-banner`, "PC 로
 
 ---
 
-## 5. admin parity ê°ì¬
+## 5. admin parity 감사
 
-> íµí© ì  íì¼: `docs/admin-parity-audit.md`
+> 통합 전 파일: `docs/admin-parity-audit.md`
 
 ## admin 서비스 AS-IS 전수 대조 (parity audit)
 
@@ -932,9 +932,9 @@ SPA)/gift 소관. onepass/payment/simpleauth/magicline 자산 디렉터리는 �
 
 ---
 
-## 6. admin ë©ë´í¸ë¦¬ parity
+## 6. admin 메뉴트리 parity
 
-> íµí© ì  íì¼: `docs/admin-menu-tree-parity.md`
+> 통합 전 파일: `docs/admin-menu-tree-parity.md`
 
 ## admin 메뉴 트리 parity 대조 (AS-IS OP_MENU ↔ TO-BE)
 
@@ -1099,9 +1099,9 @@ SPA)/gift 소관. onepass/payment/simpleauth/magicline 자산 디렉터리는 �
 
 ---
 
-## 7. admin ê°­ ì¬ì¸µê°ì¬ part1
+## 7. admin 갭 심층감사 part1
 
-> íµí© ì  íì¼: `docs/as-is-admin-gap-deep-audit-part1.md`
+> 통합 전 파일: `docs/as-is-admin-gap-deep-audit-part1.md`
 
 ## AS-IS opmanager → TO-BE admin 심층 갭 감사 (Part 1, 67개 컨트롤러)
 
@@ -1353,9 +1353,9 @@ AS-IS `ItemManagerController`(`/opmanager/item`)가 갖고 있지만 gift 서비
 
 ---
 
-## 8. admin ê°­ ì¬ì¸µê°ì¬ part2 (ë°°ì¹D)
+## 8. admin 갭 심층감사 part2 (배치D)
 
-> íµí© ì  íì¼: `docs/as-is-admin-gap-deep-audit-part2.md`
+> 통합 전 파일: `docs/as-is-admin-gap-deep-audit-part2.md`
 
 ## AS-IS opmanager → TO-BE admin 심층 갭 감사 (Part 2, 66개 컨트롤러)
 
@@ -1468,9 +1468,9 @@ Part1(67개)과 동일 방법론으로 나머지 66개 컨트롤러를 4개 배�
 
 ---
 
-## 9. ìë¡ë íì¼ ê·ì¹ parity (íì¥ìÂ·ì©ëÂ·íì¼ì­ì )
+## 9. 업로드 파일 규칙 parity (확장자·용량·파일삭제)
 
-> íµí© ì  íì¼: `docs/upload-file-parity-audit.md`
+> 통합 전 파일: `docs/upload-file-parity-audit.md`
 
 ## 업로드·파일처리 AS-IS 전수 대조 (2026-10-06)
 
@@ -1620,9 +1620,9 @@ CTP 정상(body추출+경로치환)·ERROR_01·02·03 4종 **전부 AS-IS대로 
 
 ---
 
-## 10. member ê¸°ë¥ ëì¡°
+## 10. member 기능 대조
 
-> íµí© ì  íì¼: `docs/as-is-feature-audit-member.md`
+> 통합 전 파일: `docs/as-is-feature-audit-member.md`
 
 ## AS-IS 기능 감사 — 회원(member) 서비스
 
@@ -1824,9 +1824,9 @@ donation 또는 member 서비스에 지자체별 설정 테이블+API. storefron
 
 ---
 
-## 11. member ìì ì°ëí´ì§ parity
+## 11. member 소셜 연동해지 parity
 
-> íµí© ì  íì¼: `docs/member-social-unlink-parity-audit.md`
+> 통합 전 파일: `docs/member-social-unlink-parity-audit.md`
 
 ## member 연동해지(디지털원패스/카카오) parity audit
 
@@ -1894,9 +1894,9 @@ donation 또는 member 서비스에 지자체별 설정 테이블+API. storefron
 
 ---
 
-## 12. donation ê¸°ë¥ ëì¡°
+## 12. donation 기능 대조
 
-> íµí© ì  íì¼: `docs/as-is-feature-audit-donation.md`
+> 통합 전 파일: `docs/as-is-feature-audit-donation.md`
 
 ## AS-IS 기능감사 - donation(기부) 서비스
 
@@ -1980,9 +1980,9 @@ AS-IS 기부 도메인의 실제 소스는 처음 추정한 것과 달리 `ghlov
 
 ---
 
-## 13. donation parity ê°ì¬
+## 13. donation parity 감사
 
-> íµí© ì  íì¼: `docs/donation-parity-audit.md`
+> 통합 전 파일: `docs/donation-parity-audit.md`
 
 ## donation 서비스 AS-IS 전수 대조 (parity audit)
 
@@ -2100,9 +2100,9 @@ MSA 백엔드 대조로 확정. **전부 순수 AS-IS 재현**(신규·변경 �
 
 ---
 
-## 14. gift ê¸°ë¥ ëì¡°
+## 14. gift 기능 대조
 
-> íµí© ì  íì¼: `docs/as-is-feature-audit-gift.md`
+> 통합 전 파일: `docs/as-is-feature-audit-gift.md`
 
 ## AS-IS 기능감사 — gift(답례품) 서비스
 
@@ -2177,9 +2177,9 @@ saleson은 상용 쇼핑몰 엔진(`libs/saleson-license-*.jar`)이고 실제 �
 
 ---
 
-## 15. gift ìµì ì²´ê³ parity
+## 15. gift 옵션 체계 parity
 
-> íµí© ì  íì¼: `docs/gift-option-parity-audit.md`
+> 통합 전 파일: `docs/gift-option-parity-audit.md`
 
 ## gift 옵션(다형 옵션 체계) AS-IS 전수대조 갭목록
 
@@ -2397,9 +2397,9 @@ addition_item_id)로 연결된다. 쿠폰 등 고객혜택 미적용(옵션과 �
 
 ---
 
-## 16. gift ì¹´íê³ ë¦¬ 3ë¨ í¸ë¦¬ parity
+## 16. gift 카테고리 3단 트리 parity
 
-> íµí© ì  íì¼: `docs/gift-category-tree-parity-audit.md`
+> 통합 전 파일: `docs/gift-category-tree-parity-audit.md`
 
 ## 카테고리 3단 트리 — AS-IS 전수대조 갭목록 + 실사용 판정
 
@@ -2456,9 +2456,9 @@ addition_item_id)로 연결된다. 쿠폰 등 고객혜택 미적용(옵션과 �
 
 ---
 
-## 17. gift ê²ìì´ ê´ë¦¬ parity
+## 17. gift 검색어 관리 parity
 
-> íµí© ì  íì¼: `docs/gift-search-keyword-parity-audit.md`
+> 통합 전 파일: `docs/gift-search-keyword-parity-audit.md`
 
 ## 검색어 관리 — AS-IS 전수대조 갭목록 + 실사용 판정
 
@@ -2509,9 +2509,9 @@ addition_item_id)로 연결된다. 쿠폰 등 고객혜택 미적용(옵션과 �
 
 ---
 
-## 18. gift ë°°ì¡ë¹ ì ì± parity
+## 18. gift 배송비 정책 parity
 
-> íµí© ì  íì¼: `docs/gift-delivery-fee-parity-audit.md`
+> 통합 전 파일: `docs/gift-delivery-fee-parity-audit.md`
 
 ## 배송비 정책 — AS-IS 전수대조 갭목록 + 실사용 판정
 
@@ -2608,9 +2608,9 @@ addition_item_id)로 연결된다. 쿠폰 등 고객혜택 미적용(옵션과 �
 
 ---
 
-## 19. gift íë§¤ì ìíìë¹ì¤ parity
+## 19. gift 판매자 셀프서비스 parity
 
-> íµí© ì  íì¼: `docs/gift-seller-selfservice-parity-audit.md`
+> 통합 전 파일: `docs/gift-seller-selfservice-parity-audit.md`
 
 ## 판매자 셀프서비스 — AS-IS 전수대조 갭목록 + 실사용 판정
 
@@ -2679,9 +2679,9 @@ AS-IS `SellerISysNoticeController`(/seller/sys-notice) 그대로 재현. 판매�
 
 ---
 
-## 20. order ê¸°ë¥ ëì¡°
+## 20. order 기능 대조
 
-> íµí© ì  íì¼: `docs/as-is-feature-audit-order.md`
+> 통합 전 파일: `docs/as-is-feature-audit-order.md`
 
 ## AS-IS 기능 감사 - order(주문) 서비스
 
@@ -2808,9 +2808,9 @@ AS-IS `mypage/orderList.html`/`orderDetail.html`은 배송완료/구매확정된
 
 ---
 
-## 21. point ê¸°ë¥ ëì¡°
+## 21. point 기능 대조
 
-> íµí© ì  íì¼: `docs/as-is-feature-audit-point.md`
+> 통합 전 파일: `docs/as-is-feature-audit-point.md`
 
 ## AS-IS 기능 감사 - point(포인트) 서비스
 

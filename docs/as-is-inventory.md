@@ -1,24 +1,24 @@
-# AS-IS ìì¤ ì¸ë²¤í ë¦¬ (7ìì­)
+# AS-IS 소스 인벤토리 (7영역)
 
-> 2026-10-06 íµí©. AS-IS ì ì ì¸ë²¤í ë¦¬ 7ê° íì¼ì í©ì¹ ê²ì´ë¤(ì ì°¨ë ë©ëª¨ë¦¬ `as-is-inventory-procedure`).
-> í ííì ìë³¸ì `docs/inventory/*.tsv`ì `docs/inventory/as-is-inventory.xlsx`ì ìê³ , ì´ ë¬¸ìë ê·¸ íì  ê·¼ê±°Â·ì£¼ìì´ë¤.
-> 6ê° MSA ìë¹ì¤ì ì ê±¸ë¦¬ë ìì­ì `common`ì¼ë¡ ëª¨ìë¤.
+> 2026-10-06 통합. AS-IS 전수 인벤토리 7개 파일을 합친 것이다(절차는 메모리 `as-is-inventory-procedure`).
+> 표 형태의 원본은 `docs/inventory/*.tsv`와 `docs/inventory/as-is-inventory.xlsx`에 있고, 이 문서는 그 판정 근거·주석이다.
+> 6개 MSA 서비스에 안 걸리는 영역은 `common`으로 모은다.
 
-## ëª©ì°¨
+## 목차
 
-- [1. common (6ê° ìë¹ì¤ì ì ê±¸ë¦¬ë ìì­)](#1-common-6ê°-ìë¹ì¤ì-ì-ê±¸ë¦¬ë-ìì­) â `as-is-inventory-common.md`
-- [2. admin](#2-admin) â `as-is-inventory-admin.md`
-- [3. member](#3-member) â `as-is-inventory-member.md`
-- [4. donation](#4-donation) â `as-is-inventory-donation.md`
-- [5. gift](#5-gift) â `as-is-inventory-gift.md`
-- [6. order](#6-order) â `as-is-inventory-order.md`
-- [7. point](#7-point) â `as-is-inventory-point.md`
+- [1. common (6개 서비스에 안 걸리는 영역)](#1-common-6개-서비스에-안-걸리는-영역) — `as-is-inventory-common.md`
+- [2. admin](#2-admin) — `as-is-inventory-admin.md`
+- [3. member](#3-member) — `as-is-inventory-member.md`
+- [4. donation](#4-donation) — `as-is-inventory-donation.md`
+- [5. gift](#5-gift) — `as-is-inventory-gift.md`
+- [6. order](#6-order) — `as-is-inventory-order.md`
+- [7. point](#7-point) — `as-is-inventory-point.md`
 
 ---
 
-## 1. common (6ê° ìë¹ì¤ì ì ê±¸ë¦¬ë ìì­)
+## 1. common (6개 서비스에 안 걸리는 영역)
 
-> íµí© ì  íì¼: `docs/as-is-inventory-common.md`
+> 통합 전 파일: `docs/as-is-inventory-common.md`
 
 ## AS-IS 코드 인벤토리 — common (6개 도메인 밖 전 영역)
 
@@ -529,7 +529,7 @@ MSA `admin.op_batch_job` 은 현재 **1행(테스트)** 뿐이라 AS-IS 운영 �
 
 ## 2. admin
 
-> íµí© ì  íì¼: `docs/as-is-inventory-admin.md`
+> 통합 전 파일: `docs/as-is-inventory-admin.md`
 
 ## AS-IS 코드 인벤토리 — admin (운영관리 + 판매자 포털)
 
@@ -887,7 +887,7 @@ AS-IS `locgov-notice` 컨트롤러의 공지-판매자 연결(`getNoticeSellerLi
 
 ## 3. member
 
-> íµí© ì  íì¼: `docs/as-is-inventory-member.md`
+> 통합 전 파일: `docs/as-is-inventory-member.md`
 
 ## AS-IS 인벤토리 — member 도메인
 
@@ -1279,7 +1279,7 @@ MSA가 **추가로** 가진 것: `goToStep(1|2|3)` 3단계 위저드, `toggleAll
 
 ## 4. donation
 
-> íµí© ì  íì¼: `docs/as-is-inventory-donation.md`
+> 통합 전 파일: `docs/as-is-inventory-donation.md`
 
 ## AS-IS 인벤토리 — donation 도메인
 
@@ -1523,7 +1523,7 @@ donation·member 재기동 후 실측:
 
 ## 5. gift
 
-> íµí© ì  íì¼: `docs/as-is-inventory-gift.md`
+> 통합 전 파일: `docs/as-is-inventory-gift.md`
 
 ## AS-IS 인벤토리 — gift 도메인
 
@@ -1752,7 +1752,7 @@ AS-IS는 상세화면 탭에서 `GET /api/item/restock`으로 신청 여부를 �
 
 ## 6. order
 
-> íµí© ì  íì¼: `docs/as-is-inventory-order.md`
+> 통합 전 파일: `docs/as-is-inventory-order.md`
 
 ## AS-IS 인벤토리 — order 도메인
 
@@ -1977,7 +1977,7 @@ RETURN/EXCHANGE → isDelivered(order) 필수 + gift.returnable() 필수
 
 ## 7. point
 
-> íµí© ì  íì¼: `docs/as-is-inventory-point.md`
+> 통합 전 파일: `docs/as-is-inventory-point.md`
 
 ## AS-IS 인벤토리 — point 도메인
 
