@@ -178,7 +178,7 @@
 		<tbody>
 			<tr th:each="item, i : ${list}" style="background:#fff;">
 				<td th:text="${pagination.itemNumber - i.count}">0</td>
-				<td th:text="${item.createdDate}"></td>
+				<td th:text="${@opDate.ymd(item.createdDate)}"></td>
 				<td><a th:href="|javascript:customerDetails('${item.userId}');|" th:text="${item.loginId}"></a></td>
 				<td><a th:href="|javascript:customerDetails('${item.userId}');|" th:text="${item.userName}"></a></td>
 				<td th:text="${item.addressText}"></td>

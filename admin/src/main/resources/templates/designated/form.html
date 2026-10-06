@@ -248,7 +248,7 @@
             <thead><tr><th>변경일시</th><th>이전상태</th><th>변경상태</th><th>처리자ID</th></tr></thead>
             <tbody>
             <tr th:each="l : ${approvalLog}">
-                <td th:text="${l.frstRegistPnttm}"></td>
+                <td th:text="${@opDate.ymd(l.frstRegistPnttm)}"></td>
                 <td th:text="${statusLabels.get(l.beforeStatusCode)} ?: '-'"></td>
                 <td th:text="${statusLabels.get(l.afterStatusCode)} ?: l.afterStatusCode"></td>
                 <td th:text="${l.frstRgtrId}"></td>

@@ -156,7 +156,7 @@
                     <div th:text="${row.inqireCo}"></div>
                 </td>
                 <td>
-                    <div th:text="${row.frstRegistPnttm}"></div>
+                    <div th:text="${@opDate.ymd(row.frstRegistPnttm)}"></div>
                 </td>
             </tr>
         </tbody>

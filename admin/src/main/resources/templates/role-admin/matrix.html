@@ -155,9 +155,17 @@
 </div><!-- /.admin_wrap -->
 
 <script type="text/javascript" th:src="@{/content/modules/pinterest_grid.js}"></script>
-<script type="text/javascript">
+<script type="text/javascript" th:inline="javascript">
+
+/*  AS-IS는 저장 후 M00406("저장되었습니다.")을 flash scope로 넘기고 레이아웃이 alert으로 띄운다.
+    TO-BE는 FlashRedirect + ${redirectMessage} 조합을 쓴다(다른 운영관리 화면과 동일). */
+var redirectMessage = /*[[${redirectMessage}]]*/ null;
 
 $(function(){
+  if (redirectMessage) {
+    alert(redirectMessage);
+  }
+
   $('#blog-landing').pinterest_grid({
       no_columns: 4,
       padding_x: 10,

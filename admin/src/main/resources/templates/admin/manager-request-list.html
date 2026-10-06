@@ -21,9 +21,6 @@
 <h3><span th:text="${msg.get('MENU_1406')}">관리자 권한 승인관리</span></h3>
 
 <div class="board_guide" th:if="${errorMessage}" th:text="${errorMessage}"></div>
-<div class="board_guide" th:if="${approvedLoginId}">
-    <p class="tip"><span th:text="${approvedLoginId}"></span> 계정이 승인되었습니다. 임시 비밀번호: <strong th:text="${tempPassword}"></strong></p>
-</div>
 
 <!-- Search -->
 <form id="searchForm" class="opmanager-search-form clear" method="post" th:action="@{/admin/manager-requests}">
@@ -157,7 +154,7 @@
 							<a th:href="|javascript:detailsPopup('${item.userId}', '${item.reqstSn}')|"
 							   th:text="${confmSttusLabels.containsKey(item.confmSttusCode)} ? ${confmSttusLabels.get(item.confmSttusCode)} : ${item.confmSttusCode}"></a>
 						</td>
-						<td th:text="${item.frstRegistPnttm}"></td>
+						<td th:text="${@opDate.ymd(item.frstRegistPnttm)}"></td>
 						<td><a th:href="|javascript:histroyPopup('${item.userId}')|">보기</a></td>
 					</tr>
 				</th:block>
@@ -212,7 +209,8 @@
 	 */
 	function detailsPopup(userId, reqstSn) {
 		var url = '/admin/manager-requests/popup/details/'+userId+'/'+reqstSn;
-		var popupName = 'managerRequestDetails';
+		// AS-IS와 동일한 팝업 창 이름
+		var popupName = '/opmanager/manager-request/popup/details';
 
 		// 상세 팝업 활성화
 		Common.popup(url, popupName, 600, 650 ,1, 0, 0);
@@ -223,7 +221,8 @@
 	 *	기	능  : 신청 이력 팝업
 	 */
 	function histroyPopup(userId) {
-		Common.popup('/admin/manager-requests/popup/history/'+userId, 'managerRequestHistory', 700, 500, 1);
+		// AS-IS와 동일한 팝업 창 이름·크기(800x650)
+		Common.popup('/admin/manager-requests/popup/history/'+userId, '/opmanager/manager-request/popup/history', 800, 650, 1, 0, 0);
 	}
 
 	function datepickerChange() {

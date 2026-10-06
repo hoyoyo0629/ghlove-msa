@@ -59,7 +59,7 @@
             <td th:text="${q.displayFlag()} == 'N' ? '블라인드' : '노출'"></td>
             <td th:text="${reportCounts.get(q.inquiryId())} ?: 0"
                 th:style="${(reportCounts.get(q.inquiryId()) ?: 0) > 0} ? 'color:#c00;font-weight:bold;' : ''"></td>
-            <td th:text="${q.createdDate()}"></td>
+            <td th:text="${@opDate.ymd(q.createdDate())}"></td>
             <td>
                 <form th:if="${q.status() != 'ANSWERED'}" style="display:inline-flex; gap:4px;" method="post"
                       th:action="@{/admin/gift-inquiries/{id}/answer(id=${q.inquiryId()})}">

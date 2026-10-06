@@ -252,7 +252,7 @@
 					<td><div th:text="${item.bugaStatusCd}"></div></td>
 					<td><div th:text="${item.linkRstCd}"></div></td>
 					<td><div th:text="${item.linkRstMsg}"></div></td>
-					<td><div th:text="${item.frstRegistPnttm}"></div></td>
+					<td><div th:text="${@opDate.ymdHms(item.frstRegistPnttm)}"></div></td>
 				</tr>
 				<!-- AS-IS도 colspan이 14다(컬럼 34개) -->
 				<tr th:if="${#lists.isEmpty(list)}" style="background:#fff;">

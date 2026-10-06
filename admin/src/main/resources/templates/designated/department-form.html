@@ -79,7 +79,7 @@
                 </tr>
                 <tr th:if="${department != null}">
                     <td class="label">등록일시</td>
-                    <td><div th:text="${department.createdDate} ?: '-'"></div></td>
+                    <td><div th:text="${department.createdDate != null and department.createdDate != ''} ? ${@opDate.ymd(department.createdDate)} : '-'"></div></td>
                 </tr>
             </tbody>
         </table>

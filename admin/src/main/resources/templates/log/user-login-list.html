@@ -130,7 +130,7 @@
 			<th:block th:if="${not #lists.isEmpty(list)}">
 				<tr th:each="item, i : ${list}" style="background:#fff;">
 					<td><div th:text="${pagination.itemNumber - i.count}">0</div></td>
-					<td><div th:text="${item.loginDate}"></div></td>
+					<td><div th:text="${@opDate.ymdHms(item.loginDate)}"></div></td>
 					<td><div th:text="${item.loginId}"></div></td>
 					<td><div th:text="${item.successFlag == 'Y'} ? '성공' : '실패'"></div></td>
 					<td><div th:text="${item.remoteAddr}"></div></td>

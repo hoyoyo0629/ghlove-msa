@@ -23,7 +23,7 @@
         <thead><tr><th>발송일시</th><th>수신자</th><th>수신이메일</th><th>제목</th><th>유형</th><th>성공여부</th></tr></thead>
         <tbody>
         <tr th:each="l : ${logs}">
-            <td th:text="${l.sendDate}"></td>
+            <td th:text="${@opDate.ymdHms(l.sendDate)}"></td>
             <td th:text="${l.receiveName}"></td>
             <td th:text="${l.receiveEmail}"></td>
             <td><a th:href="@{'/admin/send-mail-logs/' + ${l.sendMailLogId}}" th:text="${l.subject}"></a></td>

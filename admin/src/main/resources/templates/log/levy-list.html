@@ -69,7 +69,7 @@
             <td th:text="${r.relayType() == 'BUGA' ? '세외수입 부과' : (r.relayType() == 'SUNAP' ? '세외수입 수납확인' : '국세청 전자기부금영수증 등록')}"></td>
             <td th:text="${r.relayResultCode() == 'SUCCESS' ? '성공' : '실패'}"
                 th:style="${r.relayResultCode() == 'SUCCESS' ? 'color:#1a6b3c;' : 'color:#c0392b;'}"></td>
-            <td th:text="${r.frstRegistPnttm()}"></td>
+            <td th:text="${@opDate.ymdHms(r.frstRegistPnttm())}"></td>
         </tr>
         </tbody>
     </table>

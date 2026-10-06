@@ -142,7 +142,7 @@
 			<th:block th:if="${not #lists.isEmpty(list)}">
 				<tr th:each="row, i : ${list}" style="background:#fff;">
 					<td><div th:text="${pagination.itemNumber - i.count}">0</div></td>
-					<td><div th:text="${row.log.loginDate}"></div></td>
+					<td><div th:text="${@opDate.ymdHms(row.log.loginDate)}"></div></td>
 					<td><div th:text="${row.log.loginId}"></div></td>
 					<td>
 						<div th:text="${row.log.loginType == 'seller'} ? '답례품관리자' : ${row.roleName}"></div>

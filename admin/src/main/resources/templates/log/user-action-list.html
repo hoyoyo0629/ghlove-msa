@@ -39,7 +39,7 @@
             <td th:text="${l.requestMethod()}"></td>
             <td th:text="${l.requestUri()}"></td>
             <td th:text="${l.remoteAddr()}"></td>
-            <td th:text="${l.createdDate()}"></td>
+            <td th:text="${@opDate.ymdHms(l.createdDate())}"></td>
         </tr>
         </tbody>
     </table>

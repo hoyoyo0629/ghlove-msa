@@ -51,7 +51,7 @@
             <td th:text="${categoryLabels.get(n.categoryCode)} ?: ${n.categoryCode}"></td>
             <td th:text="${n.locgovCode != null} ? (${locgovNames.get(n.locgovCode)} ?: ${n.locgovCode}) : '전체'"></td>
             <td><a th:href="@{'/notices/' + ${n.noticeId}}" th:text="${n.subject}"></a></td>
-            <td th:text="${n.createdDate}"></td>
+            <td th:text="${@opDate.ymd(n.createdDate)}"></td>
             <td th:text="${n.hits} ?: 0"></td>
             <td>
                 <span class="pill" th:classappend="${n.useYn == 'Y'} ? 'on' : 'off'"

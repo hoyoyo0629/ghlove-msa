@@ -35,6 +35,7 @@ public class ManagerRequestController {
     private final LocgovClient locgovClient;
     private final JwtVerifier jwtVerifier;
     private final com.ghlove.admin.repository.RoleRepository roleRepository;
+    private final com.ghlove.admin.repository.ManagerRepository managerRepository;
 
     @GetMapping("/admin/manager-requests/new")
     public String newForm(HttpServletRequest request, Model model) {
@@ -99,8 +100,6 @@ public class ManagerRequestController {
     @RequestMapping(value = "/admin/manager-requests", method = { RequestMethod.GET, RequestMethod.POST })
     public String list(@ModelAttribute("searchParam") ManagerRequestParam searchParam,
                         @RequestParam(required = false) String errorMessage,
-                        @RequestParam(required = false) String approvedLoginId,
-                        @RequestParam(required = false) String tempPassword,
                         HttpSession session, HttpServletRequest request, Model model) {
         if (searchParam.getItemsPerPage() <= 0) {
             searchParam.setItemsPerPage(10);
@@ -135,8 +134,6 @@ public class ManagerRequestController {
         model.addAttribute("reqstSeCodeLabels", commonCodeService.labelsOf("REQST_SE_CODE"));
         model.addAttribute("confmSttusLabels", CONFM_STTUS_LABELS);
         model.addAttribute("errorMessage", errorMessage);
-        model.addAttribute("approvedLoginId", approvedLoginId);
-        model.addAttribute("tempPassword", tempPassword);
         model.addAttribute("roles", roleRepository.findAllByOrderByRoleSeq());
         model.addAttribute("allLocgovs", locgovClient.allLocgovs());
         model.addAttribute("provinces", provinces());
@@ -162,9 +159,34 @@ public class ManagerRequestController {
     /** AS-IS 이력 팝업 - 한 사용자의 신청 이력(최신순). */
     @GetMapping("/admin/manager-requests/popup/history/{userId}")
     public String historyPopup(@PathVariable Long userId, Model model) {
-        model.addAttribute("list", managerRequestService.history(userId));
+        // AS-IS getManagerRequestHistory는 ORDER BY LAST_UPDT_PNTTM DESC. 미처리(대기) 건은
+        // lastUpdtPnttm이 비어 있어 뒤로 간다(CUBRID NULL=최소값, DESC면 마지막).
+        var history = managerRequestService.history(userId).stream()
+                .sorted(java.util.Comparator.comparing(
+                        (ManagerRequest r) -> r.getLastUpdtPnttm() == null ? "" : r.getLastUpdtPnttm())
+                        .reversed())
+                .toList();
+        model.addAttribute("list", history);
         model.addAttribute("reqstSeCodeLabels", commonCodeService.labelsOf("REQST_SE_CODE"));
         model.addAttribute("confmSttusLabels", CONFM_STTUS_LABELS);
+        // AS-IS "작성자" = 변경한 관리자의 권한명 + (로그인아이디). AS-IS는 updId를 OP_USER_ROLE·OP_ROLE과
+        // 조인해 얻지만, TO-BE는 G_MNGR_REQST.LAST_UPDUSR_ID(관리자 userId)로 op_manager를 찾아
+        // authority→op_role.role_name + login_id로 구성한다. lastUpdusrId 하나당 한 번만 조회한다.
+        Map<String, String> roleNames = roleRepository.findAllByOrderByRoleSeq().stream()
+                .collect(java.util.stream.Collectors.toMap(com.ghlove.admin.domain.Role::getAuthority,
+                        com.ghlove.admin.domain.Role::getRoleName, (a, b) -> a));
+        Map<Long, String> updaterLabels = new LinkedHashMap<>();
+        for (ManagerRequest r : history) {
+            Long updId = r.getLastUpdusrId();
+            if (updId == null || updaterLabels.containsKey(updId)) {
+                continue;
+            }
+            managerRepository.findById(updId).ifPresent(m -> {
+                String roleName = roleNames.getOrDefault(m.getAuthority(), m.getAuthority());
+                updaterLabels.put(updId, roleName + " (" + m.getLoginId() + ")");
+            });
+        }
+        model.addAttribute("updaterLabels", updaterLabels);
         return "admin/manager-request-history";
     }
 
@@ -215,35 +237,42 @@ public class ManagerRequestController {
         return (value == null || value.isBlank()) ? null : value;
     }
 
-    @PostMapping("/admin/manager-requests/{userId}/{reqstSn}/approve")
-    public String approve(@PathVariable Long userId, @PathVariable Integer reqstSn,
-                           @RequestParam String authority, @RequestParam(required = false) String assignedLocgovCode,
-                           HttpSession session, Model model) {
+    /**
+     * AS-IS {@code POST /opmanager/manager-request/confirm} 이식 - 승인/거절을 한 엔드포인트가
+     * 처리하고 JSON을 돌려준다(팝업이 AJAX로 호출 → 성공 시 opener 새로고침 + self.close).
+     * confmSttusCode: 100=승인 / 300=거절. 거절이면 rejectResn 필수.
+     * 응답: {@code {isSuccess:true, data:{code:"SUCC"|"ERR", message?}}}.
+     */
+    @PostMapping("/admin/manager-requests/confirm")
+    @ResponseBody
+    public Map<String, Object> confirm(@RequestParam String confmSttusCode,
+                                       @RequestParam Long userId,
+                                       @RequestParam Integer reqstSn,
+                                       @RequestParam(required = false) String rejectResn,
+                                       HttpSession session) {
         Manager approver = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
+        Long approverId = approver != null ? approver.getUserId() : null;
         MemberClient.MemberInfo member = memberClient.fetchOrNull(userId);
+        Map<String, Object> data = new LinkedHashMap<>();
         try {
-            String tempPassword = managerRequestService.approve(userId, reqstSn, approver.getUserId(),
-                    member != null ? member.userName() : null,
-                    member != null ? member.email() : null,
-                    member != null ? member.phoneNumber() : null,
-                    authority, assignedLocgovCode);
-            return "redirect:/admin/manager-requests?approvedLoginId=" + encode(member != null ? member.loginId() : "")
-                    + "&tempPassword=" + encode(tempPassword);
+            if ("300".equals(confmSttusCode)) {
+                managerRequestService.reject(userId, reqstSn, approverId, rejectResn, member);
+                data.put("code", "SUCC");
+            } else if ("100".equals(confmSttusCode)) {
+                managerRequestService.approve(userId, reqstSn, approverId, member);
+                data.put("code", "SUCC");
+            } else {
+                data.put("code", "ERR");
+                data.put("message", "상태값이 올바르지 않습니다.");
+            }
         } catch (ManagerException e) {
-            return flashRedirect.to("/admin/manager-requests", e.getMessage());
+            data.put("code", "ERR");
+            data.put("message", e.getMessage());
         }
-    }
-
-    @PostMapping("/admin/manager-requests/{userId}/{reqstSn}/reject")
-    public String reject(@PathVariable Long userId, @PathVariable Integer reqstSn,
-                          @RequestParam String reason, HttpSession session) {
-        Manager approver = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
-        try {
-            managerRequestService.reject(userId, reqstSn, approver.getUserId(), reason);
-        } catch (ManagerException e) {
-            return flashRedirect.to("/admin/manager-requests", e.getMessage());
-        }
-        return "redirect:/admin/manager-requests";
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("isSuccess", true);
+        body.put("data", data);
+        return body;
     }
 
     /** upperLocgovCode/upperLocgovNm만 중복 없이 뽑는다 (기존 ReceiptController의 시/도

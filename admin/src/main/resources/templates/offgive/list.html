@@ -237,7 +237,7 @@
 				<td th:text="${item.maskedUserName}"></td>
 				<td th:text="${item.cntrAmtText}"></td>
 				<td th:text="${item.bankText}"></td>
-				<td th:text="${item.frstRegistPnttm}"></td>
+				<td th:text="${@opDate.ymd(item.frstRegistPnttm)}"></td>
 				<td th:text="${item.prjSubject}"></td>
 			</tr>
 		</tbody>

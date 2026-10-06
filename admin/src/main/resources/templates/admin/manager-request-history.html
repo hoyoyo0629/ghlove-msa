@@ -1,31 +1,32 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>관리자 권한 신청이력 - 고향사랑e음 (admin service)</title>
+    <title>권한 상태 변경이력 - 고향사랑e음 (admin service)</title>
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
-<!-- AS-IS opmanager/i18n/user/popup/manager-request-history.jsp 이식. layout=base 팝업.
-     한 사용자의 권한 신청 이력을 최신순으로 보여준다(권한 요청일/신청 구분/상태/작성자/변경일).
-     "작성자"는 AS-IS가 변경한 관리자의 권한명+아이디를 보여주는데, TO-BE는 G_MNGR_REQST에
-     LAST_UPDUSR_ID만 있어 그 ID를 표시한다(권한명 조인은 매니저 조회가 추가로 필요 - 미이식). -->
+<!-- AS-IS opmanager/i18n/user/popup/manager-request-history.jsp verbatim 이식(800x650 팝업).
+     한 사용자의 권한 신청 이력을 최신순으로(No = 전체건수 - index). 작성자는 변경한 관리자의
+     권한명 + (로그인아이디) - 컨트롤러가 LAST_UPDUSR_ID로 op_manager를 찾아 updaterLabels로 내려준다. -->
 <body>
 <div class="popup_wrap">
     <div id="pop_header">
-        <h1 class="popup_title">관리자 권한 신청이력</h1>
+        <h1 class="popup_title">권한 상태 변경이력</h1>
         <a href="javascript:self.close();" class="btn_close">
             <img th:src="@{/content/opmanager/images/btn/btn_close.png}" alt="닫기">
         </a>
     </div>
+
     <div class="popup_contents">
-        <div class="board_write">
-            <table class="board_list_table">
+        <div class="board_list">
+            <table class="board_list_table" summary="권한 상태 변경이력">
+                <caption>권한 상태 변경이력</caption>
                 <colgroup>
                     <col style="width:50px;">
-                    <col>
-                    <col>
-                    <col>
-                    <col>
-                    <col>
+                    <col style="width:150px;">
+                    <col style="width:300px;">
+                    <col style="width:100px;">
+                    <col style="width:200px;">
+                    <col style="width:200px;">
                 </colgroup>
                 <thead>
                     <tr>
@@ -38,20 +39,30 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="item, i : ${list}" style="background:#fff;">
+                    <tr th:each="item, i : ${list}" style="background:#fff;" th:if="${not #lists.isEmpty(list)}">
                         <td><div th:text="${#lists.size(list) - i.index}">0</div></td>
-                        <td><div th:text="${item.frstRegistPnttm}"></div></td>
+                        <td><div th:text="${@opDate.ymd(item.frstRegistPnttm)}"></div></td>
                         <td><div th:text="${reqstSeCodeLabels.containsKey(item.reqstSeCode)} ? ${reqstSeCodeLabels.get(item.reqstSeCode)} : ${item.reqstSeCode}"></div></td>
                         <td><div th:text="${confmSttusLabels.containsKey(item.confmSttusCode)} ? ${confmSttusLabels.get(item.confmSttusCode)} : ${item.confmSttusCode}"></div></td>
-                        <td><div th:text="${item.lastUpdusrId}"></div></td>
-                        <td><div th:text="${item.lastUpdtPnttm}"></div></td>
+                        <!-- AS-IS: 변경자(작성자)가 있을 때만 권한명 + (아이디) 표시 -->
+                        <td>
+                            <th:block th:if="${item.lastUpdusrId != null and updaterLabels.containsKey(item.lastUpdusrId)}">
+                                <div th:text="${updaterLabels.get(item.lastUpdusrId)}"></div>
+                            </th:block>
+                        </td>
+                        <td>
+                            <div th:if="${item.lastUpdusrId != null}" th:text="${@opDate.ymd(item.lastUpdtPnttm)}"></div>
+                        </td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(list)}" style="background:#fff;">
-                        <td colspan="6">신청 이력이 없습니다.</td>
+                        <td colspan="6">데이터가 없습니다.</td>
                     </tr>
                 </tbody>
             </table>
         </div>
+        <p class="popup_btns">
+            <button type="button" class="btn btn-active" onclick="self.close();">확인</button>
+        </p>
     </div>
 </div>
 </body>

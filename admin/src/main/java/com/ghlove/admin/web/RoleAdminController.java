@@ -37,6 +37,7 @@ public class RoleAdminController {
 
     private final RoleAdminService roleAdminService;
     private final CommonMessageService commonMessageService;
+    private final com.ghlove.admin.web.support.FlashRedirect flashRedirect;
 
     /** AS-IS list(/user-group/list) - 1405. */
     @GetMapping
@@ -150,12 +151,21 @@ public class RoleAdminController {
         return "role-admin/matrix";
     }
 
-    /** AS-IS groupRoleInsertAction(POST role/list) - 메뉴권한 저장 후 같은 화면으로 돌아간다. */
+    /**
+     * AS-IS groupRoleInsertAction(POST role/list) - 메뉴권한 저장 후 같은 화면으로 돌아간다.
+     * AS-IS 화면이 authority 외에 roleName·roleDesc도 hidden으로 보내고 서버가 OP_ROLE까지
+     * 갱신하므로({@code RoleServiceImpl.updateRole}) 같이 받는다.
+     */
     @PostMapping("/matrix")
     public String saveMatrix(@RequestParam("authority") String authority,
+                             @RequestParam(required = false) String roleName,
+                             @RequestParam(required = false) String roleDesc,
                              @RequestParam(required = false) List<Integer> menuIds) {
-        roleAdminService.saveMatrix(authority, menuIds);
-        return "redirect:/admin/roles/matrix?userAuthority=" + authority;
+        roleAdminService.saveMatrix(authority, roleName, roleDesc, menuIds);
+        // AS-IS는 ViewUtils.redirect("/opmanager/user-group/role/list", M00406, "")로 돌아간다 -
+        // userAuthority를 붙이지 않으므로 저장 후 선택이 첫 행(답례품관리자)으로 되돌아간다.
+        // 문구는 flash scope로 넘어간다(3인자 redirect = setJavascript + 2인자 redirect, 바이트코드 확인).
+        return flashRedirect.to("/admin/roles/matrix", commonMessageService.get("M00406"));  // 저장되었습니다.
     }
 
     /** 이전 TO-BE 경로(/admin/roles/{authority}/matrix)로 들어온 링크를 AS-IS 경로로 넘긴다. */

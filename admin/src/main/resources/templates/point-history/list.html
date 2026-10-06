@@ -61,7 +61,7 @@
             <td th:text="${r.remainingAmount() != null ? (#numbers.formatInteger(r.remainingAmount(), 0, 'COMMA') + 'P') : '-'}"></td>
             <td th:text="${r.reason()}"></td>
             <td th:text="${r.refKey()}"></td>
-            <td th:text="${r.createdDate()}"></td>
+            <td th:text="${@opDate.ymd(r.createdDate())}"></td>
         </tr>
         </tbody>
     </table>

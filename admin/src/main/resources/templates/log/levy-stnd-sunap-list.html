@@ -216,7 +216,7 @@
 					<td><div th:text="${item.rsveItem3}"></div></td>
 					<td><div th:text="${item.rsveItem4}"></div></td>
 					<td><div th:text="${item.rsveItem5}"></div></td>
-					<td><div th:text="${item.frstRegistPnttm}"></div></td>
+					<td><div th:text="${@opDate.ymdHms(item.frstRegistPnttm)}"></div></td>
 				</tr>
 				<!-- AS-IS도 colspan이 12다(컬럼 37개) -->
 				<tr th:if="${#lists.isEmpty(list)}" style="background:#fff;">

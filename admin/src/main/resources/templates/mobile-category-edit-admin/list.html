@@ -48,7 +48,7 @@
                 <span th:if="${r.editKind == '1'}" th:text="${#strings.abbreviate(r.editContent ?: '', 30)}"></span>
             </td>
             <td th:text="${r.editUrl}"></td>
-            <td th:text="${r.updatedDate}"></td>
+            <td th:text="${@opDate.ymd(r.updatedDate)}"></td>
             <td>
                 <a class="small-btn" th:href="@{/admin/mobile-category-edit/{id}/edit(id=${r.categoryEditId})}">수정</a>
                 <form style="display:inline;" th:action="@{/admin/mobile-category-edit/{id}/delete(id=${r.categoryEditId})}" method="post"

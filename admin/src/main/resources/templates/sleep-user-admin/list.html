@@ -133,7 +133,7 @@
 			<tr th:each="item, i : ${list}" style="background:#fff;">
 				<td><input type="checkbox" th:value="${item.userId}" th:id="'check_' + ${item.userId}"></td>
 				<td th:text="${pagination.itemNumber - i.count}">0</td>
-				<td th:text="${item.loginDate}"></td>
+				<td th:text="${@opDate.ymd(item.loginDate)}"></td>
 				<td th:text="${item.loginId}"></td>
 				<td th:text="${item.userName}"></td>
 				<td th:text="${item.address} + ' ' + (${item.addressDetail} ?: '')"></td>

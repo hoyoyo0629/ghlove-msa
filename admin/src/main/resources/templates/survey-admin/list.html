@@ -100,7 +100,7 @@
             <div th:text="${pagination.itemNumber - i.count}">0</div>
           </td>
           <td>
-            <div th:text="${item.frstRegistPnttm}"></div>
+            <div th:text="${@opDate.ymd(item.frstRegistPnttm)}"></div>
           </td>
           <td>
             <div th:text="${item.srvyTrgt == 'M'} ? '관리자' : (${item.srvyTrgt == 'U'} ? '대민' : (${item.srvyTrgt == 'S'} ? '답례품제공자' : ''))"></div>

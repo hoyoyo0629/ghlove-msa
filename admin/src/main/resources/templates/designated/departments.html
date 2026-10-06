@@ -150,7 +150,7 @@
                     </div>
                 </td>
                 <td th:text="${d.useYn == 'Y'} ? '사용' : '미사용'"></td>
-                <td th:text="${d.createdDate} ?: '-'"></td>
+                <td th:text="${d.createdDate != null and d.createdDate != ''} ? ${@opDate.ymd(d.createdDate)} : '-'"></td>
             </tr>
         </tbody>
     </table>

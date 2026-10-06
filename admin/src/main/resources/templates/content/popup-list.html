@@ -131,7 +131,8 @@
                                     <a th:href="@{'/popups/' + ${list.popupId} + '/edit'}" th:text="${list.subject}"></a>
                                 </div>
                             </td>
-                            <td th:text="${list.startDate} + ' ~ ' + ${list.endDate}"></td>
+                            <!-- AS-IS: ${op:date(startDate)} ~ ${op:date(endDate)} = yyyy-MM-dd ~ yyyy-MM-dd -->
+                            <td th:text="${@opDate.ymd(list.startDate)} + ' ~ ' + ${@opDate.ymd(list.endDate)}"></td>
                             <td th:text="${list.popupClose}"></td>
                             <td th:text="${list.popupType}"></td>
                             <td th:text="${list.popupStyle}"></td>

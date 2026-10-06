@@ -56,10 +56,8 @@
               <td th:text="${row.role.roleName}"></td>
               <td th:text="${row.role.roleDesc}"></td>
               <td th:text="${row.userCount}">0</td>
-              <!-- AS-IS op:date - yyyyMMddHHmmss 저장값을 날짜로 보여준다 -->
-              <td th:text="${row.role.createdDate != null and #strings.length(row.role.createdDate) >= 8}
-                           ? ${#strings.substring(row.role.createdDate,0,4) + '-' + #strings.substring(row.role.createdDate,4,6) + '-' + #strings.substring(row.role.createdDate,6,8)}
-                           : ${row.role.createdDate}"></td>
+              <!-- AS-IS ${op:date(role.createdDate)} = yyyy-MM-dd ([[admin-date-format-opdate-helper]]) -->
+              <td th:text="${@opDate.ymd(row.role.createdDate)}"></td>
 
               <td>
                 <div class="flex_box juc-center gap-08">

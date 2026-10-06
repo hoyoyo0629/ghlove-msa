@@ -129,6 +129,77 @@ metadata:
 - `admin.ExcelDownloadLog`(+Repository)는 AS-IS에 없는 표라 `@Deprecated` 표시만 하고 남겼다(과거 행 보존, DROP은 사용자 판단).
 - 주문관리 목록의 `downloadExcel()`이 `th:inline="none"`이어서 **검색조건이 항상 빈 값으로 나가 현재 검색조건이 무시**되던 것도 함께 고쳤다.
 
+**★[2026-10-06 3차] 1404·1405·1406을 AS-IS 개발DB 실데이터와 대조해 교정**
+([[asis-cubrid-dev-db-access]]으로 직접 조회. 사용자 지적: "권한 그룹이 as-is 9개인데 to-be 8개,
+답례품 관리자가 빠져있다 / 처음 접속하면 답례품관리자가 선택돼 있어야 한다").
+- **AS-IS `OP_ROLE` 은 ROLE_ADMIN_1~10 열 행**이다(9=답례품관리자, 10=지정기부사업자).
+  TO-BE엔 1~8만 있었고 `created_date` 가 전부 비어 있었다. 1404 JSP가 **지정기부사업자만**
+  `<c:if>` 로 빼기 때문에 AS-IS 화면엔 9개가 보이고, `ORDER BY CREATED_DATE DESC` 의 1위가
+  걸러져 **첫 행 = 답례품관리자**가 되어 기본 선택된다. `migration-admin-op-role-asis-sync.sql`
+  로 2행 추가 + created_date 10건 + `role_desc` 를 AS-IS verbatim(지어낸 설명문이었다)으로.
+  정렬·집합 10행 전부 AS-IS와 일치 확인.
+- 코드 결함 2건: `firstAdminAuthority()` 가 **걸러내기 전** 첫 행을 집어 안 보이는
+  지정기부사업자를 선택하게 돼 있었고, 템플릿은 `th:each`+`th:if` 라 **건너뛴 행도 `i.count`
+  에 포함**돼 번호가 2부터 시작했다(AS-IS는 그려진 행만 세는 rowNum). → 걸러낸 목록을
+  서버에서 내려준다(`RoleAdminService.matrixRoleRows`). **1405에는 이 필터가 없다**(10개 전부).
+- **★오른쪽 메뉴권한 트리를 AS-IS 쿼리로 교체.** AS-IS `MenuMapper.getAllMenuList` 는 3단
+  **전부 INNER JOIN + `STATUS_CODE='1'` + `MENU_TYPE` 1/2/3 고정**이다 → ① **미사용 메뉴는
+  아예 안 나온다**(사용자 관찰이 정확했다) ② **자식 없는 1·2단 묶음도 안 나온다**.
+  TO-BE는 status/type을 안 보고 트리를 직접 걸어 미사용 1단 9개·3단 7개를 노출했다.
+  `MenuRepository.findAllMenuListForRightMatrix()`(네이티브, AS-IS SQL verbatim) + 중첩
+  `MatrixNode` 로 교체. **데이터·순서는 원래 AS-IS와 같았다**(차이는 아래 5120 하나뿐).
+- **AS-IS에 없던 메뉴 5120 "내부문의 관리" 제거**(`migration-admin-menu-5120-admin-inquiry-asis-shape.sql`).
+  AS-IS에는 이 화면이 **답례품관리 > 관리자 문의 > 관리자 문의(16651, `/opmanager/qna-admin/list`)**
+  로 있는데, TO-BE가 16651의 menu_url을 `/qna-admin`(=5112 공개Q&A와 중복)으로 잘못 넣고
+  실제 화면(`/admin/internal-inquiry`)에는 새 메뉴 5120을 만들어 고객센터 아래 달아놨다.
+  16651을 실제 경로로 돌리고 5120+권한 6건 제거 → **권한트리 119건이 AS-IS와 순서까지 완전 일치.**
+- **1404 저장이 OP_ROLE을 갱신하지 않고 있었다.** AS-IS `RoleServiceImpl.updateRole`(바이트코드)은
+  ①OP_ROLE의 ROLE_NAME·ROLE_DESC·UPDATED_DATE UPDATE ②권한 전체 DELETE ③체크분 INSERT 순이다
+  (화면이 roleName/roleDesc를 hidden으로 보내는 이유). ①을 추가했고, 저장 후 응답도 AS-IS대로
+  **M00406 flash + userAuthority 없는 리다이렉트**(= 선택이 첫 행으로 되돌아간다)로 맞췄다.
+  ②가 무조건 전체 삭제라 **안 보이는 미사용 메뉴의 권한도 저장 시 사라진다 - AS-IS 동일, 유지.**
+- **1406 시드 20건**(`seed-admin-manager-request.sql`): AS-IS는 8,910행인데 TO-BE가 1행이라
+  검색·상태필터·페이징·이력 팝업을 눌러볼 수 없었다. 상태 100승인/200대기/300거절
+  (AS-IS 코드표 `CFM_STATUS` 확인 - TO-BE 라벨은 맞았다), 신청구분 4종, 1인 다건 4명, 거절사유 포함.
+  **`REQST_SE_CODE` 는 AS-IS가 6개**(ROLE_ADMIN_6/8/4/2 + 10·11은 use_yn='N')인데 TO-BE에
+  지어낸 `LOCALGOV`·`PROVIDER`·`OPERATOR` 3개가 더 있어 `use_yn='N'` 으로 내렸다(행 삭제는 안 함).
+  기존 1행의 `reqst_se_code='1'`(AS-IS에 없는 값)도 ROLE_ADMIN_6으로 교정.
+  **AS-IS는 LOGIN_ID·OFCPS_NM·CTTPC를 암호화 저장**하는데 TO-BE는 평문이다 - 별도 과제.
+- **미확인(사용자 클릭 필요)**: 1404 저장 실제 동작, 1406 검색·페이징(로그인 세션이 필요해
+  런타임 확인 못 함). 1405 인원수는 AS-IS가 OP_USER_ROLE, TO-BE가 매니저 수라 값이 다르다(로직 차이 아님).
+- **`op_menu_right` 전수 대조 = AS-IS와 완전 일치(503쌍).** 권한마다 +1 많았던 것(ROLE_ADMIN_1
+  115 vs 114 등)의 **원인은 5120이었다** - 5120에 ROLE_ADMIN_1~6 권한이 하나씩 붙어 있었으므로
+  5120을 지우자 1~6이 각각 -1 되어 AS-IS와 같아졌다(114/87/95/85/53/51, 7·8·10은 각 6).
+  `(authority, menu_id)` **짝 단위로도 503쌍 전부 동일**하고, 고아 권한행 0건,
+  미사용 메뉴를 가리키는 권한행 0건이다. (처음엔 "원인 미확인"으로 적었는데 5120 제거 **이전**
+  수치를 비교한 착오였다 - 대조는 조치 **후** 수치로 할 것.)
+  AS-IS 활성 3단 메뉴는 207개인데 TO-BE는 120개인데도 권한 집합이 일치한다 = AS-IS 권한이
+  걸려 있는 메뉴는 전부 TO-BE에도 있다는 뜻이다.
+
+**★[2026-10-06 4차] 1406 관리자 권한 승인관리 - 상태/이력 팝업을 AS-IS대로 재이식.**
+사용자가 "팝업 이름이 AS-IS와 다르고 폼도 다르다"고 지적. 4축(JSP+매퍼+컨트롤러+ServiceImpl) 대조 결과
+TO-BE가 **발명**한 것들을 제거했다([[no-invented-features-ask-first]]):
+- **상세(상태) 팝업**: 제목 `관리자 권한 요청 (승인)/(거절)`(TO-BE는 "관리자 권한 승인관리"였음),
+  생년월일 추가, 부서+직위 한 행. **핵심**: AS-IS 승인은 관리자가 권한을 고르지 않는다 -
+  신청구분(reqstSeCode)이 그대로 부여 권한(AS-IS `updateManagerRequestApproval`이
+  `ROLE_OPMANAGER + reqstSeCode` 부여). TO-BE가 넣었던 **'부여 권한' 드롭다운 + '소속 지자체'
+  입력은 발명 → 제거**. AS-IS대로 라디오(승인/거절) 1개 + 거절 시 거절사유 textarea,
+  **AJAX 단일 `confirm` 엔드포인트**(POST `/admin/manager-requests/confirm`, confmSttusCode
+  100/300, JSON `{isSuccess,data:{code}}`)로 교체. 기존 `/approve`·`/reject` 폼 2개 삭제.
+- **이력 팝업**: 제목 `권한 상태 변경이력`(TO-BE "관리자 권한 신청이력"이었음), board_list 래퍼,
+  빈 메시지 `데이터가 없습니다.`, **닫기(확인) 버튼** 추가. 작성자 칸은 AS-IS대로 변경 관리자
+  **권한명+(로그인아이디)** - 컨트롤러가 `LAST_UPDUSR_ID`로 op_manager 조회해 `updaterLabels` 구성.
+- **팝업 창 크기/이름 AS-IS로**: 상세 600×650, 이력 **800×650**(TO-BE 700×500이 틀렸었다).
+- **승인/거절 통지(사용자 결정: 메일로 AS-IS 최대한 맞춤)**: AS-IS `sendMail` 이식 -
+  op_mail_config 템플릿(`manager_request_approval`/`reject`) 있고 buyerSendFlag='Y'면
+  토큰 치환(`{loginId}{adminRole}{rejectResn}`) 후 EmsMailClient로 발송(enabled=false면 로그만).
+  `adminRole`은 AS-IS `getAdminRoleText`(신청구분→"구분 등급") 이식. **발명 배너(목록에 임시비번
+  표시) 제거**. op_manager가 member와 분리돼 자격증명이 필요해 임시비번을 승인 메일에 실어 보낸다
+  (분리 인증구조의 최소 추가, 사용자 승인). **미이식**: AS-IS의 per-user 수신동의(receiveEmail=='0')
+  검사는 TO-BE MemberInfo에 그 플래그가 없어 생략(문서화).
+- 빌드·기동(JPA EMF 정상, BeanCreationException 0)·가드테스트 통과. **런타임 클릭은 세션 필요로
+  미확인** - 사용자가 재기동 후 상태 링크→승인/거절, 이력 링크 확인 필요.
+
 **caption/summary는 화면에 안 보인다**(`opmanager.css:41 caption {display:none}`) - AS-IS가 caption에 엉뚱한 문구코드를 쓴 곳(배송업체 폼의 `M00055`=전체주문 내역 등)은 사용자에게 안 보이므로 verbatim 유지한다. 눈에 보이는 건 `<h3>`뿐이다.
 
 **추가 공통부품:** `templates/common/popup-result.html` = AS-IS `ViewUtils.redirect(url, message, javascript)`의 팝업 응답(`alert(message)` → `opener.fnSearch()` → `self.close()`). AS-IS 운영관리 팝업 화면 전부가 이 패턴이라 재사용한다.

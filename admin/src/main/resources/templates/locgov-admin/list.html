@@ -141,7 +141,7 @@
 					<a th:href="|javascript:pointListPopup('${item.locgovCode}');|"
 					   th:text="${item.pointRateText}"></a>
 				</td>
-				<td th:text="${item.frstRegistPnttm}"></td>
+				<td th:text="${@opDate.ymd(item.frstRegistPnttm)}"></td>
 			</tr>
 			<tr th:if="${#lists.isEmpty(list)}">
 				<td colspan="9">지자체관리 정보가 없습니다.</td>

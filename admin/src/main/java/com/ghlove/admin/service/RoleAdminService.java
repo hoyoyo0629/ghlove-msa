@@ -1,6 +1,5 @@
 package com.ghlove.admin.service;
 
-import com.ghlove.admin.domain.Menu;
 import com.ghlove.admin.domain.MenuRight;
 import com.ghlove.admin.domain.Role;
 import com.ghlove.admin.repository.MenuRepository;
@@ -10,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -100,26 +98,41 @@ public class RoleAdminService {
         return PROTECTED_AUTHORITIES.contains(authority);
     }
 
+    /**
+     * AS-IS {@code RoleServiceImpl.insertRole} 이식 - <b>authority는 폼에서 받지 않고 서버가 생성</b>한다.
+     * AS-IS는 {@code "ROLE_ADMIN_" + SequenceService.getId("ROLE_ADMIN")}로 만든다(실측: 신규
+     * 그룹 "test"가 {@code ROLE_ADMIN_104}를 받음 - 시퀀스가 104까지 와 있다). TO-BE는 프레임워크
+     * 시퀀스가 없어 기존 {@code ROLE_ADMIN_<숫자>} 중 최대값+1로 채번한다(형식·동작 동일, 번호값만
+     * 이 시스템 기준). AS-IS 등록 폼에는 권한코드·메뉴권한 입력이 없으므로 그 둘은 받지 않는다
+     * (메뉴권한은 1404 화면에서 따로 부여).
+     */
     @Transactional
-    public Role create(String authority, String roleName, String roleDesc, Integer roleSeq) {
-        if (authority == null || authority.isBlank()) {
-            throw new ManagerException("권한코드를 입력해 주세요.");
-        }
+    public Role create(String roleName, String roleDesc) {
         if (roleName == null || roleName.isBlank()) {
             throw new ManagerException("역할명을 입력해 주세요.");
         }
-        if (roleRepository.existsById(authority)) {
-            throw new ManagerException("이미 존재하는 권한코드입니다.");
-        }
+        String authority = nextAuthority();
         Role role = new Role();
         role.setAuthority(authority);
         role.setRoleName(roleName);
         role.setRoleDesc(roleDesc);
-        role.setRoleSeq(roleSeq != null ? roleSeq : nextSeq());
-        // AS-IS insertRole은 CREATED_DATE/UPDATED_DATE를 CommonMapper.datetime(yyyyMMddHHmmss)로 넣는다
+        role.setRoleSeq(nextSeq());
+        // AS-IS insert는 CREATED_DATE/UPDATED_DATE=datetime(yyyyMMddHHmmss), CREATED_USER_ID/UPDATED_USER_ID=0
         role.setCreatedDate(nowStamp());
+        role.setCreatedUserId("0");
         role.setUpdatedDate(nowStamp());
+        role.setUpdatedUserId("0");
         return roleRepository.save(role);
+    }
+
+    /** AS-IS {@code "ROLE_ADMIN_" + 시퀀스} 채번의 TO-BE 대응 - 기존 ROLE_ADMIN_&lt;숫자&gt; 최대값+1. */
+    private String nextAuthority() {
+        int max = roleRepository.findAll().stream()
+                .map(Role::getAuthority)
+                .filter(a -> a != null && a.matches("ROLE_ADMIN_\\d+"))
+                .map(a -> Integer.parseInt(a.substring("ROLE_ADMIN_".length())))
+                .max(Integer::compareTo).orElse(0);
+        return "ROLE_ADMIN_" + (max + 1);
     }
 
     @Transactional
@@ -186,10 +199,28 @@ public class RoleAdminService {
         return new MatrixData(List.copyOf(level1.values()), checked);
     }
 
-    /** 매트릭스 저장 - 이 역할의 기존 OP_MENU_RIGHT를 전부 지우고 체크된 메뉴만 다시 넣는다. */
+    /**
+     * 매트릭스 저장 - AS-IS {@code RoleServiceImpl.updateRole} 순서를 그대로 따른다(바이트코드 확인):
+     * <ol>
+     *   <li>{@code RoleMapper.updateRole} - OP_ROLE의 ROLE_NAME·ROLE_DESC·UPDATED_DATE를 갱신한다.
+     *       1404 화면이 roleName/roleDesc를 hidden으로 같이 보내는 이유다.</li>
+     *   <li>{@code MenuMapper.deleteMenuRightByAuthority} - 그 권한의 OP_MENU_RIGHT를 전부 지운다</li>
+     *   <li>{@code MenuMapper.insertMenuRightByRole} - menuIds가 있을 때만 체크된 것을 다시 넣는다</li>
+     * </ol>
+     * 2번이 무조건 전체 삭제라서, <b>화면에 안 보이는 메뉴(미사용 메뉴)에 걸려 있던 권한도 저장 시
+     * 사라진다</b> - AS-IS도 동일하므로 그대로 둔다.
+     */
     @Transactional
-    public void saveMatrix(String authority, List<Integer> menuIds) {
-        get(authority); // 존재 확인
+    public void saveMatrix(String authority, String roleName, String roleDesc, List<Integer> menuIds) {
+        Role role = get(authority);
+        // AS-IS는 보내온 값을 그대로 UPDATE한다(빈 값이면 이름이 지워진다). 1404 폼은 항상 채워
+        // 보내므로 실제로 빈 값이 오는 건 비정상 요청이고, 그때 이름을 날리지 않도록 건너뛴다.
+        if (roleName != null && !roleName.isBlank()) {
+            role.setRoleName(roleName);
+            role.setRoleDesc(roleDesc);
+            role.setUpdatedDate(nowStamp());
+            roleRepository.save(role);
+        }
         menuRightRepository.deleteAll(menuRightRepository.findByAuthority(authority));
         if (menuIds == null) {
             return;

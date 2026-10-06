@@ -34,7 +34,7 @@
                 <td th:text="${s.title}"></td>
                 <td th:text="${s.keywords}"></td>
                 <td th:text="${s.indexFlag == 'Y'} ? '허용' : '차단'"></td>
-                <td th:text="${s.createdDate}"></td>
+                <td th:text="${@opDate.ymd(s.createdDate)}"></td>
             </tr>
             </tbody>
         </table>

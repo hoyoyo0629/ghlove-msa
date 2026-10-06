@@ -4,9 +4,13 @@
 - [조건부 검색 LIKE는 cast 필수](hql-null-param-needs-cast.md) — concat 안의 파라미터는 cast(:x as String), 없으면 null이 bytea로 바인딩돼 500
 - [세션 쿠키는 서비스별 이름](session-cookie-name-per-service.md) — 쿠키는 포트 무시, admin·member가 JSESSIONID 서로 덮어써 운영자 화면이 로그인으로 튕겼음. OP_MANAGER_TIMEOUT은 "분"
 - [인라인JS 대괄호2개 금지](thymeleaf-js-inline-bracket-hazard.md) — 렌더링 중단→ERR_INCOMPLETE_CHUNKED_ENCODING 200, 에디터 쓰는 16화면이 동시에 깨져 있었음. 가드 테스트 있음
+- [admin 날짜 표시는 @opDate 헬퍼로 통일](admin-date-format-opdate-helper.md) — AS-IS는 yyyyMMddHHmmss 저장+DATE_FORMAT 표시. web/support/OpDate.ymd(등록·목록)/ymdHms(로그). 30여 화면 전수 교정
+- [admin 공통 전역 누락으로 팝업 전멸](admin-inc-common-globals-missing.md) — inc_common.jsp의 isMobileLayer·userId 미이식 → Common.popup ReferenceError, 13개 화면 팝업 먹통. opmanager-head에 보충
 - [admin op.common.js ajax는 csrf meta 필수](admin-opmanager-ajax-needs-csrf-meta.md) — _csrf/_csrf_header meta 없으면 전역 beforeSend에서 setRequestHeader 터져 ajax 전멸
 - [개발DB 교차조회 권한](dev-db-cross-schema-grants.md) — 6개 롤에 ghlove_core+gift 교차 ALL 권한, DBeaver 재로그인 제거, 볼륨 초기화 시 재적용
 - [전수 parity 대조 진척](as-is-parity-audit-progress.md) — 6개 서비스 완료 + admin 셸 메뉴트리 1라운드 백본(3단 재시드·컴파일OK·재기동대기), 남은 것 갭화면 신규구현·common
+- [★AS-IS 실데이터는 CUBRID 개발DB 직접조회](asis-cubrid-dev-db-access.md) — 10.0.120.51:30000/ghlove2. 덤프는 DDL만. 예약어 LANGUAGE·출력인코딩·암호화컬럼 함정
+- [스크립트로 파일 만들면 열어보고 보고](perl-double-encoding-when-generating-files.md) — @ARGV·소스리터럴 이중 인코딩으로 한글 깨짐, U+FFFD 검사로는 안 잡힘
 - [AS-IS 테이블 덤프 경로](asis-table-dump-path.md) — Desktop\고향사랑e음\1.AS-IS\1.DB\db-dump\테이블dump\*.sql, 코드성데이터 verbatim 확인·갭화면 구현에 직접 사용
 - [검증대기: 휴면해제·영수증출력](pending-verify-dormancy-receipt.md) — 2026-09-18 donation·member 재기동 후 5173 확인, 그 전엔 영수증 404 정상
 - [정적에셋 스코핑](static-asset-scoping-2026-09-18.md) — 2026-09-18 CSS 전역누수 라우트별 스코핑 + 누락이미지 144개 복사, storefront 전용·시각확인 대기
@@ -17,6 +21,7 @@
 - [storefront 설문 DTO 버그 수정](storefront-survey-dto-fixed.md) — 보내는 키가 안 맞아 응답이 빈 값으로 저장되던 것, 2026-10-03 해결+검증 시드
 - [회원관리 영역 이식 원장](admin-member-area-port-progress.md) — 두 번째 영역 8화면 **완료**(2026-10-04), 담당자 사용여부 9/2 변환 규칙, 주소검색 팝업 신규
 - [소규모 영역 묶음 이식 원장](admin-small-areas-port-progress.md) — 기부혜택증3·대시보드1·커뮤니티6 완료, 오프라인기부금접수는 15102만 보류(본인인증·ROLE_ADMIN_11 결정 대기)
+- [★★대원칙: AS-IS에 없으면 발명 금지, 추가는 물어보고](no-invented-features-ask-first.md) — AS-IS에 없는 기능/화면/필드/버튼 발명·추가 절대 금지, 무조건 있는 그대로. 예외 ISP/RFP 신규·변경은 먼저 질문. TO-BE에만 있는 건 제거해 AS-IS로 되돌림
 - [★화면 이식 고정절차](asis-screen-port-procedure.md) — ★★기준은 JSP+매퍼SQL+**서비스로직** 3종(2026-10-06). 서비스 본문 안 읽어 업로드 검증·조건부 정리·파일삭제를 반복 누락함. 발명 금지
 - [AS-IS 문구사전 적재완료](asis-message-catalog-loaded.md) — op_common_message 2132행, 템플릿 ${msg.get()}·JS /common/message. 덤프는 DDL만이라 데이터는 export 요청해야 함
 - [메뉴 노출은 status_code+op_menu_right](menu-visibility-verify-against-live-asis.md) — display_flag는 AS-IS WHERE에 안 쓰임. 2026-10-02 export 전수동기화 완료, 미구현 10개 실측목록 포함

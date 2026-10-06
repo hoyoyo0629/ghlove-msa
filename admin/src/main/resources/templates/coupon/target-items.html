@@ -35,7 +35,7 @@
         <tbody>
         <tr th:each="t : ${items}">
             <td th:text="${t.itemId()}"></td>
-            <td th:text="${t.createdDate()}"></td>
+            <td th:text="${@opDate.ymd(t.createdDate())}"></td>
             <td>
                 <form th:action="@{'/coupon/' + ${coupon.couponId()} + '/target-items/' + ${t.itemId()} + '/delete'}" method="post" class="inline-form">
                     <button type="submit" class="small-btn danger">제외</button>

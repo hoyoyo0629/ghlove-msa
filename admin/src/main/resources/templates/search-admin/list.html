@@ -33,7 +33,7 @@
                 <td th:text="${k.searchLink}"></td>
                 <td th:text="${k.searchMobileLink}"></td>
                 <td th:text="${k.searchStartDate} + ' ~ ' + ${k.searchEndDate}"></td>
-                <td th:text="${k.createdDate}"></td>
+                <td th:text="${@opDate.ymd(k.createdDate)}"></td>
             </tr>
             </tbody>
         </table>

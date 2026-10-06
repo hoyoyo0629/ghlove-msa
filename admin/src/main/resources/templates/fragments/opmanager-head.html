@@ -48,6 +48,17 @@
         'currentUrl': /*[[${currentUrl}]]*/ '',
         'prevPageUrl': ''
     };</script>
+    <!-- ★AS-IS inc_common.jsp가 내려주는 나머지 전역 2개. 없으면 그 값을 읽는 함수가
+         ReferenceError로 즉시 죽는다(복사해 온 자산이라 참조를 지울 수도 없다).
+         - isMobileLayer: op.common.js:642 Common.popup의 첫 줄이 읽는다. 정의가 없어
+           **Common.popup 호출이 전부 실패했다**(운영관리 13개 화면 / 23개 호출: 관리자 권한
+           승인관리의 상태·이력 팝업, 권한그룹 수정, 메뉴/공통코드/지자체/배치 등록 팝업 등).
+           AS-IS는 '${shopContext.mobileLayer}'를 넣고 'true'면 true로 바꾼다 - 운영관리 콘솔은
+           데스크톱이라 항상 false이고, false면 새 창(window.open), true면 body 안 iframe 레이어다.
+         - userId: op.common.js:2160 Common.userId()가 읽는다. AS-IS는 로그인 회원의 userId이고
+           여기서는 로그인 관리자의 userId다(현재 호출부는 없지만 자산이 참조하므로 맞춰 둔다). -->
+    <script type="text/javascript">var isMobileLayer = false;</script>
+    <script type="text/javascript" th:inline="javascript">var userId = /*[[${loginManager != null} ? ${loginManager.userId} : '']]*/ '';</script>
     <!-- AS-IS inc_head.jsp: ${shopContext.managerTimeout} - 자동 로그아웃까지의 "분"이다
          (op.manager.js가 값 * 60 * 1000으로 쓴다). 초로 알고 '3600'을 넣어 60시간이 돼 있었다. -->
     <script type="text/javascript" th:inline="javascript">var OP_MANAGER_TIMEOUT = /*[[${managerTimeout}]]*/ '60';</script>

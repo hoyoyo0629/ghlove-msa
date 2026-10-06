@@ -64,7 +64,7 @@
             <td th:text="${r.displayFlag()} == 'Y' ? '노출' : '블라인드'"></td>
             <td th:text="${reportCounts.get(r.itemReviewId())} ?: 0"
                 th:style="${(reportCounts.get(r.itemReviewId()) ?: 0) > 0} ? 'color:#c00;font-weight:bold;' : ''"></td>
-            <td th:text="${r.createdDate()}"></td>
+            <td th:text="${@opDate.ymd(r.createdDate())}"></td>
             <td>
                 <form style="display:inline;" method="post" th:action="@{/admin/gift-reviews/{id}/recommend(id=${r.itemReviewId()})}">
                     <input type="hidden" name="recommend" th:value="${r.recommendFlag()} == 'Y' ? 'false' : 'true'">

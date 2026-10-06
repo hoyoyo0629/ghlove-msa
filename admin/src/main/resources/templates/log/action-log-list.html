@@ -39,7 +39,7 @@
                     <div th:text="${pagination.itemNumber - i.count}">0</div>
                 </td>
                 <td>
-                    <div th:text="${item.createdDate}"></div>
+                    <div th:text="${@opDate.ymdHms(item.createdDate)}"></div>
                 </td>
                 <td>
                     <div th:text="${item.requestUri}"></div>

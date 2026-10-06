@@ -1,159 +1,212 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>관리자 권한 승인관리 - 고향사랑e음 (admin service)</title>
+    <title>관리자 권한 요청 - 고향사랑e음 (admin service)</title>
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
-<!-- AS-IS opmanager/i18n/user/popup/manager-request-details.jsp 이식. layout=base 팝업(600x650).
-     신청자 정보(아이디/이름/생년월일/휴대폰/이메일/소속구분/소속/부서/직위)를 보여주고,
-     상태가 대기(200)면 승인·거절 처리 영역이 뜬다(승인 시 부여 권한과 지자체를 고른다).
-     승인/거절 엔드포인트는 기존 그대로 쓴다. -->
+<!-- AS-IS opmanager/i18n/user/popup/manager-request-details.jsp verbatim 이식(600x650 팝업).
+     신청자 정보 + 상태별 처리 영역(대기=승인/거절 라디오, 승인/거절=상태 표시). 승인 시 부여 권한은
+     신청구분(reqstSeCode)이 그대로 쓰이므로 AS-IS처럼 화면에서 고르지 않는다. -->
 <body>
+<!-- AS-IS: 상태별 서브타이틀 (승인)/(거절), 대기(200)면 공백 -->
 <div class="popup_wrap">
     <div id="pop_header">
-        <h1 class="popup_title">관리자 권한 승인관리<span th:if="${details != null and details.confmSttusCode != '200'}"
+        <h1 class="popup_title">관리자 권한 요청<span th:if="${details != null and details.confmSttusCode != '200'}"
             th:text="'(' + ${confmSttusLabels.containsKey(details.confmSttusCode) ? confmSttusLabels.get(details.confmSttusCode) : details.confmSttusCode} + ')'"></span></h1>
         <a href="javascript:self.close();" class="btn_close">
             <img th:src="@{/content/opmanager/images/btn/btn_close.png}" alt="닫기">
         </a>
     </div>
     <div class="popup_contents">
+        <table class="board_write_table" summary="관리자 권한 요청">
+            <caption>관리자 권한 요청</caption>
+            <colgroup>
+                <col style="width: 150px" />
+                <col/>
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td class="label">아이디</td>
+                    <td colspan="3"><div th:text="${details != null} ? ${details.loginId} : ''"></div></td>
+                </tr>
+                <tr>
+                    <td class="label">이름</td>
+                    <td colspan="3"><div th:text="${member != null} ? ${member.userName} : ''"></div></td>
+                </tr>
+                <tr>
+                    <td class="label">생년월일</td>
+                    <td colspan="3">
+                        <div th:with="b=${member != null and member.birthday != null} ? ${#strings.replace(member.birthday,'-','')} : ''"
+                             th:text="${#strings.length(b) == 8}
+                                      ? ${#strings.substring(b,0,4) + '-' + #strings.substring(b,4,6) + '-' + #strings.substring(b,6,8)}
+                                      : ${b}"></div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">휴대폰</td>
+                    <td colspan="3"><div th:text="${member != null} ? ${member.phoneNumber} : ''"></div></td>
+                </tr>
+                <tr>
+                    <td class="label">이메일 주소</td>
+                    <td colspan="3"><div th:text="${member != null} ? ${member.email} : ''"></div></td>
+                </tr>
+                <tr>
+                    <td class="label">소속 구분</td>
+                    <td colspan="3">
+                        <div th:text="${details != null and reqstSeCodeLabels.containsKey(details.reqstSeCode)}
+                                      ? ${reqstSeCodeLabels.get(details.reqstSeCode)}
+                                      : (${details != null} ? ${details.reqstSeCode} : '')"></div>
+                    </td>
+                </tr>
+                <!-- AS-IS: 지자체(ROLE_ADMIN_6)/오프라인(ROLE_ADMIN_8)만 소속 행을 보인다 -->
+                <tr th:if="${details != null and (details.reqstSeCode == 'ROLE_ADMIN_8' or details.reqstSeCode == 'ROLE_ADMIN_6')}">
+                    <td class="label" th:text="${details.reqstSeCode == 'ROLE_ADMIN_8'} ? '소속은행' : '소속 지자체'"></td>
+                    <td colspan="3">
+                        <div th:if="${details.reqstSeCode == 'ROLE_ADMIN_6'}"
+                             th:text="${locgovNames.containsKey(details.locgovCode)} ? ${locgovNames.get(details.locgovCode)} : ${details.locgovCode}"></div>
+                        <div th:if="${details.reqstSeCode == 'ROLE_ADMIN_8'}" th:text="${details.psitnNm}"></div>
+                    </td>
+                </tr>
+                <!-- AS-IS: 소속 부서 + 직위는 한 행(4칸) -->
+                <tr>
+                    <td class="label">소속 부서</td>
+                    <td><div th:text="${details != null} ? ${details.psitnDeptNm} : ''"></div></td>
+                    <td class="label">직위</td>
+                    <td><div th:text="${details != null} ? ${details.ofcpsNm} : ''"></div></td>
+                </tr>
 
-        <div class="board_write">
-            <table class="board_write_table">
-                <colgroup>
-                    <col style="width:150px;">
-                    <col>
-                </colgroup>
-                <tbody>
+                <!-- AS-IS 상태 필드: 200(대기)/100(승인)/300(거절) -->
+                <!-- 대기(200): 승인/거절 라디오 + (거절 선택 시) 거절사유 -->
+                <th:block th:if="${details != null and details.confmSttusCode == '200'}">
                     <tr>
-                        <td class="label">아이디</td>
-                        <td><div th:text="${details != null} ? ${details.loginId} : ''"></div></td>
-                    </tr>
-                    <tr>
-                        <td class="label">이름</td>
-                        <td><div th:text="${member != null} ? ${member.userName} : ''"></div></td>
-                    </tr>
-                    <tr>
-                        <td class="label">휴대폰</td>
-                        <td><div th:text="${member != null} ? ${member.phoneNumber} : ''"></div></td>
-                    </tr>
-                    <tr>
-                        <td class="label">이메일 주소</td>
-                        <td><div th:text="${member != null} ? ${member.email} : ''"></div></td>
-                    </tr>
-                    <tr>
-                        <td class="label">소속 구분</td>
-                        <td><div th:text="${details != null and reqstSeCodeLabels.containsKey(details.reqstSeCode)}
-                                          ? ${reqstSeCodeLabels.get(details.reqstSeCode)}
-                                          : (${details != null} ? ${details.reqstSeCode} : '')"></div></td>
-                    </tr>
-                    <tr th:if="${details != null and (details.reqstSeCode == 'ROLE_ADMIN_8' or details.reqstSeCode == 'ROLE_ADMIN_6')}">
-                        <td class="label" th:text="${details.reqstSeCode == 'ROLE_ADMIN_8'} ? '소속은행' : '소속 지자체'"></td>
-                        <td>
-                            <div th:if="${details.reqstSeCode == 'ROLE_ADMIN_6'}"
-                                 th:text="${locgovNames.containsKey(details.locgovCode)} ? ${locgovNames.get(details.locgovCode)} : ${details.locgovCode}"></div>
-                            <div th:if="${details.reqstSeCode == 'ROLE_ADMIN_8'}" th:text="${details.psitnNm}"></div>
+                        <td class="label"><span class="required_mark">*</span>상태</td>
+                        <td colspan="3">
+                            <div class="flex_box gap-12">
+                                <div class="input-form">
+                                    <input id="rdoConfmSttusCode_100" name="confmSttusCode" type="radio" value="100" checked="checked">
+                                    <label for="rdoConfmSttusCode_100">승인</label>
+                                </div>
+                                <div class="input-form">
+                                    <input id="rdoConfmSttusCode_300" name="confmSttusCode" type="radio" value="300">
+                                    <label for="rdoConfmSttusCode_300">거절</label>
+                                </div>
+                            </div>
                         </td>
                     </tr>
+                    <tr id="trRejectResn" style="display:none;">
+                        <td class="label"><span class="required_mark">*</span>거절사유</td>
+                        <td colspan="3">
+                            <div>
+                                <textarea id="rejectResn" name="rejectResn" cols="30" rows="10" maxlength="2000"
+                                          class="required _filter" title="사유입력" placeholder="거절사유를 입력해 주세요."></textarea>
+                            </div>
+                        </td>
+                    </tr>
+                </th:block>
+                <!-- 승인(100) -->
+                <tr th:if="${details != null and details.confmSttusCode == '100'}">
+                    <td class="label">상태</td>
+                    <td colspan="3"><div th:text="${confmSttusLabels.containsKey(details.confmSttusCode)} ? ${confmSttusLabels.get(details.confmSttusCode)} : ${details.confmSttusCode}"></div></td>
+                </tr>
+                <!-- 거절(300): 상태 + 거절사유 -->
+                <th:block th:if="${details != null and details.confmSttusCode == '300'}">
                     <tr>
-                        <td class="label">소속 부서</td>
-                        <td><div th:text="${details != null} ? ${details.psitnDeptNm} : ''"></div></td>
+                        <td class="label">상태</td>
+                        <td colspan="3"><div th:text="${confmSttusLabels.containsKey(details.confmSttusCode)} ? ${confmSttusLabels.get(details.confmSttusCode)} : ${details.confmSttusCode}"></div></td>
                     </tr>
                     <tr>
-                        <td class="label">직위</td>
-                        <td><div th:text="${details != null} ? ${details.ofcpsNm} : ''"></div></td>
-                    </tr>
-                    <tr th:if="${details != null and details.confmSttusCode == '300'}">
                         <td class="label">거절사유</td>
-                        <td><div th:text="${details.rejectResn}"></div></td>
+                        <td colspan="3"><div th:text="${details.rejectResn}"></div></td>
                     </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- 대기(200) 상태에서만 승인/거절 처리 -->
-        <th:block th:if="${details != null and details.confmSttusCode == '200'}">
-            <div class="board_write mt20">
-                <form th:id="'approveForm'" method="post"
-                      th:action="@{'/admin/manager-requests/' + ${details.userId} + '/' + ${details.reqstSn} + '/approve'}">
-                    <table class="board_write_table">
-                        <colgroup>
-                            <col style="width:150px;">
-                            <col>
-                        </colgroup>
-                        <tbody>
-                            <tr>
-                                <td class="label"><span class="required_mark">*</span>부여 권한</td>
-                                <td>
-                                    <div>
-                                        <select id="authority" name="authority" title="부여 권한">
-                                            <option th:each="role : ${roles}" th:value="${role.authority}" th:text="${role.roleName}"></option>
-                                        </select>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="label">소속 지자체</td>
-                                <td>
-                                    <div>
-                                        <input type="text" id="assignedLocgovCode" name="assignedLocgovCode"
-                                               class="nine" th:value="${details.locgovCode}" title="소속 지자체 코드"/>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <p class="popup_btns">
-                        <button type="submit" class="btn btn-active">승인</button>
-                    </p>
-                </form>
-            </div>
-
-            <div class="board_write mt20">
-                <form th:id="'rejectForm'" method="post"
-                      th:action="@{'/admin/manager-requests/' + ${details.userId} + '/' + ${details.reqstSn} + '/reject'}">
-                    <table class="board_write_table">
-                        <colgroup>
-                            <col style="width:150px;">
-                            <col>
-                        </colgroup>
-                        <tbody>
-                            <tr>
-                                <td class="label"><span class="required_mark">*</span>거절사유</td>
-                                <td>
-                                    <div>
-                                        <input type="text" id="reason" name="reason" class="full" title="거절사유" maxlength="200"/>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <p class="popup_btns">
-                        <button type="submit" class="btn btn-dark-gray">거절</button>
-                    </p>
-                </form>
-            </div>
-        </th:block>
-
+                </th:block>
+            </tbody>
+        </table>
+        <p class="popup_btns">
+            <th:block th:if="${details != null and details.confmSttusCode == '200'}">
+                <button type="button" class="btn btn-active" onclick="managerConfirm()">확인</button>
+                <button type="button" class="btn btn-default" onclick="self.close();">취소</button>
+            </th:block>
+            <button th:unless="${details != null and details.confmSttusCode == '200'}"
+                    type="button" class="btn btn-active" onclick="self.close();">확인</button>
+        </p>
     </div>
 </div>
 
-<script type="text/javascript">
-    $(function() {
-        $('#rejectForm').on('submit', function() {
-            if ($.trim($('#reason').val()) == '') {
-                alert('거절사유를 입력해 주세요.');
-                $('#reason').focus();
-                return false;
-            }
-            return confirm('거절 처리하시겠습니까?');
-        });
+<script type="text/javascript" th:inline="javascript">
+    // AS-IS verbatim: 상세정보 유효성, 상태변경 이벤트, 승인/거절 확인(AJAX)
+    var managerUserId = /*[[${details != null} ? ${details.userId} : '']]*/ '';
+    var managerReqstSn = /*[[${details != null} ? ${details.reqstSn} : '']]*/ '';
 
-        $('#approveForm').on('submit', function() {
-            return confirm('승인 처리하시겠습니까?');
-        });
+    $(function(){
+        pageValidator();
+        confmSttusChange();
     });
+
+    function pageValidator() {
+        if (managerUserId === '' || managerUserId == null) {
+            alert('상세정보가 존재하지 않습니다.');
+            self.close();
+        }
+    }
+
+    function confmSttusChange() {
+        $("input[name='confmSttusCode']").change(function() {
+            if ($("input[name='confmSttusCode']:checked").val() == '300') {
+                $("#trRejectResn").show();
+            } else {
+                $("#trRejectResn").hide();
+                $("#rejectResn").val("");
+            }
+        });
+    }
+
+    function managerConfirm() {
+        var selectedObj = $("input[name='confmSttusCode']:checked");
+        if (!(selectedObj && selectedObj.length > 0)) {
+            alert('관리자 권한 요청에 대한 상태값을 선택해 주세요.');
+            return;
+        }
+
+        var confirmMsg = '관리자 권한을 승인 하시겠습니까?';
+        var param = {
+            confmSttusCode: $(selectedObj).val(),
+            userId: managerUserId,
+            reqstSn: managerReqstSn
+        };
+
+        if ($(selectedObj).val() == '300') {
+            confirmMsg = '권한 요청을 거절 하시겠습니까?';
+            if ($.trim($("#rejectResn").val()) === '') {
+                alert('거절사유를 입력해 주세요.');
+                $("#rejectResn").focus();
+                return;
+            }
+            param.rejectResn = $("#rejectResn").val();
+        }
+
+        if (confirm(confirmMsg)) {
+            $.post('/admin/manager-requests/confirm', param, function(response) {
+                if (response && response.isSuccess && response.data) {
+                    managerConfirmResult(response.data);
+                } else {
+                    alert('오류가 발생했습니다.');
+                }
+            });
+        }
+    }
+
+    function managerConfirmResult(data) {
+        if (data.code == 'SUCC') {
+            var code = $("input[name='confmSttusCode']:checked").val();
+            alert(code == '100' ? '승인되었습니다.' : '거절되었습니다.');
+            if (opener && !opener.closed) {
+                opener.location.reload();
+            }
+            self.close();
+        } else {
+            alert(data.message ? data.message : '오류가 발생했습니다.');
+        }
+    }
 </script>
 </body>
 </html>

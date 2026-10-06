@@ -170,7 +170,7 @@
 					<td th:text="${item.userName}"></td>
 				</th:block>
 				<td th:text="${item.phoneNumber}"></td>
-				<td th:text="${item.createdDate}"></td>
+				<td th:text="${@opDate.ymd(item.createdDate)}"></td>
 				<td th:text="${item.asIsStatusCode == '2'} ? '중지' : '사용'"></td>
 				<td th:text="${item.asIsStatusCode == '2'} ? ${item.denyDate} : ''"></td>
 			</tr>

@@ -38,7 +38,7 @@
             <td th:text="${l.loginId()} ?: ('#' + ${l.userId()})"></td>
             <td th:text="${l.parameter()}"></td>
             <td th:text="${l.remoteAddr()} ?: '-'"></td>
-            <td th:text="${l.createdDate()}"></td>
+            <td th:text="${@opDate.ymdHms(l.createdDate())}"></td>
         </tr>
         </tbody>
     </table>

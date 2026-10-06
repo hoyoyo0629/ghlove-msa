@@ -176,7 +176,7 @@
 				<td><a th:href="|javascript:chargerEdit('${item.userId}')|" th:text="${item.loginId}"></a></td>
 				<td><a th:href="|javascript:chargerEdit('${item.userId}')|" th:text="${item.userName}"></a></td>
 				<td th:text="${item.phoneNumber}"></td>
-				<td th:text="${item.createdDate}"></td>
+				<td th:text="${@opDate.ymd(item.createdDate)}"></td>
 				<td th:text="${item.asIsStatusCode == '2'} ? '중지' : '사용'"></td>
 				<td th:text="${item.asIsStatusCode == '2'} ? ${item.denyDate} : ''"></td>
 			</tr>

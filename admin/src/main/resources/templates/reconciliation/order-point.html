@@ -159,7 +159,7 @@
                 <td th:text="${list.cntrUsePoint}"></td>
                 <td th:text="${list.matchYn}"></td>
                 <td th:text="${list.holdCnt}"></td>
-                <td th:text="${list.createdDate}"></td>
+                <td th:text="${@opDate.ymd(list.createdDate)}"></td>
             </tr>
             </tbody>
         </table>

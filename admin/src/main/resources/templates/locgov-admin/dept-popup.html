@@ -44,7 +44,7 @@
 								<div th:text="${item.deptHistNo}"></div>
 							</td>
 							<td>
-								<div th:text="${item.lastUpdtPnttm}"></div>
+								<div th:text="${@opDate.ymd(item.lastUpdtPnttm)}"></div>
 							</td>
 							<td>
 								<div th:text="${item.processDeptCode}"></div>

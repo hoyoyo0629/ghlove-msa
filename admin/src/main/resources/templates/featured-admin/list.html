@@ -51,7 +51,15 @@
             <td th:text="${f.featuredCode}"></td>
             <td th:text="${f.featuredFlag == 'Y' ? '노출' : '숨김'}"></td>
             <td th:text="${f.ordering}"></td>
-            <td th:text="${(f.startDate ?: '') + ' ~ ' + (f.endDate ?: '')}"></td>
+            <!-- AS-IS featured/list.jsp 진행기간 로직 verbatim 이식:
+                 ① 시작≠99999999 & 종료=99999999 → "시작일 ~ "(개방형)
+                 ② 둘 다 99999999 → "상시 게시"
+                 ③ 시작값 있음 → "시작일 ~ 종료일"
+                 ④ 그 외 → "-"  (op:date → @opDate.ymd = yyyy-MM-dd) -->
+            <td th:text="${(f.startDate == '99999999' and f.endDate == '99999999') ? '상시 게시'
+                          : ((f.startDate != '99999999' and f.endDate == '99999999') ? (@opDate.ymd(f.startDate) + ' ~ ')
+                          : ((f.startDate != null and f.startDate != '') ? (@opDate.ymd(f.startDate) + ' ~ ' + @opDate.ymd(f.endDate))
+                          : '-'))}"></td>
             <td>
                 <a class="small-btn" th:href="@{/admin/featured/{id}/edit(id=${f.featuredId})}">수정</a>
                 <form style="display:inline;" th:action="@{/admin/featured/{id}/delete(id=${f.featuredId})}" method="post"
