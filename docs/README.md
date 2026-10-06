@@ -18,6 +18,28 @@ git 이력으로 원본을 찾을 수 있다.
 
 `archive/` 는 역할이 끝난 날짜 박힌 리포트다(`archive/README.md` 참고).
 
+## `memory/` - 통합 대상이 아니다
+
+`docs/memory/` 는 **Claude Code 세션 메모리의 실제 저장소**다(2026-10-06에 저장소 안으로 옮겼다).
+원래 위치인
+`C:\Users\<계정>\.claude\projects\c--workspace-ghlove-msa\memory` 는 이제 이 폴더를 가리키는
+**디렉터리 정션**이라서, 어느 쪽 경로로 쓰든 파일은 여기 한 벌만 생긴다. Claude Code가 보는
+경로는 바꿀 수 없으므로 정션이 사라지면 메모리도 끊긴다 - 폴더를 옮기거나 지우지 말 것.
+정션 재생성:
+
+```powershell
+New-Item -ItemType Junction `
+  -Path "$env:USERPROFILE\.claude\projects\c--workspace-ghlove-msa\memory" `
+  -Target "C:\workspace\ghlove-msa\docs\memory"
+```
+
+**이 폴더의 .md는 통합하지 않는다.** 위 6개 문서와 규칙이 정반대다:
+
+- `MEMORY.md` 는 세션마다 통째로 읽히는 **색인**이라 한 줄씩 짧게 유지해야 한다.
+- 나머지는 **사실 하나당 파일 하나**이고, 파일마다 frontmatter(`description`)로 "지금 필요한
+  메모리인가"를 판정한다. 하나로 합치면 그 선별이 불가능해져 **recall이 망가진다.**
+- 즉 파일 수가 많은 게 정상이다. 줄여야 할 건 틀린 메모리·중복 메모리뿐이다.
+
 ## 정본이 어디인가 - 중요
 
 - **진척 상태**(어느 화면까지 이식했는지)는 이 문서들이 아니라 **메모리 원장**이 정본이다

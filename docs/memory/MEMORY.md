@@ -1,0 +1,66 @@
+- [메모리는 저장소 docs/memory](memory-lives-in-repo-docs-memory.md) — 실제 위치가 repo 안, .claude 경로는 정션. 메모리 파일은 통합 금지(한 사실=한 파일)
+- [커밋은 요청 시에만](commit-only-when-asked.md) — 사용자가 git 커밋 직접 관리, 커밋 여부 확인 금지
+- [빌드는 내가·재기동은 사용자](build-is-mine-restart-is-users.md) — compileJava만 X, bootJar까지 구워야 재기동에 반영. ★bootJar EXIT=0은 기동 보증 아님 → 여분 포트로 확인
+- [조건부 검색 LIKE는 cast 필수](hql-null-param-needs-cast.md) — concat 안의 파라미터는 cast(:x as String), 없으면 null이 bytea로 바인딩돼 500
+- [세션 쿠키는 서비스별 이름](session-cookie-name-per-service.md) — 쿠키는 포트 무시, admin·member가 JSESSIONID 서로 덮어써 운영자 화면이 로그인으로 튕겼음. OP_MANAGER_TIMEOUT은 "분"
+- [인라인JS 대괄호2개 금지](thymeleaf-js-inline-bracket-hazard.md) — 렌더링 중단→ERR_INCOMPLETE_CHUNKED_ENCODING 200, 에디터 쓰는 16화면이 동시에 깨져 있었음. 가드 테스트 있음
+- [admin op.common.js ajax는 csrf meta 필수](admin-opmanager-ajax-needs-csrf-meta.md) — _csrf/_csrf_header meta 없으면 전역 beforeSend에서 setRequestHeader 터져 ajax 전멸
+- [개발DB 교차조회 권한](dev-db-cross-schema-grants.md) — 6개 롤에 ghlove_core+gift 교차 ALL 권한, DBeaver 재로그인 제거, 볼륨 초기화 시 재적용
+- [전수 parity 대조 진척](as-is-parity-audit-progress.md) — 6개 서비스 완료 + admin 셸 메뉴트리 1라운드 백본(3단 재시드·컴파일OK·재기동대기), 남은 것 갭화면 신규구현·common
+- [AS-IS 테이블 덤프 경로](asis-table-dump-path.md) — Desktop\고향사랑e음\1.AS-IS\1.DB\db-dump\테이블dump\*.sql, 코드성데이터 verbatim 확인·갭화면 구현에 직접 사용
+- [검증대기: 휴면해제·영수증출력](pending-verify-dormancy-receipt.md) — 2026-09-18 donation·member 재기동 후 5173 확인, 그 전엔 영수증 404 정상
+- [정적에셋 스코핑](static-asset-scoping-2026-09-18.md) — 2026-09-18 CSS 전역누수 라우트별 스코핑 + 누락이미지 144개 복사, storefront 전용·시각확인 대기
+- [Thymeleaf 폐기 1차 완료·2차 착수](thymeleaf-duplicate-cleanup-deferred.md) — 1차 5개 서비스 완료, 2차로 donation 의존성 완전제거(1/5)·member reactivate 전환, 나머지 4개 유지
+- [admin 프론트는 Thymeleaf](admin-frontend-is-thymeleaf-not-jsp.md) — Vue3 전환 미정, JSP 아님(Boot3 jar라 불가)
+- [admin 셸 AS-IS parity 복원](admin-shell-asis-parity-restored.md) — 정적자산 통째복사(modules 7→273)+inc_header 중첩(.admin_wrap>#container)+공통head조각+op.manager 브레드크럼, 210페이지 전환
+- [시스템관리 영역 이식 원장](admin-system-area-port-progress.md) — 25화면 AS-IS JSP 매핑표, **25/25 완료(2026-10-03)**, 화면별 AS-IS 결함·구조갭 기록
+- [storefront 설문 DTO 버그 수정](storefront-survey-dto-fixed.md) — 보내는 키가 안 맞아 응답이 빈 값으로 저장되던 것, 2026-10-03 해결+검증 시드
+- [회원관리 영역 이식 원장](admin-member-area-port-progress.md) — 두 번째 영역 8화면 **완료**(2026-10-04), 담당자 사용여부 9/2 변환 규칙, 주소검색 팝업 신규
+- [소규모 영역 묶음 이식 원장](admin-small-areas-port-progress.md) — 기부혜택증3·대시보드1·커뮤니티6 완료, 오프라인기부금접수는 15102만 보류(본인인증·ROLE_ADMIN_11 결정 대기)
+- [★화면 이식 고정절차](asis-screen-port-procedure.md) — ★★기준은 JSP+매퍼SQL+**서비스로직** 3종(2026-10-06). 서비스 본문 안 읽어 업로드 검증·조건부 정리·파일삭제를 반복 누락함. 발명 금지
+- [AS-IS 문구사전 적재완료](asis-message-catalog-loaded.md) — op_common_message 2132행, 템플릿 ${msg.get()}·JS /common/message. 덤프는 DDL만이라 데이터는 export 요청해야 함
+- [메뉴 노출은 status_code+op_menu_right](menu-visibility-verify-against-live-asis.md) — display_flag는 AS-IS WHERE에 안 쓰임. 2026-10-02 export 전수동기화 완료, 미구현 10개 실측목록 포함
+- [운영 도메인 전환 계획](production-domain-migration-plan.md) — Kong은 구축됨, 절대URL 29곳은 B군 삭제 후 상대경로화
+- [약관·정책 원문 DB 이관 보류](policy-content-db-migration-deferred.md) — admin API 연결은 끝, 운영데이터 받아 적재 후 재검토
+- [명예등급 기준금액 미설정](honor-tier-thresholds-unset.md) — g_locgov 3개 컬럼 전부 0, 등급 기능 사실상 비활성
+- [제공자 포털 분리 보류](provider-portal-split-deferred.md) — 현행(gift 내 /seller/*) 유지, 운영데이터·개발DB 이후 재결정
+- [장바구니 잔여과제](cart-review-remaining-tasks.md) — 심각결함 2건 수정 완료, 잔여·미검증은 docs/cart-review-2026-09-09.md §4
+- [쿠폰 기능 미사용](coupon-feature-unused-hide-ui.md) — 화면 진입점만 숨김, 서비스 로직·DB는 유지
+- [상세분석 기준](check-as-is-source-when-analyzing.md) — 기능은 AS-IS+RFP+ISP 종합, 레이아웃은 AS-IS 기준(CSS 링크 목록까지 대조)
+- [★AS-IS 전수대조 방식](as-is-parity-exhaustive-audit-method.md) — 모든 서비스: 프론트이벤트+검증로직+매퍼 전수 갭목록 먼저, "발견되면그때" 금지, ISP/RFP 신규·변경은 사용자 확인 필수
+- [★AS-IS 비활성상태까지 parity](as-is-parity-includes-disabled-state.md) — 기능 있으면 다 만들되, AS-IS에서 숨김/주석/비활성이면 우리도 동일하게 숨김/주석/비활성 유지(빼지도 켜지도 말 것)
+- [★SalesOn 종속·미사용은 보류](defer-saleson-dependent-unused-features.md) — AS-IS 동일 구현하되 SalesOn 종속·현재 미사용은 기록만 하고 구현 보류(DA 설계 대기). 단 이미 구현된 건 그대로 둠
+- [★조회모델은 DA 설계 후](defer-readmodels-pending-da-design.md) — 전 도메인 조회모델(ReadModel/rwd_*)은 DA 설계안 나올 때까지 보류. 이미 만든 건 유지. 실사용 표시버그는 보류 대상 아님
+- [★★AS-IS CSS/JS 자산 그대로 복사](copy-asis-css-js-assets-verbatim.md) — 차트/라이브러리 "TO-BE에 없으니 표로" 대체 금지, AS-IS에서 복사해 동일구현. 반복 지적. 소급점검 필요
+- [★★AS-IS 문구 그대로 복사·짓지말것](copy-as-is-verbatim-never-invent.md) — 사용자노출 문구/라벨/저장포맷/표시로직은 AS-IS 소스에서 verbatim 복사, 내 해석으로 새 용어/라벨 금지(각인❌→필수추가정보⭕), 없으면 확인. 반복 지적
+- [gift 옵션 다형체계 재현](gift-option-multiform-redesign.md) — S/S2/S3/T+각인(필수추가정보)+추가구성 풀구현, 판매자화면 S2·T 숨김, 옵션단위재고, DDL불요, A안(제공자웹 보류·gift포털에 얹음), ★P1~P6 전부 완료(모델/서비스·판매자에디터·구매자상세·장바구니체크아웃·옵션단위재고SAGA·조회표시), 컴파일·테스트·build OK, 재기동 시 활성
+- [배송비 정책 parity](gift-delivery-fee-parity.md) — G1~G5(묶음배송·조건부무료·개당BOX·제주도서 정식판정·착불) 완료(DeliveryFeeCalculator, ord.op_island 포팅), admin 배송비설정 UI는 AS-IS처럼 숨김. G6·G7은 다른 서브시스템이라 보류
+- [카테고리 3단 트리](gift-category-tree-parity-audit는 docs) — live(GIFT_CATEGORY 대분류+gift_subcategory 3단 메가메뉴+관리자CRUD)는 이미 구현. SalesOn op_category 4단·op_item_category(0건)는 보류+기록. docs/gift-category-tree-parity-audit.md
+- [검색어 관리](gift-search-keyword-parity-audit는 docs) — 답례품 키워드검색·추천검색어(OP_SEARCH) admin CRUD 이미 구현. 인기검색어/자동완성/금지어/통합검색은 SalesOn 종속 보류. docs/gift-search-keyword-parity-audit.md
+- [판매자 셀프서비스 parity](gift-seller-selfservice-parity.md) — 핵심(등록/옵션/재고/Q&A/대시보드) 이미 구현+P4 판매자공지 조회 신규구현(gift→admin). P1~P3·P5(출고/정산/반품=전체주문관리) 보류, P6~P8 SalesOn 보류. ISP 인용 주의
+- [포인트 예약 기능 미사용](point-reservation-unused-decision-deferred.md) — 호출부 0곳·AS-IS에도 없음, 체크아웃 재배선 vs 화면 숨김 결정 보류
+- [포인트 ReadModel 작업 중지](point-readmodel-paused-pending-db-design.md) — DB 설계 후 재개, 테이블·엔티티만 생성됨(미배포)
+- [포인트 사용 링크 추적](point-use-tracking-g-cntr-use-point.md) — g_cntr_use_point에 기부건↔주문 기록(consumeLots)·취소 삭제(restoreForOrder), 소진/복원 수정 시 유지 필수
+- [member 잔여](member-service-deferred-items.md) — 연동해지 2026-09-22 구현완료(재기동대기), 남은 것: 이벤트 발행 전무·조회모델·전자서명·Keycloak, 각각 결정 필요
+- [회원가입 축하포인트 구현·설정0](signup-point-built-but-off.md) — AS-IS 동일 구현+설정 0(비활성), point가 MEMBER_JOINED 구독 적립, POINT_JOIN 양수로 켜짐
+- [화면 대조는 내용으로](verify-screen-by-content-not-route.md) — 라우트·파일명 아닌 제목·마크업으로 확인, guide3 오판 사례
+- [donation 잔여](donation-service-deferred-items.md) — 답례품 선택(RFP 신규)·point 동기호출·조회모델·지도선택·중복기부확인 (납부연계는 이식 결정으로 번복됨)
+- [★donation 납부게이트웨이 이식 결정](donation-payment-gateway-port-decision.md) — NTS/지방세/서울 etax·지로 전부 이식, 설정스왑 가능 어댑터, gift→order→common 점검 후 라운드
+- [주문 멀티아이템 재설계 결정](order-single-item-vs-multiitem-decision.md) — 1주문=1답례품은 요건아님, AS-IS 멀티아이템으로 재설계 방향, 설계안 docs/order-multiitem-redesign-plan.md 리뷰 후 착수
+- [gift 판매자 화면 무인증 해소](gift-seller-portal-unauthenticated.md) — 2026-09-10 로그인 기반 전환 완료, 신규 화면도 currentSellerId 사용
+- [전환사업 범위 기준](scope-migration-not-greenfield.md) — AS-IS 로직 + RFP/ISP 신규기능만, 근거 없는 추가 금지
+- [★전부 이식 먼저, RFP/ISP는 그 위에](port-everything-no-omissions-then-rfp-isp.md) — MSA전환: front/back/static 누락0 이식이 기본선, 변경/추가는 별도확인. 라운드 전 파일단위 커버리지 원장 먼저
+- [미확정: DB 또 바뀔수도(퍼스트DB?)](possible-db-change-firstdb-unconfirmed.md) — 소문단계, 이식은 DB독립이라 계속 진행·DDL레이어만 후대응
+- [AS-IS 로직이 정본](as-is-logic-is-the-spec.md) — 화면 아닌 컨트롤러·서비스·매퍼 단위 대조, 프론트 이벤트까지 재현
+- [AS-IS 인벤토리 절차](as-is-inventory-procedure.md) — 6도메인+common 전수 완료(2026-09-10), 산출물 docs/inventory/, 소스 인덱스 먼저
+- [원제품(SalesOn) 잔재](saleson-original-product-leftovers.md) — 원제품 경로가 통째로 남아있음, 죽은코드 판정의 최대 변수
+- [기부금영수증 상용SW 유지(번복)](receipt-commercial-sw-replacement.md) — [2026-09-18 번복] OZ Report·Fasoo 그대로 유지 결정, 자체 PDF 대체는 보류(PoC 코드만 있음)
+- [업무예외 로그 관찰](business-exception-logging.md) — 각 서비스 XxxException 생성자에서 WARN 자동 로깅, 새 로직은 throw만 하면 관찰됨
+- [전환 방법론 두 갈래](continue-vs-rebuild-msa-decision.md) — A안 AS-IS in-place 추출(Desktop 분석문서) vs B안 현재 ghlove-msa 클린 재구현, 세션마다 답 갈린 원인
+- [API vs Kafka 판단기준](api-vs-kafka-decision-criteria.md) — 서비스 종류 아닌 상호작용 성격, 조회·즉시결과필요=API / 확정사실전파=Kafka(사용자 반복질문)
+- [고객센터 영역 이식 원장](admin-customer-center-area-port-progress.md) — 11화면 AS-IS 대조표, 구조갭 6건 해소, **승인순서 4건 전부 완료**(5112 Q&A·5104 FAQ·매뉴얼2화면·5102 1:1문의), 남은 건 축소화면 3건(5113/5114/5107)
+- [특정사업 기부 영역 이식 원장](admin-designated-donation-area-port-progress.md) — AS-IS 1262줄+JSP 7275줄 대조표, 갭 실측(목록14%·폼26%·part/request/preview 0%), **기부금관리·통계는 ReadModel/DA 결정 대기로 보류**
+- [op_qna는 QNA_TYPE으로 세 화면이 나뉜다](op-qna-split-by-qna-type.md) — 0=1:1문의(5102)/1=상품문의(중지)/2=공개Q&A(5112), 공개 쪽 필터 누락으로 개인문의 노출됐던 것 2026-10-05 수정
+- [공개 FAQ 정본은 op_faq + FaqType enum](public-faq-canonical-table.md) — 시드가 지자체FAQ 표에 자체코드로 넣어둔 걸 2026-10-05 교정, 11403은 중지라 그 표 유지
+- [국민비서 문자 발송부 위치](ips-sms-sender-lives-in-admin.md) — TIF_IPS_SNDNG_M 적재가 "발송", admin SmsIpsService 하나뿐·기부/주문 문자는 미이식
+- [수신동의 인코딩 두 갈래](receive-sms-encoding-split.md) — AS-IS 0/1인데 TO-BE가 Y/N과 0 혼용, 운영자화면 "비동의" 오표시·문자 누락
