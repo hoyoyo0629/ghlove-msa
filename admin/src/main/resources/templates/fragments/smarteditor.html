@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- AS-IS WEB-INF/tags/modules/smarteditorInit.tag 를 그대로 옮긴 것(네이버 스마트에디터2 초기화).
+     자산은 /content/modules/smarteditor2_3_10 에 이미 복사돼 있다.
+     쓰는 쪽: <div th:replace="~{fragments/smarteditor :: init}"></div>
+             <div th:replace="~{fragments/smarteditor :: editor('content')}"></div> -->
+<th:block th:fragment="init">
+    <script type="text/javascript" th:src="@{/content/modules/smarteditor2_3_10/js/HuskyEZCreator.js}" charset="utf-8"></script>
+    <script type="text/javascript">
+        var editors = [];
+
+        function pasteHTML() {
+            var sHTML = "<span style='color:#FF0000;'>이미지도 같은 방식으로 삽입합니다.</span>";
+            editors.getById["ir1"].exec("PASTE_HTML", [sHTML]);
+        }
+
+        function showHTML() {
+            var sHTML = editors.getById["content"].getIR();
+            alert(sHTML);
+        }
+
+        function submitContents(elClickedObj) {
+            editors.getById["content"].exec("UPDATE_CONTENTS_FIELD", []);   // 에디터의 내용이 textarea에 적용됩니다.
+
+            // 에디터의 내용에 대한 값 검증은 이곳에서 document.getElementById("ir1").value를 이용해서 처리하면 됩니다.
+
+            try {
+                elClickedObj.form.submit();
+            } catch(e) {}
+        }
+
+        function setDefaultFont() {
+            var sDefaultFont = '궁서';
+            var nFontSize = 24;
+            editors.getById["content"].setDefaultFont(sDefaultFont, nFontSize);
+        }
+    </script>
+</th:block>
+
+<!-- AS-IS smarteditor.tag - elPlaceHolder에 붙일 textarea id를 받는다. -->
+<th:block th:fragment="editor(editorId)">
+    <script type="text/javascript" th:inline="javascript">
+        var lang = Common.isUndefined(OP_LANGUAGE) || OP_LANGUAGE == '' ? 'ko' : OP_LANGUAGE;
+
+        //추가 글꼴 목록
+        //★ 이 블록은 th:inline="javascript"다. 여는 대괄호 두 개가 붙어 있으면 Thymeleaf가
+        //  JS 인라인 식으로 읽어 "Could not parse as expression"으로 렌더링을 중단한다.
+        //  응답이 이미 커밋된 뒤라 브라우저는 ERR_INCOMPLETE_CHUNKED_ENCODING 200을 받고
+        //  페이지 아래쪽(에디터 생성 스크립트)이 통째로 사라진다 - JS 주석 안도 예외가 아니다.
+        //  그래서 중첩 배열은 반드시 한 칸 띄운다. HTML 주석(<!-- -->)은 처리 대상이 아니라 안전.
+        //var aAdditionalFontSet = [ ["MS UI Gothic", "MS UI Gothic"], ["Comic Sans MS", "Comic Sans MS"],["TEST","TEST"] ];
+        var aDefaultFontSet = [];
+        if (lang == 'ja') {
+            aDefaultFontSet = [ ["MS PGothic", "MS PGothic"] ];  // 대괄호를 붙이면 위 이유로 터진다
+        }
+
+        nhn.husky.EZCreator.createInIFrame({
+            oAppRef: editors,
+            elPlaceHolder: /*[[${editorId}]]*/ 'content',
+            sSkinURI: '/content/modules/smarteditor2_3_10/SmartEditor2Skin_' + lang + '.html',
+            htParams : {
+                bUseToolbar : true,             // 툴바 사용 여부 (true:사용/ false:사용하지 않음)
+                bUseVerticalResizer : true,     // 입력창 크기 조절바 사용 여부 (true:사용/ false:사용하지 않음)
+                bUseModeChanger : true,         // 모드 탭(Editor | HTML | TEXT) 사용 여부 (true:사용/ false:사용하지 않음)
+                aDefaultFontList : aDefaultFontSet,
+                //aAdditionalFontList : aAdditionalFontSet,      // 추가 글꼴 목록
+                fOnBeforeUnload : function(){
+                    //alert("완료!");
+                }
+            }, //boolean
+            fOnAppLoad : function(){
+
+                //예제 코드
+                //editors.getById["ir1"].exec("PASTE_HTML", ["로딩이 완료된 후에 본문에 삽입되는 text입니다."]);
+            },
+            fCreator: "createSEditor2"
+        });
+    </script>
+</th:block>
+
+</body>
+</html>

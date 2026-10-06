@@ -2,11 +2,11 @@ package com.ghlove.order.service;
 
 import com.ghlove.order.domain.Claim;
 import com.ghlove.order.domain.ClaimMemo;
-import com.ghlove.order.domain.ExcelDownloadLog;
+
 import com.ghlove.order.domain.Order;
 import com.ghlove.order.repository.ClaimMemoRepository;
 import com.ghlove.order.repository.ClaimRepository;
-import com.ghlove.order.repository.ExcelDownloadLogRepository;
+
 import com.ghlove.order.repository.OrderRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +36,6 @@ public class OrderAdminService {
     private final OrderRepository orderRepository;
     private final ClaimRepository claimRepository;
     private final ClaimMemoRepository claimMemoRepository;
-    private final ExcelDownloadLogRepository excelDownloadLogRepository;
     private final OrderService orderService;
     private final ClaimService claimService;
 
@@ -230,23 +229,16 @@ public class OrderAdminService {
     // ==================== 엑셀(CSV) 다운로드 ====================
 
     /** AS-IS opmanager는 개인정보가 포함된 다운로드마다 사유 입력을 강제하고 이력을 남긴다
-     *  (개인정보보호법 접근·이용 로그 요건) - 이 프로젝트도 사유 없이는 실행하지 않는다.
+     *  (개인정보보호법 접근·이용 로그 요건). <b>그 기록은 AS-IS와 같이 관리자 콘솔(admin)이
+     *  담당한다</b> - admin의 사유 모달이 다운로드 직전에 {@code OP_PRIVACY_ACCESS_LOG}에
+     *  남기고(PrivacyAccessLogService) 성공하면 이 엔드포인트를 호출한다.
+     *  예전에는 여기서 {@code ord.OD_EXCEL_DOWNLOAD_LOG}에 썼는데, admin의 "엑셀다운로드 사유
+     *  관리"(1411) 화면은 AS-IS대로 개인정보 접근로그를 읽으므로 그 행들이 전혀 보이지 않았다 -
+     *  사용자 확인 후 기록 지점을 admin으로 옮겼다(2026-10-03).
      *  Apache POI 등 엑셀 라이브러리는 이 프로젝트에 아직 없어 CSV로 실행한다(엑셀에서
      *  그대로 열리는 실질적으로 동등한 결과물). */
     @Transactional
     public String exportCsv(List<Order> orders, Long managerId, String managerName, String reason, String searchCondition) {
-        if (reason == null || reason.isBlank()) {
-            throw new OrderException("다운로드 사유를 입력해 주세요.");
-        }
-        ExcelDownloadLog log = new ExcelDownloadLog();
-        log.setManagerId(managerId);
-        log.setManagerName(managerName);
-        log.setDownloadReason(reason);
-        log.setSearchCondition(searchCondition);
-        log.setRowCount(orders.size());
-        log.setCreatedDate(LocalDateTime.now());
-        excelDownloadLogRepository.save(log);
-
         StringBuilder sb = new StringBuilder("﻿");
         sb.append("주문번호,주문자ID,답례품명,판매자ID,수량,결제포인트,주문상태,배송상태,수취인,연락처,주소,주문일시\n");
         for (Order o : orders) {

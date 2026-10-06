@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>메인 진열상품 관리 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -9,9 +10,14 @@
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <h3>메인 진열상품 관리</h3>
     <p style="color:#666; margin-bottom:16px;">TEMPLATE_ID(뷰타입_카테고리팀코드 조합, 예: md_best) 단위로 메인화면에 노출할 답례품을 등록합니다. 저장하면 해당 TEMPLATE_ID의 기존 목록이 전량 교체됩니다.</p>
 
@@ -53,7 +59,10 @@
             <button type="submit" class="btn btn-dark-gray btn-small">저장(전체교체)</button>
         </div>
     </form>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

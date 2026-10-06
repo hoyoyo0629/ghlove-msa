@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>메뉴얼 관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/manual/manager/list.jsp 이식(메뉴 5201 관리자매뉴얼).
+     별도 표가 없다 - 로그인한 운영자가 볼 수 있는 메뉴를 2단으로 묶어 카드처럼 늘어놓고,
+     3단 메뉴마다 op_menu에 붙은 매뉴얼 파일을 보여준다.
+
+     AS-IS verbatim:
+     - h3가 "메뉴얼 관리"다(메뉴명 '관리자매뉴얼'이 아니다).
+     - 2단 묶음마다 표 하나이고, 표 머리 첫 칸이 <b>2단 메뉴명</b>, 둘째 칸이 "메뉴얼"이다.
+     - ROLE_ADMIN_1~4(role == 'SYSTEM')일 때만 메뉴명이 <b>등록 팝업 링크</b>가 된다.
+       그 외 권한은 메뉴명이 글자로만 나온다(다운로드는 누구나 된다).
+     - 파일이 있으면 "다운로드" 링크, 없으면 "-"다.
+     - 전체선택 체크박스와 [선택 다운로드] 버튼, 행별 체크박스는 <b>전부 주석처리</b>되어 있다
+       (JS 함수 downloadCheckManual은 남아 있다) - 켜지 않는다.
+     - 카드 배치는 pinterest_grid.js로 4열이다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span>메뉴얼 관리</span></h3>
+<form id="searchParam" method="post" th:action="@{/admin/manuals/manager}">
+
+<!-- 20221124 수정 -->
+<div>
+    <div class="flex_box gap-20 item-center">
+        <!-- AS-IS 주석처리: 전체선택 체크박스 + [선택 다운로드] 버튼 -->
+    </div>
+    <div id="blog-landing" class="input_wrap" style="height: 100vh;">
+        <div class="board_list" th:each="group : ${menuList}">
+            <table class="board_list_table" summary="">
+                <caption></caption>
+                <colgroup>
+                    <col style="width:200px;">
+                    <col style="width:100px;">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <!-- AS-IS 주석처리: 전체선택 체크박스 칸 -->
+                        <th scope="col" th:text="${group.group.menuName}"></th>
+                        <th scope="col">메뉴얼</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="background:#fff;" th:each="menu3 : ${group.menus}">
+                        <!-- AS-IS 주석처리: 행별 체크박스 칸 -->
+                        <td>
+                            <a th:if="${role == 'SYSTEM'}"
+                               th:href="|javascript:fileUploadOpen('${menu3.menuId}', '${menu3.menuName}')|"
+                               th:text="${menu3.menuName}"></a>
+                            <th:block th:unless="${role == 'SYSTEM'}" th:text="${menu3.menuName}"></th:block>
+                        </td>
+                        <td>
+                            <a th:if="${menu3.fileNm != null and !menu3.fileNm.isEmpty()}"
+                               th:href="|javascript:downloadItemImage('${menu3.menuId}')|">다운로드</a>
+                            <th:block th:unless="${menu3.fileNm != null and !menu3.fileNm.isEmpty()}">-</th:block>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<!-- // 20221124 수정 -->
+</form>
+
+    </div>
+    </div>
+</div>
+</div>
+
+<!-- 20221124 수정 -->
+<script type="text/javascript" th:src="@{/content/modules/pinterest_grid.js}"></script>
+<script type="text/javascript">
+
+	$(function () {
+
+		$('#blog-landing').pinterest_grid({
+			no_columns: 4,
+			padding_x: 10,
+			padding_y: 10,
+			margin_bottom: 50,
+			single_column_breakpoint: 700
+		});
+	});
+
+	$('.check-all').on('click', function(e) {
+		var isChecked = $(this).prop('checked');
+		var $target = $(this).parent().parent().parent().parent().find('input[type=checkbox]');
+		$target.prop('checked', isChecked);
+	});
+
+	function fileUploadOpen(id, name) {
+		var popupWidth = 500;
+		var popupHeight = 300;
+		var popupY = (window.screen.height / 2) - (popupHeight / 2);
+		var popupX = (window.screen.width / 2) - (popupWidth / 2);
+		popupX += window.screenLeft;
+
+		window.open('/admin/manuals/manager/create?menuId='+id+'&menuName='+encodeURIComponent(name),'pop','toolbar=no, menubar=no, location=no, resizable=no, scrollbars=no, status=no, titlebar=no, width=500,height=300, left='+ popupX + ', top='+ popupY);
+	}
+
+	function downloadItemImage(id) {
+		location.href = '/admin/manuals/manager/file-download/'+id;
+	}
+
+	/* AS-IS: 선택 다운로드는 진입점(버튼)이 주석처리되어 쓰이지 않는다 - 함수만 그대로 둔다. */
+	function downloadCheckManual() {
+		var manualList = new Array;
+
+		var iFrameCnt = 0;
+		$("input[id^='check_']:checked").not("[id='check_all']").map(function(index, item) {
+			if ($(item).val() != '') {
+				manualList.push($(item).val());
+
+				url = '/admin/manuals/manager/file-download/'+$(item).val();
+
+				fnCreateIframe(iFrameCnt); // 보이지 않는 iframe 생성, name는 숫자로
+
+				$("iframe[name=" + iFrameCnt + "]").attr("src", url);
+
+				iFrameCnt++;
+
+				fnSleep(1000); //각 파일별 시간 텀을 준다
+			}
+
+		});
+
+		if(manualList.length == 0) {
+			alert("다운로드할 게시물을 선택해주세요.");
+			return false;
+		}
+	}
+
+	function fnSleep (delay){
+
+		var start = new Date().getTime();
+		while (start + delay > new Date().getTime());
+
+	};
+
+	function fnCreateIframe (name){
+
+		var frm = $('<iframe name="' + name + '" style="display: none;"></iframe>');
+		frm.appendTo("body");
+
+	}
+</script>
+<!-- // 20221124 수정 -->
+</body>
+</html>

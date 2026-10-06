@@ -1,56 +1,205 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>메뉴권한 편집 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <title>사용자 권한 관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <style>
+      #blog-landing {
+      margin-top: 10px;
+      position: relative;
+      max-width: 100%;
+      width: 100%;
+      }
+      #blog-landing > div {
+        position: absolute;
+      }
+      .section {
+        border: 1px solid #ccc;
+
+      }
+      .section li {
+        padding-bottom: 15px;
+      }
+      .menu1 {
+        font-weight: bold;
+        font-size: 14px;
+        padding: 10px;
+        background: #f4f4f4;
+        color: #000;
+      }
+      .menu2 {
+        display: block;
+        font-weight: bold;
+        font-size: 13px;
+        padding: 10px 10px 5px 10px;
+
+        color: #000;
+        border-top: 1px solid #eee;
+
+      }
+      .menu3 {
+        display: block;
+        font-size: 12px;
+        padding: 2px 10px 2px 15px;
+        color: #555;
+      }
+    </style>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<!-- D10 역할별 메뉴트리×권한 체크박스 매트릭스. 시스템/행안부(ROLE_ADMIN_1~4)는
-     MenuService.UNRESTRICTED_ROLES라 이 매트릭스와 무관하게 항상 전체접근이지만(체크
-     여부와 상관없이 실제로는 항상 통과), 그 외 역할(지자체5/6, 오프라인7/8, 신규 역할)은
-     여기서 체크한 메뉴만 접근할 수 있다. -->
-<div class="contents contents_inner">
-    <div class="location"><a th:href="@{/admin/roles}">역할·메뉴권한 관리</a></div>
-    <h3>메뉴권한 편집 - <span th:text="${role.roleName}"></span> (<span th:text="${role.authority}"></span>)</h3>
+<!-- AS-IS opmanager/i18n/user-group/role/list.jsp 이식(1404 사용자 권한 관리).
+     왼쪽: 권한그룹 목록(클릭 시 그 그룹으로 재조회, 선택행 하이라이트) / 오른쪽: 전체 메뉴트리를
+     3단 체크박스로 보여주고 OP_MENU_RIGHT를 편집한다. 4열 masonry 배치는 AS-IS와 동일하게
+     pinterest_grid.js가 처리한다. AS-IS는 '지정기부사업자' 그룹을 왼쪽 목록에서 제외한다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <p class="hint" style="color:#888;margin-bottom:12px;" th:if="${role.authority == 'ROLE_ADMIN_1' or role.authority == 'ROLE_ADMIN_2' or role.authority == 'ROLE_ADMIN_3' or role.authority == 'ROLE_ADMIN_4'}">
-        이 역할은 시스템/행안부 담당자로 항상 전체 메뉴에 접근할 수 있습니다(메뉴권한 체크와 무관).
-    </p>
+      <!-- 상단 타이틀 -->
+        <h3><span th:text="${msg.get('MENU_1404')}">사용자 권한 관리</span></h3> <!-- 사용자 권한 관리 -->
 
-    <form th:action="@{'/admin/roles/' + ${role.authority} + '/matrix'}" method="post">
-        <table class="board_list_table" summary="메뉴권한 매트릭스">
-            <caption>메뉴권한 매트릭스</caption>
+      <form id="userGroupParam" method="get" th:action="@{/admin/roles/matrix}" enctype="multipart/form-data">
+      <input type="hidden" name="userAuthority" id="userAuthority" th:value="${authority}" />
+      </form>
+      <form id="role" method="post" th:action="@{/admin/roles/matrix}" enctype="multipart/form-data">
+      <input type="hidden" name="authority" id="authority" th:value="${authority}" />
+      <input type="hidden" name="roleName" id="roleName" th:value="${roleName}" />
+      <input type="hidden" name="roleDesc" id="roleDesc" th:value="${roleDesc}" />
+      <div class="flex_box gap-20">
+        <div class="board_list">
+          <table class="board_list_table" summary="사용자 권한관리">
+            <caption th:text="${msg.get('MENU_1404')}">사용자 권한 관리</caption>
+            <colgroup>
+              <col style="width:50px;">
+              <col style="width:300px;">
+            </colgroup>
             <thead>
-            <tr>
-                <th scope="col">상위메뉴</th>
-                <th scope="col">하위메뉴(체크된 메뉴만 접근가능)</th>
-            </tr>
+              <tr>
+                <th scope="col">No</th>
+                <th scope="col" th:text="${msg.get('M00586')}">그룹</th>
+              </tr>
             </thead>
-            <tbody>
-            <tr th:each="top : ${matrix.topMenus()}">
-                <td th:text="${top.menuName}"></td>
-                <td>
-                    <label th:each="child : ${matrix.childrenByParent().get(top.menuId)}" style="display:inline-block;margin:2px 12px 2px 0;">
-                        <input type="checkbox" name="menuIds" th:value="${child.menuId}"
-                               th:checked="${matrix.checkedMenuIds().contains(child.menuId)}">
-                        <span th:text="${child.menuName}"></span>
-                    </label>
-                    <span th:if="${#lists.isEmpty(matrix.childrenByParent().get(top.menuId))}" style="color:#aaa;">-</span>
-                </td>
-            </tr>
+            <tbody id="targetTb">
+
+                <!-- AS-IS도 '지정기부사업자'는 이 목록에서 제외한다 -->
+              <tr class="dyTr" onclick="fnGroupSearch($(this))"
+                  th:each="row, i : ${list}" th:if="${row.role.roleName != '지정기부사업자'}">
+                    <input type="hidden" th:value="${row.role.authority}" />
+                        <td th:text="${i.count}">1</td>
+                        <td th:text="${row.role.roleName}"></td>
+              </tr>
+
             </tbody>
-        </table>
-        <div class="btn_all btn_center" style="margin-top:16px;">
-            <button type="submit" class="btn btn-dark-gray btn-small">저장</button>
+          </table>
+          <div class="btn_all btn_center">
+            <div class="flex_box gap-08 juc-center">
+              <button type="submit" class="btn btn-dark-gray btn-mini" th:text="${msg.get('M00101')}">저장</button> <!-- 저장 -->
+            </div>
+          </div>
         </div>
-    </form>
-</div>
+
+
+        <div class="board_write half mt10">
+          <table class="board_write_table" summary="">
+            <colgroup>
+              <col style="width:150px;">
+              <col style="">
+            </colgroup>
+            <tbody>
+              <tr>
+                <td class="label" valign="top" style="padding-top: 15px; font-size: 13px">메뉴권한</td>
+                <td>
+                  <div style="padding: 15px 10 15px 15px">
+                    <p><label><input type="checkbox" class="check-all" /> 전체선택</label></p>
+
+                    <div id="blog-landing" class="input_wrap col-w-7" style="height: 100vh;">
+
+                      <div class="section" th:each="menu1 : ${matrix != null} ? ${matrix.topMenus} : ${#lists.toList({})}">
+                        <div  class="menu1">
+                          <label><input type="checkbox" class="check-all" /> <span th:text="${menu1.menuName}"></span></label>
+                        </div>
+                        <ul>
+                          <li th:each="menu2 : ${matrix.childrenByParent.containsKey(menu1.menuId)} ? ${matrix.childrenByParent.get(menu1.menuId)} : ${#lists.toList({})}">
+                            <span class="menu2">
+                              <label><input type="checkbox" class="check-all" /> <span th:text="${menu2.menuName}"></span></label>
+                            </span>
+
+                            <span class="menu3" th:each="menu3 : ${matrix.childrenByParent.containsKey(menu2.menuId)} ? ${matrix.childrenByParent.get(menu2.menuId)} : ${#lists.toList({})}">
+                              <label><input type="checkbox" name="menuIds" th:value="${menu3.menuId}"
+                                            th:checked="${matrix.checkedMenuIds.contains(menu3.menuId)}" /> <span th:text="${menu3.menuName}"></span></label>
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </form>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script type="text/javascript" th:src="@{/content/modules/pinterest_grid.js}"></script>
+<script type="text/javascript">
+
+$(function(){
+  $('#blog-landing').pinterest_grid({
+      no_columns: 4,
+      padding_x: 10,
+      padding_y: 10,
+      margin_bottom: 50,
+      single_column_breakpoint: 700
+  });
+
+  $('.check-all').on('click', function(e) {
+        var isChecked = $(this).prop('checked');
+        var $target = $(this).parent().parent().parent().find('input[type=checkbox]');
+        $target.prop('checked', isChecked);
+    });
+
+  // init 조회 - AS-IS는 선택된 권한이 없으면 목록 첫 행으로 재조회한다.
+  // TO-BE는 서버(RoleAdminController.matrix)가 같은 선택을 해서 내려주므로 재조회가 필요 없다.
+
+  // init 하이라이트
+  fnLineColor();
+
+});
+
+// 사용자 권한 선택시 조회
+function fnGroupSearch(target){
+  if(target == null){
+    var tr = $("#targetTb tr:first");
+    $('#authority').val(tr.children('input').val());
+    $('#userAuthority').val(tr.children('input').val());
+  }else{
+    $('#authority').val(target.children('input').val());
+    $('#userAuthority').val(target.children('input').val());
+  }
+
+  $('#userGroupParam').submit();
+}
+
+// 사용자 권한 테이블 하이라이트
+function fnLineColor(){
+  $("#targetTb tr").css({"background-color":"#ffffff","color":"#000000"});
+  var target = $('#userAuthority').val();
+  $("#targetTb tr").each(function(){
+    if($(this).find('input').val() == target){
+      $(this).css({"background-color":"#E4F7BA","color":"#000000"});
+    }
+  });
+}
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

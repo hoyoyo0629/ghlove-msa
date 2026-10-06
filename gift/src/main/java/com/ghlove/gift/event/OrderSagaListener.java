@@ -48,6 +48,27 @@ public class OrderSagaListener {
                 log.info("Received OrderCancelledEvent: {}", event);
                 giftService.restoreStockForOrder(event.orderId());
             }
+            // 멀티아이템(출고 단위 SAGA) - 출고 내 품목별 재고예약/복원
+            case "SHIPMENT_CREATED" -> {
+                ShipmentCreatedEvent event = objectMapper.readValue(payload, ShipmentCreatedEvent.class);
+                log.info("Received ShipmentCreatedEvent: {}", event);
+                boolean reserved = giftService.reserveStockForShipment(event.shipmentId(), event.lines());
+                if (reserved) {
+                    orderSagaPublisher.publishShipmentStockReserved(event.shipmentId(), event.orderId());
+                } else {
+                    orderSagaPublisher.publishShipmentStockReserveFailed(event.shipmentId(), event.orderId(), "재고 부족");
+                }
+            }
+            case "SHIPMENT_CANCELLED" -> {
+                ShipmentCancelledEvent event = objectMapper.readValue(payload, ShipmentCancelledEvent.class);
+                log.info("Received ShipmentCancelledEvent: {}", event);
+                giftService.restoreStockForShipment(event.shipmentId());
+            }
+            case "ITEM_CANCELLED" -> {
+                ItemCancelledEvent event = objectMapper.readValue(payload, ItemCancelledEvent.class);
+                log.info("Received ItemCancelledEvent: {}", event);
+                giftService.restoreStockForItem(event.orderItemId());
+            }
             default -> { /* not relevant to gift service */ }
         }
     }

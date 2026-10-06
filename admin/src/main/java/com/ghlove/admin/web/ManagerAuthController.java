@@ -29,6 +29,7 @@ public class ManagerAuthController {
     private static final String SESSION_PENDING_LOGIN_ID_KEY = "pendingManagerLoginId";
 
     private final ManagerAuthService managerAuthService;
+    private final com.ghlove.admin.web.support.FlashRedirect flashRedirect;
     private final MenuService menuService;
     private final AuditLogService auditLogService;
 
@@ -132,9 +133,9 @@ public class ManagerAuthController {
         try {
             X509Certificate cert = managerAuthService.parseCertificate(certFile);
             managerAuthService.registerCertificate(manager.getUserId(), cert);
-            return "redirect:/admin/my-cert?message=" + encode("인증서가 등록되었습니다.");
+            return flashRedirect.to("/admin/my-cert", "인증서가 등록되었습니다.");
         } catch (CertLoginException | ManagerException e) {
-            return "redirect:/admin/my-cert?errorMessage=" + encode(e.getMessage());
+            return flashRedirect.to("/admin/my-cert", e.getMessage());
         }
     }
 
@@ -142,15 +143,24 @@ public class ManagerAuthController {
     public String unregisterCert(HttpSession session) {
         Manager manager = (Manager) session.getAttribute(SESSION_MANAGER_KEY);
         managerAuthService.unregisterCertificate(manager.getUserId());
-        return "redirect:/admin/my-cert?message=" + encode("인증서 등록이 해제되었습니다.");
+        return flashRedirect.to("/admin/my-cert", "인증서 등록이 해제되었습니다.");
     }
 
-    private static String encode(String value) {
-        return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8);
-    }
 
     @PostMapping("/admin/logout")
     public String logout(HttpSession session) {
+        session.removeAttribute(SESSION_MANAGER_KEY);
+        return "redirect:/admin/login";
+    }
+
+    /**
+     * AS-IS {@code op.manager.js}의 {@code Manager.procSessionTimeout}이 자동 로그아웃 시
+     * {@code location.href='/op_security_logout?target=/opmanager'}로 이동한다 - 복사해 온
+     * 자산이라 이 URL이 그대로 호출되는데 TO-BE에는 없어서 404가 됐다. 자산을 고치지 않고
+     * 엔드포인트를 맞춘다(세션 정리 후 로그인 화면으로).
+     */
+    @GetMapping("/op_security_logout")
+    public String securityLogout(HttpSession session) {
         session.removeAttribute(SESSION_MANAGER_KEY);
         return "redirect:/admin/login";
     }

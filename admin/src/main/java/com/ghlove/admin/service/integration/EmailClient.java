@@ -29,7 +29,11 @@ public class EmailClient {
         log.warn("[email] enabled=true이지만 실제 SMTP 연동이 구현되어 있지 않습니다. to={}", toEmail);
     }
 
-    /** "이메일 발송"(opmanager/email) 대량메일 도구용 범용 발송. */
+    /**
+     * 단건 메일 발송(SMTP). "이메일 발송"(opmanager/email, 메뉴 1410)은 AS-IS대로 외부 EMS
+     * 연계({@link EmsMailClient})로 보내므로 이 메서드를 쓰지 않는다 - 지금은 호출부가 없고,
+     * SMTP로 한 통 보내야 하는 기능이 생길 때 쓰는 자리다.
+     */
     public void send(String toEmail, String subject, String content) {
         if (!enabled) {
             log.info("[email] disabled - mock 메일 발송 to={} subject={}", toEmail, subject);

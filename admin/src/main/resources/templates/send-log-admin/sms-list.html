@@ -1,32 +1,123 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>SMS 발송 이력 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <title>문자전송이력 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <h3>SMS 발송 이력</h3>
-    <table class="board_list_table">
-        <thead><tr><th>발송일시</th><th>발신번호</th><th>수신번호</th><th>내용</th><th>유형</th></tr></thead>
-        <tbody>
-        <tr th:each="l : ${logs}">
-            <td th:text="${l.createdDate}"></td>
-            <td th:text="${l.sendTelNumber}"></td>
-            <td th:text="${l.receiveTelNumber}"></td>
-            <td th:text="${l.content}"></td>
-            <td th:text="${l.sendType}"></td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(logs)}">발송 이력이 없습니다.</p>
+<!-- AS-IS opmanager/i18n/sms-log/list.jsp 이식. 문자 구분(SmsType 24종) + 검색내용(이름·전화번호 등)
+     + 생성일 범위 + 9컬럼(일련번호/전화번호/구분/발송내용/생성일시/전송시작일시/전송완료일시/
+     문자처리상태/오류내용) + 페이지네이션. 읽는 표는 AS-IS와 같은 문자발송 연계표 TIF_IPS_SNDNG_M. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span>문자전송이력</span></h3>
+
+<form id="searchParam" method="post" th:action="@{/admin/send-sms-logs}">
+	<div class="board_write">
+		<table class="board_write_table" summary="문자전송이력">
+			<colgroup>
+				<col style="width:220px;">
+				<col>
+			</colgroup>
+			<tbody>
+				 <tr>
+					<td class="label">문자 구분</td>
+					<td>
+						<div>
+							<select id="smsTypeStr" name="smsTypeStr" title="문자 구분" class="wd-400">
+								<option value="" th:selected="${#strings.isEmpty(searchParam.smsTypeStr)}">전체</option>
+								<option th:each="smsType : ${smsTypes}" th:value="${smsType.code}"
+								        th:selected="${searchParam.smsTypeStr == smsType.code}"
+								        th:text="${smsType.description}"></option>
+							</select>
+						</div>
+					</td>
+				 </tr>
+				 <tr>
+					<td class="label">검색내용<br>(이름, 전화번호 등)</td>
+					<td>
+						<div>
+							<input type="text" id="query" name="query" class="input_txt required _filter full"
+							       th:title="${msg.get('M00021')}" th:value="${searchParam.query}" placeholder=""/>
+						</div>
+					</td>
+				 </tr>
+				<tr>
+					<td class="label" th:text="${msg.get('M01692')}">생성일자</td>
+					<td>
+						<div>
+							<span class="datepicker"><input type="text" id="searchStartDate" name="searchStartDate" class="datepicker optional " th:title="${msg.get('M00507')}" th:value="${searchParam.searchStartDate}" /></span>
+							<span class="wave">~</span>
+							<span class="datepicker"><input type="text" id="searchEndDate" name="searchEndDate" class="datepicker optional " th:title="${msg.get('M00509')}" th:value="${searchParam.searchEndDate}" /></span>
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div> <!-- // board_write -->
+
+	<div class="btn_all btn_right">
+		<div class="flex_box gap-08">
+			<button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/admin/send-sms-logs';" th:text="${msg.get('M00047')}">초기화</button>
+			<button type="submit" class="btn btn-dark-gray btn-mini" th:text="${msg.get('M00048')}">검색</button>
+		</div>
+	</div>
+
+	<div class="count_title mt-40">
+		<h5><span th:text="${msg.get('M00045')}" th:remove="tag">총</span> <span th:text="${#numbers.formatInteger(count, 0, 'COMMA')}" th:remove="tag">0</span> <span th:text="${msg.get('M00272')}" th:remove="tag">건</span></h5>
+	</div>
+</form>
+
+<div class="board_list">
+	<table class="board_list_table" summary="문자전송이력">
+		<caption>문자전송이력</caption>
+		<thead>
+			<tr>
+				<th scope="col">일련번호</th>
+				<th scope="col">전화번호</th>
+				<th scope="col">구분</th>
+				<th scope="col">발송내용</th>
+				<th scope="col">생성일시</th>
+				<th scope="col">전송시작일시</th>
+				<th scope="col">전송완료일시</th>
+				<th scope="col">문자처리상태</th>
+				<th scope="col">오류내용</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr th:each="item : ${smsLogList}" style="background:#fff;">
+				<td><div th:text="${item.listSn}"></div></td>
+				<td><div th:text="${item.prvcIdntfcInfo}"></div></td>
+				<td><div th:text="${smsTypeTitles.containsKey(item.svcId)} ? ${smsTypeTitles.get(item.svcId)} : ${item.svcId}"></div></td>
+				<td style="text-align:left;"><div th:text="${item.sndngCntnts}"></div></td>
+				<td><div th:text="${item.infoCrtDtText}"></div></td>
+				<td><div th:text="${item.esbInitTime}"></div></td>
+				<td><div th:text="${item.esbComptTime}"></div></td>
+				<td><div th:text="${item.esbStatusCd}"></div></td>
+				<td><div th:text="${item.esbErrMsg}"></div></td>
+			</tr>
+		</tbody>
+	</table>
+
+	<div class="no_content" th:if="${#lists.isEmpty(smsLogList)}" th:text="${msg.get('M00473')}">
+		데이터가 없습니다.
+	</div>
+
+	<div class="pagination-wrap">
+		<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+	</div>
 </div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

@@ -8,6 +8,8 @@ import com.ghlove.member.service.integration.ExternalIdentity;
 import com.ghlove.member.service.integration.KakaoCertClient;
 import com.ghlove.member.service.integration.OAuth2LoginClient;
 import com.ghlove.member.service.integration.OnePassClient;
+import com.ghlove.member.event.MemberEventPublisher;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -62,17 +64,20 @@ public class ExternalLoginController {
     private final OAuth2LoginClient naverLoginClient;
     private final ExternalLoginService externalLoginService;
     private final AuthCookieSupport authCookieSupport;
+    private final MemberEventPublisher eventPublisher;
 
     public ExternalLoginController(OnePassClient onePassClient,
                                     KakaoCertClient kakaoCertClient,
                                     @Qualifier("naverLoginClient") OAuth2LoginClient naverLoginClient,
                                     ExternalLoginService externalLoginService,
-                                    AuthCookieSupport authCookieSupport) {
+                                    AuthCookieSupport authCookieSupport,
+                                    MemberEventPublisher eventPublisher) {
         this.onePassClient = onePassClient;
         this.kakaoCertClient = kakaoCertClient;
         this.naverLoginClient = naverLoginClient;
         this.externalLoginService = externalLoginService;
         this.authCookieSupport = authCookieSupport;
+        this.eventPublisher = eventPublisher;
     }
 
     @GetMapping("/onepass-login")
@@ -86,10 +91,10 @@ public class ExternalLoginController {
 
     @GetMapping("/onepass-callback")
     public String onePassCallback(@RequestParam Map<String, String> params, HttpSession session,
-                                   HttpServletResponse response, Model model) {
+                                   HttpServletResponse response, HttpServletRequest request, Model model) {
         try {
             ExternalIdentity identity = onePassClient.verifyCallback(params);
-            return completeLogin(identity, session, response);
+            return completeLogin(identity, session, response, request);
         } catch (ExternalAuthException e) {
             model.addAttribute("errorMessage", e.getMessage());
             return "login";
@@ -122,8 +127,8 @@ public class ExternalLoginController {
 
     @GetMapping("/login/naver/callback")
     public String naverCallback(@RequestParam String code, HttpSession session,
-                                 HttpServletResponse response, Model model) {
-        return oauthCallback(naverLoginClient, code, session, response, model);
+                                 HttpServletResponse response, HttpServletRequest request, Model model) {
+        return oauthCallback(naverLoginClient, code, session, response, request, model);
     }
 
     /**
@@ -152,31 +157,32 @@ public class ExternalLoginController {
      * 타야 하는 provider는 여기서 막는다(모의 인증이 실연계를 우회하지 못하게 하는 방어).
      */
     @PostMapping("/onepass-login")
-    public String onePassMock(HttpSession session, HttpServletResponse response, Model model) {
-        return mockPass("ONEPASS", session, response, model);
+    public String onePassMock(HttpSession session, HttpServletResponse response, HttpServletRequest request, Model model) {
+        return mockPass("ONEPASS", session, response, request, model);
     }
 
     @PostMapping("/login/kakao")
-    public String kakaoMock(HttpSession session, HttpServletResponse response, Model model) {
-        return mockPass("KAKAO", session, response, model);
+    public String kakaoMock(HttpSession session, HttpServletResponse response, HttpServletRequest request, Model model) {
+        return mockPass("KAKAO", session, response, request, model);
     }
 
     @PostMapping("/login/naver")
-    public String naverMock(HttpSession session, HttpServletResponse response, Model model) {
-        return mockPass("NAVER", session, response, model);
+    public String naverMock(HttpSession session, HttpServletResponse response, HttpServletRequest request, Model model) {
+        return mockPass("NAVER", session, response, request, model);
     }
 
     @PostMapping("/login/finance-cert")
-    public String financeCertMock(HttpSession session, HttpServletResponse response, Model model) {
-        return mockPass("FINANCE_CERT", session, response, model);
+    public String financeCertMock(HttpSession session, HttpServletResponse response, HttpServletRequest request, Model model) {
+        return mockPass("FINANCE_CERT", session, response, request, model);
     }
 
     @PostMapping("/login/simple-auth")
-    public String simpleAuthMock(HttpSession session, HttpServletResponse response, Model model) {
-        return mockPass("ANYID", session, response, model);
+    public String simpleAuthMock(HttpSession session, HttpServletResponse response, HttpServletRequest request, Model model) {
+        return mockPass("ANYID", session, response, request, model);
     }
 
-    private String mockPass(String provider, HttpSession session, HttpServletResponse response, Model model) {
+    private String mockPass(String provider, HttpSession session, HttpServletResponse response,
+                             HttpServletRequest request, Model model) {
         String label = MOCK_PROVIDER_LABELS.get(provider);
         if (label == null || isRealClientEnabled(provider)) {
             model.addAttribute("errorMessage", "모의 인증을 사용할 수 없는 연계 수단입니다.");
@@ -189,7 +195,7 @@ public class ExternalLoginController {
         // 모의 인증은 CI를 만들지 않는다 - 실제 본인확인을 거치지 않았으므로 CI 기반 신원으로
         // 취급하면 안 되고(필수정보/14세 검사 대상도 아니다) SNS 프로필 신원과 같게 다룬다.
         ExternalIdentity identity = ExternalIdentity.ofProfile(provider, externalId, label + " 모의회원", null, null);
-        return completeLogin(identity, session, response);
+        return completeLogin(identity, session, response, request);
     }
 
     private boolean isRealClientEnabled(String provider) {
@@ -245,10 +251,10 @@ public class ExternalLoginController {
     }
 
     private String oauthCallback(OAuth2LoginClient client, String code, HttpSession session,
-                                  HttpServletResponse response, Model model) {
+                                  HttpServletResponse response, HttpServletRequest request, Model model) {
         try {
             ExternalIdentity identity = client.exchange(code);
-            return completeLogin(identity, session, response);
+            return completeLogin(identity, session, response, request);
         } catch (ExternalAuthException e) {
             model.addAttribute("errorMessage", e.getMessage());
             return "login";
@@ -276,12 +282,19 @@ public class ExternalLoginController {
      *  완료" 안내를 띄우고, 그 밖에는 메인으로 보낸다. 리다이렉트를 루트 상대경로(/signup)로
      *  두면 member를 직접 연 경우엔 Thymeleaf signup.html, SPA를 통해 온 경우엔 같은 경로의
      *  SPA 라우트로 각각 알맞게 떨어진다. */
-    private String completeLogin(ExternalIdentity identity, HttpSession session, HttpServletResponse response) {
+    private String completeLogin(ExternalIdentity identity, HttpSession session, HttpServletResponse response,
+                                  HttpServletRequest request) {
         ExternalLoginService.LinkResult result = externalLoginService.linkOrJoin(
                 identity, AUTH_NAMES.getOrDefault(identity.provider(), identity.provider()));
         User user = result.user();
         session.setAttribute(AuthController.SESSION_USER_KEY, user);
         authCookieSupport.issue(response, user);
+
+        // 외부 인증(원패스/카카오/네이버/금융인증서/간편인증) 로그인 성공도 LoginSucceeded 이벤트로
+        // 발행한다 - ID/PW 로그인(MemberService.completeLogin)과 달리 이 경로는 세션/쿠키를 직접
+        // 발급하므로 여기서 발행한다. 신규 간편가입이면 MEMBER_JOINED와 함께 로그인 성공도 남는다.
+        eventPublisher.publishLoginSucceeded(user.getUserId(), user.getLoginId(),
+                request != null ? request.getRemoteAddr() : null);
 
         boolean joinFlow = isJoinFlow(session);
         session.removeAttribute(SESSION_EXTERNAL_AUTH_FLOW);

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>소통방 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/community/freeboard/detail.jsp 이식(메뉴 11401 소통방 상세).
+     게시글(제목·작성자·작성일시·조회수·본문) + 댓글 목록/등록/수정/삭제 + 목록·수정·삭제 버튼.
+
+     AS-IS verbatim:
+     - 작성자 표기: 1·2는 "시스템 관리자"만, 3·4는 "행정안전부" + 이름, 그 외는 상위지자체명 +
+       지자체명 + 이름이다(시스템 관리자만 이름을 찍지 않는다).
+     - 본문은 스마트에디터 HTML이라 그대로 렌더링하고 줄바꿈만 <br>로 바꾼다(AS-IS op:nl2br).
+     - 댓글 헤더에 작성자 소속과 작성일시, 본인 댓글이면 수정/삭제 버튼(삭제는 주황 #fb502e).
+     - 수정 버튼을 누르면 그 댓글 아래 textarea(.updateArea)가 토글되고 '완료'로 저장한다.
+     - 게시글 수정·삭제 버튼은 작성자 본인에게만 보인다(관리자도 남의 글은 손댈 수 없다).
+     - 댓글 수 머리말 "댓글[N]"의 숫자는 빨간색이다.
+
+     ★ 의도적 차이 1건(보안): AS-IS는 댓글 본문도 escapeXml="false"로 <pre> 안에 그대로
+       넣어 저장형 XSS가 가능하다. 댓글 입력칸은 일반 textarea라 HTML이 필요하지 않고
+       <pre>가 줄바꿈을 살려주므로, 여기서는 이스케이프해서 넣는다 - 정상적인 글은 보이는
+       모습이 완전히 같다. 게시글 본문은 에디터 HTML이라 AS-IS대로 그대로 렌더링한다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span th:text="${msg.get('MENU_11401')}">소통방</span></h3>
+
+<input type="hidden" id="bbsId" th:value="${detail.bbsId}"/>
+<section id="contents">
+	<div class="contents-wrap">
+		<div class="center">
+			<div class="s-contents list-page-wrapper">
+
+				<!-- 게시글 영역 -->
+				<div class="list-page-area">
+					<div class="list-page-body notice">
+						<div class="page-title" style="border-top: 1px solid black; margin-top: 50px; text-align: left;"
+							 th:text="${detail.bbsTtl}"></div>
+
+						<!-- 게시글 헤더 영역 -->
+						<div class="page-info">
+							<div class="page-info-list">
+								<span style="color: black; font-size: 14px; padding: 5px;">작성자 : </span>
+								<th:block th:if="${detail.authority == 'ROLE_ADMIN_1' or detail.authority == 'ROLE_ADMIN_2'}">
+									<span style="color: black; font-size: 14px; font-weight:bold; padding: 5px;">시스템 관리자</span>
+								</th:block>
+								<th:block th:if="${detail.authority == 'ROLE_ADMIN_3' or detail.authority == 'ROLE_ADMIN_4'}">
+									<span style="color: black; font-size: 14px; font-weight:bold; padding: 5px;">행정안전부</span>
+									<span style="color: black; font-size: 14px; padding: 5px;" th:text="${detail.userName}"></span>
+								</th:block>
+								<th:block th:unless="${detail.authority == 'ROLE_ADMIN_1' or detail.authority == 'ROLE_ADMIN_2'
+													   or detail.authority == 'ROLE_ADMIN_3' or detail.authority == 'ROLE_ADMIN_4'}">
+									<span style="color: black; font-size: 14px; font-weight:bold; padding: 5px;"
+										  th:text="${detail.upperLocgovNm} + ' ' + ${detail.locgovNm}"></span>
+									<span style="color: black; font-size: 14px; padding: 5px;" th:text="${detail.userName}"></span>
+								</th:block>
+							</div>
+							<div class="page-info-list">
+								<span style="color: black; font-size: 14px; padding: 5px;">작성일시 : </span>
+								<div class="date-created" style="color: black; padding: 5px; display: flex;"
+									 th:text="${detail.frstCrtDt != null} ? ${#temporals.format(detail.frstCrtDt, 'yyyy-MM-dd HH:mm:ss')} : ''"></div>
+								<div class="views" style="color: black; padding: 5px;">조회 <span th:text="${detail.inqCnt}">0</span></div>
+							</div>
+						</div>
+						<!-- 게시글 헤더 영역 -->
+
+						<!-- 게시글 본문 영역 -->
+						<div class="page-contents" style="min-height: 400px; padding: 53px 15px 53px 15px; text-align: start;"
+							 th:utext="${bbsCnHtml}"></div>
+						<!-- 게시글 본문 영역 -->
+					</div>
+				</div>
+				<!-- 게시글 영역 -->
+
+				<!-- 댓글 영역 -->
+				<div>
+					<div style="padding: 10px 0px; margin: 10px 0px; font-size: 20px; border-bottom: 1px solid #000">댓글<span style="color: red; margin-left: 10px;" th:text="'[' + ${bbsCmntListCnt} + ']'">[0]</span></div>
+					<div id="cmntList">
+						<li th:each="cmnt : ${bbsCmntList}"
+							style="border-bottom: 1px solid #ccc; padding: 15px 10px; margin-bottom: 10px; display:inline-block; width:100%">
+							<th:block th:if="${cmnt.authority == 'ROLE_ADMIN_1' or cmnt.authority == 'ROLE_ADMIN_2'}">
+								<span style="font-size: 14px; font-weight:bold">시스템 관리자</span>
+							</th:block>
+							<th:block th:if="${cmnt.authority == 'ROLE_ADMIN_3' or cmnt.authority == 'ROLE_ADMIN_4'}">
+								<span style="font-size: 14px; font-weight:bold">행정안전부</span>
+								<span style="font-size: 14px;" th:text="${cmnt.userName}"></span>
+							</th:block>
+							<th:block th:unless="${cmnt.authority == 'ROLE_ADMIN_1' or cmnt.authority == 'ROLE_ADMIN_2'
+												   or cmnt.authority == 'ROLE_ADMIN_3' or cmnt.authority == 'ROLE_ADMIN_4'}">
+								<span style="font-size: 14px; font-weight:bold"
+									  th:text="${cmnt.upperLocgovNm} + ' ' + ${cmnt.locgovNm}"></span>
+								<span style="font-size: 14px;" th:text="${cmnt.userName}"></span>
+							</th:block>
+							<span th:text="${cmnt.frstCrtDt != null} ? ${#temporals.format(cmnt.frstCrtDt, 'yyyy-MM-dd HH:mm:ss')} : ''"></span>
+							<th:block th:if="${userId != null and cmnt.frstCrtId == userId}">
+								<button type="button" style="float: right; margin-left:10px; background-color: #fb502e;"
+										class="btn btn-dark-gray btn-sm delete" th:attr="cmntId=${cmnt.cmntId}">삭제</button>
+								<button type="button" style="float: right;" class="btn btn-dark-gray btn-sm openUpdate"
+										th:attr="cmntId=${cmnt.cmntId}">수정</button>
+							</th:block>
+							<div style="margin-top: 20px; font-size: 13px;"><p> <pre class="cmntCn" th:text="${cmnt.cmntCn}"></pre></p></div>
+							<div style="position: relative; top: 12px; width: 90%; display:none;" class="updateArea">
+								<textarea rows="3" cols="60" maxlength="1000" placeholder="댓글을 입력하세요" th:text="${cmnt.cmntCn}"></textarea>
+								<button class="commentButton2 update" style="background: #004CCE;" th:attr="cmntId=${cmnt.cmntId}">완료</button>
+							</div>
+						</li>
+					</div>
+					<div class="comment-wrap">
+						<textarea id="cmntCn" class="reply_area" rows="3" cols="60" maxlength="1000" placeholder="댓글을 입력하세요"></textarea>
+						<button type="button" class="commentButton add" style="background: #004CCE;">등록</button>
+					</div>
+				</div>
+			</div>
+			<div class="btn-box">
+				<button type="button" class="btn btn-defualt btn-small list">목록</button>
+				<th:block th:if="${userId != null and detail.frstCrtId == userId}">
+					<button type="button" class="btn btn-dark-gray btn-small update" th:text="${msg.get('M00087')}">수정</button>
+					<button type="button" class="btn btn-danger btn-small delete" th:text="${msg.get('M00074')}">삭제</button>
+				</th:block>
+			</div>
+		</div>
+	</div>
+</section>
+
+    </div>
+    </div>
+</div>
+</div>
+
+<link rel="stylesheet" type="text/css" th:href="@{/content/css/community.css}">
+
+<script type="text/javascript" th:src="@{/content/modules/cmnty/cmnt.js}"></script>
+<script type="text/javascript">
+
+$(function(){
+	cmnt.init();
+})
+
+</script>
+</body>
+</html>

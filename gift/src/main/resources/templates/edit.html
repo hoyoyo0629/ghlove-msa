@@ -57,9 +57,243 @@
         <button type="submit">수정 저장</button>
     </form>
 
+    <!-- ── 옵션 설정 (AS-IS opmanager/item/form.jsp 구조 재현) ────────────────────
+         기능은 S/S2/S3/T 전부 지원하되, AS-IS와 동일하게 S2(2조합형)·T(텍스트형)는 화면에서 숨긴다.
+         비즈니스 로직은 gift 서비스 REST(PUT .../options/bulk|text|additions)에 있고 여기선 얇게 소비. -->
+    <hr>
+    <section id="option-editor" th:attr="data-item-id=${gift.itemId}">
+        <h2>옵션 설정</h2>
+        <p class="error" id="opt-msg" style="display:none"></p>
+
+        <div class="field">
+            <label>옵션 사용여부</label>
+            <label><input type="radio" name="optUse" value="N" checked> 사용안함</label>
+            <label><input type="radio" name="optUse" value="Y"> 사용</label>
+        </div>
+
+        <div id="opt-body" style="display:none">
+            <div class="field">
+                <label>옵션형태</label>
+                <label><input type="radio" name="optType" value="S" checked> 선택형</label>
+                <!-- AS-IS 동일: S2(2조합형)·T(텍스트형)는 숨김. 기능/데이터는 유지. -->
+                <label style="display:none"><input type="radio" name="optType" value="S2"> 2조합형</label>
+                <label><input type="radio" name="optType" value="S3"> 3조합형</label>
+                <label style="display:none"><input type="radio" name="optType" value="T"> 텍스트형</label>
+            </div>
+
+            <table class="opt-grid" id="opt-grid">
+                <thead>
+                    <tr>
+                        <th class="c1">옵션값1</th>
+                        <th class="c2" style="display:none">옵션값2</th>
+                        <th class="c3" style="display:none">옵션값3</th>
+                        <th>추가금액</th>
+                        <th>재고연동</th>
+                        <th>재고수량</th>
+                        <th>숨김</th>
+                        <th>삭제</th>
+                    </tr>
+                </thead>
+                <tbody id="opt-rows"></tbody>
+            </table>
+            <button type="button" id="opt-add-row">+ 항목추가</button>
+        </div>
+
+        <p><button type="button" id="opt-save">옵션 저장</button></p>
+
+        <hr>
+        <h3>필수 추가정보 등록</h3>
+        <div class="field">
+            <label>필수 추가정보 사용여부</label>
+            <label><input type="radio" name="txtUse" value="N" checked> 사용안함</label>
+            <label><input type="radio" name="txtUse" value="Y"> 사용</label>
+        </div>
+        <div id="txt-body" style="display:none">
+            <div class="field"><label>제목1</label><input type="text" id="txt1" maxlength="30" placeholder="예) 티켓을 받으실 아이디를 입력해주세요"></div>
+            <div class="field"><label>제목2</label><input type="text" id="txt2" maxlength="30"></div>
+            <div class="field"><label>제목3</label><input type="text" id="txt3" maxlength="30"></div>
+            <p class="hint">* 각 30자 이내, 콜론/수직선/홑화살괄호(: | &lt; &gt;)는 사용할 수 없습니다.</p>
+        </div>
+        <p><button type="button" id="txt-save">필수 추가정보 저장</button></p>
+
+        <hr>
+        <h3>추가구성</h3>
+        <p class="hint">* 본품과 별도로 함께 담기는 부가 답례품. 저장 시 추가구성 답례품이 생성됩니다(목록엔 노출 안 됨).</p>
+        <table class="opt-grid" id="add-grid">
+            <thead>
+                <tr><th>추가상품명 (최대40자)</th><th>추가상품가격</th><th>재고수량</th><th>삭제</th></tr>
+            </thead>
+            <tbody id="add-rows"></tbody>
+        </table>
+        <button type="button" id="add-add-row">+ 항목추가</button>
+        <p><button type="button" id="add-save">추가구성 저장</button></p>
+    </section>
+
     <div class="links">
         <a th:href="@{/my}">내 답례품 관리로</a>
     </div>
 </div>
+
+<script th:inline="javascript">
+/*<![CDATA[*/
+(function () {
+    const itemId = document.getElementById('option-editor').getAttribute('data-item-id');
+    // 판매자 자기서비스 경로(GiftController, currentSellerId 소유권 검사). /api/admin/**는 내부전용.
+    const base = '/gifts/' + itemId;
+    const msg = document.getElementById('opt-msg');
+    // 서버 모델의 현재 옵션형태/각인 값 (null 가능)
+    const gift = /*[[${gift}]]*/ {};
+
+    function showMsg(text, ok) {
+        msg.style.display = 'block';
+        msg.style.color = ok ? 'green' : 'red';
+        msg.textContent = text;
+    }
+    function selType() { return document.querySelector('input[name=optType]:checked').value; }
+
+    // 형태에 따라 옵션값2/3 컬럼 노출
+    function applyTypeColumns() {
+        const t = selType();
+        const show2 = (t === 'S2' || t === 'S3');
+        const show3 = (t === 'S3');
+        document.querySelectorAll('.opt-grid .c2').forEach(e => e.style.display = show2 ? '' : 'none');
+        document.querySelectorAll('.opt-grid .c3').forEach(e => e.style.display = show3 ? '' : 'none');
+        document.querySelectorAll('#opt-rows tr').forEach(tr => {
+            tr.querySelector('.v2').style.display = show2 ? '' : 'none';
+            tr.querySelector('.v3').style.display = show3 ? '' : 'none';
+        });
+    }
+
+    function addRow(o) {
+        o = o || {};
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+            '<td><input class="v1" type="text" value="' + (o.optionName1 || '') + '"></td>' +
+            '<td class="v2"><input type="text" value="' + (o.optionName2 || '') + '"></td>' +
+            '<td class="v3"><input type="text" value="' + (o.optionName3 || '') + '"></td>' +
+            '<td><input class="price" type="number" min="0" step="1" value="' + (o.optionPrice || 0) + '"></td>' +
+            '<td><input class="strack" type="checkbox"' + (o.optionStockFlag === 'Y' ? ' checked' : '') + '></td>' +
+            '<td><input class="sqty" type="number" min="0" step="1" value="' + (o.optionStockQuantity || 0) + '"></td>' +
+            '<td><input class="hide" type="checkbox"' + (o.optionHideFlag === 'Y' ? ' checked' : '') + '></td>' +
+            '<td><button type="button" class="del">삭제</button></td>';
+        tr.querySelector('.del').addEventListener('click', () => tr.remove());
+        document.getElementById('opt-rows').appendChild(tr);
+        applyTypeColumns();
+    }
+
+    function collectRows() {
+        const t = selType();
+        const rows = [];
+        document.querySelectorAll('#opt-rows tr').forEach(tr => {
+            const v1 = tr.querySelector('.v1').value.trim();
+            if (!v1) return;
+            rows.push({
+                optionName1: v1,
+                optionName2: (t === 'S2' || t === 'S3') ? tr.querySelector('.v2 input').value.trim() : null,
+                optionName3: (t === 'S3') ? tr.querySelector('.v3 input').value.trim() : null,
+                optionPrice: parseInt(tr.querySelector('.price').value || '0', 10),
+                stockTracked: tr.querySelector('.strack').checked,
+                stockQuantity: parseInt(tr.querySelector('.sqty').value || '0', 10),
+                hidden: tr.querySelector('.hide').checked
+            });
+        });
+        return rows;
+    }
+
+    // 옵션 사용여부 토글
+    document.querySelectorAll('input[name=optUse]').forEach(r => r.addEventListener('change', () => {
+        document.getElementById('opt-body').style.display =
+            document.querySelector('input[name=optUse]:checked').value === 'Y' ? 'block' : 'none';
+    }));
+    document.querySelectorAll('input[name=optType]').forEach(r => r.addEventListener('change', applyTypeColumns));
+    document.getElementById('opt-add-row').addEventListener('click', () => addRow());
+
+    // 옵션 저장
+    document.getElementById('opt-save').addEventListener('click', () => {
+        const use = document.querySelector('input[name=optUse]:checked').value === 'Y';
+        const body = { optionType: use ? selType() : null, rows: use ? collectRows() : [] };
+        fetch(base + '/options', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        }).then(r => r.ok ? showMsg('옵션을 저장했습니다.', true)
+                         : r.text().then(t => showMsg('저장 실패: ' + t, false)))
+          .catch(() => showMsg('네트워크 오류', false));
+    });
+
+    // 각인 토글/저장
+    document.querySelectorAll('input[name=txtUse]').forEach(r => r.addEventListener('change', () => {
+        document.getElementById('txt-body').style.display =
+            document.querySelector('input[name=txtUse]:checked').value === 'Y' ? 'block' : 'none';
+    }));
+    document.getElementById('txt-save').addEventListener('click', () => {
+        const use = document.querySelector('input[name=txtUse]:checked').value === 'Y';
+        const body = { use: use, title1: v('txt1'), title2: v('txt2'), title3: v('txt3') };
+        fetch(base + '/text-options', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        }).then(r => r.ok ? showMsg('필수 추가정보 설정을 저장했습니다.', true)
+                         : r.text().then(t => showMsg('저장 실패: ' + t, false)));
+    });
+
+    // 추가구성 행 관리
+    function addAdditionRow(a) {
+        a = a || {};
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+            '<td><input class="an" type="text" maxlength="40" value="' + (a.additionItemName || '') + '"></td>' +
+            '<td><input class="ap" type="number" min="0" step="1" value="' + (a.additionSalePrice || 0) + '"></td>' +
+            '<td><input class="aq" type="number" min="0" step="1" value="' + (a.stockQuantity || 0) + '"></td>' +
+            '<td><button type="button" class="del">삭제</button></td>';
+        tr.querySelector('.del').addEventListener('click', () => tr.remove());
+        document.getElementById('add-rows').appendChild(tr);
+    }
+    document.getElementById('add-add-row').addEventListener('click', () => addAdditionRow());
+
+    // 추가구성 저장 (추가상품명/가격/재고 → item_data_type=2 자식 답례품 생성)
+    document.getElementById('add-save').addEventListener('click', () => {
+        const rows = [];
+        document.querySelectorAll('#add-rows tr').forEach(tr => {
+            const name = tr.querySelector('.an').value.trim();
+            if (!name) return;
+            rows.push({
+                additionItemName: name,
+                additionSalePrice: parseInt(tr.querySelector('.ap').value || '0', 10),
+                stockQuantity: parseInt(tr.querySelector('.aq').value || '0', 10)
+            });
+        });
+        fetch(base + '/additions', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rows: rows })
+        }).then(r => r.ok ? showMsg('추가구성을 저장했습니다.', true)
+                         : r.text().then(t => showMsg('저장 실패: ' + t, false)));
+    });
+
+    // 기존 추가구성 로드
+    fetch(base + '/additions').then(r => r.ok ? r.json() : []).then(list => {
+        (list || []).forEach(addAdditionRow);
+    }).catch(() => {});
+
+    function v(id) { return document.getElementById(id).value.trim(); }
+
+    // 기존 값 로드
+    if (gift && gift.itemOptionFlag === 'Y' && gift.itemOptionType) {
+        document.querySelector('input[name=optUse][value=Y]').checked = true;
+        document.getElementById('opt-body').style.display = 'block';
+        const tr = document.querySelector('input[name=optType][value="' + gift.itemOptionType + '"]');
+        if (tr) tr.checked = true;
+    }
+    if (gift && gift.itemTextOptionFlag === 'Y') {
+        document.querySelector('input[name=txtUse][value=Y]').checked = true;
+        document.getElementById('txt-body').style.display = 'block';
+        if (gift.itemTextOptionTitle1) document.getElementById('txt1').value = gift.itemTextOptionTitle1;
+        if (gift.itemTextOptionTitle2) document.getElementById('txt2').value = gift.itemTextOptionTitle2;
+        if (gift.itemTextOptionTitle3) document.getElementById('txt3').value = gift.itemTextOptionTitle3;
+    }
+    fetch(base + '/options').then(r => r.json()).then(list => {
+        (list || []).forEach(addRow);
+        if ((list || []).length === 0) addRow();
+        applyTypeColumns();
+    }).catch(() => addRow());
+})();
+/*]]>*/
+</script>
 </body>
 </html>

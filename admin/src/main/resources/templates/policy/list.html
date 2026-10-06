@@ -1,45 +1,214 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
     <title>약관관리 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <h3>약관관리</h3>
-    <p><a class="btn" th:href="@{/policy/new}">+ 약관 등록</a></p>
+<!-- AS-IS opmanager/i18n/config/policy/list.jsp 이식. 검색(제목/내용 LIKE) + 정책구분 라디오 6종 +
+     전시여부 라디오 3종 + 화면출력 선택 + 7컬럼 목록 + 선택삭제/등록 + 페이지네이션.
+     정책구분·전시여부 라벨은 AS-IS JSP에 한글 리터럴로 박혀 있어 그대로 옮겼다(코드가 아니다). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <table class="board_list_table">
-        <thead>
-        <tr><th>유형</th><th>제목</th><th>전시여부</th><th>전시기간</th><th>수정일</th><th>처리</th></tr>
-        </thead>
-        <tbody>
-        <tr th:each="p : ${policies}">
-            <td th:text="${typeLabels.get(p.policyType)} ?: ${p.policyType}"></td>
-            <td><a th:href="@{'/policy/' + ${p.policyId} + '/edit'}" th:text="${p.title}"></a></td>
-            <td th:text="${p.exhibitionStatus == 'Y' ? '전시' : '비전시'}"></td>
-            <td th:text="${p.exhibitionStartDate} + ' ~ ' + ${p.exhibitionEndDate}"></td>
-            <td th:text="${p.updatedDate}"></td>
-            <td>
-                <a class="small-btn" th:href="@{'/policy/' + ${p.policyId} + '/edit'}">수정</a>
-                <form th:action="@{'/policy/' + ${p.policyId} + '/delete'}" method="post" class="inline-form"
-                      onsubmit="return confirm('삭제하시겠습니까?')">
-                    <button type="submit" class="small-btn danger">삭제</button>
-                </form>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(policies)}">등록된 약관이 없습니다.</p>
-</div>
+<form id="policyParam" method="get" th:action="@{/policy}">
+    <!-- [AS-IS 결함 수정] AS-IS list.jsp는 제목에 M00756(="이용후기(리뷰)관리"), summary/caption에
+         M00459(="이용후기(리뷰)")를 써서 약관관리 화면에 리뷰 문구가 뜬다(리뷰 화면 복사 흔적).
+         같은 기능의 상세화면 form.jsp가 쓰는 방식 - 제목은 리터럴 "약관관리", caption은
+         M00206(="약관관리") - 에 맞췄다. 사용자 확인 후 의도적으로 AS-IS와 다르게 둔 부분이다. -->
+    <h3><span>약관관리</span></h3>
+
+    <div class="board_write">
+        <table class="board_write_table" th:summary="${msg.get('M00206')}">
+            <caption th:text="${msg.get('M00206')}"></caption>
+            <colgroup>
+                <col style="width:220px;">
+            </colgroup>
+            <tbody>
+            <tr>
+                <td class="label" th:text="${msg.get('M00011')}">검색구분</td> <!-- 검색구분 -->
+                <td>
+                    <div class="flex_box gap-08">
+
+                        <select id="where" name="where" th:title="${msg.get('M00011')}" class="wd-150">
+                            <!-- AS-IS도 '전체' 옵션은 주석처리되어 있다 -->
+                            <option value="TITLE" th:selected="${policyParam.where == 'TITLE'}">제목</option>
+                            <option value="CONTENT" th:selected="${policyParam.where == 'CONTENT'}">내용</option>
+                        </select>
+                        <input type="text" id="query" name="query" th:value="${policyParam.query}"
+                               class="input_txt required _filter full" th:title="${msg.get('M00021')}" /> <!-- 검색어 입력 -->
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">정책구분</td>
+                <td>
+                    <div class="flex_box gap-12">
+                        <div class="input-form">
+                            <input type="radio" id="policyType0" name="policyType" value="" th:checked="${#strings.isEmpty(policyParam.policyType)}" /><label for="policyType0">전체</label>
+                        </div>
+                        <div class="input-form">
+                            <input type="radio" id="policyType1" name="policyType" value="0" th:checked="${policyParam.policyType == '0'}" /><label for="policyType1">약관</label>   <!-- 공개 -->
+                        </div>
+                        <div class="input-form">
+                            <input type="radio" id="policyType2" name="policyType" value="1" th:checked="${policyParam.policyType == '1'}" /><label for="policyType2">개인정보처리방침</label> <!-- 비공개 -->
+                        </div>
+                        <div class="input-form">
+                            <input type="radio" id="policyType3" name="policyType" value="4" th:checked="${policyParam.policyType == '4'}" /><label for="policyType3">개인정보수집 제3자 이용 동의</label>
+                        </div>
+                        <div class="input-form">
+                            <input type="radio" id="policyType4" name="policyType" value="5" th:checked="${policyParam.policyType == '5'}" /><label for="policyType4">저작권정책</label>
+                        </div>
+                        <div class="input-form">
+                            <input type="radio" id="policyType5" name="policyType" value="6" th:checked="${policyParam.policyType == '6'}" /><label for="policyType5">개인정보 수집·이용 동의</label>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">전시 여부</td>
+                <td>
+                    <div class="flex_box gap-12">
+                        <div class="input-form">
+                            <input type="radio" id="exh0" name="exhibitionStatus" value="" th:checked="${#strings.isEmpty(policyParam.exhibitionStatus)}" /><label for="exh0">전체</label>
+                        </div>
+                        <div class="input-form">
+                            <input type="radio" id="exh1" name="exhibitionStatus" value="Y" th:checked="${policyParam.exhibitionStatus == 'Y'}" /><label for="exh1">공개</label>   <!-- 공개 -->
+                        </div>
+                        <div class="input-form">
+                            <input type="radio" id="exh2" name="exhibitionStatus" value="N" th:checked="${policyParam.exhibitionStatus == 'N'}" /><label for="exh2">비공개</label> <!-- 비공개 -->
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div> <!-- // board_write -->
+
+    <!-- 버튼시작 -->
+                <div class="btn_all btn_right">
+                    <div class="flex_box gap-08">
+                        <button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/policy'" th:text="${msg.get('M00047')}">초기화</button> <!-- 초기화 -->
+                        <button type="submit" class="btn btn-default btn-mini" th:text="${msg.get('M00048')}">검색</button> <!-- 검색 -->
+                    </div>
+                </div>
+    <!-- 버튼 끝-->
+
+    <div class="count_title mt-40">
+        <h5>
+                총 <span th:text="${totalCount}" th:remove="tag">0</span>건
+        </h5>    <!-- 전체 -->   <!-- 건 조회 -->
+        <span>
+            <select id="itemsPerPage" name="itemsPerPage" th:title="${msg.get('M00239')}" onchange="$('form#policyParam').submit();"> <!-- 화면출력 -->
+                <option value="10" th:text="${msg.get('M00240')}" th:selected="${policyParam.itemsPerPage == 10}">10개 출력</option>
+                <option value="20" th:text="${msg.get('M00241')}" th:selected="${policyParam.itemsPerPage == 20}">20개 출력</option>
+                <option value="50" th:text="${msg.get('M00242')}" th:selected="${policyParam.itemsPerPage == 50}">50개 출력</option>
+                <option value="100" th:text="${msg.get('M00243')}" th:selected="${policyParam.itemsPerPage == 100}">100개 출력</option>
+            </select>
+        </span>
+    </div>
+</form>
+
+<form id="listForm">
+    <div class="board_write">
+        <table class="board_list_table" th:summary="${msg.get('M00273')}"> <!-- 주문내역 리스트 -->
+            <caption th:text="${msg.get('M00273')}"></caption>
+            <colgroup>
+                <col style="width:50px;">
+                <col style="width:50px;">
+                <col style="width:150px;">
+                <col style="width:500px;">
+                <col style="width:100px;">
+                <col style="width:100px;">
+                <col style="width:150px;">
+            </colgroup>
+            <thead>
+            <tr>
+                <th scope="col"><input type="checkbox" id="check_all" th:title="${msg.get('M00169')}" /></th>
+                <th scope="col">No.</th> <!-- 순번 -->
+                <th scope="col">정책구분</th> <!-- 정책구분 -->
+                <th scope="col">제목</th> <!-- 제목 -->
+                <th scope="col">전시 여부</th> <!-- 전시 여부 -->
+                <th scope="col">작성자</th> <!-- 수정자 -->
+                <th scope="col">작성일</th> <!-- 수정일 -->
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="policys, i : ${policyList}">
+                <td><input type="checkbox" name="id" id="check" th:value="${policys.policyId}" title="체크박스" /></td>
+                <td th:text="${pagination.itemNumber - i.count}">0</td>
+
+                <td th:text="${policys.policyTypeLabel}"></td>
+
+                <td>
+                    <div>
+                        <a th:href="@{'/policy/detail/' + ${policys.policyId}}" th:text="${policys.title}"></a>
+                    </div>
+                </td>
+
+                <td th:text="${policys.exhibitionStatus == 'Y'} ? '공개' : '비공개'"></td>
+
+                <td th:text="${#strings.isEmpty(policys.updatedLoginId)} ? '-' : ${policys.updatedLoginId}"></td>
+
+                <!-- AS-IS op:date - yyyyMMddHHmmss 저장값을 날짜로 보여준다 -->
+                <td th:text="${#strings.isEmpty(policys.createdDate)} ? '-'
+                             : (${#strings.length(policys.createdDate) >= 8}
+                                ? ${#strings.substring(policys.createdDate,0,4) + '-' + #strings.substring(policys.createdDate,4,6) + '-' + #strings.substring(policys.createdDate,6,8)}
+                                : ${policys.createdDate})"></td>
+
+                <!-- AS-IS도 행별 삭제 컬럼은 주석처리되어 있다 -->
+            </tr>
+
+            </tbody>
+        </table>
+    </div><!--// board_write E-->
+
+    <div class="no_content" th:if="${#lists.isEmpty(policyList)}" th:text="${msg.get('M00473')}">
+            데이터가 없습니다.
+    </div>
+
+        <div class="btn_all btn_right">
+            <div class="flex_box gap-08">
+                <a id="delete_list_data" href="#"><button type="button" class="btn btn-dark-gray btn-mini">삭제</button></a> <!-- 선택삭제 -->
+                <a th:href="@{/policy/create}"><button type="button" class="btn btn-dark-default btn-mini">등록</button></a> <!-- 등록 -->
+            </div>
+        </div>
+
+        <div class="pagination-wrap">
+            <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+        </div>
+
+</form>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script type="text/javascript">
+    $(function() {
+        Common.DateButtonEvent.set('.day_btns > a[class^=table_btn]', '', 'input[name="exhibitionStartDate"]' , 'input[name="exhibitionEndDate"]');
+
+        //목록데이터 - 삭제처리
+        $('#delete_list_data').on('click', function() {
+            Common.updateListData("/policy/delete-list", Message.get("M00306"));    // 선택된 데이터를 삭제하시겠습니까?
+        });
+    });
+
+    function deleteCheck(policyId) {
+        if (confirm("해당 약관을 " + Message.get("M00196"))) {        // 해당 약관을 삭제하시겠습니까?
+            location.replace("/policy/delete/" + policyId);
+        } else {
+            return;
+        }
+    }
+
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>서울 수납연계 로그 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/log/gif-seoul-sunap-list.jsp 이식(메뉴 1414).
+     결과여부(전체/성공/실패 → SUNAP_YN) + 전자납부번호(완전일치) + 등록일 범위 + 화면출력 +
+     9컬럼 + 페이징. 원천은 AS-IS와 같은 donation.gif_etax_sunap.
+
+     AS-IS verbatim: 결과여부 select의 title이 "아이디", 그리고 **초기화 버튼이 서울'부과' 화면으로
+     이동한다**(`/opmanager/log/gif-seoul-buga` - 복사 흔적). 그대로 두었다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span>서울 수납연계 로그</span></h3>
+
+<form id="levyLogParam" class="opmanager-search-form clear" method="post" th:action="@{/log/levy/seoul-sunap}">
+	<input type="hidden" id="sort" name="sort" th:value="${levyLogParam.sort}"/>
+	<input type="hidden" id="orderBy" name="orderBy" th:value="${levyLogParam.orderBy}"/>
+	<input type="hidden" id="itemsPerPage" name="itemsPerPage" th:value="${levyLogParam.itemsPerPage}"/>
+	<input type="hidden" id="itemsPerPageTemp" name="itemsPerPageTemp" th:value="${levyLogParam.itemsPerPageTemp}"/>
+	<input type="hidden" id="query" name="query" th:value="${levyLogParam.query}"/>
+
+	<div class="board_write">
+		<table class="board_write_table" summary="지방세외 부과 로그">
+			<colgroup>
+				<col style="width:15%;">
+				<col style="width:35%;">
+				<col style="width:15%;">
+				<col style="width:35%;">
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="label">결과여부</td>
+					<td>
+						<div class="flex_box gap-08">
+							<select id="srchRstCd" name="srchRstCd" title="아이디" class="wd-150">
+								<option value="" th:selected="${#strings.isEmpty(levyLogParam.srchRstCd)}">전체</option>
+								<option value="SUCCESS" th:selected="${levyLogParam.srchRstCd == 'SUCCESS'}">성공</option>
+								<option value="FAIL" th:selected="${levyLogParam.srchRstCd == 'FAIL'}">실패</option>
+							</select>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">전자납부번호</td>
+					<td colspan="3">
+						<div class="flex_box gap-08">
+							<input type="text" id="srchTxt" name="srchTxt" title="전자납부번호"
+							       class="input_txt required _filter wd-500" th:value="${levyLogParam.srchTxt}"/>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">등록일</td>
+					<td colspan="3">
+						<div>
+							<span class="datepicker">
+								<input type="text" id="srchStartLogDate" name="srchStartLogDate" class="datepicker optional " th:title="${msg.get('M00507')}" th:value="${levyLogParam.srchStartLogDate}" />
+							</span>
+							<span class="wave">~</span>
+							<span class="datepicker">
+								<input type="text" id="srchEndLogDate" name="srchEndLogDate" class="datepicker optional " th:title="${msg.get('M00509')}" th:value="${levyLogParam.srchEndLogDate}" />
+							</span>
+							<span class="day_btns day_btn1">
+								<a href="javascript:void(0);" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+								<a href="javascript:void(0);" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a>
+								<a href="javascript:void(0);" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>
+								<a href="javascript:void(0);" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+								<a href="javascript:void(0);" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a>
+							</span>
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<!-- AS-IS도 초기화가 서울'부과' 화면으로 간다(복사 흔적) - verbatim 유지 -->
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/log/levy/seoul-buga'">초기화</button>
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="search();">검색</button>
+			</div>
+		</div>
+	</div>
+</form>
+<!-- List -->
+<div class="board_list mt-40">
+	<!-- List Header -->
+	<div class="count_title mt-40">
+		<h5>총 <span th:text="${#numbers.formatInteger(count, 0, 'COMMA')}" th:remove="tag">0</span> 건</h5>
+		<span>
+			<select name="displayCount" id="displayCount" th:title="${msg.get('M00239')}">
+				<option value="10" th:text="${msg.get('M00240')}">10개 출력</option>
+				<option value="20" th:text="${msg.get('M00241')}">20개 출력</option>
+				<option value="50" th:text="${msg.get('M00242')}">50개 출력</option>
+				<option value="100" th:text="${msg.get('M00243')}">100개 출력</option>
+			</select>
+		</span>
+	</div>
+	<!--// List Header -->
+
+	<table class="board_list_table" summary="서울 수납 로그">
+		<caption>서울 수납 로그</caption>
+		<colgroup>
+			<col style="width:13%;">
+			<col style="width:10%;">
+			<col style="width:10%;">
+			<col style="width:8%;">
+			<col style="width:10%;">
+			<col style="width:10%;">
+			<col style="width:8%;">
+			<col style="width:*;">
+			<col style="width:13%;">
+		</colgroup>
+		<thead>
+			<tr>
+				<th scope="col">전자납부번호</th>
+				<th scope="col">요청매체</th>
+				<th scope="col">기관코드</th>
+				<th scope="col">납부여부</th>
+				<th scope="col">납부금액</th>
+				<th scope="col">납부일자</th>
+				<th scope="col">응답코드</th>
+				<th scope="col">응답메세지</th>
+				<th scope="col">연계시작일시</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr th:each="item : ${list}" style="background:#fff;">
+				<td><div th:text="${item.epayNo}"></div></td>
+				<td><div th:text="${item.comReqMeche}"></div></td>
+				<td><div th:text="${item.orgC}"></div></td>
+				<td><div th:text="${item.sunapYn}"></div></td>
+				<td style="text-align: right;"><div th:text="${item.sunapAmt == null} ? '' : ${#numbers.formatInteger(item.sunapAmt, 0, 'COMMA')}"></div></td>
+				<td><div th:text="${item.sunapDt}"></div></td>
+				<td><div th:text="${item.rstCd}"></div></td>
+				<td><div th:text="${item.rstMsg}"></div></td>
+				<td><div th:text="${item.ifStDt}"></div></td>
+			</tr>
+			<tr th:if="${#lists.isEmpty(list)}" style="background:#fff;">
+				<td colspan="9">데이터가 없습니다.</td>
+			</tr>
+		</tbody>
+	</table>
+	<div class="pagination-wrap">
+		<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+	</div>
+</div>
+<!-- List -->
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript">
+	$(function() {
+	  searchEnterKey();
+	  displayChange();
+	  displaySelected();
+
+	  Common.DateButtonEvent.set('.day_btn1 > a[class^=btn_date]', '', 'input[name="srchStartLogDate"]' , 'input[name="srchEndLogDate"]');
+	  EventHandler.calendarStartDateAndEndDateVaild();
+	});
+
+	function search() {
+		var strStartDate = $("#srchStartLogDate").val();
+		var strEndDate = $("#srchEndLogDate").val();
+
+		if(strStartDate === '' || strEndDate === '') {
+			alert("등록일자는 필수입니다.");
+			return false;
+		}
+
+		if(strStartDate && strStartDate.length == 8 && strEndDate && strEndDate.length == 8) {
+			var startDate = new Date(strStartDate.substr(0, 4), strStartDate.substr(4, 2), strStartDate.substr(6, 2));
+			var endDate = new Date(strEndDate.substr(0, 4), strEndDate.substr(4, 2), strEndDate.substr(6, 2));
+
+			if(startDate > endDate) {
+				alert("종료일이 시작일보다 빠릅니다.");
+				var value = $("#shCntrDeEnd").val();
+				$("#srchEndLogDate").val("");
+				$("#srchEndLogDate").focus();
+				$("#srchEndLogDate").val(value);
+				return false;
+			}
+		}
+		$("#levyLogParam").submit();
+	}
+
+	function displayChange() {
+		$("#displayCount").on('change', function(){
+			$("#itemsPerPage").val($(this).val());
+			$("#itemsPerPageTemp").val($(this).val());
+			$('#levyLogParam').submit();
+		});
+	}
+	function displaySelected(){
+		$("#displayCount").val($("#itemsPerPage").val());
+	}
+
+	function searchEnterKey() {
+		$("#srchTxt").on('keydown', function(e){
+			if (e.keyCode == '13') {
+				$("#levyLogParam").submit();
+			}
+		});
+	}
+</script>
+</body>
+</html>

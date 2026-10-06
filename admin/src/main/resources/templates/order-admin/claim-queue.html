@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>클레임 처리 큐 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -10,13 +11,18 @@
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
 <!-- AS-IS opmanager/order 클레임(반품/교환) 승인 큐 재현. 승인 시 원 주문이 자동으로 취소
      처리되며 재고/포인트가 보상된다(ClaimService.approve/complete, 이번 라운드는 그 SAGA
      로직을 건드리지 않고 그대로 재사용한다). 지자체 스코프는 원 주문의 LOCGOV_CODE로
      판정한다 - 지자체담당자에게는 소속 지자체 주문의 클레임만 보인다. -->
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <h3><span>클레임(반품/교환) 처리 큐</span></h3>
     <p><a th:href="@{/admin/orders}">&larr; 주문관리로</a></p>
 
@@ -94,7 +100,10 @@
         </tbody>
     </table>
     <p class="empty" th:if="${#lists.isEmpty(claims)}">조회된 클레임이 없습니다.</p>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>소통방 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/community/freeboard/form.jsp 이식(메뉴 11401 소통방 등록).
+     상단공지(1~4만) + 비밀글 + 제목 + 내용(스마트에디터) + 등록/취소.
+
+     AS-IS verbatim:
+     - 상단공지 체크박스는 시스템·행안부 관리자(ROLE_ADMIN_1~4)에게만 보인다 - 지자체
+       담당자(5·6)는 공지로 올릴 수 없다.
+     - 체크박스 라벨은 둘 다 M00083("사용")이다.
+     - 체크박스 id는 noticeYn1·isSecret1이다(AS-IS Spring form:checkbox가 붙이는 이름이고,
+       bbs.js가 그 id로 체크 여부를 읽는다 - 바꾸면 등록이 깨진다).
+     - 제목 maxlength는 255다(수정화면은 1000으로 서로 다른데 AS-IS 그대로 둔다 -
+       실제 컬럼은 varchar(300)이다).
+     - 등록 버튼 문구는 "등록"이 하드코딩돼 있고 취소는 M00037이다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span th:text="${msg.get('MENU_11401')}">소통방</span></h3>
+
+<form id="searchParam" method="post" th:action="@{/community/bbs/add}">
+	<div class="board_write">
+		<table class="board_write_table" th:attr="summary=${msg.get('M00269')}">
+			<colgroup>
+				<col style="width: 220px;">
+			</colgroup>
+			<tbody>
+				<tr th:if="${role == 'ROLE_ADMIN_1' or role == 'ROLE_ADMIN_2' or role == 'ROLE_ADMIN_3' or role == 'ROLE_ADMIN_4'}">
+					<td class="label">상단공지</td>
+					<td>
+						<div class="flex_box gap-08 item-center">
+							<div class="checkbox">
+								<input type="checkbox" id="noticeYn1" name="noticeYn" value="Y"/>
+								<label for="noticeYn1" th:text="${msg.get('M00083')}">사용</label>
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">비밀글</td>
+					<td>
+						<div class="flex_box gap-08 item-center">
+							<div class="checkbox">
+								<input type="checkbox" id="isSecret1" name="isSecret" value="Y"/>
+								<label for="isSecret1" th:text="${msg.get('M00083')}">사용</label>
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label"><span class="required_mark">*</span> <span th:text="${msg.get('M00275')}">제목</span></td>
+					<td>
+						<div>
+							<input type="text" id="bbsTtl" name="bbsTtl" th:title="${msg.get('M00275')}"
+								   class="input_txt required _filter half" maxlength="255"/>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label"><span class="required_mark">*</span> <span th:text="${msg.get('M00006')}">내용</span></td>
+					<td>
+						<!-- smart_editor2 area -->
+						<div>
+							<textarea id="bbsCn" name="bbsCn" cols="30" rows="20" maxlength="300"
+									  class="w90 editor-content" th:title="${msg.get('M00006')}"></textarea>
+						</div> <!-- smart_editor2 area -->
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<div class="btn_all btn_center">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-dark-gray btn-small add"><span>등록</span></button>
+				<button type="button" class="btn btn-defualt btn-small cancel" th:text="${msg.get('M00037')}">취소</button>
+			</div>
+		</div>
+	</div>
+</form>
+
+    </div>
+    </div>
+</div>
+</div>
+
+<div th:replace="~{fragments/smarteditor :: init}"></div>
+<div th:replace="~{fragments/smarteditor :: editor('bbsCn')}"></div>
+<script type="text/javascript" th:src="@{/content/modules/cmnty/bbs.js}"></script>
+<script type="text/javascript" th:inline="javascript">
+	$(function() {
+		try {
+			$('#searchParam')
+					.validator(
+							function() {
+								Common.getEditorContent("bbsCn");
+
+								if ($('#bbsCn').val().toLowerCase() == '<p>&nbsp;</p>'
+										|| $('#bbsCn').val() == '') {
+									alert($.validator.messages['text']
+											.format(/*[[${msg.get('M00006')}]]*/ '내용'));
+									return false;
+								}
+							})
+		} catch (e) {
+			alert(e.message);
+		}
+
+		bbs.create.init();
+	});
+</script>
+</body>
+</html>

@@ -98,4 +98,35 @@ public class Manager {
     /** 직책명. */
     @Column(name = "OFCPS_NM")
     private String ofcpsNm;
+
+    /** 휴대폰 - 운영자관리(메뉴 4501)·지자체담당자관리(4402) 목록 컬럼. 컬럼은 원래 있었고 매핑만 없었다. */
+    @Column(name = "PHONE_NUMBER")
+    private String phoneNumber;
+
+    /** 중지일자 - 사용여부가 '중지'일 때만 목록에 보여준다(AS-IS 동일). */
+    @Column(name = "DENY_DATE")
+    private String denyDate;
+
+    /**
+     * 정보수정일(yyyyMMdd) - 오프라인담당자(메뉴 4601)가 지점정보를 처음 채웠는지 판정하는 플래그다.
+     * AS-IS는 등록 시 오늘로 넣고, 수정 시 <b>비어 있을 때만</b> 오늘로 채운다(한 번 채워지면
+     * 그대로 둔다 - AS-IS personincharge-mapper.updateOffPersonInCharge의 CASE WHEN).
+     * 컬럼은 원래 있었고 매핑만 없었다.
+     */
+    @Column(name = "INFO_UPDT_DE")
+    private String infoUpdtDe;
+
+    /**
+     * AS-IS 담당자 화면들이 쓰는 사용여부 값('9' 사용 / '2' 중지)으로 바꿔 준다.
+     *
+     * <p>AS-IS {@code OP_MANAGER.STATUS_CODE}는 숫자 코드지만 이 프로젝트는 같은 컬럼에
+     * {@code ACTIVE}/{@code LOCKED}를 쓴다({@link com.ghlove.admin.service.ManagerAdminService}).
+     * 화면 마크업은 AS-IS 그대로 9/2 라디오를 두고, 값 변환은 이 getter와
+     * {@code PersonInChargeAdminService.toStatusCode}가 경계에서 담당한다 - 그러지 않으면
+     * 수정화면에서 어떤 라디오도 선택되지 않고, 저장 시 '9'/'2'가 들어가 두 체계가 섞인다.
+     */
+    @Transient
+    public String getAsIsStatusCode() {
+        return "LOCKED".equals(statusCode) ? "2" : "9";
+    }
 }

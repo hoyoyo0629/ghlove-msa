@@ -150,15 +150,35 @@ public class DonationService {
 
     /** 상세화면 "응원메시지(기부내역)" 탭 - 완료된 기부만 보여준다(raisedAmount와 동일 기준).
      *  AS-IS는 이름을 "고**"처럼 마스킹해서 보여준다. */
-    public List<CheerMessage> cheerMessagesOf(Long dsgnDntnBizId) {
+    public List<CheerMessage> cheerMessagesOf(Long dsgnDntnBizId, Long currentUserId) {
         return donationRepository.findByDsgnDntnBizIdAndCntrSttusCode(dsgnDntnBizId, STATUS_COMPLETED).stream()
                 .sorted(Comparator.comparing(Donation::getCntrDe).reversed())
                 .map(d -> {
                     MemberInfo member = memberClient.fetchOrNull(d.getUserId());
-                    return new CheerMessage(maskName(member), maskLoginId(member), formatCntrDe(d.getCntrDe()),
+                    // AS-IS giveOrder: 로그인 본인의 기부건이면 1(인라인 편집 노출), 아니면 0(읽기전용).
+                    boolean own = currentUserId != null && currentUserId.equals(d.getUserId());
+                    return new CheerMessage(own ? d.getCntrSn() : null, own ? 1 : 0,
+                            maskName(member), maskLoginId(member), formatCntrDe(d.getCntrDe()),
                             d.getCntrAmt(), d.getCheerMsg());
                 })
                 .toList();
+    }
+
+    /**
+     * 특정사업 상세 "응원메시지(기부내역)" 탭에서 본인 기부건의 응원메시지를 저장/수정한다
+     * (AS-IS designated-donation/details.html saveCheerMsg → /api/designated-donation/saveCheerMsg).
+     * 본인 완료 기부건만 편집 가능하고, 30자를 넘으면 잘라 저장한다(프론트에서도 30자 alert).
+     */
+    @Transactional
+    public void saveCheerMsg(Long userId, String cntrSn, String cheerMsg) {
+        Donation donation = donationRepository.findById(cntrSn)
+                .orElseThrow(() -> new DonationException("기부 내역을 찾을 수 없습니다."));
+        if (!donation.getUserId().equals(userId)) {
+            throw new DonationException("본인의 기부 내역만 수정할 수 있습니다.");
+        }
+        String msg = cheerMsg == null ? "" : (cheerMsg.length() > 30 ? cheerMsg.substring(0, 30) : cheerMsg);
+        donation.setCheerMsg(msg);
+        donationRepository.save(donation);
     }
 
     private static String maskName(MemberInfo member) {
@@ -264,6 +284,11 @@ public class DonationService {
 
         requireNotSelfResidence(userId, locgov.getLocgovCode());
 
+        String restriction = donationRestrictionMessage(locgov.getLocgovCode());
+        if (restriction != null) {
+            throw new DonationException(restriction.replace("\n", " "));
+        }
+
         validateAnnualLimit(userId, locgov.getLocgovCode(), amount);
         Donation donation = saveRequested(userId, locgov.getLocgovCode(), amount, null);
         if (psitnLocgovCode != null && !psitnLocgovCode.isBlank()) {
@@ -280,6 +305,47 @@ public class DonationService {
      * 없거나 주소로 지자체를 특정할 수 없으면(예: 해외주소, 회원정보 미등록) 판단 불가로
      * 보고 통과시킨다 - {@link #isSelfResidence}의 null-safety와 동일한 원칙.
      */
+    /**
+     * 하루 중복기부 확인 (AS-IS NgDonationController.locGovInfo의 getTodayCntrListInfo) -
+     * 선택한 지자체에 <b>오늘 이미 기부를 시도(생성)한 내역</b>이 있으면 true. AS-IS는 "금일
+     * 부가정보(전자납부번호) 생성건"으로 판단하는데, MSA는 기부 신청(REQUESTED) 시점에
+     * 기부건이 생성되므로 <b>오늘(cntrDe) 생성된 비취소 기부건 존재</b>로 동일하게 판정한다.
+     * 화면은 true일 때 "중복 기부 방지" 확인 팝업을 띄운다(강제 차단이 아니라 사용자 확인).
+     */
+    public boolean hasTodayDonation(Long userId, String locgovCode) {
+        String today = DE_FORMAT.format(LocalDate.now());
+        return donationRepository.findByUserIdAndCntrLocgovCodeAndCntrDe(userId, locgovCode, today).stream()
+                .anyMatch(d -> !STATUS_CANCELLED.equals(d.getCntrSttusCode()));
+    }
+
+    private static final java.util.Set<String> INCHEON_SPECIAL_LMTT = java.util.Set.of("28155", "28125", "28290");
+
+    /**
+     * 기부불가기간 차단 문구 (AS-IS locGovInfo의 lmttBgnDe~lmttEndDe 검사) - 오늘이 제한기간
+     * 안이면 안내 문구를, 아니면 null을 돌려준다. 인천 영종(28155)·제물포(28125)·검단(28290)은
+     * "18시~10시" 특수 문구를 쓴다.
+     */
+    public String donationRestrictionMessage(String locgovCode) {
+        Locgov locgov = locgovRepository.findById(locgovCode).orElse(null);
+        if (locgov == null || locgov.getLmttBgnDe() == null || locgov.getLmttEndDe() == null
+                || locgov.getLmttBgnDe().isBlank() || locgov.getLmttEndDe().isBlank()) {
+            return null;
+        }
+        String today = DE_FORMAT.format(LocalDate.now());
+        String bgn = locgov.getLmttBgnDe().replace(".", "");
+        String end = locgov.getLmttEndDe().replace(".", "");
+        if (today.compareTo(bgn) < 0 || today.compareTo(end) > 0) {
+            return null;
+        }
+        String resn = locgov.getVioltResnCn() != null ? locgov.getVioltResnCn() : "";
+        if (INCHEON_SPECIAL_LMTT.contains(locgovCode)) {
+            return "선택하신 지자체는\n" + resn + "으로\n" + locgov.getLmttBgnDe() + " 18시부터 "
+                    + locgov.getLmttEndDe() + " 10시까지 \n기부가 불가능합니다.";
+        }
+        return "선택하신 지자체는\n" + resn + "으로\n" + locgov.getLmttBgnDe() + "부터 "
+                + locgov.getLmttEndDe() + "일까지 \n기부가 불가능합니다.";
+    }
+
     private void requireNotSelfResidence(Long userId, String targetLocgovCode) {
         MemberInfo member = memberClient.fetchOrNull(userId);
         if (member == null || member.address() == null || member.address().isBlank()) {
@@ -314,6 +380,11 @@ public class DonationService {
                 || project.getDsgnDntnBizEndYmd() != null && today.compareTo(project.getDsgnDntnBizEndYmd()) > 0) {
             throw new DonationException("기부 신청 기간이 아닙니다.");
         }
+        // AS-IS(designated details.html:714): 달성률(누적기부액/목표액)이 100% 이상이면 차단.
+        if (project.getGoalAmt() != null && project.getGoalAmt() > 0
+                && raisedAmount(dsgnDntnBizId).longValue() >= project.getGoalAmt()) {
+            throw new DonationException("목표 금액이 달성되어 기부가 불가능합니다.");
+        }
 
         // SFR-003 재검토 라운드에서 발견한 gap: 일반기부는 거주지 검증이 있었는데 지정기부
         // (특정사업 기부)엔 이 검증 자체가 없었다 - 본인 주민등록주소지 사업에도 지정기부가
@@ -323,7 +394,8 @@ public class DonationService {
         validateAnnualLimit(userId, project.getLclgvCd(), amount);
         Donation donation = saveRequested(userId, project.getLclgvCd(), amount, project.getDsgnDntnBizId());
         if (cheerMsg != null && !cheerMsg.isBlank()) {
-            donation.setCheerMsg(cheerMsg.length() > 100 ? cheerMsg.substring(0, 100) : cheerMsg);
+            // AS-IS designated-donation/details.html:736 - 응원메시지 30자 제한
+            donation.setCheerMsg(cheerMsg.length() > 30 ? cheerMsg.substring(0, 30) : cheerMsg);
             donation = donationRepository.save(donation);
         }
         return donation;
@@ -346,7 +418,8 @@ public class DonationService {
         // 연간 한도를 완료 시점에도 재검증한다 - 신청 시점에만 검증하면 결제대기(REQUESTED) 건이
         // 누적에 안 잡혀, 한도 이하 신청을 여러 건 만든 뒤 순차 완료해 한도를 우회할 수 있다.
         // 이미 완료된 금액(existing)에 이 건을 더한 값이 한도를 넘으면 완료를 막는다.
-        validateAnnualLimit(donation.getUserId(), donation.getCntrLocgovCode(), donation.getCntrAmt());
+        // 이 기부건은 이미 대기(REQUESTED)로 합계에 포함되므로 자기 자신을 제외해 이중집계를 막는다.
+        validateAnnualLimit(donation.getUserId(), donation.getCntrLocgovCode(), donation.getCntrAmt(), donation.getCntrSn());
         Locgov locgov = locgovRepository.findById(donation.getCntrLocgovCode()).orElse(null);
 
         LevyResult levy = localTaxClient.registerLevy(donation, locgov);
@@ -824,11 +897,24 @@ public class DonationService {
 
     /** 연간 기부한도 검증: 전체 지자체 합산 한도(SYSTEM_CONFIG) + 지자체별 한도(G_CTBNY_SETUP). */
     private void validateAnnualLimit(Long userId, String locgovCode, BigDecimal amount) {
+        validateAnnualLimit(userId, locgovCode, amount, null);
+    }
+
+    /**
+     * 연간/지자체 기부한도 검증. AS-IS(DonationVerification.isDonationNormalAmount + getGCntrSumCntrAmt)와
+     * 동일하게 <b>올해 취소 아닌 기부건(대기 REQUESTED + 완료 COMPLETED)</b>을 "이미 쓴 한도"로
+     * 합산한다 - 신청만 해도 즉시 한도에 잡히므로, 한도 이하 신청을 여러 건 만든 뒤 순차 완료해
+     * 우회하는 것이 신청 시점에 막힌다.
+     *
+     * <p>{@code excludeCntrSn}은 완료 시점 재검증에서 <b>자기 자신(이미 대기건으로 합계에 포함된
+     * 그 기부건)</b>을 빼기 위한 것이다 - 안 빼면 이중 집계된다. 신청 시점(아직 저장 전)에는 null.
+     */
+    private void validateAnnualLimit(Long userId, String locgovCode, BigDecimal amount, String excludeCntrSn) {
         String year = String.valueOf(LocalDate.now().getYear());
 
         totalAnnualLimit().ifPresent(totalLimit -> {
-            BigDecimal existing = sum(donationRepository
-                    .findByUserIdAndCntrDeStartingWithAndCntrSttusCode(userId, year, STATUS_COMPLETED))
+            BigDecimal existing = sumExcluding(donationRepository
+                    .findByUserIdAndCntrDeStartingWithAndCntrSttusCodeNot(userId, year, STATUS_CANCELLED), excludeCntrSn)
                     .add(withdrawnCarryOver(userId));
             if (existing.add(amount).compareTo(totalLimit) > 0) {
                 throw new DonationException("연간 총 기부한도(" + formatWon(totalLimit)
@@ -840,14 +926,23 @@ public class DonationService {
                 .map(CtbnySetup::getLmtAmt)
                 .ifPresent(lmtAmt -> {
                     BigDecimal locgovLimit = BigDecimal.valueOf(lmtAmt);
-                    BigDecimal existing = sum(donationRepository
-                            .findByUserIdAndCntrLocgovCodeAndCntrDeStartingWithAndCntrSttusCode(
-                                    userId, locgovCode, year, STATUS_COMPLETED));
+                    BigDecimal existing = sumExcluding(donationRepository
+                            .findByUserIdAndCntrLocgovCodeAndCntrDeStartingWithAndCntrSttusCodeNot(
+                                    userId, locgovCode, year, STATUS_CANCELLED), excludeCntrSn);
                     if (existing.add(amount).compareTo(locgovLimit) > 0) {
                         throw new DonationException("해당 지자체의 연간 기부한도(" + formatWon(locgovLimit)
                                 + ")를 초과합니다. 올해 누적 기부액: " + formatWon(existing));
                     }
                 });
+    }
+
+    /** 기부건 목록 금액 합 - excludeCntrSn 건은 제외(완료 시점 자기자신 이중집계 방지). */
+    private BigDecimal sumExcluding(List<Donation> donations, String excludeCntrSn) {
+        return donations.stream()
+                .filter(d -> excludeCntrSn == null || !excludeCntrSn.equals(d.getCntrSn()))
+                .map(Donation::getCntrAmt)
+                .filter(java.util.Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     /**

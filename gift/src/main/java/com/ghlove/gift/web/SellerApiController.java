@@ -26,6 +26,21 @@ public class SellerApiController {
         return sellerRepository.findAllByOrderBySellerIdDesc();
     }
 
+    /**
+     * 이메일 발송(AS-IS opmanager/email)에서 발송대상 "답례품"을 고른 경우의 수신자 목록 -
+     * AS-IS {@code emailMapper.sendSellerUserList}와 동일한 조건으로 읽는 조회 전용 채널이다.
+     * admin이 OP_SELLER를 직접 보지 못하므로(gift 소유) 여기서 내려준다.
+     */
+    @GetMapping("/email-send-targets")
+    public List<EmailSendTarget> emailSendTargets() {
+        return sellerRepository.findEmailSendTargets().stream()
+                .map(row -> new EmailSendTarget((String) row[0], (String) row[1]))
+                .toList();
+    }
+
+    public record EmailSendTarget(String userName, String email) {
+    }
+
     @GetMapping("/{id}")
     public Seller get(@PathVariable Long id) {
         return sellerRepository.findById(id).orElseThrow();

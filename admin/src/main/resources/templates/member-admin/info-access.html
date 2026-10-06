@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>개인정보 열람 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<!-- AS-IS opmanager/i18n/user/popup/customer-info-access.jsp 이식. layout=base 팝업(600x810).
+     비밀번호 확인을 통과한 뒤 마스킹하지 않은 회원정보를 보여준다. 이 화면을 띄우기 전에
+     member의 G_INDVDLINFO_READNG_HIST에 열람 이력을 남긴다(AS-IS 동일).
+
+     AS-IS verbatim:
+     - 상세화면과 달리 SMS 라벨이 "SMS 수신동의"다(상세는 "국민비서·SMS 수신동의").
+     - 생년월일은 '-'를 뗀 8자리일 때만 yyyy-MM-dd로 찍는다.
+     - '성별' 행은 AS-IS에서 주석처리되어 있다 - 주석 상태 그대로 둔다.
+     - 주소는 rowspan=2(우편번호 행 + 주소 행)이고 2열 표다.
+     - window.resizeTo(600, 810)으로 팝업을 키운다. -->
+<body>
+<div class="popup_wrap">
+	<div id="pop_header">
+		<h1 class="popup_title">개인정보 열람</h1>
+		<a href="javascript:self.close();" class="btn_close"><img th:src="@{/content/opmanager/images/btn/btn_close.png}" alt="닫기"></a>
+	</div>
+
+	<div class="popup_contents">
+		<table class="board_write_table" summary="개인정보 열람">
+			<caption>개인정보 열람</caption>
+			<colgroup>
+				<col style="width: 150px" />
+				<col />
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="label">회원구분</td>
+					<td><div>일반회원</div></td>
+				</tr>
+				<tr>
+					<td class="label">이름</td>
+					<td><div th:text="${details != null} ? ${details.userName} : ''"></div></td>
+				</tr>
+				<tr>
+					<td class="label">아이디</td>
+					<td><div th:text="${details != null} ? ${details.loginId} : ''"></div></td>
+				</tr>
+				<tr>
+					<td class="label">생년월일</td>
+					<td>
+						<div th:with="birthdayCustom=${details != null and details.birthday != null
+						                               ? #strings.replace(details.birthday, '-', '') : ''}">
+							<th:block th:if="${#strings.length(birthdayCustom) == 8}"
+							          th:text="${#strings.substring(birthdayCustom,0,4)} + '-'
+							                 + ${#strings.substring(birthdayCustom,4,6)} + '-'
+							                 + ${#strings.substring(birthdayCustom,6,8)}"></th:block>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">휴대폰</td>
+					<td><div th:text="${details != null} ? ${details.phoneNumber} : ''"></div></td>
+				</tr>
+				<tr>
+					<td class="label">이메일 주소</td>
+					<td><div th:text="${details != null} ? ${details.email} : ''"></div></td>
+				</tr>
+				<tr>
+					<td class="label" rowspan="2">주소</td>
+					<td><div th:text="${details != null} ? ${details.post} : ''"></div></td>
+				</tr>
+				<tr>
+					<td><div th:text="${details != null}
+					                  ? (${details.address} ?: '') + ' ' + (${details.addressDetail} ?: '') : ''"></div></td>
+				</tr>
+				<tr>
+					<td class="label">EMAIL 수신동의</td>
+					<td><div th:text="${details != null and details.receiveEmail == '0'} ? '동의' : '비동의'"></div></td>
+				</tr>
+				<tr>
+					<td class="label">SMS 수신동의</td>
+					<td><div th:text="${details != null and details.receiveSms == '0'} ? '동의' : '비동의'"></div></td>
+				</tr>
+				<!-- AS-IS에서 주석처리된 '성별' 행 - 주석 상태 그대로 둔다
+				<tr>
+					<td class="label">성별</td>
+					<td><div>남</div></td>
+				</tr>
+				-->
+				<tr>
+					<td class="label">가입일</td>
+					<td><div th:text="${createdDateText}"></div></td>
+				</tr>
+				<tr>
+					<td class="label">마지막 로그인</td>
+					<td><div th:text="${loginDateText}"></div></td>
+				</tr>
+			</tbody>
+		</table>
+		<p class="popup_btns">
+			<button type="button" class="btn btn-active" onclick="self.close();">확인</button>
+		</p>
+	</div>
+</div>
+
+<script type="text/javascript">
+	$(function() {
+		// 윈도우 팝업 사이즈 재조정
+		window.resizeTo(600, 810);
+	});
+</script>
+</body>
+</html>

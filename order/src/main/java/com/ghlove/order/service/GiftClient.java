@@ -31,4 +31,19 @@ public class GiftClient {
             throw new OrderException("답례품 정보를 조회할 수 없습니다. (itemId=" + itemId + ")");
         }
     }
+
+    /** 장바구니 담기 시 선택 옵션의 옵션명·추가금액을 gift에서 신뢰성 있게 스냅샷한다. */
+    public OptionInfo fetchOption(Long itemOptionId) {
+        try {
+            return restClient.get()
+                    .uri("/api/gifts/options/{id}", itemOptionId)
+                    .retrieve()
+                    .body(OptionInfo.class);
+        } catch (RestClientException e) {
+            throw new OrderException("답례품 옵션 정보를 조회할 수 없습니다. (optionId=" + itemOptionId + ")");
+        }
+    }
+
+    public record OptionInfo(Long itemOptionId, Long itemId, String optionName, Integer optionPrice, boolean soldOut) {
+    }
 }

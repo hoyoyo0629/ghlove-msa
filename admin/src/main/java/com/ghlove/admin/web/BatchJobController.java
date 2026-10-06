@@ -2,73 +2,127 @@ package com.ghlove.admin.web;
 
 import com.ghlove.admin.domain.BatchJob;
 import com.ghlove.admin.repository.BatchJobRepository;
+import com.ghlove.admin.web.support.BatchJobParam;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
-/** 배치 작업 스케줄러 등록 (AS-IS opmanager/batch-job) - 실행 메서드명+주기 등록/관리.
- *  실제 동적 스케줄러 엔진은 없다(각 서비스의 @Scheduled로 이미 개별 구현된 것과 별개). */
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Batch Job - AS-IS saleson.shop.batchjob.BatchJobManagerController(/opmanager/batch-job) 재현.
+ * 작업 검색(메서드명/작업명)·트리거 종류·배치 상태로 걸러 11컬럼 목록을 보여주고, 등록·수정은
+ * {@code Common.popup} 1250x310 팝업에서 ajax로 저장한다(응답은 {isSuccess} 모양).
+ *
+ * 표 컬럼은 AS-IS {@code OP_BATCH_JOB}과 동일하다. 예전 TO-BE는 검색·선택삭제·팝업이 없고
+ * AS-IS에 없는 배치상태 토글 버튼을 갖고 있었다.
+ */
 @Controller
 @RequiredArgsConstructor
 public class BatchJobController {
 
-    private static final String STATUS_RUNNING = "1";
-    private static final String STATUS_STOPPED = "2";
-
     private final BatchJobRepository batchJobRepository;
 
-    @GetMapping("/batch-job")
-    public String list(Model model) {
-        model.addAttribute("jobs", batchJobRepository.findAllByOrderByOrderingAscBatchJobIdAsc());
+    /** AS-IS batchJobList / searchBatchJobList - GET·POST 동일 동작. AS-IS는 페이저가 없고
+     *  건수도 조회된 목록 크기를 그대로 보여준다(목록 전체를 뿌린다). */
+    @RequestMapping(value = "/batch-job", method = { RequestMethod.GET, RequestMethod.POST })
+    public String list(@ModelAttribute("batchJobParam") BatchJobParam batchJobParam, Model model) {
+        List<BatchJob> batchJobList = batchJobRepository.findAllByOrderByOrderingAscBatchJobIdAsc().stream()
+                .filter(j -> batchJobParam.matches(j.getJobMethod(), j.getJobName(),
+                        j.getTriggerType(), j.getBatchStatus()))
+                .toList();
+        model.addAttribute("batchJobList", batchJobList);
+        model.addAttribute("totalCount", batchJobList.size());
         return "batch-job/list";
     }
 
-    @GetMapping("/batch-job/new")
+    /** AS-IS getBatchJobCreate(GET create) - 팝업. */
+    @GetMapping("/batch-job/create")
     public String createForm(Model model) {
-        model.addAttribute("job", new BatchJob());
+        model.addAttribute("batchJob", new BatchJob());
         return "batch-job/form";
     }
 
-    @GetMapping("/batch-job/{id}/edit")
-    public String editForm(@PathVariable Integer id, Model model) {
-        model.addAttribute("job", batchJobRepository.findById(id).orElseThrow());
+    /** AS-IS sechedulDetailList(GET detail?batchJobId=) - 수정 팝업. */
+    @GetMapping("/batch-job/detail")
+    public String detailForm(@RequestParam("batchJobId") Integer batchJobId, Model model) {
+        model.addAttribute("batchJob", batchJobRepository.findById(batchJobId).orElseThrow());
         return "batch-job/form";
     }
 
-    @PostMapping("/batch-job")
-    public String create(BatchJob form) {
-        form.setBatchJobId(null);
-        form.setBatchStatus(STATUS_STOPPED);
-        form.setBatchApplyFlag("0");
-        batchJobRepository.save(form);
-        return "redirect:/batch-job";
+    /** AS-IS postBatchJobCreate(POST create) - ajax. 새 작업은 적용전(0)으로 넣는다. */
+    @PostMapping("/batch-job/create")
+    @ResponseBody
+    public Map<String, Object> create(@ModelAttribute BatchJob form) {
+        return run(() -> {
+            form.setBatchJobId(null);
+            if (form.getBatchApplyFlag() == null) {
+                form.setBatchApplyFlag("0");
+            }
+            batchJobRepository.save(form);
+        });
     }
 
-    @PostMapping("/batch-job/{id}")
-    public String update(@PathVariable Integer id, BatchJob form) {
-        BatchJob job = batchJobRepository.findById(id).orElseThrow();
-        job.setJobName(form.getJobName());
-        job.setJobMethod(form.getJobMethod());
-        job.setTriggerType(form.getTriggerType());
-        job.setTriggerRepeatSeconds(form.getTriggerRepeatSeconds());
-        job.setTriggerCronExpression(form.getTriggerCronExpression());
-        job.setOrdering(form.getOrdering());
-        batchJobRepository.save(job);
-        return "redirect:/batch-job";
+    /** AS-IS update(POST update) - ajax. 팝업이 폼 전체를 serialize해서 보낸다. */
+    @PostMapping("/batch-job/update")
+    @ResponseBody
+    public Map<String, Object> update(@ModelAttribute BatchJob form) {
+        return run(() -> {
+            BatchJob job = batchJobRepository.findById(form.getBatchJobId()).orElseThrow();
+            job.setJobName(form.getJobName());
+            job.setJobMethod(form.getJobMethod());
+            job.setTriggerType(form.getTriggerType());
+            job.setTriggerRepeatSeconds(form.getTriggerRepeatSeconds());
+            job.setTriggerCronExpression(form.getTriggerCronExpression());
+            job.setBatchStatus(form.getBatchStatus());
+            batchJobRepository.save(job);
+        });
     }
 
-    @PostMapping("/batch-job/{id}/toggle")
-    public String toggle(@PathVariable Integer id) {
-        BatchJob job = batchJobRepository.findById(id).orElseThrow();
-        job.setBatchStatus(STATUS_RUNNING.equals(job.getBatchStatus()) ? STATUS_STOPPED : STATUS_RUNNING);
-        batchJobRepository.save(job);
-        return "redirect:/batch-job";
+    /** AS-IS 목록 선택삭제(delete) - op.common.js Common.updateListData. */
+    @PostMapping("/batch-job/delete")
+    @ResponseBody
+    public Map<String, Object> delete(@RequestParam(value = "id", required = false) List<Integer> ids) {
+        return run(() -> {
+            if (ids != null && !ids.isEmpty()) {
+                batchJobRepository.deleteAllById(ids);
+            }
+        });
     }
 
-    @PostMapping("/batch-job/{id}/delete")
-    public String delete(@PathVariable Integer id) {
-        batchJobRepository.deleteById(id);
-        return "redirect:/batch-job";
+    /**
+     * AS-IS batchForNh - 목록의 "농협배치테스트" 버튼이 호출한다.
+     * AS-IS는 {@code ngDonationBatchService.getNoBugaLocgovList()}(농협 미부과 지자체 조회 배치)를
+     * 실행하는데 그 연계는 이 프로젝트에 아직 이식되지 않았다. 성공으로 꾸미지 않고 사유를 알린다
+     * (AS-IS에 있는 버튼이므로 화면에서는 그대로 노출한다).
+     */
+    @PostMapping("/batch-job/batchForNh")
+    @ResponseBody
+    public Map<String, Object> batchForNh() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("isSuccess", false);
+        result.put("errorMessage", "농협 배치 연계(미부과 지자체 조회)는 아직 이식되지 않았습니다.");
+        return result;
+    }
+
+    private Map<String, Object> run(Runnable action) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            action.run();
+            result.put("isSuccess", true);
+        } catch (RuntimeException e) {
+            result.put("isSuccess", false);
+            result.put("errorMessage", e.getMessage());
+        }
+        return result;
     }
 }

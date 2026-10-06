@@ -1,0 +1,55 @@
+<!-- AS-IS opmanager/i18n/user/customer/cntr-list.jsp 이식(메뉴 4101 상세의 기부내역 조각).
+     AS-IS는 layout="blank"로 표만 내려주고 상세화면이 ajax로 #cntrList에 끼워넣는다 -
+     그래서 html/head/body 없이 조각만 쓴다. 페이지 이동도 링크가 아니라
+     javascript:getCntrList(n) 호출이다(Pagination.withLink).
+
+     AS-IS verbatim:
+     - colgroup col 2개(컬럼 9개), caption/summary "기부내역".
+     - 민간연계기관명은 값이 없으면 '-'.
+     - 발생포인트는 **납부일이 있을 때만** 찍고 없으면 '-'.
+     - 납부일은 없으면 '미결제'.
+     - 빈 목록 행에는 background 스타일이 없다.
+
+     TO-BE 주의: donation의 g_cntr.sttemnt_pay_de(납부일)는 아직 어디서도 채우지 않는다
+     (납부 게이트웨이 이식이 별도 라운드) - 그래서 지금은 납부일 칸이 '미결제'로, 발생포인트가
+     '-'로 보인다. AS-IS 표시로직 자체는 그대로 옮겼다. -->
+<table class="board_list_table" summary="기부내역" xmlns:th="http://www.thymeleaf.org">
+	<caption>기부내역</caption>
+	<colgroup>
+		<col style="width:3%;">
+		<col style="width:10%;">
+	</colgroup>
+	<thead>
+		<tr>
+			<th scope="col">No.</th>
+			<th scope="col">기부신청일</th>
+			<th scope="col">기부지자체</th>
+			<th scope="col">기부형태</th>
+			<th scope="col">민간연계기관명</th>
+			<th scope="col">기부금액</th>
+			<th scope="col">발생포인트</th>
+			<th scope="col">납부번호</th>
+			<th scope="col">납부일</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr th:each="item, i : ${list}" style="background:#fff;">
+			<td th:text="${pagination.itemNumber - i.count}">0</td>
+			<td th:text="${item.cntrDe}"></td>
+			<td th:text="${item.cntrLocgovText}"></td>
+			<td th:text="${item.cntrPathNm}"></td>
+			<td th:text="${#strings.isEmpty(item.linkInsttNm)} ? '-' : ${item.linkInsttNm}"></td>
+			<td th:text="${#numbers.formatDecimal(item.cntrAmt, 1, 'COMMA', 2, 'POINT')}">0</td>
+			<td th:text="${item.paid}
+			             ? ${#numbers.formatDecimal(item.cntrPoint, 1, 'COMMA', 2, 'POINT')} : '-'"></td>
+			<td th:text="${item.elctrnPayNo}"></td>
+			<td th:text="${item.sttemntPayDeText}"></td>
+		</tr>
+		<tr th:if="${#lists.isEmpty(list)}">
+			<td colspan="9">기부내역이 존재하지 않습니다.</td>
+		</tr>
+	</tbody>
+</table>
+<div class="pagination-wrap" th:if="${not #lists.isEmpty(list)}" xmlns:th="http://www.thymeleaf.org">
+	<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+</div>

@@ -8,6 +8,7 @@ import com.ghlove.point.domain.PointReservation;
 import com.ghlove.point.event.DonationCancelledEvent;
 import com.ghlove.point.event.DonationCompletedEvent;
 import com.ghlove.point.event.PointLedgerPublisher;
+import com.ghlove.point.event.ShipmentCreatedEvent;
 import com.ghlove.point.repository.CommonCodeRepository;
 import com.ghlove.point.repository.LocgovPointRateRepository;
 import com.ghlove.point.repository.PointBalanceRepository;
@@ -258,8 +259,10 @@ public class PointService {
                     continue; // 취소된 주문의 사용
                 }
                 long used = l.getPointAmount() != null ? -l.getPointAmount() : 0;
+                // 멀티아이템 주문의 refKey는 `주문번호#품목ID` - 표시용 주문번호는 '#' 앞부분.
+                String orderCode = displayOrderCode(l.getRefKey());
                 events.add(java.util.Map.entry(ts,
-                        new PointDetailRow("USE", l.getRefKey(), de, null, null, used, 0, l.getRefKey())));
+                        new PointDetailRow("USE", l.getRefKey(), de, null, null, used, 0, orderCode)));
             } else if (TXN_EXPIRE.equals(l.getTxnType())) {
                 long used = l.getPointAmount() != null ? -l.getPointAmount() : 0;
                 events.add(java.util.Map.entry(ts,
@@ -372,6 +375,52 @@ public class PointService {
 
         adjustBalance(event.userId(), pointAmount);
         log.info("Credited {} points to userId={} for donation {}", pointAmount, event.userId(), event.cntrSn());
+    }
+
+    /**
+     * 회원가입 이벤트 소비 -> 회원가입 축하 포인트 적립 (AS-IS PointServiceImpl.earnPoint("join")).
+     * 지급액은 SYSTEM_CONFIG/POINT_JOIN(관리자 "회원가입시 포인트")이며, AS-IS와 동일하게 값이 0이면
+     * 적립 행을 만들지 않는다(현재 기본값 0 = 비활성). 회원당 1회만 적립되도록 REF_KEY(JOIN-<userId>)
+     * +EARN으로 중복을 막는다(Kafka 최소 1회 전달/컨슈머 재시작에도 안전). 회원가입 포인트는 특정
+     * 지자체에 묶이지 않으므로 locgovCode 없이 적립한다(AS-IS DEFAULT_POINT_CODE에 대응).
+     */
+    @Transactional
+    public void creditForSignup(Long userId) {
+        if (userId == null) {
+            return;
+        }
+        String refKey = "JOIN-" + userId;
+        if (pointLedgerRepository.existsByRefKeyAndTxnType(refKey, TXN_EARN)) {
+            log.info("Signup point for userId={} already credited - skipping duplicate event", userId);
+            return;
+        }
+        long pointAmount = pointJoinAmount();
+        if (pointAmount <= 0) {
+            // AS-IS earnPoint("join")의 `point != 0` 가드 - 설정이 0이면 적립하지 않는다.
+            return;
+        }
+        PointLedger ledger = new PointLedger();
+        ledger.setUserId(userId);
+        ledger.setTxnType(TXN_EARN);
+        ledger.setPointAmount(pointAmount);
+        ledger.setReason("회원가입 포인트");
+        ledger.setStdrYear(String.valueOf(LocalDateTime.now().getYear()));
+        ledger.setRefKey(refKey);
+        ledger.setCreatedDate(LocalDateTime.now());
+        openLot(ledger, pointAmount);
+        pointLedgerRepository.save(ledger);
+        pointLedgerPublisher.publish(ledger);
+        adjustBalance(userId, pointAmount);
+        log.info("Credited {} signup points to userId={}", pointAmount, userId);
+    }
+
+    /** SYSTEM_CONFIG/POINT_JOIN = 회원가입시 지급 포인트 (AS-IS OP_CONFIG.POINT_JOIN). 미설정 시 0(비활성). */
+    private int pointJoinAmount() {
+        return commonCodeRepository.findById(new CommonCodeId("SYSTEM_CONFIG", "ko", "POINT_JOIN"))
+                .map(com.ghlove.point.domain.CommonCode::getCodeValue)
+                .filter(v -> v != null && !v.isBlank())
+                .map(Integer::parseInt)
+                .orElse(0);
     }
 
     /**
@@ -490,6 +539,119 @@ public class PointService {
         // AS-IS deleteGiveUsePoint - 취소된 주문의 사용이력을 지운다. 그래야 기부포인트 현황
         // 상세의 기부건별 '사용'이 취소분만큼 줄고 '잔여'가 원상 복구된다(취소분은 사라진다).
         gCntrUsePointRepository.deleteByOrderCode(orderId);
+    }
+
+    // ==================== 멀티아이템(출고 단위 SAGA) 포인트 차감/복원 ====================
+
+    /**
+     * order.saga의 {@code SHIPMENT_CREATED}에 반응해 <b>출고(지자체) 단위</b>로 포인트를 차감한다.
+     * 상관ID가 orderId가 아니라 출고라 한 주문의 출고들이 <b>지자체별로 독립</b> 차감/복원된다
+     * (같은 주문이라도 지자체가 다른 출고는 서로 다른 lot을 소진).
+     *
+     * <p>차감 원장은 <b>품목(orderItemId) 단위로 분할</b> 기록한다(refKey={@code orderId#orderItemId}).
+     * 그래야 나중에 품목 단위 부분취소/반품({@link #restoreForItem})이 그 품목분만 정확히 복원한다.
+     * 잔액 검증은 출고 총액을 기준으로 한 번만 한다(같은 지자체라 lot 소진 순서는 무관).
+     *
+     * @return true면 차감 성공(SHIPMENT_POINT_DEDUCTED 발행), false면 포인트 부족(FAILED 발행)
+     */
+    @Transactional
+    public boolean deductForShipment(Long shipmentId, String orderId, Long userId, long groupPointAmount,
+                                      String locgovCode, List<ShipmentCreatedEvent.Line> lines) {
+        if (lines == null || lines.isEmpty()) {
+            return true;
+        }
+        // 멱등 - 이 출고의 첫 품목 refKey가 이미 있으면 처리된 것으로 본다.
+        String firstRefKey = itemRefKey(orderId, lines.get(0).orderItemId());
+        if (pointLedgerRepository.existsByRefKeyAndTxnType(firstRefKey, TXN_USE)) {
+            log.info("Shipment {} already processed for point deduction - skipping duplicate event", shipmentId);
+            return true;
+        }
+        if (balanceByLocgov(userId, locgovCode) < groupPointAmount) {
+            return false;
+        }
+
+        for (ShipmentCreatedEvent.Line line : lines) {
+            long amount = line.pointAmount();
+            if (amount <= 0) {
+                continue;
+            }
+            String refKey = itemRefKey(orderId, line.orderItemId());
+            PointLedger ledger = new PointLedger();
+            ledger.setUserId(userId);
+            ledger.setLocgovCode(locgovCode);
+            ledger.setTxnType(TXN_USE);
+            ledger.setPointAmount(-amount);
+            ledger.setReason("주문 결제");
+            ledger.setRefKey(refKey);
+            ledger.setCreatedDate(LocalDateTime.now());
+            pointLedgerRepository.save(ledger);
+            pointLedgerPublisher.publish(ledger);
+
+            consumeLots(userId, amount, locgovCode, refKey);
+            adjustBalance(userId, -amount);
+        }
+        return true;
+    }
+
+    /** order.saga의 {@code SHIPMENT_CANCELLED}에 반응해, 이 서비스가 실제로 차감한 출고의 <b>모든 품목</b>분을 복원한다. */
+    @Transactional
+    public void restoreForShipment(Long shipmentId, String orderId, List<Long> orderItemIds) {
+        if (orderItemIds == null) {
+            return;
+        }
+        for (Long orderItemId : orderItemIds) {
+            restoreForItem(orderId, orderItemId);
+        }
+    }
+
+    /** order.saga의 {@code ITEM_CANCELLED}(품목 단위 부분취소/반품)에 반응해 그 품목 차감분만 복원한다. */
+    @Transactional
+    public void restoreForItem(String orderId, Long orderItemId) {
+        String refKey = itemRefKey(orderId, orderItemId);
+        if (!pointLedgerRepository.existsByRefKeyAndTxnType(refKey, TXN_USE)) {
+            log.info("OrderItem {} was never deducted here - nothing to restore", orderItemId);
+            return;
+        }
+        if (pointLedgerRepository.existsByRefKeyAndTxnType(refKey, TXN_RESTORE)) {
+            log.info("OrderItem {} already restored - skipping duplicate event", orderItemId);
+            return;
+        }
+
+        PointLedger original = pointLedgerRepository.findFirstByRefKeyAndTxnType(refKey, TXN_USE).orElseThrow();
+        long restoreAmount = -original.getPointAmount();
+
+        PointLedger ledger = new PointLedger();
+        ledger.setUserId(original.getUserId());
+        ledger.setLocgovCode(original.getLocgovCode());
+        ledger.setTxnType(TXN_RESTORE);
+        ledger.setPointAmount(restoreAmount);
+        ledger.setReason("주문취소 복원");
+        ledger.setRefKey(refKey);
+        ledger.setCreatedDate(LocalDateTime.now());
+        openLot(ledger, restoreAmount);
+        pointLedgerRepository.save(ledger);
+        pointLedgerPublisher.publish(ledger);
+
+        adjustBalance(original.getUserId(), restoreAmount);
+        gCntrUsePointRepository.deleteByOrderCode(refKey);
+    }
+
+    /**
+     * 품목 단위 refKey. 품목별 멱등·독립복원을 위해 orderItemId를 포함하고, 표시용 orderId 복원을
+     * 위해 orderId도 인코딩한다(pt_point_ledger.REF_KEY). 읽기 모델에서 '#' 앞부분이 주문번호다.
+     * (Phase 6 point 조회모델에서 표시 처리)
+     */
+    private static String itemRefKey(String orderId, Long orderItemId) {
+        return orderId + "#" + orderItemId;
+    }
+
+    /** 사용내역 표시용 주문번호 - 멀티아이템 refKey(`주문번호#품목ID`)에서 '#' 앞부분(주문번호)만. */
+    private static String displayOrderCode(String refKey) {
+        if (refKey == null) {
+            return null;
+        }
+        int hash = refKey.indexOf('#');
+        return hash >= 0 ? refKey.substring(0, hash) : refKey;
     }
 
     /**
@@ -700,8 +862,12 @@ public class PointService {
      * 소멸시키고 잔액에서 차감한다.
      *
      * @return 소멸 처리된 lot 개수
+     *
+     * <p>정기 실행 트리거는 {@link PointExpirationBatchScheduler}로 옮겼다(2026-10-03) -
+     * 배치 실행로그(admin 메뉴 7209)를 남기려면 트랜잭션 프록시 밖에서 결과를 보고해야 하는데,
+     * 같은 빈 안에서 호출하면 프록시를 타지 않아 @Transactional이 무효가 된다. 수동 실행
+     * 엔드포인트({@code /batch/expire})는 그대로 이 메서드를 쓴다.
      */
-    @Scheduled(cron = "0 30 1 * * *")
     @Transactional
     public int runExpirationBatch() {
         String today = DATE_FORMAT.format(LocalDate.now());
@@ -842,6 +1008,15 @@ public class PointService {
     /** admin 지자체관리 "포인트 지급률 변경이력" 팝업(AS-IS locgov-point-list.jsp)용. */
     public java.util.List<com.ghlove.point.domain.LocgovPointRate> locgovPointRateHistory(String locgovCode) {
         return locgovPointRateRepository.findByLocgovCodeOrderByStdrYearDesc(locgovCode);
+    }
+
+    /** admin 지자체관리(4401) 목록의 "포인트 지급률" 컬럼 - 여러 지자체의 해당 연도 지급률. */
+    public java.util.List<com.ghlove.point.domain.LocgovPointRate> locgovPointRates(
+            String stdrYear, java.util.Collection<String> locgovCodes) {
+        if (locgovCodes == null || locgovCodes.isEmpty()) {
+            return java.util.List.of();
+        }
+        return locgovPointRateRepository.findByStdrYearAndLocgovCodeIn(stdrYear, locgovCodes);
     }
 
     private int pointValidDays() {

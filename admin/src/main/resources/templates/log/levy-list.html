@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>연계 로그 관리 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -11,14 +12,19 @@
 
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <h3>연계 로그 관리 (국세청 부과·수납)</h3>
     <p style="color:#666; margin-bottom:12px;">세외수입 부과(電子기부금영수증) 및 국세청 등록 연계 이력입니다.</p>
 
-    <p class="message" th:if="${param.message}" th:text="${param.message}" style="color:#1a6b3c; margin-bottom:12px;"></p>
-    <p class="error" th:if="${param.errorMessage}" th:text="${param.errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+    <!--/* AS-IS는 성공·실패 구분 없이 flash 메시지 하나만 쓴다(my-cert.html 주석 참고). */-->
+    <p class="message" th:if="${redirectMessage}" th:text="${redirectMessage}" style="color:#1a6b3c; margin-bottom:12px;"></p>
 
     <form th:action="@{/log/levy/backfill}" method="post" style="margin-bottom:16px;"
           onsubmit="return confirm('완료된 기부 건 중 연계 이력이 없는 건을 채웁니다. 실행하시겠습니까?')">
@@ -68,7 +74,10 @@
         </tbody>
     </table>
     <p class="empty" th:if="${#lists.isEmpty(relayLogs)}">시도 이력이 존재하지 않습니다.</p>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

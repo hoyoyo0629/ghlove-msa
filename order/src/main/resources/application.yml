@@ -50,6 +50,9 @@ ghlove:
   # 없거나 다르면 AdminApiAuthInterceptor가 무조건 401로 막는다). AdminApiAuthInterceptor 참고.
   internal:
     admin-secret: "ghlove-msa-local-dev-internal-admin-secret-do-not-expose!!"
+  # 정기배치 실행결과를 admin의 "배치 실행로그 조회"(메뉴 7209)가 읽는 표에 보고할 때 쓴다
+  admin-service:
+    base-url: http://localhost:8086
   # 쿠폰 기능 마스터 스위치 (2026-09-09부터 OFF). 쿠폰은 AS-IS에서도 현재 사용되지 않아
   # 자동발급·회원화면·회원API를 통째로 껐다. 이 하나로 아래가 전부 좌우된다:
   #   - CouponBatchScheduler        가입/생일/정기발행 자동발급 배치 (빈 미등록)

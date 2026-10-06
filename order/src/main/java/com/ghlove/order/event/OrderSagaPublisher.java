@@ -2,6 +2,8 @@ package com.ghlove.order.event;
 
 import com.ghlove.order.domain.Claim;
 import com.ghlove.order.domain.Order;
+import com.ghlove.order.domain.OrderItem;
+import com.ghlove.order.domain.Shipment;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -45,6 +47,34 @@ public class OrderSagaPublisher {
                 order.getQuantity(), order.getUnitPrice(), order.getPointAmount(), order.getLocgovCode(),
                 order.getItemName(), order.getReceiverName(), LocalDateTime.now());
         send(order.getOrderId(), event, "ORDER_CREATED");
+    }
+
+    // ==================== 멀티아이템(출고 단위 SAGA, 선택지 A) ====================
+
+    /** 출고 생성 - gift(품목별 재고예약)·point(출고 단위 포인트차감)가 구독한다. key=orderId. */
+    public void publishShipmentCreated(Shipment shipment, Long userId, List<OrderItem> items) {
+        List<ShipmentCreatedEvent.Line> lines = items.stream()
+                .map(i -> new ShipmentCreatedEvent.Line(i.getOrderItemId(), i.getItemId(), i.getItemOptionId(),
+                        i.getQuantity(), i.getPointAmount() != null ? i.getPointAmount() : 0L))
+                .toList();
+        ShipmentCreatedEvent event = new ShipmentCreatedEvent(shipment.getShipmentId(), shipment.getOrderId(),
+                userId, shipment.getLocgovCode(),
+                shipment.getPointAmount() != null ? shipment.getPointAmount() : 0L, lines, LocalDateTime.now());
+        send(shipment.getOrderId(), event, "SHIPMENT_CREATED");
+    }
+
+    /** 출고 취소/보상 - gift(재고 복원)·point(포인트 복원)가 그 출고분만 되돌린다. key=orderId. */
+    public void publishShipmentCancelled(Shipment shipment, String reason, List<Long> orderItemIds) {
+        ShipmentCancelledEvent event = new ShipmentCancelledEvent(shipment.getShipmentId(), shipment.getOrderId(),
+                reason, orderItemIds, LocalDateTime.now());
+        send(shipment.getOrderId(), event, "SHIPMENT_CANCELLED");
+    }
+
+    /** 품목 취소/보상(부분취소·반품) - gift(그 품목 재고 복원)·point(그 품목 차감분 복원)가 보상한다. key=orderId. */
+    public void publishItemCancelled(OrderItem item, String reason) {
+        ItemCancelledEvent event = new ItemCancelledEvent(item.getOrderItemId(), item.getShipmentId(),
+                item.getOrderId(), item.getItemId(), reason, LocalDateTime.now());
+        send(item.getOrderId(), event, "ITEM_CANCELLED");
     }
 
     public void publishConfirmed(Order order) {

@@ -94,11 +94,28 @@ public class LocgovAdminApiController {
         locgovAdminService.deactivate(locgovCode, managerId);
     }
 
+    /**
+     * 부서코드 변경이력. {@code lastUpdusrId}는 AS-IS 부서코드 이력 팝업의 "등록자" 칸을 위한
+     * 것이다 - AS-IS는 OP_MANAGER/OP_USER를 조인해 이름(아이디)을 찍는데, TO-BE에서 관리자
+     * 계정은 admin 소유라 ID만 내려주고 admin이 자기 OP_MANAGER에서 이름을 찾는다.
+     */
     @GetMapping("/{locgovCode}/dept-hist")
     public List<DeptHistDto> deptHist(@PathVariable String locgovCode) {
         return locgovAdminService.deptHistOf(locgovCode).stream()
-                .map(h -> new DeptHistDto(h.getDeptHistNo(), h.getProcessDeptCode(), h.getLastUpdtPnttm()))
+                .map(h -> new DeptHistDto(h.getDeptHistNo(), h.getProcessDeptCode(), h.getLastUpdtPnttm(),
+                        h.getLastUpdusrId() != null ? h.getLastUpdusrId() : h.getFrstRegisterId()))
                 .toList();
+    }
+
+    /**
+     * 직인 삭제 - AS-IS {@code POST /opmanager/user/locgov/delete/offcs}
+     * ({@code LocgovServiceImpl.deleteOffcsFile}). 파일을 실제로 지우고
+     * OFFCS_NM·OFFCS_FILE_NM·ORGINL_FILE_NM 세 컬럼을 NULL로 만든다(AS-IS updateLocgovOffcsInfo).
+     */
+    @PostMapping("/{locgovCode}/seal/delete")
+    public ResponseEntity<?> deleteSeal(@PathVariable String locgovCode,
+                                        @RequestParam(required = false) Long managerId) {
+        return ResponseEntity.ok(Map.of("deleted", locgovAdminService.deleteSeal(locgovCode, managerId)));
     }
 
     @GetMapping("/{locgovCode}/lmtt")
@@ -193,7 +210,8 @@ public class LocgovAdminApiController {
                                      String registerNm, Long managerId) {
     }
 
-    public record DeptHistDto(Integer deptHistNo, String processDeptCode, LocalDateTime changedAt) {
+    public record DeptHistDto(Integer deptHistNo, String processDeptCode, LocalDateTime changedAt,
+                               Long lastUpdusrId) {
     }
 
     public record LmttDto(String lmttBgnDe, String lmttEndDe, String violtResnCode, String violtResnCn,

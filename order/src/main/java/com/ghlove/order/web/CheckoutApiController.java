@@ -2,6 +2,10 @@ package com.ghlove.order.web;
 
 import com.ghlove.order.domain.CouponIssue;
 import com.ghlove.order.domain.Order;
+import com.ghlove.order.domain.OrderItem;
+import com.ghlove.order.domain.Shipment;
+import com.ghlove.order.repository.OrderItemRepository;
+import com.ghlove.order.repository.ShipmentRepository;
 import com.ghlove.order.service.CartGroup;
 import com.ghlove.order.service.CartService;
 import com.ghlove.order.service.CouponService;
@@ -14,6 +18,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +35,8 @@ public class CheckoutApiController {
     private final LocgovClient locgovClient;
     private final JwtVerifier jwtVerifier;
     private final CouponService couponService;
+    private final ShipmentRepository shipmentRepository;
+    private final OrderItemRepository orderItemRepository;
 
     private Long requireUser(HttpServletRequest request) {
         return jwtVerifier.currentUserId(request).orElse(null);
@@ -71,7 +79,8 @@ public class CheckoutApiController {
         return ResponseEntity.ok(new ReviewResponse(groups, totalPoint, couponsByCartItem));
     }
 
-    public record PreviewRequest(List<Long> cartItemId, Map<Long, Integer> couponByCartItem, String deliveryAddress) {
+    public record PreviewRequest(List<Long> cartItemId, Map<Long, Integer> couponByCartItem, String deliveryAddress,
+                                  String zipcode) {
     }
 
     /**
@@ -88,7 +97,7 @@ public class CheckoutApiController {
         }
         try {
             return ResponseEntity.ok(
-                    cartService.quote(userId, req.cartItemId(), req.couponByCartItem(), req.deliveryAddress()));
+                    cartService.quote(userId, req.cartItemId(), req.couponByCartItem(), req.zipcode()));
         } catch (OrderException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -96,7 +105,7 @@ public class CheckoutApiController {
 
     public record CompleteRequest(List<Long> cartItemId, String receiverName, String receiverPhone,
                                    String deliveryAddress, String deliveryAddressDetail, String requestNote,
-                                   Map<Long, Integer> couponByCartItem) {
+                                   Map<Long, Integer> couponByCartItem, String zipcode) {
     }
 
     public record CompleteResponse(List<String> orderIds) {
@@ -109,21 +118,34 @@ public class CheckoutApiController {
             return ResponseEntity.status(401).build();
         }
         var deliveryInfo = new OrderService.DeliveryInfo(req.receiverName(), req.receiverPhone(),
-                req.deliveryAddress(), req.deliveryAddressDetail(), req.requestNote());
+                req.deliveryAddress(), req.deliveryAddressDetail(), req.requestNote(), req.zipcode());
         try {
-            List<String> orderIds = cartService.checkout(userId, req.cartItemId(), deliveryInfo, req.couponByCartItem());
-            return ResponseEntity.ok(new CompleteResponse(orderIds));
+            // 멀티아이템 재설계 flip: 한 번의 결제 = 주문 1건(주문번호 1개). 지자체별 출고·품목은
+            // 하위에 묶인다. 레거시 cartService.checkout(행마다 주문 N건)은 롤백용으로 남겨둔다.
+            String orderId = cartService.checkoutMultiItem(userId, req.cartItemId(), deliveryInfo, req.couponByCartItem());
+            return ResponseEntity.ok(new CompleteResponse(List.of(orderId)));
         } catch (OrderException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
-    public record OrderGroupDto(String locgovNm, List<Order> orders, long groupTotal) {
+    public record DoneItemDto(String itemName, String optionName, String textOption, Integer quantity, long pointAmount) {
     }
 
-    public record DoneResponse(List<OrderGroupDto> groups, long totalPoint) {
+    public record OrderGroupDto(String locgovNm, List<DoneItemDto> items, long groupTotal, long deliveryFee) {
     }
 
+    public record DoneResponse(String orderId, java.time.LocalDateTime createdDate,
+                                String receiverName, String receiverPhone, String deliveryAddress,
+                                String deliveryAddressDetail, String requestNote,
+                                List<OrderGroupDto> groups, long totalPoint) {
+    }
+
+    /**
+     * 주문완료(AS-IS order/step2.html) - 방금 결제한 주문을 지자체(출고) 그룹 + 품목 목록으로
+     * 보여준다. 멀티아이템 재설계 후에는 orderIds가 보통 단일 주문번호 1건이고, 그 안의
+     * 지자체별 출고가 그룹이 된다. 레거시 단일품목 주문(백필 전, 출고행 없음)도 헤더로 표현한다.
+     */
     @GetMapping("/api/checkout/done")
     public ResponseEntity<?> done(@RequestParam String orderIds, HttpServletRequest request) {
         Long userId = requireUser(request);
@@ -133,23 +155,52 @@ public class CheckoutApiController {
         List<String> ids = List.of(orderIds.split(","));
         var orders = orderService.ordersOf(ids).stream()
                 .filter(o -> userId.equals(o.getUserId()))
+                .sorted(Comparator.comparing(Order::getCreatedDate))
                 .toList();
         if (orders.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("message", "주문을 찾을 수 없습니다."));
         }
+        List<String> orderIdList = orders.stream().map(Order::getOrderId).toList();
 
-        Map<String, List<Order>> byLocgov = new LinkedHashMap<>();
-        for (var order : orders) {
-            String code = order.getLocgovCode() != null ? order.getLocgovCode() : "";
-            byLocgov.computeIfAbsent(code, k -> new java.util.ArrayList<>()).add(order);
+        Map<String, List<DoneItemDto>> itemsByLocgov = new LinkedHashMap<>();
+        Map<String, Long> feeByLocgov = new LinkedHashMap<>();
+
+        List<Shipment> shipments = shipmentRepository.findByOrderIdIn(orderIdList).stream()
+                .sorted(Comparator.comparing(Shipment::getShipmentId)).toList();
+        if (!shipments.isEmpty()) {
+            for (Shipment s : shipments) {
+                String code = s.getLocgovCode() != null ? s.getLocgovCode() : "";
+                List<OrderItem> items = orderItemRepository.findByShipmentId(s.getShipmentId());
+                itemsByLocgov.computeIfAbsent(code, k -> new ArrayList<>()).addAll(items.stream()
+                        .map(i -> new DoneItemDto(i.getItemName(), i.getOptionName(), i.getTextOption(), i.getQuantity(),
+                                i.getPointAmount() != null ? i.getPointAmount() : 0L))
+                        .toList());
+                feeByLocgov.merge(code, s.getDeliveryFee() != null ? s.getDeliveryFee() : 0L, Long::sum);
+            }
+        } else {
+            // 레거시 단일품목 주문(백필 전) - 각 주문을 그 지자체 그룹의 품목 1건으로
+            for (Order o : orders) {
+                String code = o.getLocgovCode() != null ? o.getLocgovCode() : "";
+                itemsByLocgov.computeIfAbsent(code, k -> new ArrayList<>())
+                        .add(new DoneItemDto(o.getItemName(), o.getOptionName(), null, o.getQuantity(),
+                                o.getPointAmount() != null ? o.getPointAmount() : 0L));
+                feeByLocgov.merge(code, o.getDeliveryFee() != null ? o.getDeliveryFee() : 0L, Long::sum);
+            }
         }
-        List<OrderGroupDto> groups = byLocgov.entrySet().stream()
+
+        List<OrderGroupDto> groups = itemsByLocgov.entrySet().stream()
                 .map(e -> new OrderGroupDto(
                         e.getKey().isEmpty() ? "지자체 미지정" : locgovClient.nameOf(e.getKey()),
                         e.getValue(),
-                        e.getValue().stream().mapToLong(Order::getPointAmount).sum()))
+                        e.getValue().stream().mapToLong(DoneItemDto::pointAmount).sum(),
+                        feeByLocgov.getOrDefault(e.getKey(), 0L)))
                 .toList();
 
-        return ResponseEntity.ok(new DoneResponse(groups, orders.stream().mapToLong(Order::getPointAmount).sum()));
+        Order header = orders.get(0);
+        long totalPoint = groups.stream().mapToLong(OrderGroupDto::groupTotal).sum();
+        return ResponseEntity.ok(new DoneResponse(
+                String.join(", ", orderIdList), header.getCreatedDate(),
+                header.getReceiverName(), header.getReceiverPhone(), header.getDeliveryAddress(),
+                header.getDeliveryAddressDetail(), header.getRequestNote(), groups, totalPoint));
     }
 }

@@ -1,39 +1,298 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>매뉴얼 관리 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <title>사용자 매뉴얼 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <h3>매뉴얼 관리</h3>
-    <p><a class="btn" th:href="@{/admin/manuals/new}">+ 매뉴얼 등록</a></p>
+<!-- AS-IS opmanager/i18n/manual/user/list.jsp 이식(메뉴 5202 사용자매뉴얼).
+     공개 화면 한 페이지에 대한 설명을 등록해 두는 목록이다.
 
-    <table class="board_list_table">
+     ★ AS-IS는 진입(GET)에서 조회하지 않고 빈 목록을 내려준다 - 검색해야 조회된다.
+     ★ 등록일 두 칸은 비어 있으면 컨트롤러가 오늘로 채운다(진입에서도 채운다).
+
+     AS-IS verbatim:
+     - 검색구분은 페이지 구분 / 제목 / 내용 셋이다('전체'는 주석처리).
+     - 날짜 버튼이 오늘·1주일·한달·3달·1년 다섯 개다(다른 화면과 다르다).
+     - 검색 버튼은 submit이 아니라 search() 함수를 호출한다(주석에 submit 버튼이 남아 있다).
+     - 출력수 select는 10/20/50/<b>100</b>이다(다른 화면은 100이 없다).
+     - 컬럼은 체크박스/No./페이지 구분/제목/작성자/조회수/등록일 7개다.
+     - 제목을 누르면 수정화면으로 간다.
+     - 목록 아래 버튼은 [등록][삭제]이고 삭제는 체크한 건을 일괄로 지운다.
+     - 빈 목록 안내문구가 없다(표만 비어 있다). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span>사용자 매뉴얼</span></h3>
+
+<form id="searchParam" method="post" th:action="@{/admin/manuals}">
+    <input type="hidden" id="sort" name="sort" th:value="${searchParam.sort}"/>
+    <input type="hidden" id="orderBy" name="orderBy" th:value="${searchParam.orderBy}"/>
+    <input type="hidden" id="itemsPerPage" name="itemsPerPage" th:value="${searchParam.itemsPerPage}"/>
+    <input type="hidden" id="page" name="page" th:value="${searchParam.page}"/>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="사용자 매뉴얼">
+            <colgroup>
+                <col style="width:220px;">
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td class="label">검색구분</td>
+                    <td>
+                        <div>
+                            <!-- AS-IS 주석처리: '전체' 항목 -->
+                            <select id="where" name="where" title="검색구분" class="wd-150">
+                                <option value="PAGE" th:selected="${searchParam.where == 'PAGE'}">페이지 구분</option>
+                                <option value="SUBJECT" th:selected="${searchParam.where == 'SUBJECT'}">제목</option>
+                                <option value="CONTENT" th:selected="${searchParam.where == 'CONTENT'}">내용</option>
+                            </select>
+                            <input type="text" id="query" name="query" th:value="${searchParam.query}"
+                                   title="검색구분" class="input_txt required _filter half"/>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">등록일</td>
+                    <td>
+                        <div>
+                            <span class="datepicker"><input type="text" id="startCreateDate" name="startCreateDate"
+                                    th:value="${searchParam.startCreateDate}" class="datepicker optional"
+                                    th:title="${msg.get('M00507')}"/></span>
+                            <span class="wave">~</span>
+                            <span class="datepicker"><input type="text" id="endCreateDate" name="endCreateDate"
+                                    th:value="${searchParam.endCreateDate}" class="datepicker optional"
+                                    th:title="${msg.get('M00509')}"/></span>
+                            <span class="day_btns">
+                                <a href="javascript:void(0);" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+                                <a href="javascript:void(0);" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a>
+                                <a href="javascript:void(0);" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>
+                                <a href="javascript:void(0);" class="btn_date month-3" th:text="${msg.get('M00030')}">3달</a>
+                                <a href="javascript:void(0);" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a>
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="btn_all btn_left">
+            <ul class="list-bullet point">
+                <li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li>
+            </ul>
+        </div>
+        <div class="btn_all btn_right">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/admin/manuals'">초기화</button>
+                <!-- <button type="submit" class="btn btn-dark-gray btn-mini">검색</button> -->
+                <button type="button" class="btn btn-dark-gray btn-mini" onclick="search();">검색</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="board_list mt-40">
+    <div class="count_title mt-40">
+        <h5>총 <span th:text="${#numbers.formatInteger(count, 0, 'COMMA')}" th:remove="tag">0</span>건</h5>
+        <span>
+            <select name="displayCount" id="displayCount" th:title="${msg.get('M00239')}">
+                <option value="10" th:text="${msg.get('M00240')}">10개 출력</option>
+                <option value="20" th:text="${msg.get('M00241')}">20개 출력</option>
+                <option value="50" th:text="${msg.get('M00242')}">50개 출력</option>
+                <option value="100" th:text="${msg.get('M00243')}">100개 출력</option>
+            </select>
+        </span>
+    </div>
+
+    <table class="board_list_table" summary="사용자 매뉴얼">
+        <caption>사용자 매뉴얼</caption>
+        <colgroup>
+            <col style="width:50px;">
+            <col style="width:50px;">
+            <col style="width:200px;">
+            <col style="width:500px;">
+            <col style="width:200px;">
+            <col style="width:100px;">
+            <col style="width:150px;">
+        </colgroup>
         <thead>
-        <tr><th>제목</th><th>연결 화면</th><th>첨부파일</th><th>등록일</th></tr>
+            <tr>
+                <th scope="col"><input type="checkbox" id="check_all"></th>
+                <th scope="col">No.</th>
+                <th scope="col">페이지 구분</th>
+                <th scope="col">제목</th>
+                <th scope="col">작성자</th>
+                <th scope="col">조회수</th>
+                <th scope="col">등록일</th>
+            </tr>
         </thead>
         <tbody>
-        <tr th:each="m : ${manuals}">
-            <td><a th:href="@{'/admin/manuals/' + ${m.mnlSn} + '/edit'}" th:text="${m.title}"></a></td>
-            <td th:text="${m.menuUrlCode}"></td>
-            <td>
-                <a th:if="${m.fileSrc != null and !#strings.isEmpty(m.fileSrc)}"
-                   th:href="@{'/admin/manuals/' + ${m.mnlSn} + '/download'}" th:text="${m.orgnlFileNm}"></a>
-                <span th:unless="${m.fileSrc != null and !#strings.isEmpty(m.fileSrc)}">-</span>
-            </td>
-            <td th:text="${#temporals.format(m.createdDate, 'yyyy-MM-dd HH:mm')}"></td>
-        </tr>
+            <tr style="background:#fff;" th:each="row, i : ${list}">
+                <td>
+                    <div>
+                        <input type="checkbox" th:value="${row.mnlSn}" th:id="|check_${row.mnlSn}|">
+                    </div>
+                </td>
+                <td>
+                    <div th:text="${pagination.itemNumber - i.count}"></div>
+                </td>
+                <td>
+                    <div th:text="${row.pageGbn}"></div>
+                </td>
+                <td class="tleft">
+                    <div>
+                        <a th:href="|javascript:manualDetail(${row.mnlSn})|" th:text="${row.menuSj}"></a>
+                    </div>
+                </td>
+                <td>
+                    <div th:text="${row.userName}"></div>
+                </td>
+                <td>
+                    <div th:text="${row.inqireCo}"></div>
+                </td>
+                <td>
+                    <div th:text="${row.frstRegistPnttm}"></div>
+                </td>
+            </tr>
         </tbody>
     </table>
-    <p class="empty" th:if="${#lists.isEmpty(manuals)}">등록된 매뉴얼이 없습니다.</p>
+    <div class="btn_all btn_right">
+        <div class="flex_box gap-08">
+            <button type="button" class="btn btn-default btn-mini" onclick="location.href='/admin/manuals/create'">등록</button>
+            <button type="button" class="btn btn-dark-gray btn-mini" onclick="deleteCheckManual()">삭제</button>
+        </div>
+    </div>
+    <div class="pagination-wrap">
+        <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+    </div>
 </div>
-<div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<div style="display: none;">
+    <span id="today" th:text="${today}"></span>
+    <span id="week" th:text="${week}"></span>
+    <span id="month1" th:text="${month1}"></span>
+    <span id="month2" th:text="${month2}"></span>
+    <span id="month3" th:text="${month3}"></span>
+    <span id="year1" th:text="${year1}"></span>
+</div>
+
+    </div>
+    </div>
+</div>
+</div>
+
+<script type="text/javascript" th:inline="javascript">
+var redirectMessage = /*[[${redirectMessage}]]*/ null;
+
+$(function(){
+	if (redirectMessage) {
+		alert(redirectMessage);
+	}
+
+	displayChange();
+	displaySelected();
+
+	// 체크박스 이벤트 (체크&해제)
+	checkedEventSet();
+
+	Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="startCreateDate"]' , 'input[name="endCreateDate"]');
+	EventHandler.calendarStartDateAndEndDateVaild();
+});
+
+function displayChange() {
+	$("#displayCount").on('change', function(){
+		$("#itemsPerPage").val($(this).val());
+		$('#searchParam').submit();
+	});
+}
+function displaySelected(){
+	$("#displayCount").val($("#itemsPerPage").val());
+}
+
+/* AS-IS: 체크한 건을 일괄 삭제한다. 응답 본문의 결과코드(SUCC)를 보고 문구를 고른다. */
+function deleteCheckManual() {
+	var manualList = new Array;
+
+	$("input[id^='check_']:checked").not("[id='check_all']").map(function(index, item) {
+		manualList.push($(item).val());
+	});
+
+	if(manualList.length == 0) {
+		alert("삭제할 게시물을 선택해주세요.");
+		return false;
+	}
+
+	if(confirm("삭제하시겠습니까?")) {
+		$.post('/admin/manuals/deleteManual', {"manualList": manualList}, function(response) {
+			if(response.isSuccess && response.data) {
+				if(response.data == "SUCC") {
+					alert("삭제되었습니다.");
+					location.reload();
+				} else {
+					alert("오류가 발생했습니다.");
+				}
+			}
+		});
+	}
+}
+
+function manualDetail(id) {
+	location.href = '/admin/manuals/edit/'+id;
+}
+
+/**
+ *	함 수 명 : checkedEvent
+ *	기	능  : 체크&해제 이벤트 셋팅
+ */
+function checkedEventSet() {
+	var childObjs = $("input[id^='check_']").not("[id='check_all']");
+
+	// 체크박스 '전체' 체크&해지
+	$("#check_all").click(function(){
+		$(childObjs).prop("checked", $(this).is(":checked"));
+	});
+
+	// '개별' 체크박스에 따른 '전체' 체크박스 체크&해지
+	$(childObjs).click(function() {
+		if($(childObjs).length == $("input[id^='check_']:checked").not("[id='check_all']").length) {
+			$("#check_all").prop("checked", true);
+		} else {
+			$("#check_all").prop("checked", false);
+		}
+	});
+}
+
+/**
+ *	함 수 명 : search
+ *	기	능  : 검색
+ */
+function search() {
+	var strStartDate = $("#startCreateDate").val();
+	var strEndDate = $("#endCreateDate").val();
+
+	if(strStartDate && strStartDate.length == 8 && strEndDate && strEndDate.length == 8) {
+		var startDate = new Date(strStartDate.substr(0, 4), strStartDate.substr(4, 2), strStartDate.substr(6, 2));
+		var endDate = new Date(strEndDate.substr(0, 4), strEndDate.substr(4, 2), strEndDate.substr(6, 2));
+
+		if(startDate > endDate) {
+			alert("종료일이 시작일보다 빠릅니다.");
+			var value = $("#startCreateDate").val();
+			$("#endCreateDate").val("");
+			$("#endCreateDate").focus();
+			$("#endCreateDate").val(value);
+			return false;
+		}
+		var searchChk = Common.searchDateMonth(startDate, endDate);
+		if(!searchChk) return false;
+	}
+
+	$("#searchParam").submit();
+}
+</script>
 </body>
 </html>

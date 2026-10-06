@@ -23,8 +23,11 @@ public class QnaFileStorageService {
     private String uploadDir;
 
     private static final long MAX_SIZE = 5 * 1024 * 1024; // 5MB (AS-IS 1:1문의 첨부 제한)
+    /** AS-IS QnaServiceImple의 AVAILABLE_EXTENSION 12종 그대로.
+     *  (2026-10-06 교정: xls·xlsx가 빠져 있어 엑셀 첨부가 거부되고 있었다) */
     private static final List<String> ALLOWED_EXTENSIONS =
-            List.of("jpg", "jpeg", "gif", "png", "hwp", "doc", "docx", "ppt", "pptx", "pdf");
+            List.of("jpg", "jpeg", "gif", "png", "hwp", "doc", "docx",
+                    "xls", "xlsx", "ppt", "pptx", "pdf");
 
     /** @return 저장된 파일명 (UUID 기반, DB에는 이 값만 기록) */
     public String store(MultipartFile file) {
@@ -56,5 +59,27 @@ public class QnaFileStorageService {
             throw new QnaException("파일 저장에 실패했습니다.");
         }
         return storedName;
+    }
+
+    /** 저장된 파일명으로 실제 경로를 만든다 - Q&A 관리(5112) 첨부 다운로드용. */
+    public Path resolve(String storedName) {
+        return Paths.get(uploadDir, storedName);
+    }
+
+    /**
+     * 저장된 파일을 디스크에서 지운다 - Q&A 관리(5112) 첨부 삭제용.
+     * AS-IS {@code deleteItemImageByItemId}도 DB 행을 지우기 전에 {@code fileStorage.delete}로
+     * 실제 파일을 지운다(그래서 화면 확인문구가 "파일이 실제로 삭제됩니다"다).
+     * 파일이 없어도 삭제는 계속 진행한다.
+     */
+    public void delete(String storedName) {
+        if (storedName == null || storedName.isBlank()) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(resolve(storedName));
+        } catch (IOException e) {
+            log.warn("첨부파일 삭제 실패: {}", storedName, e);
+        }
     }
 }

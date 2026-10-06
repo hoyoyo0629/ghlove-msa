@@ -58,4 +58,23 @@ public class Qna {
     /** "N"이면 공개게시판 목록에서 숨긴다(운영자 비노출 처리). null/"Y"는 노출. */
     @Column(name = "DISPLAY_FLAG")
     private String displayFlag;
+
+    /**
+     * 문의 구분 - AS-IS {@code Qna} 상수 그대로 <b>'0' 1:1문의 / '1' 상품문의 / '2' 공개 Q&A</b>다.
+     * 세 화면(5102·5103·5112)이 이 표를 공유하고 이 값으로 갈린다 - Q&A 관리(5112)는
+     * {@code qna_type='2'}만 조회한다({@link com.ghlove.admin.repository.QnaOpenAdminRepository}).
+     */
+    @Column(name = "QNA_TYPE")
+    private String qnaType;
+
+    /**
+     * 데이터 상태 - AS-IS는 <b>'0' 정상 / '1' 삭제</b>다. 삭제는 행을 지우지 않고 이 값을 '1'로
+     * 바꾸는 소프트 삭제이고, 목록 조회는 {@code data_status_code='0'}만 본다.
+     */
+    @Column(name = "DATA_STATUS_CODE")
+    private String dataStatusCode;
+
+    /** AS-IS 공통 사용여부. 목록 조회는 'Y'만 본다. */
+    @Column(name = "USE_YN")
+    private String useYn;
 }

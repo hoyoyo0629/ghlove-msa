@@ -2,6 +2,7 @@ package com.ghlove.order.event;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ghlove.order.service.OrderService;
+import com.ghlove.order.service.ShipmentSagaService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Component;
 public class OrderSagaListener {
 
     private final OrderService orderService;
+    private final ShipmentSagaService shipmentSagaService;
     private final ObjectMapper objectMapper;
 
     @KafkaListener(topics = OrderSagaPublisher.TOPIC, groupId = "order-service")
@@ -37,7 +39,13 @@ public class OrderSagaListener {
             case "STOCK_RESERVE_FAILED" -> orderService.onStockReserveFailed(objectMapper.readValue(payload, StockReserveFailedEvent.class));
             case "POINT_DEDUCTED" -> orderService.onPointDeducted(objectMapper.readValue(payload, PointDeductedEvent.class));
             case "POINT_DEDUCT_FAILED" -> orderService.onPointDeductFailed(objectMapper.readValue(payload, PointDeductFailedEvent.class));
-            case "ORDER_CREATED", "ORDER_CONFIRMED", "ORDER_CANCELLED" -> { /* published by this service - not consumed here */ }
+            // 멀티아이템(출고 단위 SAGA, 선택지 A) - gift/point가 발행하는 출고 결과
+            case "SHIPMENT_STOCK_RESERVED" -> shipmentSagaService.onStockReserved(objectMapper.readValue(payload, ShipmentStockReservedEvent.class));
+            case "SHIPMENT_STOCK_RESERVE_FAILED" -> shipmentSagaService.onStockReserveFailed(objectMapper.readValue(payload, ShipmentStockReserveFailedEvent.class));
+            case "SHIPMENT_POINT_DEDUCTED" -> shipmentSagaService.onPointDeducted(objectMapper.readValue(payload, ShipmentPointDeductedEvent.class));
+            case "SHIPMENT_POINT_DEDUCT_FAILED" -> shipmentSagaService.onPointDeductFailed(objectMapper.readValue(payload, ShipmentPointDeductFailedEvent.class));
+            case "ORDER_CREATED", "ORDER_CONFIRMED", "ORDER_CANCELLED",
+                 "SHIPMENT_CREATED", "SHIPMENT_CANCELLED", "ITEM_CANCELLED" -> { /* published by this service - not consumed here */ }
             default -> log.warn("Unknown eventType={} for orderId={} - ignoring", eventType, orderId);
         }
     }

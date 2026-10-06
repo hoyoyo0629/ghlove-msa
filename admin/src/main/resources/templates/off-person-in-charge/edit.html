@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>오프라인담당자 상세 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/user/off-charger/edit.jsp 이식(메뉴 4601 오프라인담당자 상세/수정).
+     구분 · 아이디 · 이름 · 지점 연락처 · 소속 지점 · 개인번호 · EMAIL · 사용여부.
+
+     AS-IS 권한 분기(adminRoleType/adminRoleGrade는 컨트롤러가 계산해 내려준다):
+     - SYS(ROLE_ADMIN_1~4) 또는 OFF 주담당자(ROLE_ADMIN_7): 수정·삭제·목록 버튼, 구분 라디오,
+       사용여부 행, 비밀번호 초기화 버튼이 모두 보인다.
+     - OFF 부담당자(ROLE_ADMIN_8): 버튼이 '저장' 하나뿐이고, 구분은 **숨은 라디오 + 텍스트**이며
+       사용여부 행과 비밀번호 초기화 버튼이 **아예 없다**(자기 지점정보만 채우는 화면).
+     - 소속 지점 select는 SYS에만 보이고, 그 외에는 hidden + disabled 텍스트(은행명)다.
+     - 주담당자가 **자기 자신**을 볼 때는 사용여부 라디오가 disabled다(스스로 중지 불가).
+
+     AS-IS verbatim:
+     - h3가 MENU_4601이 아니라 **MENU_1101="운영자관리"**다(등록화면과 같다).
+     - 목록 버튼 class가 `btn-defualt`(default 오타)다.
+     - 사용여부 라벨에는 required_mark(*)가 없다(등록·지자체담당자 화면과 다르다).
+     - 이메일 도메인칸은 disabled이고 저장 시 `@nonghyup.com`을 붙인다.
+     - '담당자 연락처' 행은 AS-IS에서 주석처리되어 있다 - 주석 그대로 남겨 둔다.
+     - 사용여부 값은 AS-IS 그대로 9(사용)/2(중지)를 쓰고, 실제 컬럼값(ACTIVE/LOCKED) 변환은
+       Manager.getAsIsStatusCode() / 컨트롤러 경계에서만 한다.
+     - 주담당자 승격 응답 3분기: SUCC / ERR_MAIN_CNT("주관리자는 최대 2명까지만 등록이
+       가능합니다.") / NEED_AUTH_SWAP(권한 승계 동의 → /auth-swap → 로그아웃). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span th:text="${msg.get('MENU_1101')}">운영자관리</span></h3>
+
+<!-- AS-IS가 JSP에서 계산하던 '관리자 권한 셋팅'을 컨트롤러가 내려준다(adminRoleType/adminRoleGrade).
+     editable = SYS 또는 OFF 주담당자 -->
+<th:block th:with="editable=${adminRoleType == 'SYS' or (adminRoleType == 'OFF' and adminRoleGrade == 'M')},
+                   phoneParts=${details != null and details.phoneNumber != null
+                                ? #strings.arraySplit(details.phoneNumber, '-') : null}">
+
+<!-- 수정/삭제/목록 버튼 -->
+<div class="btn_all btn_right mb15">
+	<div class="flex_box gap-08">
+		<th:block th:if="${editable}">
+			<button type="button" class="btn btn-dark-gray btn-mini" onclick="chargerEdit();">수정</button>
+			<button type="button" class="btn btn-dark-gray btn-mini" onclick="chargerDelete();">삭제</button>
+			<button type="button" class="btn btn-defualt btn-mini" onclick="moveListPage();">목록</button>
+		</th:block>
+		<th:block th:unless="${editable}">
+			<button type="button" class="btn btn-dark-gray btn-mini" onclick="chargerEdit();">저장</button>
+		</th:block>
+	</div>
+</div>
+<!--// 수정/삭제/목록 버튼 -->
+
+<div class="board_write">
+	<table class="board_write_table" summary="">
+		<colgroup>
+			<col style="width:220px;">
+		</colgroup>
+		<tbody>
+			<tr>
+				<td class="label">구분</td>
+				<td>
+					<div class="flex_box gap-12">
+						<th:block th:if="${editable}">
+							<div class="input-form">
+								<input id="authorityM" name="authority" type="radio" value="ROLE_ADMIN_7"
+								       th:checked="${details != null and details.authority == 'ROLE_ADMIN_7'}">
+								<label for="authorityM">오프라인 주담당자</label>
+							</div>
+							<div class="input-form">
+								<input id="authorityS" name="authority" type="radio" value="ROLE_ADMIN_8"
+								       th:checked="${details != null and details.authority == 'ROLE_ADMIN_8'}">
+								<label for="authorityS">오프라인 부담당자</label>
+							</div>
+						</th:block>
+						<th:block th:unless="${editable}">
+							<input name="authority" type="radio" th:value="${details != null} ? ${details.authority} : ''" style="display:none;" checked>
+							<span th:text="${details != null and details.authority == 'ROLE_ADMIN_7'} ? '오프라인 주담당자' : '오프라인 부담당자'"></span>
+						</th:block>
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>아이디</td>
+				<td><div th:text="${details != null} ? ${details.loginId} : ''"></div></td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>이름</td>
+				<td>
+					<div>
+						<input id="userName" title="이름" class="input_txt required _filter wd-200" type="text"
+						       th:value="${details != null} ? ${details.userName} : ''">
+					</div>
+				</td>
+			</tr>
+			<!-- AS-IS에서 주석처리된 '담당자 연락처' 행 - 주석 상태 그대로 둔다
+			<tr style="display:none">
+				<td class="label"><span class="required_mark">*</span>담당자 연락처</td>
+				<td>
+					<div class="flex_box gap-08 item-center">
+						<select id="phoneNumber1" title="담당자 연락처" class="wd-100" disabled>
+							<option value="">-선택-</option>
+						</select>
+						<span class="wave">-</span>
+						<input id="phoneNumber2" title="" class="input_txt required _filter wd-100 _number" type="text" maxLength="4" disabled>
+						<span class="wave">-</span>
+						<input id="phoneNumber3" title="" class="input_txt required _filter wd-100 _number" type="text" maxLength="4" disabled>
+					</div>
+				</td>
+			</tr>
+			-->
+			<tr>
+				<td class="label"><span class="required_mark">*</span>지점 연락처</td>
+				<td>
+					<div class="flex_box gap-08 item-center">
+						<select id="phoneNumber1" title="지점 연락처" class="wd-100">
+							<option value="">-선택-</option>
+							<option th:each="code : ${phoneCodeList}" th:value="${code.key}" th:text="${code.value}"
+							        th:selected="${phoneParts != null and phoneParts.length > 0 and code.key == phoneParts[0]}"></option>
+						</select>
+						<span class="wave">-</span>
+						<input id="phoneNumber2" title="" class="input_txt required _filter wd-100 _number" type="text" maxLength="4"
+						       th:value="${phoneParts != null and phoneParts.length > 1} ? ${phoneParts[1]} : ''">
+						<span class="wave">-</span>
+						<input id="phoneNumber3" title="" class="input_txt required _filter wd-100 _number" type="text" maxLength="4"
+						       th:value="${phoneParts != null and phoneParts.length > 2} ? ${phoneParts[2]} : ''">
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>소속 지점</td>
+				<td>
+					<div class="flex_box gap-08 item-center">
+						<th:block th:if="${adminRoleType == 'SYS'}">
+							<select id="bankCode" title="소속 지점" class="wd-100">
+								<option th:each="code : ${bankCodeList}" th:value="${code.key}" th:text="${code.value}"
+								        th:selected="${details != null and code.key == details.bankCode}"></option>
+							</select>
+						</th:block>
+						<th:block th:unless="${adminRoleType == 'SYS'}">
+							<input type="hidden" id="bankCode" th:value="${details != null} ? ${details.bankCode} : ''" />
+							<input title="" class="input_txt required _filter wd-100" type="text" th:value="${bankNm}" disabled>
+						</th:block>
+						<input id="psitnNm" title="" class="input_txt required _filter wd-150" type="text"
+						       th:value="${details != null} ? ${details.psitnNm} : ''">
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>개인번호</td>
+				<td>
+					<div class="flex_box gap-08 item-center">
+						<input id="empId" title="개인번호" class="input_txt required _filter wd-200" type="text"
+						       th:value="${details != null} ? ${details.empId} : ''" maxlength="20">
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>EMAIL</td>
+				<td>
+					<div>
+						<input id="email" title="EMAIL" class="input_txt required _filter wd-200" type="text"
+						       th:value="${details != null and details.email != null
+						                  ? #strings.arraySplit(details.email, '@')[0] : ''}">&nbsp;@
+						<input id="emailDomain" title="EMAILDOMAIN" placeholder="nonghyup.com" class="input_txt required _filter wd-200" type="text" disabled="true">
+					</div>
+				</td>
+			</tr>
+			<tr th:if="${editable}">
+				<td class="label">사용여부</td>
+				<td>
+					<div class="flex_box gap-12">
+						<div class="input-form">
+							<input id="statusCode9" name="statusCode" type="radio" value="9"
+							       th:checked="${details != null and details.asIsStatusCode == '9'}">
+							<label for="statusCode9">사용</label>
+						</div>
+						<div class="input-form">
+							<input id="statusCode2" name="statusCode" type="radio" value="2"
+							       th:checked="${details != null and details.asIsStatusCode == '2'}">
+							<label for="statusCode2">중지</label>
+						</div>
+					</div>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+<div class="btn_all btn_right" th:if="${editable}">
+	<div class="flex_box gap-08">
+		<button type="button" class="btn btn-dark-gray btn-small" onclick="passwordInit();">비밀번호 초기화 및 신규 비밀번호 발급</button>
+	</div>
+</div>
+</th:block>
+
+<!-- 목록 검색 조건 -->
+<input type="hidden" id="listSearchParam" />
+<!--// 목록 검색 조건  -->
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<!-- AS-IS는 GET /op_security_logout?target=/opmanager로 로그아웃하지만 TO-BE의 /admin/logout은
+     POST라서, 권한이관/본인삭제 후 로그아웃은 이 폼을 submit한다. -->
+<form id="logoutForm" method="post" th:action="@{/admin/logout}"></form>
+
+<script type="text/javascript" th:inline="javascript">
+	var userId = [[${details != null ? details.userId : null}]];
+	var adminRole = [[${adminRole}]];
+	var adminRoleType = [[${adminRoleType}]];
+	var adminRoleGrade = [[${adminRoleGrade}]];
+	var loginUserId = [[${loginUserId}]];
+
+	$(function() {
+
+		// 페이지 유효성 체크
+		if(!userId) {
+			alert("잘못된 접근 입니다.");
+
+			if(adminRoleType == "SYS" || (adminRoleType == "OFF" && adminRoleGrade == "M")) {
+				moveListPage();
+			} else {
+				location.href = "/admin";
+			}
+			return false;
+		}
+
+		// 네비게이션 수정
+		$(".contents .contents_inner").find("div.location a").removeClass("on");
+		$(".contents .contents_inner").find("div.location").append('> <a href="'+location.pathname+'" class="on">상세</a>');
+
+		// 목록 검색 조건 저장
+		listSearchParamSave();
+
+		// 지점담당자(부담당자)의 최초 접속인 경우 alert 활성화
+		if($("#listSearchParam").val().indexOf("pageEvent=change") > -1) {
+			alert("지점 정보를 입력하지 않으시면 다른 페이지 이용이 제한됩니다.");
+		}
+
+		// 관리자 권한에 따른 화면 체크
+		adminRoleCheck();
+
+		// 이름 공백 제거
+		if($("#userName").length) {
+			$("#userName").keyup(function(e) {
+				if(e && e.target && e.target.value) {
+					e.target.value = e.target.value.replace(/\s/g, "");
+				}
+			});
+		}
+	});
+
+	/**
+	 *	함 수 명 : adminRoleCheck
+	 *	기	능  : 관리자 권한에 따른 화면 체크 (주담당자는 자기 사용여부를 바꿀 수 없다)
+	 */
+	function adminRoleCheck() {
+		if(adminRole == "ROLE_ADMIN_7" && loginUserId == userId) {
+			$("input[name=statusCode]").prop("disabled", true);
+		}
+	}
+
+	/**
+	 *	함 수 명 : listSearchParamSave
+	 *	기	능  : 목록 검색 조건 저장
+	 */
+	function listSearchParamSave() {
+
+		// 목록 검색 조건 저장
+		$("#listSearchParam").val(location.search);
+
+		// 검색 조건 삭제
+		history.replaceState({}, null, location.pathname);
+	}
+
+	/**
+	 *	함 수 명 : moveListPage
+	 *	기	능  : 목록 페이지 이동
+	 */
+	function moveListPage() {
+		location.href = "/admin/off-person-in-charge"+$("#listSearchParam").val();
+	}
+
+	/**
+	 *	함 수 명 : chargerEdit
+	 *	기	능  : 오프라인담당자 수정
+	 */
+	function chargerEdit() {
+		if(isNaN($("#phoneNumber2").val())){
+			alert("전화번호는 숫자로 입력해 주세요.");
+			$("#phoneNumber2").focus();
+			return false;
+		}
+		if(isNaN($("#phoneNumber3").val())){
+			alert("전화번호는 숫자로 입력해 주세요.");
+			$("#phoneNumber3").focus();
+			return false;
+		}
+		var confirmMsg = "저장하시겠습니까?";
+		var resultMsg = "저장되었습니다.";
+
+		if(adminRoleType == "SYS" || adminRoleType == "OFF" && adminRoleGrade == "M") {
+			confirmMsg = "정보를 수정 하시겠습니까?";
+			resultMsg = "수정되었습니다.";
+		}
+
+		if(validator() && confirm(confirmMsg)) {
+
+			// 이름 공백 제거
+			if($("#userName").val()) {
+				$("#userName").val($("#userName").val().replace(/\s/g, ""));
+			}
+			// 파라미터
+			var param = {
+				"userId": userId,
+				"authority": $("input[name='authority']:checked").val(),
+				"userName": $("#userName").val(),
+				"phoneNumber": $("#phoneNumber1").val()+"-"+ $("#phoneNumber2").val()+"-"+$("#phoneNumber3").val(),
+				"bankCode": $("#bankCode").val(),
+				"psitnNm": $("#psitnNm").val(),
+				"empId": $("#empId").val(),
+				"email": $("#email").val() + "@nonghyup.com",
+				"statusCode": $("input[name='statusCode']:checked").val()
+			};
+
+			$.post("/admin/off-person-in-charge/edit", param, function(response) {
+				if(response.isSuccess && response.data) {
+					if(response.data.code == "SUCC") {
+						alert(resultMsg);
+
+						if($("#listSearchParam").val().indexOf("pageEvent") > -1) {
+							location.href = "/admin";
+						} else {
+							$("#listSearchParam").val("");
+							moveListPage();
+						}
+					} else if(response.data.code == "ERR_MAIN_CNT") {
+						alert("주관리자는 최대 2명까지만 등록이 가능합니다.");
+					} else if(response.data.code == "NEED_AUTH_SWAP") {
+						if(confirm("현재 주관리자가 2명이므로 권한이 승계됩니다. \n권한 승계 후 현재 로그인한 계정은 계정 중지 처리됩니다.\n승계하시겠습니까?")) {
+							// 승계 확인한 경우 권한 이관 처리
+							$.post("/admin/off-person-in-charge/auth-swap", param, function(response) {
+								if(response.data.code == "AUTH_CHANGED_LOGOUT") {
+									alert("수정되었습니다. 권한이 변경되어 로그아웃됩니다.");
+									$("#logoutForm").submit();
+								} else {
+									alert("오류가 발생했습니다.");
+								}
+							})
+						}
+					} else {
+						alert("오류가 발생했습니다.");
+					}
+				}
+			});
+		}
+	}
+
+	/**
+	 *	함 수 명 : validator
+	 *	기	능  : 유효성 검사
+	 */
+	function validator() {
+		if($("input[name='authority']:checked").length == 0 || $("input[name='authority']:checked").val() == "") {
+			alert("회원구분을 선택해 주세요.");
+			$("#authorityM").focus();
+			return false;
+		}
+
+		if($.trim($("#userName").val()) == "") {
+			alert("이름을 입력해 주세요.");
+			$("#userName").focus();
+			return false;
+		}
+
+		if($("#phoneNumber1").val() == "") {
+			alert("지점 연락처를 선택해 주세요.");
+			$("#phoneNumber1").focus();
+			return false;
+		}
+
+		if($.trim($("#phoneNumber2").val()) == "") {
+			alert("지점 연락처를 입력해 주세요.");
+			$("#phoneNumber2").focus();
+			return false;
+		}
+
+		if($.trim($("#phoneNumber3").val()) == "") {
+			alert("지점 연락처를 입력해 주세요.");
+			$("#phoneNumber3").focus();
+			return false;
+		}
+
+		if($("#bankCode").val() == "") {
+			alert("소속 지점을 선택해 주세요.");
+			$("#bankCode").focus();
+			return false;
+		}
+
+		if($.trim($("#psitnNm").val()) =="") {
+			alert("소속 지점을 입력해 주세요.");
+			$("#psitnNm").focus();
+			return false;
+		}
+
+		if(/<|>|&lt;|&gt;/.test($("#psitnNm").val())){
+			alert("<, > 문자는 입력할 수 없습니다.");
+			return false;
+		}
+
+		if($.trim($("#empId").val()) == "") {
+			alert("개인번호를 입력해 주세요.");
+			$("#empId").focus();
+			return false;
+		}
+
+ 		// srhan. 20251029. 이메일 인증 추가하며 '직책' 입력 UI를 '이메일'로 변경
+		if($.trim($("#email").val()) == "") {
+			alert("이메일을 입력해 주세요.");
+			$("#email").focus();
+			return false;
+		}
+
+		if($("input[name='statusCode']").length > 0
+				&& ($("input[name='statusCode']:checked").length == 0 || $("input[name='statusCode']:checked").val() == "")) {
+			alert("사용여부를 선택해 주세요.");
+			$("#statusCode9").focus();
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 *	함 수 명 : chargerDelete
+	 *	기	능  : 오프라인담당자 삭제
+	 */
+	function chargerDelete() {
+		if(confirm("삭제하시겠습니까?")) {
+			$.post("/admin/off-person-in-charge/delete", {"userIdList": [userId]}, function(response) {
+				if(response.isSuccess && response.data) {
+					if(response.data.code == "SUCC") {
+						alert("삭제되었습니다.");
+
+						if(response.data.isLogout == "Y") {
+							$("#logoutForm").submit();
+						} else {
+							$("#listSearchParam").val("");
+							moveListPage();
+						}
+					} else {
+						alert("오류가 발생했습니다.");
+					}
+				}
+			});
+		}
+	}
+
+	/**
+	 *	함 수 명 : passwordInit
+	 *	기	능  : 비밀번호 초기화 및 신규 비밀번호 발급
+	 */
+	function passwordInit() {
+		var url = "/admin/off-person-in-charge/popup/password-init/" + userId;
+		var popupName = "offChargerPasswordInit";
+		Common.popup(url, popupName, 500, 320 ,1, 0, 0);
+	}
+</script>
+</body>
+</html>

@@ -1,110 +1,350 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>오프라인담당자 관리 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <title>오프라인담당자 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<!-- D8 오프라인담당자 관리 - ROLE_ADMIN_7(주담당자)/ROLE_ADMIN_8(부담당자), 승인요청 없이
-     이 화면에서 즉시 계정을 만든다. -->
-<div class="contents contents_inner">
-    <h3>오프라인담당자 관리</h3>
+<!-- AS-IS opmanager/i18n/user/off-charger/list.jsp 이식(메뉴 4601 오프라인담당자).
+     검색구분(지점명/아이디/이름/개인번호) + 사용여부(전체/사용/중지) + 화면출력 + 9컬럼 +
+     전체목록 엑셀다운로드 + 사용/중지 일괄변경.
 
-    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
-    <p th:if="${tempPassword}" class="dev-code" style="background:#eef4ff;color:#1a73e8;padding:10px;border-radius:4px;">
-        <strong th:text="${createdLoginId}"></strong> 계정의 (임시)비밀번호:
-        <strong th:text="${tempPassword}"></strong> (담당자에게 별도로 전달해 주세요 - 다시 확인할 수 없습니다)
-    </p>
+     ★ AS-IS는 진입(GET) 시 조회하지 않는다 - 검색해야(POST) 조회된다.
+     ★ 목록은 ROLE_ADMIN_1~4·7만 볼 수 있다. 오프라인 부담당자(ROLE_ADMIN_8)는 이 화면 대신
+        자기 상세로 리다이렉트되고, 그 외 권한은 홈으로 간다(컨트롤러에서 처리).
+     ★ 오프라인담당자(7·8)가 조회하면 자기 지점(BANK_CODE)만 보인다.
 
-    <form th:action="@{/admin/off-person-in-charge}" method="get" id="searchForm">
-        <div class="board_write">
-            <table class="board_write_table" summary="오프라인담당자 검색조건">
-                <colgroup><col style="width:150px;"><col><col style="width:150px;"><col></colgroup>
-                <tbody>
-                <tr>
-                    <td class="label">소속지자체</td>
-                    <td>
-                        <select name="locgovCode">
-                            <option value="">전체</option>
-                            <option th:each="l : ${allLocgovs}" th:value="${l.locgovCode}" th:text="${l.locgovNm}"
-                                    th:selected="${l.locgovCode == locgovCode}"></option>
-                        </select>
-                    </td>
-                    <td class="label">아이디/이름</td>
-                    <td><input type="text" name="keyword" th:value="${keyword}" placeholder="아이디 또는 이름"></td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="btn_all btn_right" style="margin-bottom:16px;">
-            <div class="flex_box gap-08">
-                <a class="btn btn-dark-gray btn-small" th:href="@{/admin/off-person-in-charge/new}">+ 담당자 등록</a>
-                <button type="submit" class="btn btn-dark-gray btn-small">검색</button>
-            </div>
-        </div>
-    </form>
+     AS-IS verbatim:
+     - '구분' 칸은 주담당자만 "주관리자"로 찍고 부담당자는 '-'다.
+     - '소속 지점'은 은행명 + 공백 + 지점명이다.
+     - 주담당자(ROLE_ADMIN_7)가 볼 때 자기 행의 체크박스는 disabled다(자기 상태를 바꿀 수 없다).
+     - 등록 버튼은 ROLE_ADMIN_1·2·7에만 보인다(3·4에는 없다).
+     - 사용 버튼은 btn-dark-gray, 중지 버튼은 btn-default다.
+     - 중지일자는 사용여부가 '중지'일 때만 찍는다.
+     - 안내문구 "검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다."
+     - 빈 목록 문구 "오프라인담당자 정보가 존재하지 않습니다."(colspan 9)
 
-    <div class="count_title mt-40">
-        <h5>총 <span th:text="${totalCount}" th:remove="tag"></span>건</h5>
-    </div>
+     엑셀 다운로드는 개인정보가 포함되므로 AS-IS처럼 사유 모달을 먼저 띄운다
+     (PrivacyAccess.OFF_CHARGER = "오프라인 담당자 목록"). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <table class="board_list_table" summary="오프라인담당자목록">
-        <caption>오프라인담당자목록</caption>
-        <thead>
-        <tr>
-            <th scope="col">아이디</th>
-            <th scope="col">이름</th>
-            <th scope="col">직위/부서/직책</th>
-            <th scope="col">권한</th>
-            <th scope="col">소속지자체</th>
-            <th scope="col">상태</th>
-            <th scope="col">처리</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="m : ${list}">
-            <td><a th:href="@{'/admin/off-person-in-charge/' + ${m.userId} + '/edit'}" th:text="${m.loginId}"></a></td>
-            <td th:text="${m.userName}"></td>
-            <td th:text="(${m.psitnDeptNm} ?: '-') + ' / ' + (${m.psitnNm} ?: '-') + ' / ' + (${m.ofcpsNm} ?: '-')"></td>
-            <td th:text="${m.authority == 'ROLE_ADMIN_7'} ? '오프라인주담당자' : '오프라인부담당자'"></td>
-            <td th:text="${m.locgovCode} ?: '-'"></td>
-            <td th:text="${m.statusCode == 'ACTIVE' ? '정상' : (m.statusCode == 'LOCKED' ? '잠금' : m.statusCode)}"></td>
-            <td>
-                <form th:action="@{'/admin/off-person-in-charge/' + ${m.userId} + '/reset-password'}" method="post" style="display:inline;"
-                      onsubmit="return confirm('임시비밀번호를 재발급하시겠습니까?');">
-                    <button type="submit" class="small-btn">비밀번호 재발급</button>
-                </form>
-                <form th:action="@{'/admin/off-person-in-charge/' + ${m.userId} + '/delete'}" method="post" style="display:inline;"
-                      onsubmit="return confirm('이 담당자를 삭제하시겠습니까?');">
-                    <button type="submit" class="small-btn ghost">삭제</button>
-                </form>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(list)}">등록된 오프라인담당자가 없습니다.</p>
+<h3><span th:text="${msg.get('MENU_4601')}">오프라인담당자</span></h3>
 
-    <div class="pagination-wrap" th:if="${totalPages > 1}">
-        <div class="pagination">
-            <a th:if="${currentPage > 0}" class="prev"
-               th:href="@{/admin/off-person-in-charge(locgovCode=${locgovCode},keyword=${keyword},page=${currentPage - 1},size=${size})}">이전</a>
-            <span th:each="p : ${#numbers.sequence(0, totalPages - 1)}">
-                <strong th:if="${p == currentPage}" th:text="${p + 1}"></strong>
-                <a th:unless="${p == currentPage}"
-                   th:href="@{/admin/off-person-in-charge(locgovCode=${locgovCode},keyword=${keyword},page=${p},size=${size})}"
-                   th:text="${p + 1}"></a>
-            </span>
-            <a th:if="${currentPage < totalPages - 1}" class="next"
-               th:href="@{/admin/off-person-in-charge(locgovCode=${locgovCode},keyword=${keyword},page=${currentPage + 1},size=${size})}">다음</a>
-        </div>
-    </div>
+<!-- Search -->
+<form id="searchForm" class="opmanager-search-form clear" method="post" th:action="@{/admin/off-person-in-charge}">
+	<input type="hidden" id="sort" name="sort" th:value="${searchParam.sort}"/>
+	<input type="hidden" id="orderBy" name="orderBy" th:value="${searchParam.orderBy}"/>
+	<input type="hidden" id="itemsPerPage" name="itemsPerPage" th:value="${searchParam.itemsPerPage}"/>
+	<input type="hidden" id="query" name="query" th:value="${searchParam.query}"/>
+
+	<div class="board_write">
+		<table class="board_write_table" summary="">
+			<colgroup>
+				<col style="width:220px;">
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="label">검색구분</td>
+					<td>
+						<div class="flex_box gap-08">
+							<select id="srchKey" name="srchKey" title="지점명" class="wd-150">
+								<option value="PSITN_NM" th:selected="${searchParam.srchKey == 'PSITN_NM'}">지점명</option>
+								<option value="LOGIN_ID" th:selected="${searchParam.srchKey == 'LOGIN_ID'}">아이디</option>
+								<option value="USER_NAME" th:selected="${searchParam.srchKey == 'USER_NAME'}">이름</option>
+								<option value="EMP_ID" th:selected="${searchParam.srchKey == 'EMP_ID'}">개인번호</option>
+							</select>
+							<input type="text" id="srchValue" name="srchValue" title="검색구분"
+							       class="input_txt required _filter half" th:value="${searchParam.srchValue}"/>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">사용여부</td>
+					<td>
+						<div class="flex_box gap-12">
+							<div class="input-form">
+								<input type="radio" id="srchStatusCode0" name="srchStatusCode" value=""
+								       th:checked="${#strings.isEmpty(searchParam.srchStatusCode)}"/>
+								<label for="srchStatusCode0">전체</label>
+							</div>
+							<div class="input-form">
+								<input type="radio" id="srchStatusCode9" name="srchStatusCode" value="9"
+								       th:checked="${searchParam.srchStatusCode == '9'}"/>
+								<label for="srchStatusCode9">사용</label>
+							</div>
+							<div class="input-form">
+								<input type="radio" id="srchStatusCode2" name="srchStatusCode" value="2"
+								       th:checked="${searchParam.srchStatusCode == '2'}"/>
+								<label for="srchStatusCode2">중지</label>
+							</div>
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<div class="btn_all btn_left">
+			<ul class="list-bullet point">
+		        <li>
+		            검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.
+		        </li>
+	        </ul>
+	  	</div>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/admin/off-person-in-charge'">초기화</button>
+				<button type="button" class="btn btn-dark-gray btn-mini" th:if="${creatable}" onclick="chargerCreate()">등록</button>
+				<button type="submit" class="btn btn-dark-gray btn-mini">검색</button>
+			</div>
+		</div>
+	</div>
+</form>
+<!--// Search -->
+
+<!-- List Header -->
+<div class="count_title mt-40">
+	<h5>총 <span th:text="${#numbers.formatInteger(count, 0, 'COMMA')}" th:remove="tag">0</span>건</h5>
+	<span>
+		<select name="displayCount" id="displayCount" th:title="${msg.get('M00239')}">
+			<option value="10" th:text="${msg.get('M00240')}">10개 출력</option>
+			<option value="20" th:text="${msg.get('M00241')}">20개 출력</option>
+			<option value="50" th:text="${msg.get('M00242')}">50개 출력</option>
+			<option value="100" th:text="${msg.get('M00243')}">100개 출력</option>
+		</select>
+	</span>
 </div>
+<!--// List Header -->
+
+<!-- List -->
+<div class="board_list">
+	<table class="board_list_table" summary="오프라인 담당자관리">
+		<caption>오프라인 담당자관리</caption>
+		<colgroup>
+			<col style="width:5%;">
+			<col style="width:5%;">
+		</colgroup>
+		<thead>
+			<tr>
+				<th scope="col"><input type="checkbox" id="check_all"></th>
+				<th scope="col">No.</th>
+				<th scope="col">구분</th>
+				<th scope="col">소속 지점</th>
+				<th scope="col">아이디</th>
+				<th scope="col">이름</th>
+				<th scope="col">개인번호</th>
+				<th scope="col">사용여부</th>
+				<th scope="col">중지일자</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr th:each="item, i : ${list}" style="background:#fff;">
+				<td>
+					<!-- AS-IS: 주담당자가 자기 행을 체크할 수 없다 -->
+					<input type="checkbox" th:value="${item.userId}" th:id="'check_' + ${item.userId}"
+					       th:disabled="${adminRole == 'ROLE_ADMIN_7' and loginUserId == item.userId}">
+				</td>
+				<td th:text="${pagination.itemNumber - i.count}">0</td>
+				<td th:text="${item.authorityText}">-</td>
+				<td th:text="${item.branchText}"></td>
+				<td><a th:href="|javascript:chargerEdit('${item.userId}')|" th:text="${item.loginId}"></a></td>
+				<td th:text="${item.userName}"></td>
+				<td th:text="${item.empId}"></td>
+				<td th:text="${item.asIsStatusCode == '2'} ? '중지' : '사용'"></td>
+				<td th:text="${item.asIsStatusCode == '2'} ? ${item.denyDateText} : ''"></td>
+			</tr>
+			<tr th:if="${#lists.isEmpty(list)}" style="background:#fff;">
+				<td colspan="9">오프라인담당자 정보가 존재하지 않습니다.</td>
+			</tr>
+		</tbody>
+	</table>
+
+	<div class="flex_box juc-sbt">
+		<div class="btn_all">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="downloadExcel();">전체 목록 엑셀 다운로드</button>
+			</div>
+		</div>
+		<div class="btn_all">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="statusChange('9');">사용</button>
+				<button type="button" class="btn btn-default btn-mini" onclick="statusChange('2');">중지</button>
+			</div>
+		</div>
+	</div>
+	<div class="pagination-wrap" th:if="${not #lists.isEmpty(list)}">
+		<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+	</div>
+</div>
+<!--// List -->
+
+<!-- 날짜 셋팅 영역 (AS-IS 그대로 - 이 화면에는 날짜 입력칸이 없어 실제로 읽히지 않는다) -->
+<div style="display: none;">
+	<span id="today" th:text="${searchDates.today}"></span>
+	<span id="week" th:text="${searchDates.week}"></span>
+	<span id="month1" th:text="${searchDates.month1}"></span>
+	<span id="month3" th:text="${searchDates.month3}"></span>
+	<span id="year1" th:text="${searchDates.year1}"></span>
+</div>
+<!--// 날짜 셋팅 영역  -->
+
+<div th:replace="~{fragments/privacy-access :: modal}"></div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript" th:inline="javascript">
+	$(function(){
+
+		// 기간 검색 적용 (검색조건 : 등록일)
+		serachDate();
+
+		// 한 페이지 출력 갯수 변경 이벤트
+		displayChange();
+
+		// 선택된 페이지 출력 갯수 셋팅
+		displaySelected();
+
+		// 체크박스 이벤트 (체크&해제)
+		checkedEventSet();
+	});
+
+	/**
+	 *	함 수 명 : serachDate
+	 *	기	능  : 기간 검색 적용
+	 */
+	function serachDate() {
+		$(".btn_date").on('click',function(){
+			var $id = $(this).attr('class').replace('btn_date ','');
+			if ($id == 'all') {
+				$("input[type=text]",$(this).parent().parent()).val('');
+
+			} else {
+				var today = $("#today").text();
+				var date1 = '';
+				var date2 = '';
+
+				if ($id == 'today') {
+					date1 = today;
+					date2 = today;
+				} else {
+					date1 = $("#"+$id).text();
+					date2 = today;
+				}
+
+				$("input[type=text]",$(this).parent().parent()).eq(0).val(date1);
+				$("input[type=text]",$(this).parent().parent()).eq(1).val(date2);
+			}
+		});
+	}
+
+	/**
+	 *	함 수 명 : displayChange
+	 *	기	능  : 한 페이지 출력 갯수 변경 이벤트
+	 */
+	function displayChange() {
+		$("#displayCount").on('change', function(){
+			$("#itemsPerPage").val($(this).val());
+			$('#searchForm').submit();
+		});
+	}
+
+	/**
+	 *	함 수 명 : displaySelected
+	 *	기	능  : 선택된 페이지 출력 갯수 셋팅
+	 */
+	function displaySelected(){
+		$("#displayCount").val($("#itemsPerPage").val());
+	}
+
+	/**
+	 *	함 수 명 : checkedEvent
+	 *	기	능  : 체크&해제 이벤트 셋팅
+	 */
+	function checkedEventSet() {
+		var childObjs = $("input[id^='check_']").not(":disabled").not("[id='check_all']");
+
+		// 체크박스 '전체' 체크&해지
+		$("#check_all").click(function(){
+			$(childObjs).prop("checked", $(this).is(":checked"));
+		});
+
+		// '개별' 체크박스에 따른 '전체' 체크박스 체크&해지
+		$(childObjs).click(function() {
+			if($(childObjs).length == $("input[id^='check_']:checked").not("[id='check_all']").length) {
+				$("#check_all").prop("checked", true);
+			} else {
+				$("#check_all").prop("checked", false);
+			}
+		});
+	}
+
+	/**
+	 *	함 수 명 : downloadExcel
+	 *	기	능  : 엑셀 다운로드 (AS-IS Shop.downloadExcelOrder - 개인정보 사유 모달을 먼저 띄운다)
+	 */
+	function downloadExcel() {
+		openPrivacyModal("/admin/off-person-in-charge/list/download-excel?" + $("#searchForm").serialize());
+	}
+
+	/**
+	 *	함 수 명 : statusChange
+	 *	기	능  : 사용여부 변경
+	 *	파라미터  : type - 2(중지), 9(사용)
+	 */
+	function statusChange(type) {
+		var userIdList = new Array;
+
+		// 선택된 사용자 셋팅
+		$("input[id^='check_']:checked").not("[id='check_all']").map(function(index, item) {
+			userIdList.push($(item).val());
+		});
+
+		if(userIdList.length == 0) {
+			alert("처리할 항목을 선택해 주세요.");
+			return false;
+		}
+
+		var msg = "선택된 아이디 권한을 사용으로 변경 하시겠습니까?";
+		if(type == 2) msg = "선택된 아이디 사용 권한을 중지 하시겠습니까?";
+		if(confirm(msg)) {
+			$.post("/admin/off-person-in-charge/status/edit", {"userIdList": userIdList, "statusCode": type}, function(response) {
+				if(response.isSuccess && response.data) {
+					if(response.data.code == "SUCC") {
+						msg = (type == 2) ? "중지" : "사용";
+						alert(msg+"되었습니다.");
+						location.reload();
+					} else {
+						alert("오류가 발생했습니다.");
+					}
+				}
+			});
+		}
+	}
+
+	/**
+	 *	함 수 명 : chargerEdit
+	 *	기	능  : 오프라인 담당자 상세 조회
+	 *	파라미터  : userId - 사용자 ID
+	 */
+	function chargerEdit(userId) {
+		location.href = "/admin/off-person-in-charge/edit/"+userId+location.search;
+	}
+
+	/**
+	 *	함 수 명 : chargerCreate
+	 *	기	능  : 오프라인 담당자 등록
+	 */
+	function chargerCreate() {
+		location.href = "/admin/off-person-in-charge/create";
+	}
+</script>
 </body>
 </html>

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 public class ShopConfigController {
 
     private final ShopConfigRepository shopConfigRepository;
+    private final com.ghlove.admin.web.support.FlashRedirect flashRedirect;
 
     @GetMapping("/site-config")
     public String form(Model model) {
@@ -40,7 +41,6 @@ public class ShopConfigController {
         config.setDeniedId(form.getDeniedId());
         config.setBanWord(form.getBanWord());
         shopConfigRepository.save(config);
-        return "redirect:/site-config?message=" +
-                java.net.URLEncoder.encode("저장되었습니다.", java.nio.charset.StandardCharsets.UTF_8);
+        return flashRedirect.to("/site-config", "저장되었습니다.");
     }
 }

@@ -11,5 +11,7 @@ public interface ClaimRepository extends JpaRepository<Claim, Long> {
 
     Optional<Claim> findByOrderIdAndStatus(String orderId, String status);
 
+    Optional<Claim> findByOrderItemIdAndStatus(Long orderItemId, String status);
+
     List<Claim> findByOrderIdIn(List<String> orderIds);
 }

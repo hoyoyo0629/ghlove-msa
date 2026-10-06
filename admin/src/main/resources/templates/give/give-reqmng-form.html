@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>기부금 변경신청 등록 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -11,7 +12,7 @@
 
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
 <!-- AS-IS opmanager/give/give-reqmng/req_form.jsp 재현 - 요청분류 100(기부금 취소/과오납)은
      세외수입시스템 결의일자+관련문서 3항목이 증빙으로 필수, 200(포인트생성)은 사유만
@@ -23,7 +24,12 @@
      "전자납부번호"/"영수증상태"는 Donation 엔티티 자체에 대응 컬럼이 없어(AS-IS 세외수입시스템
      연계 개념 자체가 이 프로젝트엔 없음) 계속 생략한다 - 값 조회가 아니라 새 필드 추적이
      필요한 스키마 확장이라 [[admin-console-asis-design-round]]의 RELAY_TYPE류와 같은 판단. -->
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <div class="location">
         <a th:href="@{/}">&nbsp;</a> &gt; <a th:href="@{/give-reqmng}">기부금 변경신청 관리</a> &gt; <a class="on">등록</a>
     </div>
@@ -92,7 +98,10 @@
     }
     toggleEvidence(document.getElementById('cntrReqmngCode') ? document.getElementById('cntrReqmngCode').value : '100');
     </script>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

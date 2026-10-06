@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>기부포인트 상세현황 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -11,13 +12,18 @@
 
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
 <!-- AS-IS opmanager/give/give-point/form.jsp 재현 - 건별(납부번호=CNTR_SN) 발생/사용/
      잔액 포인트. 사용/잔액은 point 서비스의 FIFO lot(REMAINING_AMOUNT)을 그대로 읽어
      계산한다(PointClient) - 포인트 소비 자체는 지자체 단위로 이뤄지지만 lot은 어느
      기부에서 났는지 추적되므로 "이 기부로 생긴 포인트 중 남은 양"은 정확히 구해진다. -->
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <p><a th:href="@{/give-point}">&larr; 기부포인트 현황</a></p>
     <h3 th:text="${locgovFullNm} + ' 기부포인트 상세현황'"></h3>
 
@@ -95,7 +101,10 @@
         </tbody>
     </table>
     <p class="empty" th:if="${#lists.isEmpty(list)}">조회된 기부포인트 상세현황이 없습니다.</p>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

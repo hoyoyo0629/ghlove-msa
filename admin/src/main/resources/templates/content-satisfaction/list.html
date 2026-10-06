@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <meta charset="UTF-8">
+    <title>콘텐츠 만족도 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+    <h3><span>콘텐츠 만족도</span></h3>
+
+    <!-- URL 부분일치 검색 (AS-IS: menuUrl 필터) -->
+    <form method="get" th:action="@{/admin/content-satisfaction}" class="board_write">
+        <table class="board_write_table" summary="콘텐츠 만족도 검색">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr>
+                <td class="label">URL</td>
+                <td><input type="text" name="menuUrl" th:value="${menuUrl}" class="input_txt half" title="URL"></td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="btn_all btn_left">
+            <ul class="list-bullet point"><li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li></ul>
+        </div>
+        <div class="btn_all btn_right">
+            <div class="flex_box gap-08">
+                <a class="btn btn-dark-gray btn-mini" th:href="@{/admin/content-satisfaction}">초기화</a>
+                <button type="submit" class="btn btn-dark-gray btn-mini">검색</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="board_list mt-40">
+        <div class="count_title mt-40"><h5>총 <span th:text="${#lists.size(rows)}" th:remove="tag">0</span>건</h5></div>
+        <table class="board_list_table" summary="콘텐츠 만족도">
+            <caption>콘텐츠 만족도</caption>
+            <colgroup>
+                <col style="width:50px;"><col style="width:500px;">
+                <col style="width:100px;"><col style="width:100px;"><col style="width:100px;"><col style="width:100px;"><col style="width:100px;">
+            </colgroup>
+            <thead>
+            <tr>
+                <th scope="col">No.</th><th scope="col">URL</th>
+                <th scope="col">매우 만족</th><th scope="col">만족</th><th scope="col">불만족</th><th scope="col">매우 불만족</th><th scope="col"></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="r,i : ${rows}" style="background:#fff;">
+                <td th:text="${i.count}">1</td>
+                <td><a th:href="${r.menuUrl}" target="_blank" th:text="${r.menuUrl} + ' (' + ${r.menuNm} + ')'"></a></td>
+                <td th:text="${r.veryGood}">0</td>
+                <td th:text="${r.good}">0</td>
+                <td th:text="${r.bad}">0</td>
+                <td th:text="${r.veryBad}">0</td>
+                <td><a th:href="@{/admin/content-satisfaction/detail(menuUrl=${r.menuUrl})}">상세보기</a></td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="no_content" th:if="${#lists.isEmpty(rows)}">검색 결과가 없습니다.</div>
+    </div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

@@ -14,9 +14,30 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 
-/** 지자체FAQ 관리 (AS-IS opmanager/community/locv-faq) - 고객센터 FAQ(OP_COMMUNITY_LOCGOVFAQ)의
- *  관리자 CRUD 화면. AS-IS 실제 권한: ROLE_ADMIN_1~4(시스템/행안부)만 쓰기 가능,
- *  ROLE_ADMIN_5~6(지자체)은 조회만 가능 - {@link #requireWriteAccess} 참고. */
+/**
+ * 고객센터 FAQ 관리 ({@code OP_COMMUNITY_LOCGOVFAQ}) - 공개 화면
+ * {@code /faqs}·{@code /api/faqs}({@link com.ghlove.admin.service.FaqService})가 읽는 그 데이터를
+ * 관리하는 화면이다. 쓰기는 ROLE_ADMIN_1~4(시스템/행안부)만, ROLE_ADMIN_5~6(지자체)은 조회만
+ * 가능하다 - {@link #requireWriteAccess} 참고.
+ *
+ * <p><b>★ AS-IS 메뉴 11403 '지자체FAQ'를 이 화면으로 되살리지 않기로 했다(2026-10-04 사용자 결정).</b>
+ * AS-IS에 같은 URL({@code /opmanager/community/locv-faq})의 {@code LocgFaqManagerController}가 있고
+ * 같은 표를 다루지만, 그 <b>메뉴는 AS-IS에서 중지</b>({@code display_flag='N'},
+ * {@code status_code='2'})다. 더구나 AS-IS 화면의 질문유형 목록은 Java enum {@code FaqType}
+ * ({@code F_LOGIN}·{@code F_CNTR_SYSTEM}…)인데 이 표의 실데이터 코드는
+ * {@code JOIN}·{@code DONATE}… 라서 <b>애초에 서로 맞지 않는다</b>(메뉴가 꺼진 배경으로 보인다).
+ *
+ * <p>그래서 <b>op_menu에 11403을 중지 상태로만 등록</b>하고
+ * ({@code migration-admin-menu-11403-locgov-faq-stopped.sql}) 이 화면은 손대지 않았다 -
+ * AS-IS가 꺼 둔 화면을 살아서 쓰이는 공개 FAQ 관리 화면 위에 덮는 것이 오히려 AS-IS와
+ * 멀어지기 때문이다. [[as-is-parity-includes-disabled-state]] 원칙("빼지도 켜지도 말 것")에 맞는다.
+ *
+ * <p><b>남은 결함(이 화면이 아니라 고객센터 라운드 몫)</b>: 질문유형 라벨이 화면에 빈 값으로 나온다.
+ * {@code database/ddl/service-admin.sql}이 {@code FAQ_TYPE} 코드 11건
+ * ({@code JOIN}·{@code DONATE}…)을 <b>{@code ADMIN_COMMON_CODE}라는 없는 표 이름</b>으로 INSERT해서
+ * 실제 {@code admin.op_common_code}에는 들어가지 않았고, 거기에는 쇼핑몰용 {@code FAQ_TYPE} 1~6만 있다.
+ * 그 11건을 올바른 표에 넣으면 해결된다(담당자용 FAQ(11405)는 {@code CMNTY_FAQ_TYPE}을 쓰므로 무관).
+ */
 @Controller
 @RequestMapping("/community/locv-faq")
 @RequiredArgsConstructor

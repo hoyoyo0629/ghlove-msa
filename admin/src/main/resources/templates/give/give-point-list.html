@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>기부포인트 현황 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -11,13 +12,18 @@
 
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
 <!-- AS-IS opmanager/give/give-point/list.jsp 재현 - 년도×지자체 발생/사용/잔액 포인트
      집계. give-state와 같은 통계 ReadModel(GiveStateService)을 재사용하되 포인트잔액
      (발생-사용) 컬럼을 추가로 보여준다 - AS-IS도 두 화면이 같은 원장을 서로 다른
      렌즈(모금 실적 vs 포인트 잔액)로 보여주는 별개 메뉴다. -->
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <h3>기부포인트 현황</h3>
 
     <form th:action="@{/give-point}" method="get" style="margin-bottom:20px;">
@@ -98,7 +104,10 @@
         </tbody>
     </table>
     <p class="empty" th:if="${#lists.isEmpty(rows)}">조회된 기부포인트 현황이 없습니다.</p>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 
 <script th:inline="none">
 function filterLocgov() {

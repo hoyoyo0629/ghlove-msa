@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>기부금 모금현황 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -11,7 +12,7 @@
 
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
 <!-- AS-IS opmanager/give/give-state/list.jsp 재현 - 년도×지자체로 집계된 기부금 모금현황
      (기부모금액/기부건수/기부인원/발생포인트/답례품금액). admin은 donation/point의 DB를
@@ -20,7 +21,12 @@
      분리해 각자 다른 화면을 보여주지만(지자체는 자기 지자체만), 이 프로젝트는 아직
      지자체 단위로 세분화된 역할이 없어(ROLE_ADMIN/ROLE_OPERATOR만) ROLE_ADMIN 전용
      "전체 보기" 화면만 우선 구현했다. -->
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <h3>기부금 모금현황</h3>
 
     <form th:action="@{/give-state}" method="get" style="margin-bottom:20px;">
@@ -110,7 +116,10 @@
         </tbody>
     </table>
     <p class="empty" th:if="${#lists.isEmpty(rows)}">조회된 기부현황이 없습니다.</p>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 
 <script th:inline="none">
 function filterLocgov() {

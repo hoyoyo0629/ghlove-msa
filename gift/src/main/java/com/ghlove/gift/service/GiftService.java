@@ -10,6 +10,7 @@ import com.ghlove.gift.domain.SeasonFoodItem;
 import com.ghlove.gift.domain.Seller;
 import com.ghlove.gift.event.GiftLifecyclePublisher;
 import com.ghlove.gift.repository.CommonCodeRepository;
+import com.ghlove.gift.repository.GiftOptionRepository;
 import com.ghlove.gift.repository.GiftOrderStockRepository;
 import com.ghlove.gift.repository.GiftRepository;
 import com.ghlove.gift.repository.GiftSubcategoryItemRepository;
@@ -64,6 +65,8 @@ public class GiftService {
     private final GiftRepository giftRepository;
     private final CommonCodeRepository commonCodeRepository;
     private final GiftOrderStockRepository giftOrderStockRepository;
+    private final com.ghlove.gift.repository.GiftShipmentStockRepository giftShipmentStockRepository;
+    private final GiftOptionRepository giftOptionRepository;
     private final ItemImageRepository itemImageRepository;
     private final FileStorageService fileStorageService;
     private final GiftLifecyclePublisher giftLifecyclePublisher;
@@ -766,6 +769,192 @@ public class GiftService {
         });
         reservation.setStatus(RESERVATION_RESTORED);
         giftOrderStockRepository.save(reservation);
+    }
+
+    // ==================== 멀티아이템(출고 단위 SAGA) 재고 예약/복원 ====================
+
+    /**
+     * order.saga의 {@code SHIPMENT_CREATED}에 반응해 <b>출고 내 모든 품목</b> 재고를 예약한다
+     * (all-or-nothing: 하나라도 부족하면 아무것도 예약하지 않고 실패). GIFT_SHIPMENT_STOCK에
+     * (shipmentId,itemId)로 기록해 Kafka 재전달에도 중복 차감되지 않게 한다.
+     *
+     * @return true면 출고 전체 예약 성공(SHIPMENT_STOCK_RESERVED 발행), false면 재고 부족(FAILED 발행)
+     */
+    @Transactional
+    public boolean reserveStockForShipment(Long shipmentId,
+                                            List<com.ghlove.gift.event.ShipmentCreatedEvent.Line> lines) {
+        if (giftShipmentStockRepository.existsByShipmentId(shipmentId)) {
+            log.info("Shipment {} already processed for stock reservation - skipping duplicate event", shipmentId);
+            return true;
+        }
+        if (lines == null || lines.isEmpty()) {
+            return false;
+        }
+
+        // 1) 재고 선검증 - 옵션단위 재고(option_stock_flag='Y')는 옵션ID별, 그 외는 답례품ID별로
+        //    합산 수요를 확인한다(같은 답례품/옵션이 여러 줄일 수 있음).
+        java.util.Map<Long, Integer> demandByItem = new java.util.HashMap<>();
+        java.util.Map<Long, Integer> demandByOption = new java.util.HashMap<>();
+        for (var line : lines) {
+            int need = line.quantity() != null ? line.quantity() : 0;
+            if (isOptionStockTracked(line.itemOptionId())) {
+                demandByOption.merge(line.itemOptionId(), need, Integer::sum);
+            } else {
+                demandByItem.merge(line.itemId(), need, Integer::sum);
+            }
+        }
+        for (var e : demandByItem.entrySet()) {
+            Gift gift = giftRepository.findById(e.getKey()).orElse(null);
+            if (gift == null || gift.getStockQuantity() == null || gift.getStockQuantity() < e.getValue()) {
+                return false;
+            }
+        }
+        for (var e : demandByOption.entrySet()) {
+            var option = giftOptionRepository.findById(e.getKey()).orElse(null);
+            if (option == null || option.getOptionStockQuantity() == null
+                    || option.getOptionStockQuantity() < e.getValue()) {
+                return false;
+            }
+        }
+
+        // 2) 차감 + 예약행 기록(품목=orderItemId 단위). 옵션단위면 옵션재고를, 아니면 답례품재고를 깎는다.
+        LocalDateTime now = LocalDateTime.now();
+        for (var line : lines) {
+            int need = line.quantity() != null ? line.quantity() : 0;
+            Long optionId = isOptionStockTracked(line.itemOptionId()) ? line.itemOptionId() : null;
+            if (optionId != null) {
+                var option = giftOptionRepository.findById(optionId).orElseThrow();
+                option.setOptionStockQuantity(option.getOptionStockQuantity() - need);
+                option.setOptionSoldOutFlag(option.getOptionStockQuantity() <= 0 ? "Y" : "N");
+                giftOptionRepository.save(option);
+            } else {
+                Gift gift = giftRepository.findById(line.itemId()).orElseThrow();
+                gift.setStockQuantity(gift.getStockQuantity() - need);
+                gift.setSoldOut(gift.getStockQuantity() <= 0 ? SOLD_OUT : IN_STOCK);
+                giftRepository.save(gift);
+            }
+
+            com.ghlove.gift.domain.GiftShipmentStock reservation = new com.ghlove.gift.domain.GiftShipmentStock();
+            reservation.setOrderItemId(line.orderItemId());
+            reservation.setShipmentId(shipmentId);
+            reservation.setItemId(line.itemId());
+            reservation.setItemOptionId(optionId);
+            reservation.setQuantity(need);
+            reservation.setStatus(RESERVATION_RESERVED);
+            reservation.setCreatedDate(now);
+            giftShipmentStockRepository.save(reservation);
+        }
+        return true;
+    }
+
+    /** 옵션이 존재하고 재고연동(option_stock_flag='Y')이면 옵션단위 재고로 관리한다. */
+    private boolean isOptionStockTracked(Long itemOptionId) {
+        if (itemOptionId == null || itemOptionId <= 0) {
+            return false;
+        }
+        return giftOptionRepository.findById(itemOptionId)
+                .map(o -> "Y".equals(o.getOptionStockFlag()))
+                .orElse(false);
+    }
+
+    /** order.saga의 {@code SHIPMENT_CANCELLED}에 반응해, 이 서비스가 실제 예약한 출고 재고만 복원한다. */
+    @Transactional
+    public void restoreStockForShipment(Long shipmentId) {
+        List<com.ghlove.gift.domain.GiftShipmentStock> reservations =
+                giftShipmentStockRepository.findByShipmentId(shipmentId);
+        if (reservations.isEmpty()) {
+            log.info("Shipment {} was never reserved here - nothing to restore", shipmentId);
+            return;
+        }
+        for (var reservation : reservations) {
+            restoreReservation(reservation);
+        }
+    }
+
+    /** order.saga의 {@code ITEM_CANCELLED}(품목 단위 부분취소/반품)에 반응해 그 품목 재고만 복원한다. */
+    @Transactional
+    public void restoreStockForItem(Long orderItemId) {
+        com.ghlove.gift.domain.GiftShipmentStock reservation =
+                giftShipmentStockRepository.findById(orderItemId).orElse(null);
+        if (reservation == null) {
+            log.info("OrderItem {} was never reserved here - nothing to restore", orderItemId);
+            return;
+        }
+        restoreReservation(reservation);
+    }
+
+    private void restoreReservation(com.ghlove.gift.domain.GiftShipmentStock reservation) {
+        if (RESERVATION_RESTORED.equals(reservation.getStatus())) {
+            return;
+        }
+        Long optionId = reservation.getItemOptionId();
+        if (optionId != null && optionId > 0) {
+            // 옵션단위 예약분 복원 - 그 옵션 재고만 되돌린다.
+            giftOptionRepository.findById(optionId).ifPresent(option -> {
+                int restored = (option.getOptionStockQuantity() == null ? 0 : option.getOptionStockQuantity())
+                        + reservation.getQuantity();
+                option.setOptionStockQuantity(restored);
+                option.setOptionSoldOutFlag(restored <= 0 ? "Y" : "N");
+                giftOptionRepository.save(option);
+            });
+        } else {
+            giftRepository.findById(reservation.getItemId()).ifPresent(gift -> {
+                gift.setStockQuantity(gift.getStockQuantity() + reservation.getQuantity());
+                gift.setSoldOut(IN_STOCK);
+                giftRepository.save(gift);
+            });
+        }
+        reservation.setStatus(RESERVATION_RESTORED);
+        giftShipmentStockRepository.save(reservation);
+    }
+
+    // ---- 추가구성 자식 답례품 (AS-IS ItemServiceImpl: itemAdditionFlag='Y'면 추가상품명/가격으로
+    //      item_data_type=2 자식 OP_ITEM을 생성해 OP_ITEM_ADDITION으로 연결) ----
+
+    /**
+     * 추가구성 자식 답례품(item_data_type=2)을 생성한다. 본품의 판매자/지자체/카테고리를 상속하고,
+     * 일반 답례품 목록·검색에는 뜨지 않게 displayFlag='N', 주문은 가능하게 dataStatusCode='APPROVED'로 둔다.
+     */
+    @Transactional
+    public Gift createAdditionChild(Long parentItemId, String name, Integer price, Integer stockQuantity) {
+        Gift parent = giftRepository.findById(parentItemId)
+                .orElseThrow(() -> new GiftException("본품 답례품을 찾을 수 없습니다."));
+        if (name == null || name.isBlank()) {
+            throw new GiftException("추가상품명을 입력해 주세요.");
+        }
+        if (name.trim().length() > 40) {
+            throw new GiftException("추가상품명은 최대 40자입니다.");
+        }
+        if (price == null || price < 0) {
+            throw new GiftException("추가상품가격은 0원 이상이어야 합니다.");
+        }
+        int qty = stockQuantity != null && stockQuantity > 0 ? stockQuantity : 0;
+
+        Gift child = new Gift();
+        child.setSellerId(parent.getSellerId());
+        child.setItemName(name.trim());
+        child.setCategoryCode(parent.getCategoryCode());
+        child.setLocgovCode(parent.getLocgovCode());
+        child.setSalePrice(price);
+        child.setStockQuantity(qty);
+        child.setSoldOut(qty <= 0 ? SOLD_OUT : IN_STOCK);
+        child.setDisplayFlag(DISPLAY_OFF);        // 목록/검색 숨김
+        child.setDataStatusCode(STATUS_APPROVED); // 주문 가능
+        child.setCreatedDate(CREATED_DATE_FORMAT.format(LocalDateTime.now()));
+        child.setDisplayType(DISPLAY_TYPE_ALWAYS);
+        child.setItemLabel(LABEL_NONE);
+        child.setItemDataType("2");
+        return giftRepository.save(child);
+    }
+
+    /** 추가구성 교체/해제 시 자식 답례품을 지운다 - item_data_type='2'인 것만 안전 삭제한다. */
+    @Transactional
+    public void deleteAdditionChild(Long childItemId) {
+        giftRepository.findById(childItemId).ifPresent(child -> {
+            if ("2".equals(child.getItemDataType())) {
+                giftRepository.deleteById(childItemId);
+            }
+        });
     }
 
     // ---- 답례품 상품관리 2단계 (엑셀 대량처리/일괄작업 - admin-console-item-mgmt-round #2).

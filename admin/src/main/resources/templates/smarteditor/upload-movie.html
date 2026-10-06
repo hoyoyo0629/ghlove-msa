@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8"/>
+	<title>관리자페이지</title>
+	<meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+	<link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}"/>
+	<link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}"/>
+	<link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+	<link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print"/>
+
+	<script type="text/javascript" th:src="@{/content/modules/jquery/jquery-1.11.0.min.js}"></script>
+	<script type="text/javascript" th:src="@{/content/modules/spin.min.js}"></script>
+	<script type="text/javascript" th:src="@{/content/modules/op.common.js}" charset="utf-8"></script>
+
+	<meta name="_csrf" content=""/>
+	<meta name="_csrf_header" content="X-CSRF-TOKEN"/>
+</head>
+<body>
+<!-- AS-IS front/i18n/smarteditor/upload-movie.jsp 이식 - 스마트에디터 "동영상" 버튼 팝업.
+     ★ 업로드가 아니다. 서버로 파일을 보내지 않고 화면 JS가 youtu.be 주소를 youtube.com/embed로
+     바꿔 반응형 iframe 마크업을 만들어 에디터 본문에 끼워 넣는다(그래서 POST 핸들러가 없다).
+     width/height 행과 내용 행은 AS-IS에서 style="display: none;'"로 숨겨져 있다(따옴표 오타까지
+     AS-IS 그대로 - 값은 전송에만 쓰인다). -->
+<div class="popup_wrap">
+	<h1 class="popup_title">동영상 <span th:text="${msg.get('M00088')}">등록</span></h1> <!-- 등록 -->
+
+	<div class="popup_contents">
+		<table class="board_write_table" summary="동영상 링크">
+			<caption>동영상 링크</caption>
+			<colgroup>
+				<col style="width: 110px"/>
+				<col style=""/>
+			</colgroup>
+			<tbody>
+			<tr class="content_url">
+				<td class="label">동영상 URL</td>
+				<td colspan="3">
+					<div>
+						<input type="text" name="url" class="nine"/>
+					</div>
+				</td>
+			</tr>
+			<tr class="content_url" style="display: none;'">
+				<td class="label">width</td>
+				<td>
+					<div>
+						<input type="text" name="width" class="nine _number" value="800"/>
+					</div>
+				</td>
+				<td class="label">height</td>
+				<td>
+					<div>
+						<input type="text" name="height" class="nine _number" value="600"/>
+					</div>
+				</td>
+			</tr>
+			<tr class="content_source">
+				<td colspan="4">
+					<div>예시 : https://youtu.be/eKzxjQ_1f7k</div>
+				</td>
+			</tr>
+			<tr class="content_source" style="display: none;'">
+				<td class="label">내용</td>
+				<td colspan="3">
+					<div>
+						<input type="text" name="source" class="nine"/>
+					</div>
+				</td>
+			</tr>
+			</tbody>
+		</table>
+
+		<p class="popup_btns">
+			<button type="button" class="btn btn-active" th:text="${msg.get('M00088')}">등록</button> <!-- 등록 -->
+			<a href="javascript:self.close();" class="btn btn-default" th:text="${msg.get('M00037')}">취소</a> <!-- 취소 -->
+		</p>
+
+	</div>
+</div>
+
+<iframe src="" id="frame_action" name="frame_action"
+        style="display:none;width: 1000px;height: 800px; border:1px solid red"></iframe>
+
+<script type="text/javascript">
+	$(function () {
+
+		$('button.btn-active').on('click', function () {
+
+			var width = $('input[name="width"]').val();
+			var height = $('input[name="height"]').val();
+			var url = $('input[name="url"]').val();
+
+			var inputData = "";
+
+			// 소스코드 변경
+			var sendUrl = url.replace('https://youtu.be/', 'https://www.youtube.com/embed/')
+
+			inputData += '<div style="position:relative; padding-bottom:56.25%">';
+			inputData += '<iframe style="position:absolute; width:100%"  width="' + width + '" height="' + height + '" src="' + sendUrl + '" frameborder="0" allowfullscreen></iframe>';
+			inputData += '</div>';
+
+			opener.nhn.husky.PopUpManager.setCallback(window, 'PASTE_HTML', [inputData]);
+
+			self.close();
+
+		});
+	});
+
+</script>
+
+</body>
+</html>

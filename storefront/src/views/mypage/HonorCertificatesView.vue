@@ -45,8 +45,7 @@ onMounted(async () => {
       </ul>
     </div>
   </section>
-
-  <div class="center" style="padding: 20px 0">
-    <router-link to="/mypage/tax-credit-estimate">세액공제 예상액 확인하기</router-link>
-  </div>
+  <!-- AS-IS honorList.html(기부혜택증)에는 세액공제 관련 링크가 없다(그 문구 자체가 AS-IS
+       전무). tax-credit-estimate 화면은 MSA 신규작이고 원래 GNB 미연결 의도였으므로, AS-IS
+       파리티를 위해 이 화면에서 링크를 노출하지 않는다(화면·계산 로직은 유지, 라우트는 존치). -->
 </template>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="format-detection" content="telephone=no">
+
+<script type="text/javascript" src="UI/js/ML4Web_Main.js"></script>
+<script type="text/javascript" src="UI/js/ML4Web_Popup.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function() {
+	_createWindow();
+
+	initEventHandler();
+});
+
+function _createWindow() {
+	var jqxwidget3 = $('#ML_install');
+	var offset3 = jqxwidget3.offset();
+	//-00. Main
+	$("#ML_install").MLjquiWindow({
+		autoOpen: true,
+		title:'프로그램 설치 안내',
+		resizable: false,
+		//position: 'center',
+		position: {x: offset3.left + ($(window).width()/2) - 200, y: offset3.top + 200},
+		showCloseButton:false,
+		closeButtonSize: 0,
+		isModal: true,
+		modalOpacity: 0.3,
+		modalZIndex: 99999,
+		modalBackgroundZIndex: 99999,
+		showCollapseButton: false,
+		//maxHeight: 600,
+		//maxWidth:420,
+		minHeight: 180,
+		//minWidth: 200,
+		height: 180,
+		width: 398,
+		initContent: function () {
+			$('#ML_install').MLjquiWindow('focus');
+		}
+	});
+}
+
+function installProgram(param){
+	var downloadCount = 0;
+	//var installPageUrl = ML4WebApi.getProperty("cs_install_page_url");
+
+	try{
+		var installType = ML4WebApi.getProperty("cs_install_type");
+		var os_ver = ML4WebApi.getProperty("os");
+		
+		if(os_ver == ""){
+			os_ver = ML4WebApi.detectOs();
+		}
+		
+		if(installType == "download"){
+			if(os_ver.indexOf("LINUX64") > -1){
+				if(param == "ubuntu"){
+					document.location.href = ML4WebApi.getProperty("cs_download_linux_ubuntu64");
+				}else{
+					document.location.href = ML4WebApi.getProperty("cs_download_linux_fedora64");
+				}
+			}else{
+				if(param == "ubuntu"){
+					document.location.href = ML4WebApi.getProperty("cs_download_linux_ubuntu32");
+				}else{
+					document.location.href = ML4WebApi.getProperty("cs_download_linux_fedora32");
+				}
+			}
+			
+			DSDialog.closeDialog(function(code, obj){});
+		}else{
+			window.top.location.href = installPageUrl;
+		}
+	}catch(e){
+		if(installType == "download"){
+			document.location.href = ML4WebApi.getProperty("cs_download_win");
+			DSDialog.closeDialog(function(code, obj){});
+		}else{
+			window.top.location.href = installPageUrl;
+		}
+	}
+}
+
+function _initSlideEvent(){
+
+	$("#MLstrSlide").owlCarousel({
+		autoPlay : false,
+		navigation : false,
+//		navigationText : ["prev","next"],
+		slideSpeed : 300,
+		pagination : false,
+		paginationSpeed : 400,
+		mouseDrag : false,
+		touchDrag : false,
+		// "singleItem:true" is a shortcut for:
+		// items : 5,
+		// itemsDesktop : [375,5],
+		// itemsDesktopSmall : false,
+		// itemsTablet: false,
+		// itemsMobile : false
+		singleItem : true
+	});
+
+	// Custom Navigation Events(슬라이딩 효과)
+	var owl = $("#MLstrSlide");
+
+	$(".customNavigation").children(".str_add_li").removeClass('ne');
+	$(".customNavigation").children(".str_add_li").addClass('dis');
+}
+
+function initEventHandler() {
+	if(ML4WebApi.getProperty("libType") == "0"){
+		$(".install_txt").html("최신 버전의 MagicLine이 아닙니다.<br/>최신 버전으로 설치합니다.");
+	}
+	
+	//Ubuntu 설치
+	$('#btn_install_ubuntu').click(function () {
+		if ($("#ML_install").length > 0) {
+			$('#ML_install').MLjquiWindow('destroy');
+		}
+		
+		if(ML4WebApi.getProperty("libType") == "0"){
+			ML4WebUI.closeMainDialog('main');
+		}
+		
+		installProgram('ubuntu');
+	});
+	
+	//Fedora 설치
+	$('#btn_install_fedora').click(function () {
+		if ($("#ML_install").length > 0) {
+			$('#ML_install').MLjquiWindow('destroy');
+		}
+		
+		if(ML4WebApi.getProperty("libType") == "0"){
+			ML4WebUI.closeMainDialog('main');
+		}
+		
+		installProgram('fedora');
+	});
+	
+	//취소
+	$('#btn_install_cancle').click(function () {
+		//alert("Todo develope 취소 프로세스")
+		if ($("#ML_install").length > 0) {
+			$('#ML_install').MLjquiWindow('destroy');
+		}
+		
+		if(ML4WebApi.getProperty("libType") == "0"){
+			ML4WebUI.closeMainDialog('main');
+		}
+	});
+
+}
+</script>
+</head>
+<!--<body oncontextmenu="return false" ondragstart="return false" onselectstart="return false">-->
+
+<body>
+
+<div id="ML_install" style="display:none;">
+	<div id="ML_container">
+		<div id="ML_cs_install_window">
+			<div class="install_wrap">
+				<img src="UI/images/setup_content2.png" style="vertical-align:top;" alt="아이콘"/>
+				<span class="install_txt">최신 버전의 MagicLine이  아닙니다.<br/>최신 버전으로 설치합니다.<br/>취소시 디스크,보안매체를 이용할 수<br/>없습니다.</span>
+				<!-- <div id="jqxLoader"></div> -->
+			</div>
+		</div>
+
+		<div class="ML_btn_area">
+			<span class="btn_row">
+				<p class="b_blue_btn"><button type="button" id="btn_install_ubuntu" onClick="#"><span>우분투</span></button></p>
+				<span class="w_space5"></span>
+				<p class="b_blue_btn"><button type="button" id="btn_install_fedora" onClick="#"><span>페도라</span></button></p>
+				<span class="w_space5"></span>
+				<p class="b_grey_btn"><button type="button" id="btn_install_cancle" onClick="#" ><span>취소</span></button></p>
+			</span>
+		</div>
+	</div>
+</div>
+</body>
+</html>

@@ -168,6 +168,19 @@ public class LocgovAdminClient {
         return fetchBytes("/api/locgov-admin/{code}/image/{type}", locgovCode, type);
     }
 
+    /** 직인 삭제 - AS-IS POST /delete/offcs. 파일 삭제 + 직인명/파일명 컬럼 NULL. */
+    public boolean deleteSeal(String locgovCode, Long managerId) {
+        try {
+            Map<?, ?> result = restClient.post()
+                    .uri("/api/locgov-admin/{code}/seal/delete?managerId={managerId}", locgovCode, managerId)
+                    .retrieve().body(Map.class);
+            Object deleted = result != null ? result.get("deleted") : null;
+            return Boolean.TRUE.equals(deleted);
+        } catch (RestClientException e) {
+            return false;
+        }
+    }
+
     public void deleteImage(String locgovCode, String type, Long managerId) {
         try {
             restClient.post()
@@ -278,7 +291,9 @@ public class LocgovAdminClient {
                                 boolean hasMobileImage, String useAt, LocalDateTime frstRegistPnttm) {
     }
 
-    public record DeptHist(Integer deptHistNo, String processDeptCode, LocalDateTime changedAt) {
+    /** {@code lastUpdusrId}는 부서코드 이력 팝업의 "등록자" 칸용 - admin이 OP_MANAGER에서 이름을 찾는다. */
+    public record DeptHist(Integer deptHistNo, String processDeptCode, LocalDateTime changedAt,
+                            Long lastUpdusrId) {
     }
 
     public record Lmtt(String lmttBgnDe, String lmttEndDe, String violtResnCode, String violtResnCn,

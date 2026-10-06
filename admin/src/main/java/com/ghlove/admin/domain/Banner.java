@@ -50,4 +50,19 @@ public class Banner {
      *  통합했다. MAIN(메인 캐러셀, 기본값)/LOGIN_WEB(로그인 웹)/LOGIN_MOBILE(로그인 모바일). */
     @Column(name = "BANNER_TYPE")
     private String bannerType;
+
+    /** AS-IS PC/모바일 배너 이미지 - 저장 파일명과 원본 파일명을 따로 둔다. 예전 TO-BE는 이 네
+     *  컬럼을 매핑하지 않고 AS-IS에 없는 imageUrl 텍스트 입력으로 대체해 두어, 등록화면의
+     *  PC/모바일 이미지 업로드 자체가 없었다. */
+    @Column(name = "PC_FILE_NAME")
+    private String pcFileName;
+
+    @Column(name = "M_FILE_NAME")
+    private String mFileName;
+
+    @Column(name = "PC_ORG_FILE_NAME")
+    private String pcOrgFileName;
+
+    @Column(name = "M_ORG_FILE_NAME")
+    private String mOrgFileName;
 }

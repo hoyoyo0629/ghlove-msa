@@ -141,6 +141,22 @@ public class DonationPublicApiController {
         return rate != null ? Map.of("rate", rate) : Map.of();
     }
 
+    /** 지자체 선택 시 검사 (AS-IS /api/ngdonation/locGovInfo) - 하루 중복기부(dupl)와
+     *  기부불가기간(lmttBgnDe~lmttEndDe) 차단 문구를 함께 돌려준다. */
+    @GetMapping("/api/donate/today-duplicate")
+    public ResponseEntity<?> todayDuplicate(@RequestParam String locgovCode, HttpServletRequest request) {
+        var authUserId = jwtVerifier.currentUserId(request);
+        if (authUserId.isEmpty()) {
+            return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
+        }
+        String restriction = donationService.donationRestrictionMessage(locgovCode);
+        Map<String, Object> body = new java.util.HashMap<>();
+        body.put("duplicate", donationService.hasTodayDonation(authUserId.get(), locgovCode));
+        body.put("restricted", restriction != null);
+        body.put("restrictionMessage", restriction);
+        return ResponseEntity.ok(body);
+    }
+
     public record CreateDonationRequest(String locgovCode, BigDecimal amount, String psitnLocgovCode, String presentType) {
     }
 
@@ -202,15 +218,15 @@ public class DonationPublicApiController {
             BigDecimal rate = donationService.fundingRatePercent(p);
             return new DesignatedProjectCardDto(p.getDsgnDntnBizId(), p.getDsgnDntnBizTtl(), p.getLclgvCd(),
                     locgovNameOf(locgovsByCode, p.getLclgvCd()), p.getImageUrl(),
-                    p.getDsgnDntnBizBgngYmd() + " ~ " + p.getDsgnDntnBizEndYmd(), p.getGoalAmt(),
+                    formatYmd(p.getDsgnDntnBizBgngYmd()) + " ~ " + formatYmd(p.getDsgnDntnBizEndYmd()), p.getGoalAmt(),
                     donationService.raisedAmount(p.getDsgnDntnBizId()), rate, gaugeClassOf(rate),
                     rate.compareTo(HUNDRED) > 0, p.getDsgnDntnBizSttsCd());
         }).toList();
         return new DesignatedListResponse(cards, currentPage, totalPages, donationService.codesOf("DSGN_BSNS_TYPE"));
     }
 
-    public record CheerMessageDto(String maskedUserName, String maskedLoginId, String cntrDeFormatted,
-                                   BigDecimal cntrAmt, String cheerMsg) {
+    public record CheerMessageDto(String cntrSn, int giveOrder, String maskedUserName, String maskedLoginId,
+                                   String cntrDeFormatted, BigDecimal cntrAmt, String cheerMsg) {
     }
 
     public record NoticeDto(Long prjNoticeId, String prjNoticeSubject, String prjNoticeCn, String dateText) {
@@ -224,14 +240,17 @@ public class DonationPublicApiController {
     }
 
     @GetMapping("/api/designated-donation/projects/{id}")
-    public ResponseEntity<?> designatedDetail(@PathVariable Long id) {
+    public ResponseEntity<?> designatedDetail(@PathVariable Long id, HttpServletRequest request) {
         DesignatedProject project = donationService.findProject(id).orElse(null);
         if (project == null) {
             return ResponseEntity.notFound().build();
         }
+        // 공개 화면이지만 로그인 상태면 본인 기부건을 giveOrder=1로 표시해 인라인 편집을 노출한다.
+        Long currentUserId = jwtVerifier.currentUserId(request).orElse(null);
         BigDecimal rate = donationService.fundingRatePercent(project);
-        List<CheerMessageDto> cheerMessages = donationService.cheerMessagesOf(id).stream()
-                .map(c -> new CheerMessageDto(c.maskedUserName(), c.maskedLoginId(), c.cntrDeFormatted(), c.cntrAmt(), c.cheerMsg()))
+        List<CheerMessageDto> cheerMessages = donationService.cheerMessagesOf(id, currentUserId).stream()
+                .map(c -> new CheerMessageDto(c.cntrSn(), c.giveOrder(), c.maskedUserName(), c.maskedLoginId(),
+                        c.cntrDeFormatted(), c.cntrAmt(), c.cheerMsg()))
                 .toList();
         List<NoticeDto> notices = donationService.noticesOf(id).stream()
                 .map(n -> {
@@ -250,6 +269,25 @@ public class DonationPublicApiController {
     }
 
     public record CreateDesignatedDonationRequest(Long dsgnDntnBizId, BigDecimal amount, String cheerMsg) {
+    }
+
+    public record SaveCheerMsgRequest(String cntrSn, String cheerMsg) {
+    }
+
+    /** 특정사업 상세 "응원메시지(기부내역)" 탭에서 본인 기부건의 응원메시지 저장/수정
+     *  (AS-IS designated-donation/details.html saveCheerMsg). 로그인 본인 완료 기부건만. */
+    @PostMapping("/api/designated-donation/saveCheerMsg")
+    public ResponseEntity<?> saveCheerMsg(@RequestBody SaveCheerMsgRequest req, HttpServletRequest request) {
+        var authUserId = jwtVerifier.currentUserId(request);
+        if (authUserId.isEmpty()) {
+            return ResponseEntity.status(401).build();
+        }
+        try {
+            donationService.saveCheerMsg(authUserId.get(), req.cntrSn(), req.cheerMsg());
+            return ResponseEntity.ok(Map.of("result", true));
+        } catch (DonationException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     @PostMapping("/api/donate/designated")

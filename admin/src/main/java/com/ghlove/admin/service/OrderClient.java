@@ -42,6 +42,37 @@ public class OrderClient {
                                       String orderStatus, LocalDateTime createdDate) {
     }
 
+    /**
+     * 포인트사용 정합성검증(메뉴 7210)의 주문측 집계 - AS-IS pointcheck 쿼리의 주문 파트를
+     * order 서비스가 자기 표에서 집계해 내려준다(조회 전용, 사용자 승인 후 추가 2026-10-03).
+     */
+    public List<OrderAmountRow> reconciliationOrderAmounts(String query, String startDate, String endDate) {
+        try {
+            List<OrderAmountRow> rows = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/reconciliation/order-amounts")
+                            .queryParamIfPresent("query", java.util.Optional.ofNullable(blankToNull(query)))
+                            .queryParamIfPresent("startDate", java.util.Optional.ofNullable(blankToNull(startDate)))
+                            .queryParamIfPresent("endDate", java.util.Optional.ofNullable(blankToNull(endDate)))
+                            .build())
+                    .header(HEADER_SECRET, adminSecret)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<OrderAmountRow>>() {
+                    });
+            return rows != null ? rows : List.of();
+        } catch (RestClientException e) {
+            return List.of();
+        }
+    }
+
+    public record OrderAmountRow(String orderCode, String locgovCode, String orderStatus,
+                                  long orderAmt, long orderAmtCancel, long orderAmt0,
+                                  long remittanceAmt, long holdCnt, LocalDateTime createdDate) {
+    }
+
+    private static String blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value;
+    }
+
     /** StatsService ReadModel 재동기화용 - 주문 전체 현재 상태 스냅샷.
      *  SFR-006 재검토 라운드 - 이 경로가 시크릿 헤더 없이 무인증으로 남아있던 잔존
      *  gap(admin_gap_fill_round2 메모 참고)을 이번에 닫는다: 다른 관리자 호출과 동일하게

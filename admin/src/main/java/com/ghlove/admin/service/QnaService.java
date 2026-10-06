@@ -26,6 +26,18 @@ public class QnaService {
 
     private static final DateTimeFormatter CREATED_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
+    /**
+     * AS-IS {@code Qna.QNA_GROUP_TYPE_INDIVIDUAL} - 1:1 문의(마이페이지에서 쓰는 개인 문의).
+     * 운영자 화면은 메뉴 <b>5102</b>({@code /admin/inquiries})다.
+     */
+    private static final String QNA_TYPE_INDIVIDUAL = "0";
+
+    /**
+     * AS-IS {@code Qna.QNA_GROUP_TYPE_QNA} - 고객센터 공개 Q&A 게시판.
+     * 운영자 화면은 메뉴 <b>5112</b>({@code /qna-admin})다.
+     */
+    private static final String QNA_TYPE_QNA = "2";
+
     private final QnaRepository qnaRepository;
     private final QnaAnswerRepository qnaAnswerRepository;
     private final QnaFileRepository qnaFileRepository;
@@ -48,6 +60,9 @@ public class QnaService {
         qna.setUserName(userName);
         qna.setEmail(email);
         qna.setQnaGroup(qnaGroup);
+        // AS-IS api/qna QnaController는 1:1문의 등록 시 QNA_TYPE_INDIVIDUAL('0')을 넣는다.
+        // 빠뜨리면 운영자 1:1문의 화면(5102, qna_type='0' 필터)에 글이 보이지 않는다.
+        qna.setQnaType(QNA_TYPE_INDIVIDUAL);
         qna.setSubject(subject);
         qna.setQuestion(question);
         qna.setCreatedDate(LocalDateTime.now().format(CREATED_DATE_FORMAT));
@@ -73,9 +88,17 @@ public class QnaService {
         return qna;
     }
 
-    /** 날짜 범위는 CREATED_DATE(yyyyMMddHHmmss)의 앞 8자리(yyyyMMdd)로 비교한다. */
+    /**
+     * 마이페이지 "1:1 문의" 내역 - 날짜 범위는 CREATED_DATE(yyyyMMddHHmmss)의 앞 8자리로 비교한다.
+     *
+     * <p>AS-IS {@code api/qna QnaController}는 이 목록을 {@code QNA_TYPE='0'}으로 거른다 -
+     * 같은 표에 공개 Q&A 글({@code '2'})이 섞여 있어서다. 그 필터가 빠져 있어
+     * <b>내가 쓴 Q&A 글까지 1:1문의 내역에 나오던 것</b>을 바로잡았다.
+     */
     public List<Qna> myInquiries(Long userId, String searchStartDate, String searchEndDate) {
-        List<Qna> all = qnaRepository.findByUserIdOrderByCreatedDateDesc(userId);
+        List<Qna> all = qnaRepository.findByUserIdOrderByCreatedDateDesc(userId).stream()
+                .filter(q -> QNA_TYPE_INDIVIDUAL.equals(q.getQnaType()))
+                .toList();
         if (searchStartDate == null && searchEndDate == null) {
             return all;
         }
@@ -175,12 +198,18 @@ public class QnaService {
      * 고객센터 &gt; Q&amp;A (AS-IS qna/qna-open.html) - 전체 회원 글이 다 보이는 공개 게시판.
      * AS-IS는 질문행과 답변행을 하나의 flat 리스트로 묶어 내려준다(답변이 달린 질문은 그
      * 목록에 두 줄을 차지한다) - 순번(No.)도 이 합쳐진 리스트 기준으로 매겨진다.
+     *
+     * <p><b>★ {@code QNA_TYPE='2'} 필터를 넣었다</b>. 같은 표에 마이페이지 <b>1:1문의</b>
+     * ({@code '0'})가 함께 들어 있는데 그 필터가 빠져 있어서, 개인 문의의 <b>제목과 작성자가
+     * 공개 게시판 목록에 그대로 노출</b>되고 있었다(비밀글이면 내용만 가려지고 제목은 보인다).
+     * AS-IS 공개 Q&A는 {@code QNA_TYPE_QNA}로만 조회한다.
      */
     @Transactional(readOnly = true)
     public BoardPage publicBoard(String where, String query, String orderBy, String sort,
                                   int page, int size, Long viewerUserId) {
         List<Qna> all = qnaRepository.findAll().stream()
                 .filter(q -> !"N".equals(q.getDisplayFlag()))
+                .filter(q -> QNA_TYPE_QNA.equals(q.getQnaType()))
                 .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
 
         if (query != null && !query.isBlank()) {
@@ -239,7 +268,12 @@ public class QnaService {
         return new BoardPage(rows, currentPage, Math.max(totalPages, 1), totalCount);
     }
 
-    /** 상세 조회 - 비밀글이고 작성자 본인이 아니면 잠금 상태로만 반환한다(내용은 내려주지 않는다). */
+    /**
+     * 상세 조회 - 비밀글이고 작성자 본인이 아니면 잠금 상태로만 반환한다(내용은 내려주지 않는다).
+     *
+     * <p>목록과 같은 이유로 <b>공개 Q&A 글만</b> 열어 준다 - 그러지 않으면 id만 바꿔
+     * 남의 1:1문의를 열어 볼 수 있다(비밀글이 아니면 본문까지 보였다).
+     */
     @Transactional
     public Optional<BoardDetail> publicBoardDetail(Integer qnaId, Long viewerUserId) {
         Optional<Qna> found = qnaRepository.findById(qnaId);
@@ -247,6 +281,9 @@ public class QnaService {
             return Optional.empty();
         }
         Qna qna = found.get();
+        if (!QNA_TYPE_QNA.equals(qna.getQnaType())) {
+            return Optional.empty();
+        }
         boolean mine = viewerUserId != null && viewerUserId.equals(qna.getUserId());
         boolean locked = "Y".equals(qna.getSecretFlag()) && !mine;
         if (locked) {

@@ -48,6 +48,29 @@ public class OrderSagaListener {
                 log.info("Received OrderCancelledEvent: {}", event);
                 pointService.restoreForOrder(event.orderId());
             }
+            // 멀티아이템(출고 단위 SAGA) - 출고(지자체) 단위 포인트 차감/복원
+            case "SHIPMENT_CREATED" -> {
+                ShipmentCreatedEvent event = objectMapper.readValue(payload, ShipmentCreatedEvent.class);
+                log.info("Received ShipmentCreatedEvent: {}", event);
+                long amount = event.groupPointAmount() != null ? event.groupPointAmount() : 0L;
+                boolean deducted = pointService.deductForShipment(event.shipmentId(), event.orderId(),
+                        event.userId(), amount, event.locgovCode(), event.lines());
+                if (deducted) {
+                    orderSagaPublisher.publishShipmentPointDeducted(event.shipmentId(), event.orderId());
+                } else {
+                    orderSagaPublisher.publishShipmentPointDeductFailed(event.shipmentId(), event.orderId(), "포인트 부족");
+                }
+            }
+            case "SHIPMENT_CANCELLED" -> {
+                ShipmentCancelledEvent event = objectMapper.readValue(payload, ShipmentCancelledEvent.class);
+                log.info("Received ShipmentCancelledEvent: {}", event);
+                pointService.restoreForShipment(event.shipmentId(), event.orderId(), event.orderItemIds());
+            }
+            case "ITEM_CANCELLED" -> {
+                ItemCancelledEvent event = objectMapper.readValue(payload, ItemCancelledEvent.class);
+                log.info("Received ItemCancelledEvent: {}", event);
+                pointService.restoreForItem(event.orderId(), event.orderItemId());
+            }
             default -> { /* not relevant to point service */ }
         }
     }

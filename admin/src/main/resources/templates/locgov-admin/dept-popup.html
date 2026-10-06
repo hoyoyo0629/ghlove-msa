@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>부서코드 변경이력 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<!-- AS-IS opmanager/i18n/user/locgov/popup.jsp 이식. layout=base 팝업(800x600).
+     지자체 수정화면의 부서코드 옆 "이력확인"이 띄운다.
+
+     AS-IS verbatim:
+     - 페이지당 5건이다(컨트롤러가 itemsPerPage=5로 고정한다).
+     - No 칼럼은 순번이 아니라 **DEPT_HIST_NO(이력 일련번호)**를 그대로 찍는다.
+     - 등록자는 "이름(아이디)" 형태다. TO-BE에서 관리자 계정은 admin 소유라 donation이 ID만
+       내려주고 admin이 OP_MANAGER에서 이름·아이디를 찾는다.
+     - caption/summary가 없고, 빈 목록 행에만 background 스타일이 없다. -->
+<body>
+<div class="popup_wrap">
+	<div id="pop_header">
+		<h1 class="popup_title">부서코드 변경이력</h1>
+		<a href="javascript:self.close();" class="btn_close"><img th:src="@{/content/opmanager/images/btn/btn_close.png}" alt="닫기"></a>
+	</div>
+
+	<div class="popup_contents">
+		<div>
+			<div class="board_list">
+				<table class="board_list_table">
+					<colgroup>
+						<col style="width:200px;">
+						<col style="width:200px;">
+						<col style="width:200px;">
+						<col style="width:300px;">
+					</colgroup>
+					<thead>
+						<tr>
+							<th scope="col">No</th>
+							<th scope="col">변경일</th>
+							<th scope="col">부서코드</th>
+							<th scope="col">등록자</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr th:each="item : ${list}" style="background:#fff;">
+							<td>
+								<div th:text="${item.deptHistNo}"></div>
+							</td>
+							<td>
+								<div th:text="${item.lastUpdtPnttm}"></div>
+							</td>
+							<td>
+								<div th:text="${item.processDeptCode}"></div>
+							</td>
+							<td>
+								<div th:text="${item.registerText}"></div>
+							</td>
+						</tr>
+						<tr th:if="${#lists.isEmpty(list)}">
+							<td colspan="4">부서코드 변경이력 데이터가 존재하지 않습니다.</td>
+						</tr>
+					</tbody>
+				</table>
+				<div class="pagination-wrap" th:if="${not #lists.isEmpty(list)}">
+					<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script type="text/javascript">
+	$(function() {
+
+	});
+
+	/**
+	 *	함 수 명 : movePage
+	 *	기	능  : 페이지 이동 (AS-IS 페이지네이션 태그가 만든 링크를 이 팝업 안에서 처리한다)
+	 */
+	function movePage(page) {
+		var url = new URL(location.href);
+		url.searchParams.set("page", page);
+		location.href = url.toString();
+	}
+</script>
+</body>
+</html>

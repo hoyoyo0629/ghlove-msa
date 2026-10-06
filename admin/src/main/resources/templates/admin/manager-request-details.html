@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>관리자 권한 승인관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<!-- AS-IS opmanager/i18n/user/popup/manager-request-details.jsp 이식. layout=base 팝업(600x650).
+     신청자 정보(아이디/이름/생년월일/휴대폰/이메일/소속구분/소속/부서/직위)를 보여주고,
+     상태가 대기(200)면 승인·거절 처리 영역이 뜬다(승인 시 부여 권한과 지자체를 고른다).
+     승인/거절 엔드포인트는 기존 그대로 쓴다. -->
+<body>
+<div class="popup_wrap">
+    <div id="pop_header">
+        <h1 class="popup_title">관리자 권한 승인관리<span th:if="${details != null and details.confmSttusCode != '200'}"
+            th:text="'(' + ${confmSttusLabels.containsKey(details.confmSttusCode) ? confmSttusLabels.get(details.confmSttusCode) : details.confmSttusCode} + ')'"></span></h1>
+        <a href="javascript:self.close();" class="btn_close">
+            <img th:src="@{/content/opmanager/images/btn/btn_close.png}" alt="닫기">
+        </a>
+    </div>
+    <div class="popup_contents">
+
+        <div class="board_write">
+            <table class="board_write_table">
+                <colgroup>
+                    <col style="width:150px;">
+                    <col>
+                </colgroup>
+                <tbody>
+                    <tr>
+                        <td class="label">아이디</td>
+                        <td><div th:text="${details != null} ? ${details.loginId} : ''"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="label">이름</td>
+                        <td><div th:text="${member != null} ? ${member.userName} : ''"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="label">휴대폰</td>
+                        <td><div th:text="${member != null} ? ${member.phoneNumber} : ''"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="label">이메일 주소</td>
+                        <td><div th:text="${member != null} ? ${member.email} : ''"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="label">소속 구분</td>
+                        <td><div th:text="${details != null and reqstSeCodeLabels.containsKey(details.reqstSeCode)}
+                                          ? ${reqstSeCodeLabels.get(details.reqstSeCode)}
+                                          : (${details != null} ? ${details.reqstSeCode} : '')"></div></td>
+                    </tr>
+                    <tr th:if="${details != null and (details.reqstSeCode == 'ROLE_ADMIN_8' or details.reqstSeCode == 'ROLE_ADMIN_6')}">
+                        <td class="label" th:text="${details.reqstSeCode == 'ROLE_ADMIN_8'} ? '소속은행' : '소속 지자체'"></td>
+                        <td>
+                            <div th:if="${details.reqstSeCode == 'ROLE_ADMIN_6'}"
+                                 th:text="${locgovNames.containsKey(details.locgovCode)} ? ${locgovNames.get(details.locgovCode)} : ${details.locgovCode}"></div>
+                            <div th:if="${details.reqstSeCode == 'ROLE_ADMIN_8'}" th:text="${details.psitnNm}"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="label">소속 부서</td>
+                        <td><div th:text="${details != null} ? ${details.psitnDeptNm} : ''"></div></td>
+                    </tr>
+                    <tr>
+                        <td class="label">직위</td>
+                        <td><div th:text="${details != null} ? ${details.ofcpsNm} : ''"></div></td>
+                    </tr>
+                    <tr th:if="${details != null and details.confmSttusCode == '300'}">
+                        <td class="label">거절사유</td>
+                        <td><div th:text="${details.rejectResn}"></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 대기(200) 상태에서만 승인/거절 처리 -->
+        <th:block th:if="${details != null and details.confmSttusCode == '200'}">
+            <div class="board_write mt20">
+                <form th:id="'approveForm'" method="post"
+                      th:action="@{'/admin/manager-requests/' + ${details.userId} + '/' + ${details.reqstSn} + '/approve'}">
+                    <table class="board_write_table">
+                        <colgroup>
+                            <col style="width:150px;">
+                            <col>
+                        </colgroup>
+                        <tbody>
+                            <tr>
+                                <td class="label"><span class="required_mark">*</span>부여 권한</td>
+                                <td>
+                                    <div>
+                                        <select id="authority" name="authority" title="부여 권한">
+                                            <option th:each="role : ${roles}" th:value="${role.authority}" th:text="${role.roleName}"></option>
+                                        </select>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="label">소속 지자체</td>
+                                <td>
+                                    <div>
+                                        <input type="text" id="assignedLocgovCode" name="assignedLocgovCode"
+                                               class="nine" th:value="${details.locgovCode}" title="소속 지자체 코드"/>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="popup_btns">
+                        <button type="submit" class="btn btn-active">승인</button>
+                    </p>
+                </form>
+            </div>
+
+            <div class="board_write mt20">
+                <form th:id="'rejectForm'" method="post"
+                      th:action="@{'/admin/manager-requests/' + ${details.userId} + '/' + ${details.reqstSn} + '/reject'}">
+                    <table class="board_write_table">
+                        <colgroup>
+                            <col style="width:150px;">
+                            <col>
+                        </colgroup>
+                        <tbody>
+                            <tr>
+                                <td class="label"><span class="required_mark">*</span>거절사유</td>
+                                <td>
+                                    <div>
+                                        <input type="text" id="reason" name="reason" class="full" title="거절사유" maxlength="200"/>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="popup_btns">
+                        <button type="submit" class="btn btn-dark-gray">거절</button>
+                    </p>
+                </form>
+            </div>
+        </th:block>
+
+    </div>
+</div>
+
+<script type="text/javascript">
+    $(function() {
+        $('#rejectForm').on('submit', function() {
+            if ($.trim($('#reason').val()) == '') {
+                alert('거절사유를 입력해 주세요.');
+                $('#reason').focus();
+                return false;
+            }
+            return confirm('거절 처리하시겠습니까?');
+        });
+
+        $('#approveForm').on('submit', function() {
+            return confirm('승인 처리하시겠습니까?');
+        });
+    });
+</script>
+</body>
+</html>

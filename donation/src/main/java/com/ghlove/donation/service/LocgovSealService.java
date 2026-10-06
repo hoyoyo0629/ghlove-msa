@@ -73,6 +73,30 @@ public class LocgovSealService {
         locgovRepository.save(locgov);
     }
 
+    /**
+     * 직인 삭제 - AS-IS {@code LocgovServiceImpl.deleteOffcsFile}. 암호화 파일을 실제로 지우고
+     * {@code OFFCS_NM}·{@code OFFCS_FILE_NM}·{@code ORGINL_FILE_NM} 세 컬럼을 NULL로 만든다
+     * (AS-IS {@code updateLocgovOffcsInfo}가 직인명까지 함께 비운다 - 화면도 삭제 후
+     * 직인명 입력칸을 비운다).
+     *
+     * @return 삭제 처리했으면 true, 지자체가 없으면 false
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public boolean deleteSeal(String locgovCode) {
+        Locgov locgov = locgovRepository.findById(locgovCode).orElse(null);
+        if (locgov == null) {
+            return false;
+        }
+        if (locgov.getOffcsFileNm() != null && !locgov.getOffcsFileNm().isBlank()) {
+            deleteQuietly(locgov.getOffcsFileNm());
+        }
+        locgov.setOffcsNm(null);
+        locgov.setOffcsFileNm(null);
+        locgov.setOrginlFileNm(null);
+        locgovRepository.save(locgov);
+        return true;
+    }
+
     /** 복호화된 원본 이미지 바이트. 직인이 등록되지 않은 지자체면 empty. */
     public Optional<byte[]> decryptedSealBytes(String locgovCode) {
         if (locgovCode == null) {

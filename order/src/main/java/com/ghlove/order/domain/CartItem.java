@@ -32,6 +32,21 @@ public class CartItem {
     @Column(name = "ITEM_ID")
     private Long itemId;
 
+    /** 선택한 답례품 옵션 (없으면 0). 옵션명/추가금액은 담을 때 gift에서 조회해 스냅샷한다. */
+    @Column(name = "ITEM_OPTION_ID")
+    private Long itemOptionId = 0L;
+
+    @Column(name = "OPTION_NAME")
+    private String optionName;
+
+    @Column(name = "OPTION_PRICE")
+    private Integer optionPrice = 0;
+
+    /** 각인(필수 추가정보) 구매자 입력값 - 제목별 값을 '||'로 연결(AS-IS textOption).
+     *  각인이 다르면 별도 라인이므로 유니크 키(user,item,option,text)에 포함. 없으면 ''. */
+    @Column(name = "TEXT_OPTION", nullable = false)
+    private String textOption = "";
+
     @Column(name = "QUANTITY")
     private Integer quantity;
 

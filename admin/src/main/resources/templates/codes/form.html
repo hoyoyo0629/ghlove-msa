@@ -1,61 +1,158 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>코드 등록 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <title>공통코드 관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
+<!-- AS-IS opmanager/i18n/code/form.jsp 이식. AS-IS는 layout="base"(관리셸 없음)인 팝업창이라
+     header/lnb/footer 없이 .popup_wrap 만 쓴다. 코드구분은 읽기전용이고, 저장하면
+     common/popup-result가 opener.fnSearch() 후 창을 닫는다(AS-IS와 동일). -->
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div class="popup_wrap">
+    <h1 class="popup_title" th:text="${msg.get('MENU_1401')}">공통코드 관리</h1> <!-- 공통코드 관리 -->
+    <div class="popup_contents">
 
-<!-- codes/list.html에서 넘어올 때 사이드바가 사라지던 버그 수정(content/banner-form.html과
-     같은 패턴). board_write_table로 재작성. -->
-<div class="contents contents_inner">
-    <div class="location"><a th:href="@{/codes}">공통코드 관리</a></div>
-    <h3><span>코드 등록</span></h3>
+        <div class="board_guide" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
-    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+        <form id="code" th:action="${isNew} ? @{/codes/create} : @{/codes/edit}" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="language" value="ko" />
 
-    <div class="board_write">
-        <table class="board_write_table" summary="코드 등록">
-            <colgroup><col style="width:220px;"><col></colgroup>
-            <tbody>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>코드유형</td>
-                <td><input type="text" id="codeType" name="codeType" th:value="${codeType}" required placeholder="예: NOTICE_CATEGORY" form="codeForm"></td>
-            </tr>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>코드 ID</td>
-                <td><input type="text" id="id" name="id" required placeholder="예: GENERAL" form="codeForm"></td>
-            </tr>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>라벨</td>
-                <td><input type="text" id="label" name="label" required placeholder="예: 공지" form="codeForm"></td>
-            </tr>
-            <tr>
-                <td class="label">설명 (선택)</td>
-                <td><textarea id="detail" name="detail" rows="2" form="codeForm"></textarea></td>
-            </tr>
-            <tr>
-                <td class="label">정렬순서 (선택)</td>
-                <td><input type="number" id="ordering" name="ordering" step="1" form="codeForm"></td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
-    <form id="codeForm" th:action="@{/codes}" method="post"></form>
-    <div class="btn_all btn_center">
-        <div class="flex_box gap-08">
-            <button type="submit" form="codeForm" class="btn btn-dark-gray btn-small">등록</button>
-            <a th:href="@{/codes}" class="btn btn-dark-default btn-small">목록으로</a>
-        </div>
+            <div class="board_write">
+
+                <table class="board_write_table">
+                    <caption th:text="${msg.get('MENU_1401')}">공통코드 관리</caption> <!-- 공통코드 관리 -->
+                    <colgroup>
+                        <col style="width:150px;">
+                        <col style="width:auto;">
+                    </colgroup>
+                    <tbody>
+                        <tr>
+                            <td class="label"><span th:text="${msg.get('M01680')}">코드구분</span> <font color=red>*</font></td> <!-- 코드구분 -->
+                            <td>
+                                <div>
+                                    <input type="text" id="codeType" name="codeType" th:value="${code.codeType}" th:title="${msg.get('M01680')}" class="nine" readonly="readonly" maxlength="30"/>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label"><span th:text="${msg.get('M01374')}">코드</span> <font color=red>*</font></td> <!-- 코드 -->
+                            <td>
+                                <div>
+                                    <input type="text" id="id" name="id" th:value="${code.id}" th:title="${msg.get('M01374')}" class="nine" maxlength="25" th:readonly="${!isNew}"/>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label" th:text="${msg.get('M01674')}">코드라벨</td> <!-- 코드라벨 -->
+                            <td>
+                                <div>
+                                    <input type="text" id="label" name="label" th:value="${code.label}" th:title="${msg.get('M01674')}" class="nine" maxlength="40"/>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label" th:text="${msg.get('M01677')}">코드상세</td> <!-- 코드상세 -->
+                            <td>
+                                <div>
+                                    <input type="text" id="detail" name="detail" th:value="${code.detail}" th:title="${msg.get('M01677')}" class="nine" maxlength="55"/>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label" th:text="${msg.get('M01678')}">정렬순서</td> <!-- 정렬순서 -->
+                            <td>
+                                <div>
+                                    <!-- AS-IS op:negativeNumberToEmpty - 음수는 빈칸으로 보여준다 -->
+                                    <input type="text" name="ordering" id="ordering"
+                                           th:value="${code.ordering != null and code.ordering >= 0} ? ${code.ordering} : ''"
+                                           th:title="${msg.get('M01678')}" class="nine" maxlength="10"/>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label" th:text="${msg.get('M00669')}">사용유무</td> <!-- 사용유무  -->
+                            <td>
+                                <div>
+                                    <input type="radio" id="useYn1" name="useYn" value="Y" th:checked="${code.useYn == null or code.useYn == 'Y'}" /><label for="useYn1">Y</label>
+                                    <input type="radio" id="useYn2" name="useYn" value="N" th:checked="${code.useYn == 'N'}" /><label for="useYn2">N</label>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td class="label" th:text="${msg.get('M01682')}">상위ID</td> <!-- 상위ID  -->
+                            <td>
+                                <div>
+                                    <input type="text" id="upId" name="upId" th:value="${code.upId}" th:title="${msg.get('M01682')}" class="nine" maxlength="25"/>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label" th:text="${msg.get('M01675')}">코드값</td> <!-- 코드값  -->
+                            <td>
+                                <div>
+                                    <input type="text" id="codeValue" name="codeValue" th:value="${code.codeValue}" th:title="${msg.get('M01675')}" class="nine" maxlength="200"/>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label" th:text="${msg.get('M01684')}">확장코드</td> <!-- 확장코드  -->
+                            <td>
+                                <div>
+                                    <input type="text" id="extensionCode" name="extensionCode" th:value="${code.extensionCode}" th:title="${msg.get('M01684')}" class="nine" maxlength="200"/>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label" th:text="${msg.get('M01685')}">매핑코드</td> <!-- 매핑코드  -->
+                            <td>
+                                <div>
+                                    <input type="text" id="mappingCode" name="mappingCode" th:value="${code.mappingCode}" th:title="${msg.get('M01685')}" class="nine" maxlength="200"/>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+             </div> <!--// board_write E-->
+
+            <!-- 버튼시작 -->
+            <div class="btn_center">
+                <button type="submit" class="btn btn-active"><span th:text="${msg.get('M00101')}">저장</span></button> <!-- 저장 -->
+                <a href="JavaScript:self.close();" class="btn btn-dark-gray"><span th:text="${msg.get('M00569')}">닫기</span></a> <!-- 닫기 -->
+            </div>
+            <!-- 버튼 끝-->
+        </form>
     </div>
 </div>
-<div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+
+<script type="text/javascript">
+
+$(function() {
+
+    // validator
+    try{
+        $('#code').validator(function() {
+            var codeType = $("#codeType").val();
+            var id = $("#id").val();
+
+            if (codeType.length==0) {
+                alert("코드구분은 필수 입력항목입니다.");
+                $("#codeType").focus();
+                return false;
+            }
+            if (id.length==0) {
+                alert("코드값은 필수 입력항목입니다.");
+                $("#id").focus();
+                return false;
+            }
+        });
+    } catch(e) {
+        alert(e.message);
+    }
+
+});
+
+</script>
 </body>
 </html>

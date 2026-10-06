@@ -4,7 +4,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
 import { loadDaumPostcode } from '../../utils/daumPostcode'
-import { formatN } from '../../utils/format'
+import { formatN, formatTextOption } from '../../utils/format'
 
 // AS-IS order/step1.html 재현 (Thymeleaf 버전 order/checkout.html과 동일 출처). 장바구니에서
 // 선택한 cartItemId 목록을 쿼리로 받아 읽기전용 재표시 + 배송지입력 + 결제하기.
@@ -71,6 +71,7 @@ async function refreshQuote() {
       cartItemId: cartItemIds,
       couponByCartItem: selectedCoupons(),
       deliveryAddress: form.address || null,
+      zipcode: form.post || null,
     })
     errorMessage.value = ''
   } catch (e) {
@@ -81,7 +82,7 @@ async function refreshQuote() {
 }
 
 // 쿠폰 선택과 배송지(제주·도서산간 추가배송비)가 바뀌면 금액을 다시 받아온다.
-watch([couponSelections, () => form.address], () => {
+watch([couponSelections, () => form.address, () => form.post], () => {
   if (!loading.value) refreshQuote()
 })
 
@@ -166,6 +167,7 @@ async function submit() {
       deliveryAddressDetail: form.addressDetail,
       requestNote: form.requestNote,
       couponByCartItem,
+      zipcode: form.post,
     })
     router.push({ path: '/checkout/done', query: { orderIds: res.orderIds.join(',') } })
   } catch (e) {
@@ -222,7 +224,10 @@ async function submit() {
                     <div class="g_info_wrap">
                       <div class="link_wrap">
                         <div class="g_info__img"><img :src="line.thumbnailUrl ?? '/images/thumb.png'" :alt="line.itemName + ' 이미지'" /></div>
-                        <div class="g_info__txt"><div class="info_title"><span>{{ line.itemName }}</span></div></div>
+                        <div class="g_info__txt"><div class="info_title"><span>{{ line.itemName }}</span></div>
+                          <div class="info_opt" v-if="line.optionName">옵션 : {{ line.optionName }}</div>
+                          <div class="info_opt" v-if="line.textOption"><span v-html="formatTextOption(line.textOption)"></span></div>
+                        </div>
                       </div>
                     </div>
                   </div>

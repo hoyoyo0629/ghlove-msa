@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
-import { formatN } from '../../utils/format'
+import { formatN, formatTextOption } from '../../utils/format'
 
 // AS-IS order/step2.html 재현 (Thymeleaf 버전 order/order-complete.html과 동일 출처).
 const route = useRoute()
@@ -10,11 +10,11 @@ const router = useRouter()
 const groups = ref([])
 const totalPoint = ref(0)
 const loading = ref(true)
+const header = ref({})
 
-const allOrders = computed(() => groups.value.flatMap((g) => g.orders))
-const orderIdsText = computed(() => allOrders.value.map((o) => o.orderId).join(', '))
-const orderedDate = computed(() => (allOrders.value[0] ? allOrders.value[0].createdDate?.replace('T', ' ').slice(0, 16) : ''))
-const first = computed(() => allOrders.value[0] ?? {})
+const orderIdsText = computed(() => header.value.orderId ?? '')
+const orderedDate = computed(() => (header.value.createdDate ? header.value.createdDate.replace('T', ' ').slice(0, 16) : ''))
+const first = computed(() => header.value ?? {})
 
 onMounted(async () => {
   const orderIds = route.query.orderIds
@@ -26,6 +26,7 @@ onMounted(async () => {
     const data = await api.get('order', `/api/checkout/done?orderIds=${encodeURIComponent(orderIds)}`)
     groups.value = data.groups
     totalPoint.value = data.totalPoint
+    header.value = data
   } catch {
     router.replace('/cart')
     return
@@ -74,14 +75,18 @@ onMounted(async () => {
                 </div>
               </div>
               <ul class="item_list-group">
-                <li class="list-items" v-for="o in g.orders" :key="o.orderId">
+                <li class="list-items" v-for="(it, idx) in g.items" :key="idx">
                   <div class="date-col g_info">
-                    <div class="g_info_wrap"><div class="link_wrap"><div class="g_info__txt"><div class="info_title"><span>{{ o.itemName }}</span></div></div></div></div>
+                    <div class="g_info_wrap"><div class="link_wrap"><div class="g_info__txt">
+                      <div class="info_title"><span>{{ it.itemName }}</span></div>
+                      <div class="info_opt" v-if="it.optionName">옵션 [ {{ it.optionName }} ]</div>
+                      <div class="info_opt" v-if="it.textOption"><span v-html="formatTextOption(it.textOption)"></span></div>
+                    </div></div></div>
                   </div>
                   <div class="date-col g_amtprc">
                     <div class="g_info_wrap">
-                      <div class="g_info__amount">{{ o.quantity }}개</div>
-                      <div class="g_info__price">{{ formatN(o.pointAmount) }} P</div>
+                      <div class="g_info__amount">{{ it.quantity }}개</div>
+                      <div class="g_info__price">{{ formatN(it.pointAmount) }} P</div>
                     </div>
                   </div>
                 </li>
@@ -111,8 +116,8 @@ onMounted(async () => {
             <div class="list_wrapper" v-for="g in groups" :key="g.locgovNm">
               <div class="list_loc">{{ g.locgovNm }}</div>
               <ul class="paymentC">
-                <li class="payment_list"><span class="payment__label">답례품 포인트</span><span class="payment__val">{{ formatN(g.groupTotal) }}P</span></li>
-                <li class="payment_list"><span class="payment__label">배송비</span><span class="payment__val">무료배송</span></li>
+                <li class="payment_list"><span class="payment__label">답례품 포인트</span><span class="payment__val">{{ formatN(g.groupTotal - g.deliveryFee) }}P</span></li>
+                <li class="payment_list"><span class="payment__label">배송비</span><span class="payment__val">{{ g.deliveryFee ? formatN(g.deliveryFee) + 'P' : '무료배송' }}</span></li>
               </ul>
               <div class="payment_list total_pay">
                 <strong class="label">결제 포인트</strong>

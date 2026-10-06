@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>FAQ - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/faq/form.jsp 이식(메뉴 5104 FAQ 등록·수정).
+     AS-IS는 등록과 수정이 같은 화면(form.jsp)이고 action만 달라진다.
+
+     AS-IS verbatim:
+     - h3가 M00674("자주 묻는 질문관리")다.
+     - 표는 질문유형 / 제목 / 내용 세 줄이다. 사용여부를 끄는 수단이 없다(저장 시 항상 'Y').
+     - 질문유형 select에는 <b>빈 항목이 없다</b>(전체 옵션은 주석처리) - 항상 값이 하나 선택된다.
+     - 제목에만 required가 붙고 내용에는 붙지 않는다.
+     - 내용 textarea의 title 속성이 M00661("배송/반품/환불/교환안내")이다 - 다른 화면에서
+       복사한 흔적이지만 화면에 보이는 값이 아니라 그대로 둔다.
+     - 버튼은 가운데 정렬 [저장][취소]이고, 취소는 Link.list로 목록으로 돌아간다.
+     - 내용은 스마트에디터로 편집한다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<!-- AS-IS는 form:form에 action을 주지 않아 "지금 보고 있는 주소"로 그대로 POST한다
+     (/faq-admin/create 또는 /faq-admin/edit/{id}). 그래서 Link.view가 붙여 준 ?url=<돌아갈 주소>도
+     같이 전송되어 수정 저장 후 리다이렉트에 실려 간다 - 그 모양을 유지하려고 여기서도 비워 둔다. -->
+<form id="faq" method="post">
+    <h3><span th:text="${msg.get('M00674')}">자주 묻는 질문관리</span></h3>
+    <div class="board_write">
+        <table class="board_write_table">
+            <caption th:text="${msg.get('M00675')}"></caption>
+            <colgroup>
+                <col style="width:150px;">
+                <col style="width:auto;">
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td class="label" th:text="${msg.get('M00676')}">질문유형</td>
+                    <td>
+                        <div>
+                            <!-- AS-IS 주석처리: '전체' 옵션 -->
+                            <select id="faqType" name="faqType" th:title="${msg.get('M00677')}">
+                                <option th:each="t : ${faqTypes}" th:value="${t.key}" th:text="${t.value}"
+                                        th:selected="${faq.faqType == t.key}"></option>
+                            </select>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label" th:text="${msg.get('M00275')}">제목</td>
+                    <td>
+                        <div>
+                            <input type="text" id="title" name="title" th:value="${faq.title}"
+                                   th:title="${msg.get('M00275')}" class="form-block required"/>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label" th:text="${msg.get('M00006')}">내용</td>
+                    <td>
+                        <div>
+                            <textarea id="content" name="content" cols="30" rows="6" class="w90 editor-content"
+                                      th:title="${msg.get('M00661')}" th:text="${faq.content}"></textarea>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div> <!-- // board_write -->
+
+    <!-- 버튼시작 -->
+    <div class="btn_all btn_center">
+        <div class="flex_box gap-08">
+            <button type="submit" class="btn btn-active"><span th:text="${msg.get('M00101')}">저장</span></button>
+            <a href="javascript:Link.list('/faq-admin')" class="btn btn-default"><span th:text="${msg.get('M00037')}">취소</span></a>
+        </div>
+    </div>
+    <!-- 버튼 끝-->
+</form>
+
+    </div>
+    </div>
+</div>
+</div>
+
+<div th:replace="~{fragments/smarteditor :: init}"></div>
+<div th:replace="~{fragments/smarteditor :: editor('content')}"></div>
+
+<script type="text/javascript" th:inline="javascript">
+var redirectMessage = /*[[${redirectMessage}]]*/ null;
+
+$(function() {
+	if (redirectMessage) {
+		alert(redirectMessage);
+	}
+
+	// validator
+	try{
+		$('#faq').validator(function() {
+
+			Common.getEditorContent("content");
+		});
+	} catch(e) {
+		alert(e.message);
+	}
+});
+</script>
+</body>
+</html>

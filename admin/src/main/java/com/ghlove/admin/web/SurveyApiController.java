@@ -1,62 +1,68 @@
 package com.ghlove.admin.web;
 
-import com.ghlove.admin.domain.Qustnr;
-import com.ghlove.admin.domain.QustnrQesitm;
-import com.ghlove.admin.domain.QustnrRspns;
-import com.ghlove.admin.repository.QustnrQesitmRepository;
-import com.ghlove.admin.repository.QustnrRepository;
-import com.ghlove.admin.repository.QustnrRspnsRepository;
+import com.ghlove.admin.repository.QestnarRepository;
 import com.ghlove.admin.service.JwtVerifier;
+import com.ghlove.admin.service.QestnarAdminService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * storefront(Vue3 SPA)용 공개 설문 참여 API - AS-IS `/api/qustnr/{qustnrSn}`(QustnrController)
- * 재현. 운영 콘솔의 설문관리({@link QustnrAdminController} /admin/surveys)는 문항 등록·결과집계까지
- * 있었으나 이용자가 참여할 화면·경로가 없었다.
+ * storefront(Vue3 SPA)용 공개 설문 참여 API - AS-IS `/api/qustnr/{qustnrSn}`(QustnrController) 재현.
  *
- * <p>AS-IS getQustnrByApi의 판정을 옮겼다: 로그인 필수, 노출중(isShow=Y)+노출기간 안이어야 하고,
- * 이미 응답한 사용자는 재참여 불가(regCnt&gt;0 → ALREADY_DONE). AS-IS의 객관식 보기(QustnrIem)는
- * MSA가 자유서술형 문항으로 단순화했으므로({@link QustnrAdminController} 참고) 응답도 문항별 텍스트다.
+ * <p>2026-10-02: 운영 콘솔 설문관리({@link QustnrAdminController})를 AS-IS 모델
+ * ({@code G_QESTNAR}/{@code G_QUSTNR_QESITM}/{@code G_QUSTNR_IEM}/{@code G_QUSTNR_RSPNS_RESULT})로
+ * 이식하면서 이 API도 같은 표를 보도록 옮겼다 - 그대로 두면 관리자가 등록한 설문이 이용자 화면에
+ * 보이지 않는 split-brain이 된다. 문항이 객관식 선택지(qustnrIem)를 갖게 되었으므로 응답은
+ * 선택지 id(qustnrIemSn)와 텍스트(respondAnswerCn, 주관식)를 함께 받는다.
+ *
+ * <p>AS-IS 판정을 유지한다: 로그인 필수, 노출기간 안이어야 하고, 이미 응답한 사용자는 재참여 불가.
  */
 @RestController
 @RequiredArgsConstructor
 public class SurveyApiController {
 
-    private static final String SHOW_Y = "Y";
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-    private final QustnrRepository qustnrRepository;
-    private final QustnrQesitmRepository qesitmRepository;
-    private final QustnrRspnsRepository rspnsRepository;
+    private final QestnarRepository qestnarRepository;
+    private final QestnarAdminService qestnarAdminService;
     private final JwtVerifier jwtVerifier;
 
-    public record QuestionDto(Long qustnrQesitmSn, String qestnCn, Integer qestnSeq) {
+    /** 선택지 - 객관식 문항의 보기. 주관식(stype)은 입력칸 자리표시용으로 1건만 온다. */
+    public record ChoiceDto(Integer qustnrIemSn, Integer iemSn, String iemCn) {
+    }
+
+    public record QuestionDto(Integer qustnrQesitmSn, String qestnCn, String qestnTyCode,
+                              Integer parentSn, List<ChoiceDto> choices) {
     }
 
     public record SurveyDto(Long qustnrSn, String qustnrSj, String qustnrBgnDe, String qustnrEndDe,
-                            boolean loggedIn, boolean alreadyResponded, List<QuestionDto> questions) {
+                            String srvyTrgt, boolean loggedIn, boolean alreadyResponded,
+                            List<QuestionDto> questions) {
     }
 
-    public record AnswerDto(Long qustnrQesitmSn, String rspnsCn) {
+    /** 응답 한 건 - 객관식은 qustnrIemSn, 주관식은 respondAnswerCn. */
+    public record AnswerDto(Integer qustnrQesitmSn, Integer qustnrIemSn, String respondAnswerCn) {
     }
 
-    /** 현재 참여 가능한(노출중 + 기간 내) 설문 중 가장 최근 것. 없으면 204. */
+    /** 현재 참여 가능한(기간 내) 대민 설문 중 가장 최근 것. 없으면 204. */
     @GetMapping("/api/surveys/active")
     public ResponseEntity<SurveyDto> active(HttpServletRequest request) {
-        String today = LocalDate.now().format(DATE);
-        return qustnrRepository.findByIsShowOrderByQustnrSnDesc(SHOW_Y).stream()
-                .filter(q -> withinPeriod(q, today))
+        return qestnarRepository.getQustnrList(null).stream()
+                .filter(q -> "U".equals(q.srvyTrgt()))
+                .filter(q -> "Y".equals(q.isShow()))
                 .findFirst()
                 .map(q -> ResponseEntity.ok(toDto(q, request)))
                 .orElseGet(() -> ResponseEntity.noContent().build());
@@ -65,12 +71,12 @@ public class SurveyApiController {
     /** 특정 설문(팝업·배너에서 링크로 진입). 없으면 404. */
     @GetMapping("/api/surveys/{id}")
     public ResponseEntity<SurveyDto> get(@PathVariable Long id, HttpServletRequest request) {
-        return qustnrRepository.findById(id)
-                .map(q -> ResponseEntity.ok(toDto(q, request)))
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        QestnarRepository.QestnarRow survey = qestnarRepository.getQustnr(id);
+        return survey == null ? ResponseEntity.notFound().build()
+                : ResponseEntity.ok(toDto(survey, request));
     }
 
-    /** 설문 응답 제출 - 로그인 필수, 문항별 텍스트 1건씩 저장. 1인 1회. */
+    /** 설문 응답 제출 - 로그인 필수, 1인 1회. */
     @PostMapping("/api/surveys/{id}/responses")
     @Transactional
     public ResponseEntity<Void> submit(@PathVariable Long id, @RequestBody List<AnswerDto> answers,
@@ -78,55 +84,50 @@ public class SurveyApiController {
         Long userId = jwtVerifier.currentUserId(request)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다."));
 
-        Qustnr survey = qustnrRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "설문을 찾을 수 없습니다."));
-        String today = LocalDate.now().format(DATE);
-        if (!SHOW_Y.equals(survey.getIsShow()) || !withinPeriod(survey, today)) {
+        QestnarRepository.QestnarRow survey = qestnarRepository.getQustnr(id);
+        if (survey == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "설문을 찾을 수 없습니다.");
+        }
+        if (!withinPeriod(survey)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "참여할 수 없는 설문입니다.");
         }
-        if (rspnsRepository.existsByQustnrSnAndUserId(id, userId)) {
+        if (qestnarRepository.existsResponse(id, userId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 참여한 설문입니다.");
         }
         if (answers == null || answers.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "응답을 입력해 주세요.");
         }
 
-        LocalDateTime now = LocalDateTime.now();
         for (AnswerDto a : answers) {
             if (a.qustnrQesitmSn() == null) {
                 continue;
             }
-            QustnrRspns r = new QustnrRspns();
-            r.setQustnrSn(id);
-            r.setQustnrQesitmSn(a.qustnrQesitmSn());
-            r.setUserId(userId);
-            r.setRspnsCn(a.rspnsCn());
-            r.setRspnsDt(now);
-            rspnsRepository.save(r);
+            qestnarRepository.insertQustnrRspnsResult(id, a.qustnrQesitmSn(), userId,
+                    a.qustnrIemSn() == null ? 0 : a.qustnrIemSn(), a.respondAnswerCn());
         }
         return ResponseEntity.noContent().build();
     }
 
-    private boolean withinPeriod(Qustnr q, String today) {
-        String bgn = q.getQustnrBgnDe();
-        String end = q.getQustnrEndDe();
-        // 시작일/종료일이 비어 있으면 그 방향 제한 없음 (운영 콘솔이 기간을 선택 입력이라)
+    /** 기간 판정 - 시작/종료일이 비어 있으면 그 방향 제한은 없다(AS-IS도 기간을 선택 입력으로 둔다). */
+    private boolean withinPeriod(QestnarRepository.QestnarRow q) {
+        String today = LocalDate.now().format(DATE);
+        String bgn = q.qustnrBgnDe();
+        String end = q.qustnrEndDe();
         boolean afterStart = bgn == null || bgn.isBlank() || bgn.compareTo(today) <= 0;
         boolean beforeEnd = end == null || end.isBlank() || today.compareTo(end) <= 0;
         return afterStart && beforeEnd;
     }
 
-    private SurveyDto toDto(Qustnr q, HttpServletRequest request) {
+    private SurveyDto toDto(QestnarRepository.QestnarRow q, HttpServletRequest request) {
         Long userId = jwtVerifier.currentUserId(request).orElse(null);
-        boolean already = userId != null && rspnsRepository.existsByQustnrSnAndUserId(q.getQustnrSn(), userId);
-        List<QuestionDto> questions = qesitmRepository.findByQustnrSnOrderByQestnSeq(q.getQustnrSn()).stream()
-                .map(this::toQuestion)
+        boolean already = userId != null && qestnarRepository.existsResponse(q.qustnrSn(), userId);
+        List<QuestionDto> questions = qestnarAdminService.qesitmViews(q.qustnrSn()).stream()
+                .map(v -> new QuestionDto(v.qustnrQesitmSn(), v.qestnCn(), v.qestnTyCode(), v.parentSn(),
+                        v.qustnrIem().stream()
+                                .map(i -> new ChoiceDto(i.qustnrIemSn(), i.iemSn(), i.iemCn()))
+                                .toList()))
                 .toList();
-        return new SurveyDto(q.getQustnrSn(), q.getQustnrSj(), q.getQustnrBgnDe(), q.getQustnrEndDe(),
+        return new SurveyDto(q.qustnrSn(), q.qustnrSj(), q.qustnrBgnDe(), q.qustnrEndDe(), q.srvyTrgt(),
                 userId != null, already, questions);
-    }
-
-    private QuestionDto toQuestion(QustnrQesitm e) {
-        return new QuestionDto(e.getQustnrQesitmSn(), e.getQestnCn(), e.getQestnSeq());
     }
 }

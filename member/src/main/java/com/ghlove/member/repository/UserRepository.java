@@ -9,6 +9,10 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByLoginId(String loginId);
 
+    /** admin Q&A 관리(5112)의 검색구분 '아이디' - AS-IS는 목록 SQL에서 LOGIN_ID LIKE로 걸지만
+     *  TO-BE는 회원이 다른 서비스라 회원ID를 먼저 받아 걸러야 한다. */
+    java.util.List<User> findByLoginIdContainingAndStatusCode(String loginId, String statusCode);
+
     Optional<User> findByUserNameAndEmail(String userName, String email);
 
     Optional<User> findByLoginIdAndUserNameAndEmail(String loginId, String userName, String email);

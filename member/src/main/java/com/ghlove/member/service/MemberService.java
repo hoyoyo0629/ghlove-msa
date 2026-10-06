@@ -70,6 +70,7 @@ public class MemberService {
     private final GiftClient giftClient;
     private final com.ghlove.member.repository.MberSecsnRepository mberSecsnRepository;
     private final com.ghlove.member.repository.UserCiRepository userCiRepository;
+    private final com.ghlove.member.event.MemberEventPublisher eventPublisher;
 
     /**
      * 아이디를 쓸 수 있는가 - AS-IS `UserServiceImpl.checkDuplication()` 재현.
@@ -193,6 +194,10 @@ public class MemberService {
         notificationClient.sendAlimtalk(form.getPhoneNumber(), "WELCOME_SIGNUP",
                 Map.of("userName", form.getUserName()));
 
+        // 회원가입 완료 이벤트 발행 (MemberRegistered) - 발행 실패는 비차단 로그.
+        eventPublisher.publishMemberJoined(saved.getUserId(), saved.getLoginId(),
+                saved.getLoginPathCode(), saved.getSbscrbSeCode());
+
         return saved;
     }
 
@@ -237,6 +242,10 @@ public class MemberService {
         userDetailRepository.save(detail);
 
         userRoleRepository.save(new UserRole(saved.getUserId(), ROLE_USER));
+
+        // 오프라인 즉석 가입도 회원가입 완료 이벤트를 발행한다(가입경로만 다름) - MemberRegistered.
+        eventPublisher.publishMemberJoined(saved.getUserId(), saved.getLoginId(),
+                saved.getLoginPathCode(), saved.getSbscrbSeCode());
 
         return new WalkInResult(saved.getUserId(), loginId, tempPassword);
     }
@@ -408,6 +417,7 @@ public class MemberService {
         user.setLoginDate(now());
         User saved = userRepository.save(user);
         recordLoginLog(user.getLoginId(), "Y", remoteAddr, null);
+        eventPublisher.publishLoginSucceeded(saved.getUserId(), saved.getLoginId(), remoteAddr);
         return saved;
     }
 
@@ -740,6 +750,26 @@ public class MemberService {
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new MemberException("비밀번호가 올바르지 않습니다.");
         }
+        applyWithdrawal(user, leaveCode, reason, remoteAddr);
+    }
+
+    /**
+     * 디지털원패스/카카오 연동해지에 따른 탈퇴 (AS-IS updateUserKeyStatusCode / kakaoLinkSecedeByUserId).
+     * 비밀번호 확인을 거치지 않는다 - 원패스 연동해지 화면엔 비밀번호 입력이 없고, 카카오(SNS)
+     * 회원은 애초에 비밀번호로 로그인하지 않기 때문이다(passwordType=P). 외부 연동해지 API 호출은
+     * 호출측(컨트롤러)이 수단별 client로 먼저 처리하고, 개인정보 삭제 처리만 여기서 공통으로 한다.
+     */
+    @Transactional
+    public void secedeExternal(Long userId, String leaveCode, String reason, String remoteAddr) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new MemberException("회원 정보를 찾을 수 없습니다."));
+        applyWithdrawal(user, leaveCode, reason, remoteAddr);
+    }
+
+    /** 일반탈퇴(비번확인 후)와 연동해지 탈퇴가 공유하는 탈퇴 공통 처리 - AS-IS도 둘 다
+     *  updateSecedeGeneralCustomer 계열의 같은 처리를 탔다. */
+    private void applyWithdrawal(User user, String leaveCode, String reason, String remoteAddr) {
+        Long userId = user.getUserId();
 
         // 크로스 서비스 처리(포인트 소멸·관심답례품/관심지자체 삭제)를 개인정보 삭제보다 먼저
         // 한다 - 이들이 실패하면 아직 개인정보가 안 지워진 상태에서 예외로 중단되어 안전하게
@@ -800,6 +830,33 @@ public class MemberService {
         userRoleRepository.deleteByUserId(userId);
 
         recordChangeLog(userId, "WITHDRAW" + (reason == null || reason.isBlank() ? "" : ": " + reason), remoteAddr);
+
+        // 탈퇴 확정 이벤트 발행(일반 탈퇴 + 연동해지 공통) - MemberWithdrawn.
+        eventPublisher.publishMemberWithdrawn(userId, leaveCode);
+    }
+
+    /** AS-IS kakaoLinkClearByUserId 판정 결과 - 화면이 SUCCESS(연동만 해제 완료)와
+     *  CHECK_SECEDE(탈퇴 동반 확인 후 탈퇴화면 이동)를 구분해 처리한다. */
+    public enum KakaoLinkClearResult { NOT_VALID_LOGIN, SUCCESS, CHECK_SECEDE }
+
+    /**
+     * AS-IS kakaoLinkClearByUserId 재현. 카카오 가입경로(loginPathCode 500)면 탈퇴가 동반되므로
+     * 화면에 확인을 요청(CHECK_SECEDE)하고, 아이디/원패스 가입 후 카카오를 부가 연동한 경우
+     * (100/300 등)면 카카오 유저키만 지워 연동만 해제(SUCCESS)한다.
+     */
+    @Transactional
+    public KakaoLinkClearResult clearKakaoLink(Long userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return KakaoLinkClearResult.NOT_VALID_LOGIN;
+        }
+        if ("500".equals(user.getLoginPathCode())) {
+            return KakaoLinkClearResult.CHECK_SECEDE;
+        }
+        user.setKakaoUserKey(null);
+        user.setUpdatedDate(now());
+        userRepository.save(user);
+        return KakaoLinkClearResult.SUCCESS;
     }
 
     /**
@@ -819,6 +876,7 @@ public class MemberService {
             user.setUpdatedDate(now());
             userRepository.save(user);
             recordChangeLog(user.getUserId(), "DORMANT_CONVERTED (마지막 로그인: " + user.getLoginDate() + ")", null);
+            eventPublisher.publishMemberDormant(user.getUserId());
         }
         return targets.size();
     }
@@ -957,6 +1015,10 @@ public class MemberService {
         log.setMemo(memo);
         log.setLoginDate(now());
         loginLogRepository.save(log);
+        // 로그인 실패만 이벤트로 발행한다(성공은 completeLogin에서 userId와 함께 발행) - LoginFailed.
+        if ("N".equals(successFlag)) {
+            eventPublisher.publishLoginFailed(loginId, remoteAddr, memo);
+        }
     }
 
     private void recordChangeLog(Long userId, String parameter, String remoteAddr) {

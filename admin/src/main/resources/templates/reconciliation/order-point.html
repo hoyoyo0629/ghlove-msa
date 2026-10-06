@@ -1,61 +1,189 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>주문금액-포인트사용 대사 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <title>포인트 정합성 검사 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <h3>주문금액-포인트사용 대사</h3>
-    <!-- AS-IS view_rc_order_amt_vs_point_use_check 재구현. 이 프로젝트는 결제수단이 포인트
-         뿐이라, 주문 시점에 기록된 요청 차감액(order.pointAmount)과 point 서비스 원장이 실제로
-         차감한 금액을 대조한다 - 비동기 SAGA(choreography)에서 두 값이 어긋나면 데이터 무결성
-         문제이므로 조사가 필요하다. -->
-    <p th:text="'불일치 ' + ${mismatchCount} + '건 / 전체 ' + ${#lists.size(rows)} + '건'"
-       th:style="${mismatchCount > 0} ? 'color:#c0392b; font-weight:bold;' : ''"></p>
+<!-- AS-IS opmanager/i18n/point-check/list.jsp 이식(메뉴 7210).
+     주문번호 검색 + 정합여부(전체/금액일치/금액불일치) + 주문일자 범위 + 출력수(10/50/100/200/500) +
+     11컬럼 + 맨 위 합계 행. 주문일자 기본값은 올해 1월 1일 ~ 오늘이다(AS-IS 컨트롤러와 동일).
 
-    <table class="board_list_table">
-        <thead>
-        <tr>
-            <th>주문ID</th>
-            <th>회원ID</th>
-            <th>상품명</th>
-            <th>주문 차감요청액</th>
-            <th>포인트원장 실차감액</th>
-            <th>대사결과</th>
-            <th>주문상태</th>
-            <th>주문일시</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="r : ${rows}" th:classappend="${!r.matched()} ? 'row-error'">
-            <td th:text="${r.orderId()}"></td>
-            <td th:text="${r.userId()}"></td>
-            <td th:text="${r.itemName()}"></td>
-            <td th:text="${#numbers.formatInteger(r.orderPointAmount(), 0, 'COMMA')}"></td>
-            <td th:text="${#numbers.formatInteger(r.ledgerUsedAmount(), 0, 'COMMA')}"></td>
-            <td>
-                <span class="pill" th:classappend="${r.matched()} ? 'on' : 'off'"
-                      th:text="${r.matched()} ? '일치' : '불일치'"></span>
-            </td>
-            <td th:text="${r.orderStatus()}"></td>
-            <td th:text="${#temporals.format(r.createdDate(), 'yyyy-MM-dd HH:mm')}"></td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(rows)}">대사 대상 주문이 없습니다.</p>
-</div>
-<style>
-.row-error { background: #fdecea; }
-</style>
+     AS-IS 그대로 보존한 것:
+     - h3는 메뉴명("포인트사용 정합성검증")이 아니라 리터럴 "포인트 정합성 검사"다.
+     - colgroup이 9개뿐인데 컬럼은 11개다(AS-IS 결함 - 폭 지정이 뒤 2개에 안 먹는다).
+     - table summary/caption이 "배치 작업"이다(배치로그 화면에서 복사된 흔적, 화면에 안 보임).
+     - 주문 번호 검색 select의 "메서드명" option, 선택삭제/신규등록 버튼은 주석처리돼 화면에 없다.
+     - 합계 행의 정합여부 칸에는 '금액일치/금액불일치'가 아니라 차액이 찍힌다.
+
+     ★ 금액 대응은 TO-BE 주문 모델에 맞춰 바뀌었다(order의 OrderReconciliationRepository 주석 참고):
+     결제금액=포인트 결제액, 취소금액=상태 CANCELLED, 입금대기금액은 TO-BE에 해당 상태가 없어 0,
+     정산금액(op_remittance_detail)·미정주문건수(op_order_item_hold)는 아직 쌓이는 게 없어 0이다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<form id="pointCheckParam" method="post" th:action="@{/reconciliation/order-point/list}">
+    <h3>포인트 정합성 검사</h3>
+    <div class="board_write">
+        <table class="board_write_table" summary="Point Check">
+            <colgroup>
+                <col style="width:150px;" />
+                <col style="width:400px;" />
+                <col style="width:150px;" />
+                <col style="width:*;" />
+                <col style="width:150px;" />
+                <col style="width:*;" />
+            </colgroup>
+            <tbody>
+            <tr>
+                <td class="label">주문 번호 검색</td>
+                <td colspan="5">
+                    <div>
+                        <select id="searchType" name="searchType" title="작업명">
+                            <!-- AS-IS도 "메서드명" option은 주석처리된 상태다 -->
+                            <option value="orderCode" th:selected="${pointCheckParam.searchType == 'orderCode'}">주문번호</option>
+                        </select>
+                        <input type="text" id="query" name="query" class="three" title="검색어 입력"
+                               style="width:250px;" placeholder="Search.." th:value="${pointCheckParam.query}"/>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">정합여부 검색</td>
+                <td colspan="5">
+                    <div>
+                        <select id="matchYnType" name="matchYnType" title="작업명">
+                            <option value="" th:selected="${#strings.isEmpty(pointCheckParam.matchYnType)}">전체</option>
+                            <option value="Y" th:selected="${pointCheckParam.matchYnType == 'Y'}">금액일치</option>
+                            <option value="N" th:selected="${pointCheckParam.matchYnType == 'N'}">금액불일치</option>
+                        </select>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">주문일자</td><!-- op:message에 등록필요 (AS-IS 주석) -->
+                <td colspan="5">
+                    <div>
+                       <select id="searchDateType" name="searchDateType">
+                            <option value="EXECUTION_DATE" th:selected="${pointCheckParam.searchDateType == 'EXECUTION_DATE'}">주문일자</option>
+                       </select>
+                       <span class="datepicker"><input type="text" id="searchStartDate" name="searchStartDate" class="datepicker" maxlength="8" th:title="${msg.get('M00024')}" th:value="${pointCheckParam.searchStartDate}" /></span>
+                       <span class="wave">~</span>
+                       <span class="datepicker"><input type="text" id="searchEndDate" name="searchEndDate" class="datepicker" maxlength="8" th:title="${msg.get('M00025')}" th:value="${pointCheckParam.searchEndDate}" /></span>
+
+                       <span class="day_btns">
+                           <a href="javascript:;" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+                           <a href="javascript:;" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a>
+                           <a href="javascript:;" class="btn_date day-15" th:text="${msg.get('M00028')}">15일</a>
+                           <a href="javascript:;" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>
+                           <a href="javascript:;" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+                        </span>
+                   </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 버튼시작 -->
+	<div class="btn_all btn_right">
+		<div class="flex_box gap-08">
+            <button type="button" class="btn btn-dark-gray btn-sm" onclick="location.href='/reconciliation/order-point';"><span class="glyphicon glyphicon-repeat"></span> <span th:text="${msg.get('M00047')}">초기화</span></button>
+            <button type="submit" class="btn btn-dark-gray btn-sm"><span class="glyphicon glyphicon-search"></span> 검색</button>
+        </div>
+    </div>
+    <!-- 버튼 끝-->
+
+    <div class="count_title mt-40">
+		<h5>
+			<span th:text="${msg.get('M00045')}" th:remove="tag">총</span> <span th:text="${#numbers.formatInteger(totalCount, 0, 'COMMA')}" th:remove="tag">0</span> <span th:text="${msg.get('M00272')}" th:remove="tag">건</span>
+		</h5>
+		<span>
+			<select id="itemsPerPage" name="itemsPerPage" th:title="${msg.get('M00054')} + ${msg.get('M00052')}"
+				onchange="$('form#pointCheckParam').submit();">
+				<option value="10" th:selected="${pointCheckParam.itemsPerPage == 10}" th:text="'10' + ${msg.get('M00053')}">10개 출력</option>
+				<option value="50" th:selected="${pointCheckParam.itemsPerPage == 50}" th:text="'50' + ${msg.get('M00053')}">50개 출력</option>
+				<option value="100" th:selected="${pointCheckParam.itemsPerPage == 100}" th:text="'100' + ${msg.get('M00053')}">100개 출력</option>
+				<option value="200" th:selected="${pointCheckParam.itemsPerPage == 200}" th:text="'200' + ${msg.get('M00053')}">200개 출력</option>
+				<option value="500" th:selected="${pointCheckParam.itemsPerPage == 500}" th:text="'500' + ${msg.get('M00053')}">500개 출력</option>
+			</select>
+		</span>
+	</div>
+</form>
+
+<form id="listForm">
+    <div class="board_write">
+        <table class="board_list_table" summary="배치 작업">
+            <caption>배치 작업</caption>
+            <colgroup>
+                <col style="width:10%;" />
+                <col style="width:10%;" />
+                <col style="width:10%;" />
+                <col style="width:10%;" />
+                <col style="width:10%;" />
+                <col style="width:10%;" />
+                <col style="width:3%;" />
+                <col style="width:10%;" />
+                <col style="width:8%;" />
+            </colgroup>
+            <thead>
+            <tr>
+                <th scope="col">주문번호</th>
+                <th scope="col">지자체명</th>
+                <th scope="col">주문상태</th>
+                <th scope="col">결제금액</th>
+                <th scope="col">취소금액</th>
+                <th scope="col">입금대기금액</th>
+                <th scope="col">정산금액</th>
+                <th scope="col">사용완료 포인트</th>
+                <th scope="col">정합여부</th>
+                <th scope="col">미정주문건수</th>
+                <th scope="col">주문일자</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="list : ${pointCheckList}">
+                <td th:text="${list.orderCode}"></td>
+                <td th:text="${list.locgovNm}"></td>
+                <td th:text="${list.orderStatusDesc}"></td>
+                <td th:text="${list.orderAmt}"></td>
+                <td th:text="${list.orderAmtCancel}"></td>
+                <td th:text="${list.orderAmt0}"></td>
+                <td th:text="${list.remittanceAmt}"></td>
+                <td th:text="${list.cntrUsePoint}"></td>
+                <td th:text="${list.matchYn}"></td>
+                <td th:text="${list.holdCnt}"></td>
+                <td th:text="${list.createdDate}"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div><!--// board_write E-->
+
+    <div class="no_content" th:if="${#lists.isEmpty(pointCheckList)}" th:text="${msg.get('M00473')}">
+        데이터가 없습니다.
+    </div>
+
+    <!-- AS-IS도 선택삭제·신규등록 버튼 영역은 주석처리돼 있다 -->
+    <div class="pagination-wrap">
+		<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+	</div>
+</form>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript">
+    $(function() {
+        Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="searchStartDate"]' , 'input[name="searchEndDate"]');
+    });
+</script>
 </body>
 </html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>메일 대체코드 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<!-- AS-IS opmanager/i18n/mail-config/change-code.jsp 이식. layout="base" 팝업(500x500)으로
+     해당 템플릿의 {대체코드} → 설명 목록만 보여준다(저장 버튼은 AS-IS도 주석처리). -->
+<body>
+<div class="popup_wrap">
+
+	<h1 class="popup_title"><span th:text="${title}"></span> <span th:text="${msg.get('M00404')}">대체코드</span> <!-- 대체코드 --> </h1>
+
+	<div class="popup_contents">
+
+		<div class="board_write">
+		<table class="board_write_table">
+			<colgroup>
+				<col style="width: 165px;" />
+			</colgroup>
+			<tr th:each="item : ${codeList}">
+				<td class="label" th:text="${item.key}"></td>
+				<td><div th:text="${item.value}"></div></td>
+			</tr>
+		</table>
+
+	</div> <!-- // board_write -->
+
+	<!-- AS-IS도 저장 버튼은 주석처리되어 있다 -->
+
+	</div> <!-- // popup_contents -->
+
+	<a href="javascript:self.close();" class="popup_close" th:text="${msg.get('M00353')}">창 닫기</a>
+</div>
+</body>
+</html>

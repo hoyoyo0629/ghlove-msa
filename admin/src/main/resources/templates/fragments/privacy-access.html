@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- AS-IS opmanager/i18n/include/modal/privacy-access.jsp 를 그대로 옮긴 "개인정보 엑셀 다운로드 사유"
+     모달. 개인정보가 포함된 목록을 내려받을 때 AS-IS는 늘 이 모달을 먼저 띄우고, 사유를
+     /common/opmanager/privacy-access-log 로 보내 개인정보 접근로그를 남긴 다음에야 실제 다운로드
+     URL로 이동한다(엑셀다운로드 사유 관리 1411 화면이 그 로그를 읽는다).
+
+     쓰는 쪽:
+       <div th:replace="~{fragments/privacy-access :: modal}"></div>
+       ... openPrivacyModal('/admin/orders/export?locgovCode=...')   // 다운로드 URL을 넘긴다
+
+     AS-IS 그대로 보존한 것:
+     - 사유는 5글자 이상, 동의 체크박스 필수.
+     - 안내문구 3개 + "★ 엑셀은 개인정보보호를 위해 암호화되며..." 문장까지 verbatim.
+     - 사유구분(#reasonType) select는 AS-IS 마크업에 없다(JS에만 change 핸들러가 남아 있다) -
+       그래서 REASON_TYPE은 실제로 비어 있고 1411의 "사유타입" 칸도 빈칸이다. 그대로 뒀다.
+     - 성공 시 "다운로드가 진행 중입니다. 잠시만 기다려주세요." alert 후 이동.
+     AS-IS에 있던 param(POST 방식 주문번호 전달) 분기는 배송준비중(모바일) 주문 엑셀 전용이라
+     그 화면을 이식할 때 함께 되살린다(지금은 uri 이동만 쓴다). -->
+<th:block th:fragment="modal">
+    <div class="modal fade" id="privacyModal" tabindex="-1" role="dialog" aria-labelledby="privacyAccessModal">
+
+        <div class="modal-dialog-centered" role="document" style="width: 450px">
+            <div class="modal-content popup_wrap">
+                <form id="formPrivacy">
+                    <input type="hidden" name="uri" />
+                    <input type="hidden" name="url" />
+                    <div id="pop_header">
+                        <h1 class="popup_title">개인정보 엑셀 다운로드 사유</h1>
+                        <a href="javascript:popupClose();" class="btn_close"><img th:src="@{/content/opmanager/images/btn/btn_close.png}" alt="닫기"></a>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <textarea name="reason" id="reason" title="개인정보 엑셀 다운로드 사유" class="required" style="height:200px;" maxlength="900"></textarea>
+                            <div class="text-info pt10" style="display: flex;">
+                            	<div style="margin-right: 5px;">1. </div>
+                            	<div>개인정보는 기부금 관리 및 답례품 관리 목적 외에 활용할 수 없으며, 무단으로 유출하거나 목적외 활용할 경우 개인정보보호법에 따른 책임이 있음을 확인합니다.</div>
+                            </div>
+                            <div class="text-info pt10" style="display: flex;">
+                           		<div style="margin-right: 5px;">2. </div>
+                            	<div>개인정보가 포함된 자료는 반드시 암호화하여 보관하여야 합니다.</div>
+                            </div>
+		                    <div class="text-info pt10" style="display: flex;">
+                           		<div style="margin-right: 5px;">3. </div>
+                            	<div>활용 목적 완료 후 폐기하여야 합니다.</div>
+                            </div>
+							<div class="text-info pt10">
+								<input name="checkbox" type="checkbox" id="checkAccess" style="cursor:pointer" />
+								<label for="checkAccess" style="cursor:pointer">
+								위 사항을 확인하였습니다.
+								</label>
+							</div>
+		                    <div class="text-info pt10" style="display: flex; color: black;">
+                           		<div style="margin-right: 5px;">★ </div>
+                            	<div>엑셀은 개인정보보호를 위해 암호화되며 비밀번호는 <br>다운받으시는 분의 <span class="text-info pt10">고향사랑e음 ID</span>로 생성됩니다.</div>
+							</div>
+
+						</div>
+	                    <div class="popup_btns" style="display: flex; justify-content: center; align-items: center; gap: 8px;">
+	                        <button type="button" class="btn btn-default" data-dismiss="modal" onclick="popupClose();">취소</button>
+	                        <button type="submit" class="btn btn-active">등록</button>
+	                    </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+    /** 다운로드 URL을 받아 사유 모달을 띄운다. url(접근로그 판정용)과 uri(이동할 주소)는 같은 값이다. */
+    function openPrivacyModal(downloadUri) {
+        var $form = $("#formPrivacy");
+        $form.find("input[name='uri']").val(downloadUri);
+        // 접근로그 레지스트리(PrivacyAccess) 판정은 쿼리스트링 없는 경로로 한다
+        $form.find("input[name='url']").val(String(downloadUri).split('?')[0]);
+        $form.find("textarea[name='reason']").val('');
+        $("#checkAccess").prop('checked', false);
+        $("#privacyModal").modal('show');
+    }
+
+    $(function() {
+        var $form = $("#formPrivacy");
+
+        $form.on('submit', function() {
+            if ($("#reason").val().length < 5) {
+                alert("엑셀다운로드 사유를 5글자 이상 입력해주세요.");
+                return false;
+            }
+
+            if (!$("#checkAccess").is(":checked")) {
+                alert("동의 항목을 체크해주시기 바랍니다.");
+                return false;
+            }
+
+            $.post("/common/opmanager/privacy-access-log", $form.serialize(), function(response) {
+                if (response.isSuccess) {
+                    alert("다운로드가 진행 중입니다. 잠시만 기다려주세요.");
+
+                    $form.find("textarea[name='reason']").val('');
+                    $("#privacyModal").modal('hide');
+
+                    location.href = $form.find("input[name='uri']").val();
+                } else {
+                    alert(response.errorMessage);
+                }
+            }, 'json');
+            return false;
+        });
+    });
+
+    function popupClose() {
+        var $form = $("#formPrivacy");
+        $form.find("textarea[name='reason']").val('');
+        $("#privacyModal").modal('hide');
+    }
+
+    $('#privacyModal').on('hidden.bs.modal', function(){
+        $("#checkAccess").prop('checked', false);
+    });
+    </script>
+</th:block>
+
+</body>
+</html>

@@ -26,4 +26,19 @@ public class Role {
 
     @Column(name = "ROLE_SEQ")
     private Integer roleSeq;
+
+    /** AS-IS는 생성일을 목록의 "생성일자"(M01692) 컬럼에 보여주고 정렬키로도 쓴다
+     *  (getUserGroupList의 ORDER BY opr.CREATED_DATE DESC). AS-IS 저장 형식은
+     *  CommonMapper.datetime = yyyyMMddHHmmss 문자열이다. */
+    @Column(name = "CREATED_DATE")
+    private String createdDate;
+
+    @Column(name = "CREATED_USER_ID")
+    private String createdUserId;
+
+    @Column(name = "UPDATED_DATE")
+    private String updatedDate;
+
+    @Column(name = "UPDATED_USER_ID")
+    private String updatedUserId;
 }

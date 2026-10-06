@@ -5,6 +5,7 @@ import com.ghlove.donation.domain.DesignatedProject;
 import com.ghlove.donation.domain.DsgnAprvLog;
 import com.ghlove.donation.domain.PrjNotice;
 import com.ghlove.donation.service.DesignatedAdminService;
+import com.ghlove.donation.service.DesignatedStatService;
 import com.ghlove.donation.service.DonationException;
 import com.ghlove.donation.service.DonationService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ import java.util.Map;
 public class DesignatedAdminApiController {
 
     private final DesignatedAdminService designatedAdminService;
+    private final DesignatedStatService designatedStatService;
     private final DonationService donationService;
 
     /** admin의 사업구분(DSGN_BSNS_TYPE) 드롭다운용 - 다른 codesOf() 소비처와 동일하게
@@ -35,6 +37,35 @@ public class DesignatedAdminApiController {
     @GetMapping("/api/designated-projects/admin")
     public List<ProjectDto> list() {
         return designatedAdminService.listAll().stream().map(ProjectDto::of).toList();
+    }
+
+    /**
+     * admin 특정사업 목록(메뉴 17101)용 - AS-IS {@code selectDesignatedDonationList}의
+     * 검색조건·집계·요약을 그대로 돌려준다. 자세한 규칙은
+     * {@link DesignatedAdminService#search} 주석.
+     */
+    @GetMapping("/api/designated-projects/admin/search")
+    public DesignatedAdminService.ProjectSearchResult search(
+            @RequestParam(required = false) String upperLocgovCode,
+            @RequestParam(required = false) String locgovCode,
+            @RequestParam(required = false) String bsnsType,
+            @RequestParam(required = false) String prjStDt,
+            @RequestParam(required = false) String prjEdDt,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String prjStatus,
+            @RequestParam(required = false) String displayFlag) {
+        return designatedAdminService.search(new DesignatedAdminService.ProjectSearchCriteria(
+                upperLocgovCode, locgovCode, bsnsType, prjStDt, prjEdDt, query, prjStatus, displayFlag));
+    }
+
+    /**
+     * admin 목록 하단 일괄처리 - 모금상태('2' 진행 / '9' 종료) 또는 공개여부('Y' / 'N')를
+     * 한꺼번에 바꾼다. AS-IS가 같은 파라미터로 네 값을 보내고 서버가 값으로 구분한다.
+     */
+    @PostMapping("/api/designated-projects/admin/bulk-update")
+    public Map<String, Object> bulkUpdate(@RequestParam List<Long> ids, @RequestParam String value,
+                                          @RequestParam Long managerId) {
+        return Map.of("changed", designatedAdminService.bulkUpdate(ids, value, managerId));
     }
 
     @GetMapping("/api/designated-projects/admin/{id}")
@@ -64,6 +95,19 @@ public class DesignatedAdminApiController {
         try {
             DesignatedProject saved = designatedAdminService.update(id, form.toEntity(), image, canSelfApprove, managerId);
             return ResponseEntity.ok(ProjectDto.of(saved));
+        } catch (DonationException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    /**
+     * 사업 한 건의 모금 현황 - admin 수정화면의 읽기전용 세 칸(남은 일수/모금 된 금액/달성률)용.
+     * 집계 규칙은 목록과 같다({@link DesignatedAdminService#statOf}).
+     */
+    @GetMapping("/api/designated-projects/admin/{id}/stat")
+    public ResponseEntity<?> stat(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(designatedAdminService.statOf(id));
         } catch (DonationException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -114,6 +158,46 @@ public class DesignatedAdminApiController {
         return list.stream().map(DepartmentDto::of).toList();
     }
 
+    /**
+     * 사업부서 검색 - AS-IS {@code part/list.jsp}의 조건 4종(지자체·부서명·사용유무·등록일 범위).
+     * 규칙은 {@link DesignatedAdminService#searchDepartments} 주석.
+     */
+    @GetMapping("/api/designated-projects/admin/departments/search")
+    public List<DepartmentDto> searchDepartments(@RequestParam(required = false) String upperLocgovCode,
+                                                 @RequestParam(required = false) String locgovCode,
+                                                 @RequestParam(required = false) String deptNm,
+                                                 @RequestParam(required = false) String useYn,
+                                                 @RequestParam(required = false) String searchStDt,
+                                                 @RequestParam(required = false) String searchEdDt) {
+        return designatedAdminService
+                .searchDepartments(upperLocgovCode, locgovCode, deptNm, useYn, searchStDt, searchEdDt)
+                .stream().map(DepartmentDto::of).toList();
+    }
+
+    /** 사업부서 단건 - AS-IS {@code part/form/{id}} 수정화면용. */
+    @GetMapping("/api/designated-projects/admin/departments/{deptId}")
+    public ResponseEntity<?> department(@PathVariable Long deptId) {
+        try {
+            return ResponseEntity.ok(DepartmentDto.of(designatedAdminService.departmentOrThrow(deptId)));
+        } catch (DonationException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    /** 사업부서 수정 - AS-IS {@code updateDsgncntrPartMng}(부서명·지자체·사용유무). */
+    @PostMapping("/api/designated-projects/admin/departments/{deptId}")
+    public ResponseEntity<?> updateDepartment(@PathVariable Long deptId, @RequestParam String deptNm,
+                                              @RequestParam String locgovCode,
+                                              @RequestParam(required = false) String useYn,
+                                              @RequestParam Long managerId) {
+        try {
+            return ResponseEntity.ok(DepartmentDto.of(
+                    designatedAdminService.updateDepartment(deptId, deptNm, locgovCode, useYn, managerId)));
+        } catch (DonationException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
     @PostMapping("/api/designated-projects/admin/departments")
     public ResponseEntity<?> createDepartment(@RequestParam String deptNm, @RequestParam String locgovCode, @RequestParam Long managerId) {
         try {
@@ -156,6 +240,48 @@ public class DesignatedAdminApiController {
     @GetMapping("/api/designated-projects/admin/analysis/month")
     public List<MonthStatDto> analysisByMonth(@RequestParam(required = false) String year) {
         return designatedAdminService.analysisByMonth(year).stream().map(MonthStatDto::of).toList();
+    }
+
+    // ---- 월별통계(특정사업 월별통계) - AS-IS designated-donation/analysis/month 3종 ----
+    // 공통 필터: 시도(shWdr)/시군구(shLocgovCode)/조회년도(selYear)/상태(prjStatus 0전체·2진행·9종료).
+
+    @GetMapping("/api/designated-projects/admin/analysis/month/campaign")
+    public List<DesignatedStatService.BsnsStatRow> monthCampaign(
+            @RequestParam(required = false) String shWdr, @RequestParam(required = false) String shLocgovCode,
+            @RequestParam(required = false) String selYear, @RequestParam(required = false) String prjStatus) {
+        return designatedStatService.campaign(shWdr, shLocgovCode, selYear, prjStatus);
+    }
+
+    @GetMapping("/api/designated-projects/admin/analysis/month/amountraised")
+    public List<DesignatedStatService.BsnsStatRow> monthAmountRaised(
+            @RequestParam(required = false) String shWdr, @RequestParam(required = false) String shLocgovCode,
+            @RequestParam(required = false) String selYear, @RequestParam(required = false) String prjStatus) {
+        return designatedStatService.amountRaised(shWdr, shLocgovCode, selYear, prjStatus);
+    }
+
+    @GetMapping("/api/designated-projects/admin/analysis/month/amount")
+    public List<DesignatedStatService.MonthStatRow> monthAmount(
+            @RequestParam(required = false) String shWdr, @RequestParam(required = false) String shLocgovCode,
+            @RequestParam(required = false) String selYear, @RequestParam(required = false) String prjStatus) {
+        return designatedStatService.amount(shWdr, shLocgovCode, selYear, prjStatus);
+    }
+
+    // ---- 지자체별 통계(AS-IS analysis/locgov) - 요약 + 지자체별 집계 목록 ----
+
+    @GetMapping("/api/designated-projects/admin/analysis/locgov/summary")
+    public DesignatedStatService.LocgovSummary locgovSummary(
+            @RequestParam(required = false) String shWdr, @RequestParam(required = false) String shLocgovCode,
+            @RequestParam(required = false) String bsnsType, @RequestParam(required = false) String frDt,
+            @RequestParam(required = false) String toDt, @RequestParam(required = false) String prjStatus) {
+        return designatedStatService.locgovSummary(shWdr, shLocgovCode, bsnsType, frDt, toDt, prjStatus);
+    }
+
+    @GetMapping("/api/designated-projects/admin/analysis/locgov/list")
+    public List<DesignatedStatService.LocgovStatRow> locgovList(
+            @RequestParam(required = false) String shWdr, @RequestParam(required = false) String shLocgovCode,
+            @RequestParam(required = false) String bsnsType, @RequestParam(required = false) String frDt,
+            @RequestParam(required = false) String toDt, @RequestParam(required = false) String prjStatus) {
+        return designatedStatService.locgovList(shWdr, shLocgovCode, bsnsType, frDt, toDt, prjStatus);
     }
 
     public record LocgovStatDto(String locgovCode, java.math.BigDecimal amount, long donationCount, long donorCount) {
@@ -212,9 +338,15 @@ public class DesignatedAdminApiController {
         }
     }
 
-    public record DepartmentDto(Long deptId, String deptNm, String locgovCode, String useYn) {
+    /** {@code createdDate}는 AS-IS 부서목록의 "등록일시" 칸(yyyy-MM-dd HH:mm)이다. */
+    public record DepartmentDto(Long deptId, String deptNm, String locgovCode, String useYn,
+                                 String createdDate) {
+        private static final java.time.format.DateTimeFormatter REG_DT =
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
         static DepartmentDto of(DesignatedPart p) {
-            return new DepartmentDto(p.getDeptId(), p.getDeptNm(), p.getLocgovCode(), p.getUseYn());
+            return new DepartmentDto(p.getDeptId(), p.getDeptNm(), p.getLocgovCode(), p.getUseYn(),
+                    p.getFrstRegDt() == null ? null : p.getFrstRegDt().format(REG_DT));
         }
     }
 

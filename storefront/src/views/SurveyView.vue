@@ -1,9 +1,20 @@
 <script setup>
-// AS-IS qustnr/detail.html 재현 - 설문 참여 화면. 특정 설문(/survey/:id) 또는 현재
-// 진행중 설문(/survey)을 받아 문항별 답변을 제출한다. AS-IS getQustnrByApi의 판정
+// AS-IS 설문 참여 화면(별도 프론트의 qustnr/detail_srvy.html) 재현 - 특정 설문(/survey/:id)
+// 또는 현재 진행중 설문(/survey)을 받아 문항별 답변을 제출한다. AS-IS getQustnrByApi의 판정
 // (로그인 필수·노출기간·1인 1회)은 admin SurveyApiController가 하고, 여기서는 그 결과에
-// 따라 폼/안내를 보여준다. MSA 설문은 자유서술형 문항이라 답변도 텍스트다.
-import { onMounted, ref } from 'vue'
+// 따라 폼/안내를 보여준다.
+//
+// 2026-10-03 수정: 설문 데이터모델을 AS-IS(G_QESTNAR 계열)로 교체했는데 이 화면이 따라오지
+// 않아 **응답이 빈 값으로 저장되고 있었다** - 보내는 키가 rspnsCn인데 API(AS-IS
+// QustnrRspnsResult)가 받는 키는 qustnrIemSn/respondAnswerCn이라 서버에서 조용히 버려졌다.
+// 또 모든 문항을 textarea로 그려서 객관식 선택지가 아예 보이지 않았다.
+//   - 문항 종류(qestnTyCode)대로 rtype=객관식(선택지 라디오) / stype=주관식(textarea)
+//   - 제출 payload를 AS-IS 필드명(qustnrQesitmSn / qustnrIemSn / respondAnswerCn)으로
+//   - 답하지 않은 문항은 보내지 않는다(빈 행이 쌓이는 것을 막는다)
+//   - 연계질문(parentSn)은 부모 문항 아래에 들여써 보여준다. AS-IS가 부모 답에 따라
+//     조건부로 펼치는지는 그 프론트 소스가 AS-IS 저장소에 없어 확인하지 못했다(항상 노출).
+// ETC_ANSWER_CN(기타 답변)은 AS-IS DTO·컬럼에는 있지만 입력 UI 근거를 찾지 못해 두지 않았다.
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api/http'
 
@@ -11,11 +22,31 @@ const route = useRoute()
 const router = useRouter()
 
 const survey = ref(null)
-const answers = ref({}) // qustnrQesitmSn -> 답변 텍스트
+// qustnrQesitmSn -> { qustnrIemSn, respondAnswerCn }
+const answers = ref({})
 const loading = ref(true)
 const notFound = ref(false)
 const errorMessage = ref('')
 const done = ref(false)
+
+const MULTIPLE_CHOICE = 'rtype'
+
+function isTopLevel(q) {
+  return q.parentSn === null || q.parentSn === undefined || q.parentSn === 0
+}
+
+/** 부모 문항 + 그 아래 연계질문 목록으로 묶는다. */
+const questionGroups = computed(() => {
+  const all = survey.value?.questions ?? []
+  return all.filter(isTopLevel).map((parent) => ({
+    parent,
+    children: all.filter((c) => !isTopLevel(c) && c.parentSn === parent.qustnrQesitmSn),
+  }))
+})
+
+function emptyAnswer() {
+  return { qustnrIemSn: null, respondAnswerCn: '' }
+}
 
 async function load() {
   loading.value = true
@@ -29,7 +60,9 @@ async function load() {
       survey.value = null
     } else {
       survey.value = data
-      answers.value = Object.fromEntries((data.questions ?? []).map((q) => [q.qustnrQesitmSn, '']))
+      answers.value = Object.fromEntries(
+        (data.questions ?? []).map((q) => [q.qustnrQesitmSn, emptyAnswer()]),
+      )
     }
   } catch {
     notFound.value = true
@@ -39,6 +72,24 @@ async function load() {
   }
 }
 
+/** 답한 문항만 AS-IS 필드명으로 만든다(객관식은 선택지 id, 주관식은 텍스트). */
+function buildPayload() {
+  return (survey.value.questions ?? [])
+    .map((q) => {
+      const a = answers.value[q.qustnrQesitmSn] ?? emptyAnswer()
+      if (q.qestnTyCode === MULTIPLE_CHOICE) {
+        return a.qustnrIemSn
+          ? { qustnrQesitmSn: q.qustnrQesitmSn, qustnrIemSn: a.qustnrIemSn, respondAnswerCn: null }
+          : null
+      }
+      const text = (a.respondAnswerCn ?? '').trim()
+      return text
+        ? { qustnrQesitmSn: q.qustnrQesitmSn, qustnrIemSn: null, respondAnswerCn: text }
+        : null
+    })
+    .filter(Boolean)
+}
+
 async function submit() {
   errorMessage.value = ''
   if (!survey.value) return
@@ -46,10 +97,11 @@ async function submit() {
     router.push({ path: '/login', query: { target: route.fullPath } })
     return
   }
-  const payload = (survey.value.questions ?? []).map((q) => ({
-    qustnrQesitmSn: q.qustnrQesitmSn,
-    rspnsCn: answers.value[q.qustnrQesitmSn] ?? '',
-  }))
+  const payload = buildPayload()
+  if (payload.length === 0) {
+    errorMessage.value = '응답을 입력해 주세요.'
+    return
+  }
   try {
     await api.post('admin', `/api/surveys/${survey.value.qustnrSn}/responses`, payload)
     done.value = true
@@ -93,14 +145,57 @@ onMounted(load)
         </p>
 
         <ol class="survey-form__questions">
-          <li v-for="q in survey.questions" :key="q.qustnrQesitmSn" class="survey-q">
-            <label :for="'q' + q.qustnrQesitmSn" class="survey-q__label">{{ q.qestnCn }}</label>
+          <li v-for="g in questionGroups" :key="g.parent.qustnrQesitmSn" class="survey-q">
+            <p class="survey-q__label">{{ g.parent.qestnCn }}</p>
+
+            <!-- 객관식: 선택지 라디오 -->
+            <ul v-if="g.parent.qestnTyCode === 'rtype'" class="survey-q__choices">
+              <li v-for="c in g.parent.choices" :key="c.qustnrIemSn">
+                <input
+                  :id="'c' + g.parent.qustnrQesitmSn + '-' + c.qustnrIemSn"
+                  v-model="answers[g.parent.qustnrQesitmSn].qustnrIemSn"
+                  type="radio"
+                  :name="'q' + g.parent.qustnrQesitmSn"
+                  :value="c.qustnrIemSn"
+                />
+                <label :for="'c' + g.parent.qustnrQesitmSn + '-' + c.qustnrIemSn">{{ c.iemCn }}</label>
+              </li>
+            </ul>
+
+            <!-- 주관식: 텍스트 -->
             <textarea
-              :id="'q' + q.qustnrQesitmSn"
-              v-model="answers[q.qustnrQesitmSn]"
+              v-else
+              :id="'q' + g.parent.qustnrQesitmSn"
+              v-model="answers[g.parent.qustnrQesitmSn].respondAnswerCn"
               class="survey-q__input"
               rows="3"
             ></textarea>
+
+            <!-- 연계질문 -->
+            <ul v-if="g.children.length" class="survey-q__children">
+              <li v-for="c in g.children" :key="c.qustnrQesitmSn" class="survey-q">
+                <p class="survey-q__label">{{ c.qestnCn }}</p>
+                <ul v-if="c.qestnTyCode === 'rtype'" class="survey-q__choices">
+                  <li v-for="i in c.choices" :key="i.qustnrIemSn">
+                    <input
+                      :id="'c' + c.qustnrQesitmSn + '-' + i.qustnrIemSn"
+                      v-model="answers[c.qustnrQesitmSn].qustnrIemSn"
+                      type="radio"
+                      :name="'q' + c.qustnrQesitmSn"
+                      :value="i.qustnrIemSn"
+                    />
+                    <label :for="'c' + c.qustnrQesitmSn + '-' + i.qustnrIemSn">{{ i.iemCn }}</label>
+                  </li>
+                </ul>
+                <textarea
+                  v-else
+                  :id="'q' + c.qustnrQesitmSn"
+                  v-model="answers[c.qustnrQesitmSn].respondAnswerCn"
+                  class="survey-q__input"
+                  rows="3"
+                ></textarea>
+              </li>
+            </ul>
           </li>
         </ol>
 
@@ -164,6 +259,25 @@ onMounted(load)
   padding: 8px;
   box-sizing: border-box;
   font-size: 14px;
+}
+.survey-q__choices {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.survey-q__choices li {
+  padding: 3px 0;
+  font-size: 14px;
+}
+.survey-q__choices label {
+  margin-left: 6px;
+  cursor: pointer;
+}
+.survey-q__children {
+  list-style: none;
+  margin: 14px 0 0 16px;
+  padding: 0 0 0 12px;
+  border-left: 2px solid #eee;
 }
 .survey-form__error {
   color: #d32f2f;

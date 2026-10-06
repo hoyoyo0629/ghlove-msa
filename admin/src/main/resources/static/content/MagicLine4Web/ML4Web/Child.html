@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<title> Cross Domain Test Page </title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=Edge">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="format-detection" content="telephone=no">
+<link id="ML_common_css" rel="stylesheet" type="text/css" />
+<link id="MLjquibase_css" rel="stylesheet" type="text/css" href="UI/css/MLjquibase.css"/>
+
+<script src="js/ext/jquery-1.10.2.js"></script>
+<script src="js/ext/jquery-ui.min.js"></script>
+<script src="js/ext/jquery.blockUI.js"></script>
+<!-- <script src="js/ext/json2.js"></script> -->
+<script src="js/message/jquery.i18n.properties.min.js"></script>
+
+<script src="js/ML4Web_API.min.js?v=20210408"></script>
+
+<!-- 매직라인 js -->
+<script src="UI/js/dialog/MLjquicore.js"></script>
+<script src="UI/js/dialog/MLjqui_nec.js"></script>
+<script src="UI/js/dialog/MLjquidata.js"></script>
+<script src="UI/js/dialog/MLjquitabs.js"></script>
+<script src="UI/js/dialog/MLjquiloader.js"></script>
+<script src="UI/js/dialog/owl.carousel.js"></script>
+<!-- 간편인증 js 추가분-->
+<script src="UI/js/dialog/MLjquibuttons.js"></script>
+<script src="UI/js/dialog/MLjquicheckbox.js"></script>
+<script src="UI/js/dialog/MLjquidragdrop.js"></script>
+<script src="UI/js/dialog/MLjquidropdownlist.js"></script>
+<script src="UI/js/dialog/MLjquilistbox.js"></script>
+<script src="UI/js/dialog/MLjquiscrollbar.js"></script>
+<script src="UI/js/dialog/MLjquiwindow.js"></script>
+
+</head>
+<!-- <body oncontextmenu="return false" ondragstart="return false" onselectstart="return false"> -->
+<body style="background-color:transparent" onload="">
+<!-- inca keypad form -->
+<form name="form1" id="form1" style="display:none;"></form>
+	<!-- <div id="div_overlay" style="z-index:100000;position:fixed; width:100%; height:100%; top:0px; left:0px; background-color: #000000;opacity:0.3;filter:alpha(opacity=30);">
+		<div style="z-index:100001;position:fixed;top:50%; height:100%;width:100%;">
+			<div style="margin: 0 auto; padding: 5px; width:26px; height:26px; background-color:#fff; vertical-align:middle; font-weight:bold; text-align:center;color:#555;border-radius:5px;">
+				<img src="UI/images/loader.gif" style="vertical-align:middle"/>
+			</div>
+		</div>
+	</div> -->
+
+	<!-- <div id="div_popup" style="opacity:1;-ms-filter:'progid:DXImageTransform.Microsoft.Alpha(Opacity=90)';filter:Alpha(Opacity=90);left:245px;top:82px;width:465px;height:655px;transform:translate3d(0px, 0px, 0px);transition:none;z-index:1600;"> -->
+		<div id="selectCertContainer" style="width:100%;margin-top:0;"></div>
+		<div id="selectCertContainer1" style="width:100%;margin-top:0;"></div>
+		<div id="certDetailContainer" style="width:100%;margin-top:0;"></div>
+		<div id="certSignContainer" style="width:100%;margin-top:0;">
+			<iframe id="startCs" name="startCs" style="display:none"></iframe>
+		</div>
+		<div id="csContainer" style="width:100%;margin-top:0;"></div>
+	<!-- </div> -->
+
+	<!-- 01. Alert dialog -->
+	<div style="width:100%;margin-top:0;">
+		<div id="outside_alert" class="ML_container_dialog">
+			<div class="ML_content">
+				<div class="ML_content-area" style="padding-top:5px;">
+					<div class="ML_pw_dialog_status_area">
+						<div class="ML_pw_dialog_area">
+							<div id="outside_alert_msg" class="ML_pw_dialog_txt">msg</div>
+							<div class="btn_row">
+								<p class="b_blue_btn"><button type="button" onClick="closeOutsideAlert();"><span>확인</span></button></p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- sycronize localStorage -->
+	<!-- <div id="div_dsmlcert" style="display:none;"><iframe id="dsmlcert" name="dsmlcert" ></iframe></div> -->
+
+<script>
+function openOutsideAlert(msg){
+	if($('#outside_alert').attr("status") =="ready"){
+		$('#outside_alert_msg').html(msg);
+		$('#outside_alert').MLjquiWindow('open');
+	}else{
+		alert(msg);
+	}
+}
+
+function closeOutsideAlert(){
+	$('#outside_alert').MLjquiWindow('close');
+
+	closeMainDialogToChild();
+}
+</script>
+<script src="js/ML4Web_Child.js?v=20210408" integrity="sha256-o/SgyvX76UG/qMjicOQXzWvvRsUIksIq4p2tavB3dTI=" ></script>
+<script src="js/ML4Web_UI.js?v=20210408" integrity="sha256-83borQtY2Ta7rN170wCqv8QRnWJ+cD2atFj4hsfShhY=" ></script>
+</body>
+</html>

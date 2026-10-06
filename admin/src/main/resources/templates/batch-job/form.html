@@ -1,46 +1,178 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>배치 작업 등록/수정 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <title>Batch Job - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <style type="text/css">
+        .board_list_table th {
+            text-align: center;
+        }
+    </style>
 </head>
+<!-- AS-IS opmanager/i18n/batch-job/form.jsp 이식. layout="base" 팝업(1250x310)이고, 등록/수정
+     버튼은 batchJobId 유무에 따라 JS가 붙인다. 저장은 ajax로 /batch-job/create|update 호출 후
+     부모 목록과 자기 자신을 새로 고친다(AS-IS와 동일). -->
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div class="popup_wrap">
+    <h1 class="popup_title">Batch Job</h1> <!-- Batch Job -->
+    <div class="popup_contents">
+        <form id="listForm" method="post">
+            <input type="hidden" id="batchJobId" name="batchJobId" th:value="${batchJob.batchJobId}" />
+            <div class="board_write">
+                <h3><span>Batch Job</span></h3>
+                <table class="board_list_table" summary="Batch Job"> <!-- Batch Job -->
+                    <caption>Batch Job</caption>
+                    <colgroup>
+                        <col style="width:30%;" />
+                        <col style="width:30%;" />
+                        <col style="width:10%;" />
+                        <col style="width:15%;" />
+                        <col style="width:15%;" />
+                        <col style="width:10%;" />
+                    </colgroup>
+                    <thead>
+                    <tr>
+                        <th scope="col">작업명</th> 		 	 <!-- 작업명 -->
+                        <th scope="col">작업실행 메서드명</th> <!-- 작업실행 메서드명 -->
+                        <th scope="col">트리거 종류<br>(1:심플, 2:크론)</th>  <!-- 트리거 종류 -->
+                        <th scope="col">반복 시간</th> 	 <!-- 반복 시간 -->
+                        <th scope="col">반복 표현식</th> 	 <!-- 반복 표현식 -->
+                        <th scope="col">배치 상태<br>(1:실행중, 2:정지)</th>  <!-- 배치 상태 -->
+                    </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <input type="text" id="jobName" name="jobName" class="required" title="" maxlength="100" style="width:250px;" th:value="${batchJob.jobName}"/>
+                            </td>
+                            <td>
+                                <input type="text" id="jobMethod" name="jobMethod" class="required" title="" maxlength="100" style="width:300px;" th:value="${batchJob.jobMethod}"/>
+                            </td>
+                            <td>
+                                <select id="triggerType" name="triggerType" class="input-txt" style="width:50px;">
+                                    <option value="1" th:selected="${batchJob.triggerType == null or batchJob.triggerType == '1'}">1</option>
+                                    <option value="2" th:selected="${batchJob.triggerType == '2'}">2</option>
+                                </select>
+                            </td>
+                            <td>
+                                <input type="text" id="triggerRepeatSeconds" name="triggerRepeatSeconds" class="required" title="" maxlength="100" style="width:200px;" th:value="${batchJob.triggerRepeatSeconds}"/>
+                            </td>
+                            <td>
+                                <input type="text" id="triggerCronExpression" name="triggerCronExpression" class="required" title="" maxlength="100" style="width:200px;" th:value="${batchJob.triggerCronExpression}"/>
+                            </td>
+                            <td>
+                                <select id="batchStatus" name="batchStatus" class="input-txt" style="width:50px;">
+                                    <option value="1" th:selected="${batchJob.batchStatus == null or batchJob.batchStatus == '1'}">1</option>
+                                    <option value="2" th:selected="${batchJob.batchStatus == '2'}">2</option>
+                                </select>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div><!--// board_write E-->
 
-<div class="contents contents_inner">
-    <div class="location"><a th:href="@{/batch-job}">배치 작업 스케줄러</a></div>
-    <h3><span th:text="${job.batchJobId} != null ? '배치 작업 수정' : '배치 작업 등록'"></span></h3>
+            <div class="btn_all">
+                <div class="btn_right mb0">
 
-    <div class="board_write">
-        <table class="board_write_table" summary="배치 작업 등록/수정">
-            <colgroup><col style="width:220px;"><col></colgroup>
-            <tbody>
-            <tr><td class="label"><span class="required_mark">*</span>작업명</td><td><input type="text" id="jobName" name="jobName" th:value="${job.jobName}" required form="jobForm"></td></tr>
-            <tr><td class="label"><span class="required_mark">*</span>실행 메서드명</td><td><input type="text" id="jobMethod" name="jobMethod" th:value="${job.jobMethod}" required form="jobForm"></td></tr>
-            <tr>
-                <td class="label">트리거 종류</td>
-                <td>
-                    <label><input type="radio" name="triggerType" value="1" th:checked="${job.triggerType == null or job.triggerType == '1'}" form="jobForm"> 심플(초 반복)</label>
-                    <label><input type="radio" name="triggerType" value="2" th:checked="${job.triggerType == '2'}" form="jobForm"> 크론</label>
-                </td>
-            </tr>
-            <tr><td class="label">반복 초 (심플인 경우)</td><td><input type="text" id="triggerRepeatSeconds" name="triggerRepeatSeconds" th:value="${job.triggerRepeatSeconds}" form="jobForm"></td></tr>
-            <tr><td class="label">크론 표현식 (크론인 경우)</td><td><input type="text" id="triggerCronExpression" name="triggerCronExpression" th:value="${job.triggerCronExpression}" placeholder="0 0 1 * * *" form="jobForm"></td></tr>
-            <tr><td class="label">정렬순서</td><td><input type="number" id="ordering" name="ordering" th:value="${job.ordering}" form="jobForm"></td></tr>
-            </tbody>
-        </table>
-    </div>
-    <form id="jobForm" th:action="${job.batchJobId} != null ? @{'/batch-job/' + ${job.batchJobId}} : @{/batch-job}" method="post"></form>
-    <div class="btn_all btn_center">
-        <button type="submit" form="jobForm" class="btn btn-dark-gray btn-small">저장</button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
-<div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript">
+    var $form = $('#listForm');
+
+    $(document).ready(function() {
+
+        $($form).validator(function() {
+
+        });
+
+        var $btn_right = $('.btn_right');
+
+        if ($('#batchJobId').val()) {
+            $btn_right.append('<button type="button" id="update_list_data" onclick="updateData()" class="btn btn-default btn-sm">수정</button>');
+        } else {
+            $btn_right.append('<button type="button" id="update_list_data" onclick="createData()" class="btn btn-default btn-sm">등록</button>');
+        }
+
+
+    });
+
+    // 목록데이터 - 수정처리
+    function updateData() {
+        if (!textValidation()) {
+            return;
+        }
+
+        if (!confirm("선택된 데이터를 전송하시겠습니까?")) {
+            $form.find('table input, table select').prop('disabled', false);
+            return;
+        }
+
+        $.post("/batch-job/update", $form.serialize(), function(response) {
+            Common.responseHandler(response, function(response){
+                opener.location.reload();
+                location.reload();
+            });
+        });
+
+    }
+
+
+    function createData() {
+        if (!textValidation()) {
+            return;
+        }
+
+        if (!confirm("선택된 데이터를 등록하시겠습니까?")) {
+            $form.find('table input, table select').prop('disabled', false);
+            return;
+        }
+
+        $.post("/batch-job/create", $form.serialize(), function(response) {
+            Common.responseHandler(response, function(response){
+                opener.location.reload();
+                location.reload();
+            });
+        });
+
+    }
+
+    function textValidation() {
+        var jobName 			= $('input[name=jobName]').val();
+        var jobMethod 			= $('input[name=jobMethod]').val();
+        // AS-IS는 트리거종류/배치상태도 input[name=...]으로 읽는데 실제 엘리먼트는 select라
+        // 항상 undefined가 되어 해당 검사가 통과된다 - AS-IS 동작을 그대로 둔다.
+        var triggerType 		= $('input[name=triggerType]').val();
+        var triggerRepeatSeconds = $('input[name=triggerRepeatSeconds]').val();
+        var triggerCronExpression = $('input[name=triggerCronExpression]').val();
+        var batchStatus 	= $('input[name=batchStatus]').val();
+
+        var booleanVal = true;
+
+        if (jobName == '') {
+            alert("작업명을 입력하세요");
+            booleanVal = false;
+        } else if(jobMethod == ''){
+            alert("메서드명을 입력하세요");
+            booleanVal = false;
+        } else if(triggerType == ''){
+            alert("트리거 종류를 입력하세요. 예) 심플:1, 크론:2");
+            booleanVal = false;
+        } else if(triggerRepeatSeconds == '' && triggerCronExpression == ''){
+            alert("반복 시간 또는 표현식을 입력하세요");
+            booleanVal = false;
+        } else if(batchStatus == ''){
+            alert("배치 상태를 입력하세요. 예) 실행중:1, 정지:2");
+            booleanVal = false;
+        }
+
+        return booleanVal;
+    }
+
+
+</script>
 </body>
 </html>

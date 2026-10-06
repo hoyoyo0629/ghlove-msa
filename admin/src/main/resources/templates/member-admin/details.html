@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>회원관리 상세 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/user/customer/details.jsp 이식(메뉴 4101 일반회원관리 상세).
+     회원상세정보(7행) + 버튼 4개 + 누적합계(4칸) + 기부내역(ajax) + 포인트 내역(ajax).
+
+     AS-IS verbatim:
+     - h3가 M00210이고, 네비게이션 끝에 "수정"을 덧붙인다(상세인데 수정이다 - 그대로 둔다).
+     - 회원구분은 항상 "일반회원" 고정 텍스트다.
+     - 주소는 rowspan=2로 우편번호 행 + 주소 행이다.
+     - SMS 수신동의 라벨이 "국민비서·SMS 수신동의"다(팝업에서는 그냥 "SMS 수신동의").
+     - 수신동의는 '0'이면 동의, 그 외는 비동의.
+     - 기부내역·포인트 내역은 빈 div에 ajax로 끼워넣고, 페이지 이동도 ajax 함수를 호출한다.
+     - 디지털원패스 회원이면 탈퇴 팝업을 열기 전에 막는다.
+     - details가 없으면 "잘못된 접근입니다." 후 목록으로.
+
+     MSA 분담: 회원정보는 member, 누적합계·기부내역은 donation(g_cntr), 사용포인트는
+     point(g_cntr_use_point), 가입경로 라벨은 admin의 OP_COMMON_CODE(SBSCRB_SE)다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span th:text="${msg.get('M00210')}">회원관리</span></h3>
+
+<!-- 회원상세정보 -->
+<div class="board_write">
+	<table class="board_write_table" summary="회원상세정보">
+		<colgroup>
+			<col style="width:220px;">
+			<col>
+			<col style="width:220px;">
+			<col>
+		</colgroup>
+		<tbody>
+			<tr>
+				<td class="label">회원구분</td>
+				<td colspan="3">
+					<div>일반회원</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label">이름</td>
+				<td>
+					<div th:text="${details != null} ? ${details.userName} : ''"></div>
+				</td>
+				<td class="label">아이디</td>
+				<td>
+					<div th:text="${details != null} ? ${details.loginId} : ''"></div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label">휴대폰</td>
+				<td>
+					<div th:text="${details != null} ? ${details.phoneNumber} : ''"></div>
+				</td>
+				<td class="label">이메일 주소</td>
+				<td>
+					<div th:text="${details != null} ? ${details.email} : ''"></div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label" rowspan="2">주소</td>
+				<td colspan="3">
+					<div th:text="${details != null} ? ${details.post} : ''"></div>
+				</td>
+			</tr>
+			<tr>
+				<td colspan="3">
+					<div th:text="${details != null}
+					              ? (${details.address} ?: '') + ' ' + (${details.addressDetail} ?: '') : ''"></div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label">EMAIL 수신동의</td>
+				<td>
+					<div th:text="${details != null and details.receiveEmail == '0'} ? '동의' : '비동의'"></div>
+				</td>
+				<td class="label">국민비서·SMS 수신동의</td>
+				<td>
+					<div th:text="${details != null and details.receiveSms == '0'} ? '동의' : '비동의'"></div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label">가입경로</td>
+				<td colspan="3">
+					<div th:text="${sbscrbSeNm}"></div>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+	<div class="btn_all btn_right">
+		<div class="flex_box gap-08">
+			<button type="button" class="btn btn-dark-gray btn-mini" onclick="deliveryPopup();">배송지 관리</button>
+			<button type="button" class="btn btn-dark-gray btn-mini" onclick="passwordConfirmPopup();">개인정보 열람</button>
+			<button type="button" class="btn btn-dark-gray btn-mini" onclick="customerSecede();">회원탈퇴</button>
+			<button type="button" class="btn btn-dark-gray btn-mini" onclick="moveListPage();">목록</button>
+		</div>
+	</div>
+</div>
+<!--// 회원상세정보 -->
+
+<!-- 누적합계 -->
+<h3 class="mt50 fs24"><span>누적합계</span></h3>
+<div class="board_write mb30">
+	<table class="board_write_table" summary="회원상세정보">
+		<colgroup>
+			<col>
+			<col>
+			<col>
+			<col>
+		</colgroup>
+		<tbody>
+			<tr>
+				<td class="label">기부금액</td>
+				<td>
+					<div th:text="${#numbers.formatDecimal(cumclativeTotal.totalCntrAmt, 1, 'COMMA', 2, 'POINT')}">0</div>
+				</td>
+				<td class="label">발생포인트</td>
+				<td>
+					<div th:text="${#numbers.formatDecimal(cumclativeTotal.totalCntrPoint, 1, 'COMMA', 2, 'POINT')}">0</div>
+				</td>
+				<td class="label">사용포인트</td>
+				<td>
+					<div th:text="${#numbers.formatDecimal(cumclativeTotal.totalCntrUsePoint, 1, 'COMMA', 2, 'POINT')}">0</div>
+				</td>
+				<td class="label">포인트잔액</td>
+				<td>
+					<div th:text="${#numbers.formatDecimal(cumclativeTotal.totalCntrBlcePoint, 1, 'COMMA', 2, 'POINT')}">0</div>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+<!--// 누적합계 -->
+
+<!-- 기부내역 목록 -->
+<h3 class="mt-70"><span>기부내역</span></h3>
+<div class="board_list mb30" id="cntrList"></div>
+<!--// 기부내역 목록  -->
+
+<!-- 포인트 내역 목록 -->
+<h3><span>포인트 내역</span></h3>
+<div class="board_list" id="pointList"></div>
+<!--// 포인트 내역 목록  -->
+
+<!-- ================= 운영 기능 (AS-IS 4101에는 없는 TO-BE 전용) =================
+     계정잠금 해제·RBAC 권한 회수는 SFR-002로 추가된 기능이다. AS-IS 상세화면의 버튼은
+     위의 네 개(배송지 관리·개인정보 열람·회원탈퇴·목록)뿐이라, AS-IS 영역과 섞지 않고
+     여기 따로 뒀다(MemberAdminController). -->
+<div class="board_write mt50" th:if="${details != null}">
+	<h3 class="fs24"><span>운영 기능 (AS-IS 외)</span></h3>
+	<p class="error" th:if="${redirectMessage != null}" th:text="${redirectMessage}"
+	   style="color:#c0392b;"></p>
+	<div class="btn_all btn_right">
+		<div class="flex_box gap-08">
+			<form th:action="@{'/admin/members/' + ${details.userId} + '/unlock'}" method="post" style="display:inline;"
+			      onsubmit="return confirm('계정 잠금을 해제하시겠습니까?');">
+				<button type="submit" class="btn btn-default btn-mini">계정잠금 해제</button>
+			</form>
+			<form th:each="role : ${details.roles}"
+			      th:action="@{'/admin/members/' + ${details.userId} + '/roles/' + ${role} + '/revoke'}"
+			      method="post" style="display:inline;"
+			      onsubmit="return confirm('이 권한을 회수하시겠습니까?');">
+				<button type="submit" class="btn btn-default btn-mini"
+				        th:text="${role} + ' 회수'">권한 회수</button>
+			</form>
+		</div>
+	</div>
+</div>
+<!--// 운영 기능 -->
+
+<!-- 목록 검색 조건 -->
+<input type="hidden" id="listSearchParam" />
+<!--// 목록 검색 조건  -->
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript" th:inline="javascript">
+	var userId = [[${details != null ? details.userId : null}]];
+	var onePassUser = [[${details != null and details.onePassUser}]];
+
+	$(function(){
+
+		// 페이지 유효성 확인
+		if(!userId) {
+			alert("잘못된 접근입니다.");
+			moveListPage();
+			return false;
+		}
+
+		// 네비게이션 수정
+		$(".contents .contents_inner").find("div.location a").removeClass("on");
+		$(".contents .contents_inner").find("div.location").append('> <a href="'+location.pathname+'" class="on">수정</a>');
+
+		// 목록 검색 조건 저장
+		listSearchParamSave();
+
+		// 기부내역 목록 조회
+		getCntrList(1);
+
+		// 포인트 내역 목록 조회
+		getPointList(1);
+	});
+
+	/**
+	 *	함 수 명 : listSearchParamSave
+	 *	기	능  : 목록 검색 조건 저장
+	 */
+	function listSearchParamSave() {
+
+		// 목록 검색 조건 저장
+		$("#listSearchParam").val(location.search);
+
+		// 검색 조건 삭제
+		history.replaceState({}, null, location.pathname);
+	}
+
+	/**
+	 *	함 수 명 : moveListPage
+	 *	기	능  : 목록 페이지 이동
+	 */
+	function moveListPage() {
+		location.href = "/admin/members"+$("#listSearchParam").val();
+	}
+
+	/**
+	 *	함 수 명 : passwordConfirmPopup
+	 *	기	능  : 개인정보 열람 > 비밀번호 확인 팝업 활성화
+	 */
+	function passwordConfirmPopup() {
+		window.open("/admin/members/popup/password/"+userId, "customerAccessPopup", "width=450, height=250");
+	}
+
+	/**
+	 *	함 수 명 : getCntrList
+	 *	기	능  : 기부내역 목록 조회
+	 *	파라미터  : page - 현재 페이지
+	 */
+	function getCntrList(page) {
+		$.get("/admin/members/details/"+userId+"/cntr-list?page="+page, {}, function(result) {
+			$("#cntrList").html(result);
+		}, "html");
+	}
+
+	/**
+	 *	함 수 명 : getPointList
+	 *	기	능  : 포인트 내역 목록 조회
+	 *	파라미터  : page - 현재 페이지
+	 */
+	function getPointList(page) {
+		$.get("/admin/members/details/"+userId+"/point-list?page="+page, {}, function(result) {
+			$("#pointList").html(result);
+		}, "html");
+	}
+
+	/**
+	 *	함 수 명 : customerSecede
+	 *	기	능  : 회원탈퇴 팝업 활성화
+	 */
+	function customerSecede() {
+		if(onePassUser) {
+			alert("디지털원패스 회원은 탈퇴 처리 불가능합니다.");
+			return false;
+		}
+
+		var url = "/admin/members/popup/secede/"+userId;
+		var popupName = "customerSecedePopup";
+		Common.popup(url, popupName, 600, 330, 1, 0, 0);
+	}
+
+	/**
+	 *	함 수 명 : customerSecedeCallBack
+	 *	기	능  : 회원탈퇴 콜백 함수 (팝업이 호출한다)
+	 */
+	function customerSecedeCallBack(isLogout) {
+		if(isLogout && isLogout == "Y") {
+			$("#logoutForm").submit();
+		} else {
+			$("#listSearchParam").val("");
+			moveListPage();
+		}
+	}
+
+	/**
+	 *	함 수 명 : deliveryPopup
+	 *	기	능  : 배송지 관리 팝업
+	 */
+	function deliveryPopup() {
+		var url = "/admin/members/delivery/"+userId;
+		Common.popup(url, '배송지관리', 800, 480, 1, 0, 0);
+	}
+</script>
+
+<!-- AS-IS는 GET /op_security_logout으로 로그아웃하지만 TO-BE의 /admin/logout은 POST다. -->
+<form id="logoutForm" method="post" th:action="@{/admin/logout}"></form>
+</body>
+</html>

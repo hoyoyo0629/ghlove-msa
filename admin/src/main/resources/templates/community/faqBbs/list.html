@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>담당자용 FAQ - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/community/faqBbs/list.jsp 이식(메뉴 11405 담당자용 FAQ).
+     소속(시스템/행안부/지자체 + 시도·시군구) + 검색구분(전체/제목) + 등록일자 +
+     <b>질문유형 탭</b> + 화면출력 + 6컬럼 + 등록.
+
+     ★ AS-IS는 @RequestMapping 하나로 GET·POST를 다 받아 진입에서도 조회한다.
+
+     AS-IS verbatim(11404 SR과 다른 점):
+     - <b>상단 빨간 안내문구가 없다</b>(소통방 문구가 주석으로만 남아 있다 - 그대로 둔다).
+     - 소속 컬럼이 아니라 <b>질문유형</b> 컬럼이다(코드에 맞는 라벨을 찍고, 못 찾으면 빈 값).
+     - 질문유형은 select가 아니라 <b>탭</b>이고, 누르면 바로 검색된다('전체'가 첫 탭).
+       탭은 <b>한 줄에 6개씩</b> 배치하고 마지막 줄은 빈 li로 6칸까지 채운다(AS-IS 레이아웃 그대로).
+     - 등록 버튼 문구는 M00088이 아니라 "등록"이 하드코딩돼 있다.
+
+     ★ 제목(h3)은 MENU_11405가 op_common_message에 없어서(실측) op_menu.menu_name을 쓴다
+       - 11406과 같은 처리. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<div>
+	<h3>
+		<span th:text="${activeMenu != null ? activeMenu.menuName : '담당자용 FAQ'}">담당자용 FAQ</span>
+	</h3>
+	<!-- <p style="margin-top:10px; margin-bottom:50px; text-align:center; font-size: 20px; font-weight: 400;">행안부와 지자체를 위한 자유로운 소통방입니다.</p> -->
+</div>
+
+<form id="searchParam" method="post" th:action="@{/community/faq-bbs/list}">
+	<input type="hidden" id="sort" name="sort" th:value="${searchParam.sort}"/>
+	<input type="hidden" id="orderBy" name="orderBy" th:value="${searchParam.orderBy}"/>
+	<input type="hidden" id="itemsPerPage" name="itemsPerPage" th:value="${searchParam.itemsPerPage}"/>
+	<input type="hidden" id="page" name="page" th:value="${searchParam.page}"/>
+
+	<div class="board_write">
+		<table class="board_write_table" summary="">
+			<colgroup>
+				<col style="width: 220px;">
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="label">소속</td>
+					<td colspan="3">
+						<div class="flex_box gap-08">
+							<select id="searchRole" name="searchRole" title="소속" class="wd-150" onchange="adminChange(this.value)">
+								<option value="" th:selected="${searchParam.searchRole == null or searchParam.searchRole == ''}">전체</option>
+								<option value="ROLE_ADMIN_1" th:selected="${searchParam.searchRole == 'ROLE_ADMIN_1'}">시스템 관리자</option>
+								<option value="ROLE_ADMIN_3" th:selected="${searchParam.searchRole == 'ROLE_ADMIN_3'}">행정안전부</option>
+								<option value="ROLE_ADMIN_5" th:selected="${searchParam.searchRole == 'ROLE_ADMIN_5'}">지자체</option>
+							</select>
+							<!-- 지자체가 선택되면 2, 3차 카테고리(시도/군구) 선택 -->
+							<select id="shWdr" name="shWdr" class="wd-150" style="display:none" onchange="wdrChange(this.value)">
+								<option value="">-시·도 선택-</option>
+								<option th:each="w : ${wdr}" th:value="${w.id}" th:text="${w.label}"
+										th:selected="${searchParam.shWdr == w.id}"></option>
+							</select>
+
+							<select id="locgovCode" name="locgovCode" class="wd-150" style="display:none">
+								<option value="">-시·군·구-</option>
+							</select>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">검색구분</td>
+					<td colspan="3">
+						<div class="flex_box gap-08">
+							<select id="where" name="where" title="검색구분" class="wd-150">
+								<option value="ALL" th:selected="${searchParam.where == 'ALL'}">전체</option>
+								<option value="SUBJECT" th:selected="${searchParam.where == 'SUBJECT'}">제목</option>
+								<!-- <option value="USERNAME">작성자</option> -->
+							</select>
+							<input type="text" id="query" name="query" class="input_txt required _filter half"
+								   th:title="${msg.get('M00021')}" th:value="${searchParam.query}"/>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">등록일자</td>
+					<td colspan="3">
+						<div class="search-date">
+							<span class="datepicker">
+								<input type="text" id="startDt" name="startDt" class="datepicker optional"
+									   th:title="${msg.get('M00507')}" th:value="${searchParam.startDt}"/>
+							</span>
+							<span class="wave">~</span>
+							<span class="datepicker">
+								<input type="text" id="endDt" name="endDt" class="datepicker optional"
+									   th:title="${msg.get('M00509')}" th:value="${searchParam.endDt}"/>
+							</span>
+							<span class="day_btns day_btn1">
+								<a href="javascript:void(0);" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+								<a href="javascript:void(0);" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a>
+								<a href="javascript:void(0);" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>
+								<a href="javascript:void(0);" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+								<a href="javascript:void(0);" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a>
+								<a href="javascript:void(0);" class="btn_date clear" th:text="${msg.get('M00039')}">전체</a>
+								<!-- 전체 -->
+							</span>
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<div class="jq_tabonoff comm_tab1">
+			<!-- ul 한줄에 li태그 6개까지 배치 (줄 쪼개기는 서버에서 - faqTypeTabRows) -->
+			<input type="hidden" name="shFaqType" id="shFaqType" th:value="${searchParam.shFaqType}"/>
+			<ul class="jq_tab tabs" th:each="row : ${faqTypeTabRows}">
+				<li th:each="tab : ${row}"
+					th:class="${tab != null and tab.id == (searchParam.shFaqType == null ? '' : searchParam.shFaqType)} ? 'active' : ''"
+					th:attr="data-id=${tab != null ? tab.id : null}">
+					<a href="javascript:;" class="" th:text="${tab != null ? tab.label : ''}"></a>
+				</li>
+			</ul>
+		</div>
+		<div class="btn_all btn_left">
+			<ul class="list-bullet point">
+				<li>
+					검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.
+				</li>
+			</ul>
+		</div>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-default btn-mini"
+						onclick="location.href='/community/faq-bbs/list'" th:text="${msg.get('M00047')}">초기화</button>
+				<!-- 초기화 -->
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="search();"
+						th:text="${msg.get('M00048')}">검색</button>
+				<!-- 검색 -->
+			</div>
+		</div>
+	</div>
+</form>
+
+<div class="count_title mt-40">
+	<h5>
+		총 <span th:text="${#numbers.formatInteger(pagination.totalItems, 1, 'COMMA')}" th:remove="tag">0</span> 건
+	</h5>
+	<span>
+		<select name="displayCount" id="displayCount" th:title="${msg.get('M00239')}">
+			<option value="10" th:text="${msg.get('M00240')}">10개 출력</option>
+			<option value="20" th:text="${msg.get('M00241')}">20개 출력</option>
+			<option value="50" th:text="${msg.get('M00242')}">50개 출력</option>
+			<option value="100" th:text="${msg.get('M00243')}">100개 출력</option>
+		</select>
+	</span>
+</div>
+
+<div class="board_list">
+	<table class="board_list_table" summary="">
+		<caption></caption>
+		<colgroup>
+			<col style="width: 80px;">
+			<col style="width: 150px;">
+			<!-- <col style="width: 150px;"> -->
+			<col style="width: *;">
+			<col style="width: 100px;">
+			<col style="width: 150px;">
+			<col style="width: 150px;">
+		</colgroup>
+		<thead>
+			<tr>
+				<th scope="col">No.</th>
+				<th scope="col">질문유형</th>
+				<!-- <th scope="col">작성자</th> -->
+				<th scope="col">제목</th>
+				<th scope="col">조회수</th>
+				<th scope="col">등록일시</th>
+				<th scope="col">수정일시</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr th:each="community, i : ${list}">
+				<td th:text="${pagination.itemNumber - i.count}">0</td>
+				<td th:text="${community.faqTypeNm}"></td>
+				<td>
+					<div style="align-items: center; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+						<span class="label_notice" th:if="${community.noticeYn == 'Y'}">공지</span>
+						<a class="communityId" th:href="|javascript:communityDetail('${community.bbsId}')|"
+						   style="max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block;"
+						   th:text="${community.bbsTtl}"></a>
+
+						<span class="comment-count" th:if="${community.cmntCnt > 0}"
+							  th:attr="data-community-id=${community.bbsId}"
+							  style="color: red; margin-left: 10px" th:text="'[' + ${community.cmntCnt} + ']'"></span>
+						<img class="databoard-icon" th:if="${community.attachedFileCnt > 0}"
+							 th:src="@{/content/images/icon/cli-icon_file-list.png}" alt="첨부자료 있음" />
+						<img class="databoard-icon" th:if="${community.isSecret == 'Y'}"
+							 th:src="@{/content/images/icon/icon_lock.png}" alt="비밀글" />
+					</div>
+				</td>
+				<td th:text="${community.inqCnt}">0</td>
+				<td th:text="${community.frstCrtDt != null} ? ${#temporals.format(community.frstCrtDt, 'yyyy-MM-dd HH:mm:ss')} : ''"></td>
+				<td th:text="${community.lastMdfcnDt != null} ? ${#temporals.format(community.lastMdfcnDt, 'yyyy-MM-dd HH:mm:ss')} : ''"></td>
+			</tr>
+		</tbody>
+	</table>
+
+	<div class="no_content" th:if="${#lists.isEmpty(list)}" th:text="${msg.get('M00170')}">등록된 내용이 없습니다.</div>
+	<div class="btn_all btn_right">
+		<div class="flex_box gap-08">
+			<a th:href="@{/community/faq-bbs/form}" class="btn btn-dark-gray btn-mini">등록</a>
+		</div>
+	</div>
+	<div class="pagination-wrap">
+		<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+	</div>
+</div>
+
+    </div>
+    </div>
+</div>
+</div>
+
+<link rel="stylesheet" type="text/css" th:href="@{/content/css/community.css}">
+<script type="text/javascript" th:inline="javascript">
+	// AS-IS ViewUtils.redirect(url, message) - 안내문구를 alert으로 띄운다
+	var redirectMessage = /*[[${redirectMessage}]]*/ null;
+
+	// AS-IS는 시군구 목록을 ajax로 받지만 TO-BE admin은 지자체 목록을 실어 보내 걸러 쓴다.
+	var allLocgovs = /*[[${locgovs}]]*/ [];
+	if(!allLocgovs) { allLocgovs = []; }
+	var selectedLocgovCode = /*[[${searchParam.locgovCode}]]*/ '';
+
+	$(function() {
+		if (redirectMessage) {
+			alert(redirectMessage);
+		}
+
+		searchEnterKey()
+		displayChange();
+		datepickerChange()
+		displaySelected();
+		showTab();
+
+		adminChange($("#searchRole").val());
+		wdrChange($("#shWdr").val());
+
+		Common.DateButtonEvent.set('.day_btn1 > a[class^=btn_date]', '',
+				'input[name="startDt"]', 'input[name="endDt"]');
+		EventHandler.calendarStartDateAndEndDateVaild();
+
+	})
+
+	function showTab() {
+		//$(".tab_content:first").show();
+		$('.jq_tabonoff').delegate('.jq_tab>li', 'click', function() {
+			var index = $(this).parent().children().index(this);
+			$('.jq_tab>li').removeClass();
+			$(this).addClass('active');
+			$("#shFaqType").val($(this).data('id'));
+			search();
+		});
+	}
+
+	/**
+	 *	함 수 명 : adminChange
+	 *	기	능  : 소속 변경 이벤트, 지자체 선택 시 2, 3차 카테고리 보여줌
+	 */
+	function adminChange(value) {
+		if ($("#searchRole").val() == "ROLE_ADMIN_5") {
+			$("#shWdr").css('display', 'block');
+			$("#locgovCode").css('display', 'block');
+		} else {
+			$("#shWdr").css('display', 'none');
+			$("#locgovCode").css('display', 'none');
+			$("#shWdr").val('');
+			$("#locgovCode").val('');
+		}
+	}
+
+	function wdrChange(value) {
+		$("#locgovCode option").remove();
+		if ($("#shWdr").val() != "") {
+			$('#locgovCode').append('<option value="">-시·군·구-</option>');
+			$.each(allLocgovs, function(index, item) {
+				if (item.upperLocgovCode == value) {
+					$('#locgovCode').append('<option value="' + item.locgovCode + '">' + item.locgovNm + '</option>');
+				}
+			});
+
+			if (selectedLocgovCode) {
+				$("#locgovCode").val(selectedLocgovCode);
+			}
+		} else {
+			$('#locgovCode').append('<option value="">-시·군·구-</option>');
+		}
+	}
+
+	function displayChange() {
+		$("#displayCount").on('change', function() {
+			$("#itemsPerPage").val($(this).val());
+			$("#page").val(1);
+			$('#searchParam').submit();
+		});
+	}
+	function displaySelected() {
+		$("#displayCount").val($("#itemsPerPage").val());
+	}
+
+	/**
+	 *	함 수 명 : datepickerChange
+	 *	기	능  : 날짜 변경 이벤트
+	 */
+	function datepickerChange() {
+		if ($("input.datepicker").length) {
+			$("input.datepicker").keyup(function(e) {
+				if (e && e.target && e.target.value) {
+					var value = e.target.value.replace(/[^0-9]/g, "");
+					if (value.length > 8) {
+						value = value.slice(0, 8);
+					}
+					e.target.value = value;
+				}
+			});
+		}
+	}
+
+	/**
+	 *	함 수 명 : search
+	 *	기	능  : 검색
+	 */
+	function search() {
+		var strStartDate = $("#startDt").val();
+		var strEndDate = $("#endDt").val();
+
+		if (strStartDate && strStartDate.length == 8 && strEndDate
+				&& strEndDate.length == 8) {
+			var startDate = new Date(strStartDate.substr(0, 4), strStartDate
+					.substr(4, 2), strStartDate.substr(6, 2));
+			var endDate = new Date(strEndDate.substr(0, 4), strEndDate.substr(
+					4, 2), strEndDate.substr(6, 2));
+			if (startDate > endDate) {
+				alert("종료일이 시작일보다 빠릅니다.");
+				$("#endDt").focus();
+				return false;
+			}
+			var searchChk = Common.searchDateMonth(startDate, endDate);
+			if (!searchChk)
+				return false;
+		}
+
+		$("#page").val(1);
+		$("#searchParam").submit();
+	}
+
+	function communityDetail(id) {
+
+		location.href = '/community/faq-bbs/detail/' + id;
+	}
+
+	/**
+	 *	함 수 명 : searchEnterKey
+	 *	기	능  : 검색 엔터키 이벤트
+	 */
+	function searchEnterKey() {
+		$("#query").on('keydown', function(e) {
+			if (e.keyCode == '13') {
+				$("#page").val(1);
+				$("#searchParam").submit();
+			}
+		});
+	}
+</script>
+</body>
+</html>

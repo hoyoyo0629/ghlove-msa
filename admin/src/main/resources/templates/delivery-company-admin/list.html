@@ -1,42 +1,155 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>택배사관리 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <title>배송업체 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
-<div class="contents contents_inner">
-    <h3>택배사관리</h3>
-    <p style="color:#666; margin-bottom:16px;">송장 등록 시 선택할 택배사와 배송조회 URL을 관리합니다.</p>
-    <p th:if="${message}" style="color:#1a7f37;" th:text="${message}"></p>
-    <p th:if="${errorMessage}" style="color:#d32f2f;" th:text="${errorMessage}"></p>
-    <p><a class="btn" th:href="@{/admin/delivery-companies/new}">+ 택배사 등록</a></p>
-    <table class="board_list_table">
-        <thead>
-        <tr><th>ID</th><th>택배사명</th><th>대표연락처</th><th>배송조회 URL</th><th>사용</th><th>처리</th></tr>
-        </thead>
-        <tbody>
-        <tr th:each="c : ${companies}">
-            <td th:text="${c.deliveryCompanyId()}"></td>
-            <td><a th:href="@{'/admin/delivery-companies/' + ${c.deliveryCompanyId()} + '/edit'}" th:text="${c.deliveryCompanyName()}"></a></td>
-            <td th:text="${c.telNumber()}"></td>
-            <td th:text="${c.deliveryCompanyUrl()}"></td>
-            <td th:text="${c.useFlag() == 'Y' ? '사용' : '미사용'}"></td>
-            <td>
-                <a class="small-btn" th:href="@{'/admin/delivery-companies/' + ${c.deliveryCompanyId()} + '/edit'}">수정</a>
-                <form th:action="@{'/admin/delivery-companies/' + ${c.deliveryCompanyId()} + '/delete'}" method="post" class="inline-form"
-                      onsubmit="return confirm('삭제하시겠습니까?')">
-                    <button type="submit" class="small-btn danger">삭제</button>
-                </form>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(companies)}">등록된 택배사가 없습니다.</p>
-</div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/delivery-company/list.jsp 이식. 검색구분(배송업체명/연락처) + 화면출력
+     7종 + 5컬럼 목록 + 등록·선택삭제 + 페이지네이션. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+            <form id="deliveryCompanyParam" method="post" th:action="@{/admin/delivery-companies}" enctype="multipart/form-data">
+                <h3><span th:text="${msg.get('M01211')}">배송업체</span></h3>
+
+                <div class="board_guide" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+                <div class="board_write">
+                    <table class="board_write_table" th:summary="${msg.get('M01211')}">
+                        <caption th:text="${msg.get('M01211')}"></caption> <!-- 배송업체 -->
+                        <colgroup>
+                            <col style="width:220px;" />
+                            <col style="width:auto;" />
+                        </colgroup>
+                        <tbody>
+                             <tr>
+                                <td class="label" th:text="${msg.get('M00011')}">검색구분</td> <!-- 검색구분 -->
+                                <td>
+                                    <div class="flex_box gap-08">
+                                        <select id="where" name="where" class="wd-150">
+                                            <option value="DELIVERY_COMPANY_NAME" th:text="${msg.get('M00665')}" th:selected="${deliveryCompanyParam.where == 'DELIVERY_COMPANY_NAME'}">배송업체명</option> <!-- 배송업체명 -->
+                                            <option value="TEL_NUMBER" th:text="${msg.get('M00154')}" th:selected="${deliveryCompanyParam.where == 'TEL_NUMBER'}">연락처</option>   <!-- 연락처 -->
+                                        </select>
+                                        <input type="text" id="query" name="query" class="full" th:value="${deliveryCompanyParam.query}" th:title="${msg.get('M00665')}" />
+                                    </div>
+                                </td>
+                             </tr>
+                        </tbody>
+                    </table>
+                </div> <!-- // board_write -->
+
+                <!-- 버튼시작 -->
+                <div class="btn_all btn_right">
+                    <div class="flex_box gap-08">
+                        <button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/admin/delivery-companies';" th:text="${msg.get('M00047')}">초기화</button>
+                        <button type="submit" class="btn btn-dark-gray btn-mini" th:text="${msg.get('M00048')}">검색</button> <!-- 검색 -->
+                    </div>
+                </div>
+                <!-- 버튼 끝-->
+
+            <div class="count_title mt-40">
+                <h5>
+                    <span th:text="${msg.get('M00045')}" th:remove="tag">총</span>  <span th:text="${#numbers.formatInteger(pagination.totalItems, 0, 'COMMA')}" th:remove="tag">0</span> <span th:text="${msg.get('M00272')}" th:remove="tag">건</span>
+                </h5>	 <!-- 전체 -->   <!-- 건 조회 -->
+                <span>
+                    <select id="itemsPerPage" name="itemsPerPage" title="출력수 선택" onchange="$('#deliveryCompanyParam').submit();">
+                        <option value="10"   th:selected="${deliveryCompanyParam.itemsPerPage == 10}">10개 출력</option>
+                        <option value="20"   th:selected="${deliveryCompanyParam.itemsPerPage == 20}">20개 출력</option>
+                        <option value="30"   th:selected="${deliveryCompanyParam.itemsPerPage == 30}">30개 출력</option>
+                        <option value="50"   th:selected="${deliveryCompanyParam.itemsPerPage == 50}">50개 출력</option>
+                        <option value="100"  th:selected="${deliveryCompanyParam.itemsPerPage == 100}">100개 출력</option>
+                        <option value="500"  th:selected="${deliveryCompanyParam.itemsPerPage == 500}">500개 출력</option>
+                        <option value="1000" th:selected="${deliveryCompanyParam.itemsPerPage == 1000}">1000개 출력</option>
+                    </select>
+                </span>
+            </div>
+            </form>
+
+            <form id="listForm">
+            <div class="board_write">
+                <table class="board_list_table" th:summary="${msg.get('M00273')}"> <!-- 주문내역 리스트 -->
+                    <caption th:text="${msg.get('M00273')}"></caption>
+                    <colgroup>
+                        <col style="width:50px;">
+                        <col style="width:200px;">
+                        <col style="width:200px;">
+                        <col style="width:500px;">
+                        <col style="width:150px;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th scope="col"><input type="checkbox" name="tempId2" id="check_all" th:title="${msg.get('M00169')}" /></th> <!-- 체크박스 -->
+                            <th scope="col" th:text="${msg.get('M00665')}">배송업체명</th> <!-- 배송업체명 -->
+                            <th scope="col" th:text="${msg.get('M00666')}">대표연락처</th> <!-- 대표연락처 -->
+                            <th scope="col" th:text="${msg.get('M00671')}">배송 조회 URL</th> <!-- 배송 조회 URL -->
+                            <th scope="col" th:text="${msg.get('M00669')}">사용유무</th> <!-- 사용유무 -->
+                        </tr>
+
+                    </thead>
+                    <tbody>
+                    <tr th:each="companyList : ${deliveryCompanyList}" style="background:#fff;">
+                        <td>
+                            <div>
+                                <input type="checkbox" name="id" id="check" th:value="${companyList.deliveryCompanyId}" th:title="${msg.get('M00169')}" />
+                            </div>
+                        </td>
+                        <td>
+                            <div>
+                                <a th:href="@{'/admin/delivery-companies/edit/' + ${companyList.deliveryCompanyId}}" th:text="${companyList.deliveryCompanyName}"></a>
+                            </div>
+                        </td>
+                        <td>
+                            <div th:text="${companyList.telNumber}"></div>
+                        </td>
+                        <td style="text-align:left;">
+                            <div th:text="${companyList.deliveryCompanyUrl}"></div>
+                        </td>
+                        <td>
+                            <div th:text="${companyList.useFlag == 'Y'} ? ${msg.get('M00083')} : ${msg.get('M00089')}"></div> <!-- 사용 --> <!-- 사용안함 -->
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <div class="no_content" th:if="${#lists.isEmpty(deliveryCompanyList)}" th:text="${msg.get('M00473')}">
+                    데이터가 없습니다.
+                </div>
+
+            </div><!--// board_write E-->
+
+            <div class="btn_all btn_right">
+                <div class="flex_box gap-08">
+                    <a th:href="@{/admin/delivery-companies/create}" class="btn btn-default btn-mini" th:text="${msg.get('M00088')}">등록</a> <!-- 등록 -->
+                    <a id="delete_list_data" href="#" class="btn btn-dark-gray btn-mini"><span th:text="${msg.get('M00074')}">삭제</span></a> <!-- 삭제 -->
+                </div>
+            </div>
+            </form>
+
+            <div class="pagination-wrap">
+                <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div><br/>
+            </div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script type="text/javascript">
+$(function() {
+
+	//목록데이터 - 삭제처리
+	$('#delete_list_data').on('click', function() {
+		Common.updateListData("/admin/delivery-companies/delete", Message.get("M00306"));	// 선택된 데이터를 삭제하시겠습니까?
+	});
+
+});
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

@@ -69,6 +69,16 @@ public class User {
     @Column(name = "MBER_CI")
     private String mberCi;
 
+    /**
+     * 디지털원패스 연계 식별키 - 값이 있으면 원패스로 가입·연동된 회원이다.
+     *
+     * <p>AS-IS 일반회원관리(메뉴 4101)는 이 값이 있으면 <b>관리자가 탈퇴시킬 수 없게</b> 막는다
+     * (화면에서 "디지털원패스 회원은 탈퇴 처리 불가능합니다." · 서버에서 {@code ERR_ONE_PASS}).
+     * 컬럼은 원래 있었고 매핑만 없었다 - 그 판정을 하려면 읽을 수 있어야 한다.
+     */
+    @Column(name = "USER_KEY")
+    private String userKey;
+
     /** 중복가입확인정보(DI). */
     @Column(name = "MBER_DI")
     private String mberDi;

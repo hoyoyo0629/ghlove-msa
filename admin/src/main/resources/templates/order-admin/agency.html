@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>주문대행 조회 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -8,11 +9,16 @@
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
 <!-- AS-IS opmanager/order/agency(OrderAgencyController) - 콜센터 상담원 전용 전체조회 도구.
      지자체 스코프 없이(=시스템/행안부담당자만) 전체 지자체 주문을 검색한다. -->
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <h3><span>주문대행 조회</span></h3>
     <p style="color:#888; margin-bottom:12px;">콜센터 상담원이 고객 문의에 대응하기 위해 지자체 구분 없이 전체 주문을 조회하는 화면입니다 (시스템관리자 전용).</p>
 
@@ -121,7 +127,10 @@
                th:href="@{/admin/order-agency(locgovCode=${locgovCode},orderStatus=${orderStatus},searchType=${searchType},keyword=${keyword},startDate=${startDate},endDate=${endDate},page=${currentPage + 1},size=${size})}">다음</a>
         </div>
     </div>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

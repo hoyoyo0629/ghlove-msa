@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>탈퇴사유 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<!-- AS-IS opmanager/i18n/user/popup/secede-reason-details.jsp 이식. layout=base 팝업(600x350).
+     회원탈퇴관리(메뉴 4105) 목록의 탈퇴사유를 눌렀을 때 전문을 보여준다.
+     팝업 제목은 AS-IS대로 "회원탈퇴"다(탈퇴사유가 아니다). -->
+<body>
+<div class="popup_wrap">
+	<div id="pop_header">
+		<h1 class="popup_title">회원탈퇴</h1>
+		<a href="javascript:self.close();" class="btn_close">
+			<img th:src="@{/content/opmanager/images/btn/btn_close.png}" alt="닫기">
+		</a>
+	</div>
+
+	<div class="popup_contents">
+		<table class="board_write_table" summary="회원탈퇴">
+			<caption>회원탈퇴</caption>
+			<colgroup>
+				<col style="width: 150px" />
+				<col />
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="label">탈퇴사유</td>
+					<td colspan="3">
+						<div>
+							<th:block th:if="${details != null and not #strings.isEmpty(details.leaveCodeLabel)}">
+								<span th:text="${details.leaveCodeLabel}"></span><br/>
+							</th:block>
+							<span th:text="${details != null} ? ${details.leaveReason} : ''"></span>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">탈퇴구분</td>
+					<td>
+						<div th:text="${details != null and details.leaveUserId != null} ? '관리자탈퇴' : '회원탈퇴'"></div>
+					</td>
+					<td class="label">담당자</td>
+					<td>
+						<div>
+							<th:block th:if="${details != null and details.leaveUserId != null}">
+								<span th:text="${details.roleName}"></span>
+								<th:block th:if="${not #strings.isEmpty(details.leaveUserName)}">
+									<br/><span th:text="'(' + ${details.leaveUserName} + ')'"></span>
+								</th:block>
+							</th:block>
+							<th:block th:unless="${details != null and details.leaveUserId != null}">-</th:block>
+						</div>
+					</td>
+				</tr>
+
+			</tbody>
+		</table>
+		<p class="popup_btns">
+			<button type="button" class="btn btn-active" onclick="self.close();">확인</button>
+		</p>
+	</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<!--
+ 판매자 공지사항 목록 (AS-IS seller/i18n/sellerNotice/list.jsp). 컬럼·문구는 AS-IS 그대로:
+ 제목 "공지사항", 검색(제목/기간), "총 N건", No./제목/조회수/등록일시, 공지 라벨, 첨부표시.
+ 스타일은 gift 셀프포털의 경량 템플릿(seller-dashboard.html)과 일관.
+-->
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>공지사항 - 고향사랑e음 (gift service)</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<nav class="navbar">
+    <div class="logo">답례품<span class="badge">gift</span></div>
+    <div class="nav-links">
+        <a th:href="@{/seller/dashboard}">판매자 대시보드</a>
+    </div>
+</nav>
+
+<div class="wrap">
+    <h1 style="text-align:left">공지사항</h1>
+
+    <form method="get" th:action="@{/seller/sys-notice/list}" style="margin-bottom:16px;">
+        <label>제목
+            <input type="text" name="keyword" th:value="${keyword}" style="width:200px;">
+        </label>
+        <label>등록일
+            <input type="text" name="startDt" th:value="${startDt}" placeholder="YYYY-MM-DD" style="width:120px;">
+            ~
+            <input type="text" name="endDt" th:value="${endDt}" placeholder="YYYY-MM-DD" style="width:120px;">
+        </label>
+        <button type="submit">검색</button>
+    </form>
+
+    <h5 style="text-align:left; margin:8px 0;">총 <span th:text="${count}">0</span>건</h5>
+
+    <table>
+        <thead>
+        <tr>
+            <th style="width:70px;">No.</th>
+            <th>제목</th>
+            <th style="width:90px;">조회수</th>
+            <th style="width:170px;">등록일시</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="notice, stat : ${list}">
+            <td th:text="${count - stat.index}">1</td>
+            <td style="text-align:left;">
+                <span th:if="${notice.noticeFlag() == 'Y'}" class="label_notice"
+                      style="color:#c00; font-weight:bold; margin-right:4px;">공지</span>
+                <a th:href="@{'/seller/sys-notice/detail/' + ${notice.noticeId()}}" th:text="${notice.subject()}">제목</a>
+                <span th:if="${notice.attachedFileCnt() > 0}" title="첨부자료 있음" style="margin-left:4px;">📎</span>
+            </td>
+            <td th:text="${notice.hits()} ?: 0">0</td>
+            <td th:text="${notice.frstCrtDt()}">-</td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(list)}">등록된 게시글이 없습니다.</p>
+</div>
+</body>
+</html>

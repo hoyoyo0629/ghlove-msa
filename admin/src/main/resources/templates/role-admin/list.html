@@ -1,56 +1,116 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>역할·메뉴권한 관리 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <title>사용자 권한그룹 관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<!-- D10 역할·메뉴권한 관리 (AS-IS UserGroupController - 이름과 달리 회원그룹이 아니라
-     관리자 권한관리다). 역할 자체 CRUD + 역할별 메뉴권한 매트릭스 편집. -->
-<div class="contents contents_inner">
-    <h3>역할·메뉴권한 관리</h3>
+<!-- AS-IS opmanager/i18n/user-group/list.jsp 이식(1405 사용자 권한그룹 관리).
+     5컬럼(그룹명/설명/인원/생성일자/관리기능) + 권한그룹 생성·수정 팝업 + 페이지네이션.
+     AS-IS는 관리기능의 삭제 버튼을 JSP에서 주석처리해 두었으므로 여기서도 노출하지 않는다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+      <!-- 상단 타이틀 -->
+        <h3><span th:text="${msg.get('MENU_1405')}">사용자 권한그룹 관리</span></h3> <!-- 사용자 권한그룹 관리 -->
 
-    <div class="btn_all btn_right" style="margin-bottom:16px;">
-        <a class="btn btn-dark-gray btn-small" th:href="@{/admin/roles/new}">+ 역할 등록</a>
-    </div>
+        <div class="board_guide" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
-    <table class="board_list_table" summary="역할목록">
-        <caption>역할목록</caption>
-        <thead>
-        <tr>
-            <th scope="col">권한코드</th>
-            <th scope="col">역할명</th>
-            <th scope="col">설명</th>
-            <th scope="col">순서</th>
-            <th scope="col">처리</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="r : ${roles}">
-            <td><a th:href="@{'/admin/roles/' + ${r.authority} + '/edit'}" th:text="${r.authority}"></a></td>
-            <td th:text="${r.roleName}"></td>
-            <td th:text="${r.roleDesc}"></td>
-            <td th:text="${r.roleSeq}"></td>
-            <td>
-                <a class="small-btn" th:href="@{'/admin/roles/' + ${r.authority} + '/matrix'}">메뉴권한 편집</a>
-                <form th:action="@{'/admin/roles/' + ${r.authority} + '/delete'}" method="post" style="display:inline;"
-                      onsubmit="return confirm('이 역할을 삭제하시겠습니까?');">
-                    <button type="submit" class="small-btn ghost">삭제</button>
-                </form>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(roles)}">등록된 역할이 없습니다.</p>
-</div>
+        <!-- 버튼시작 -->
+        <div class="btn_all btn_right mb10">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-dark-gray btn-mini" onclick="fnGrpCreate()" th:text="${msg.get('M01691')}">권한그룹 생성</button>
+            </div>
+        </div>
+        <!-- 버튼 끝-->
+
+      <!-- 조회 목록 -->
+      <div class="board_list">
+        <table class="board_list_table" summary="사용자 권한 그룹관리">
+          <caption th:text="${msg.get('MENU_1405')}">사용자 권한그룹 관리</caption>
+          <colgroup>
+            <col>
+            <col>
+            <col style="width:5%;">
+            <col style="width:15%;">
+            <col style="width:15%;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col" th:text="${msg.get('M00571')}">그룹명</th> <!-- 그룹명 -->
+              <th scope="col" th:text="${msg.get('M00998')}">설명</th> <!-- 설명 -->
+              <th scope="col" th:text="${msg.get('M01694')}">인원</th> <!-- 인원 -->
+              <th scope="col" th:text="${msg.get('M01692')}">생성일자</th> <!-- 생성일 -->
+              <th scope="col" th:text="${msg.get('M01693')}">관리기능</th> <!-- 관리기능 -->
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr th:each="row : ${list}" style="background:#fff;">
+              <td th:text="${row.role.roleName}"></td>
+              <td th:text="${row.role.roleDesc}"></td>
+              <td th:text="${row.userCount}">0</td>
+              <!-- AS-IS op:date - yyyyMMddHHmmss 저장값을 날짜로 보여준다 -->
+              <td th:text="${row.role.createdDate != null and #strings.length(row.role.createdDate) >= 8}
+                           ? ${#strings.substring(row.role.createdDate,0,4) + '-' + #strings.substring(row.role.createdDate,4,6) + '-' + #strings.substring(row.role.createdDate,6,8)}
+                           : ${row.role.createdDate}"></td>
+
+              <td>
+                <div class="flex_box juc-center gap-08">
+                  <button type="button" class="btn btn-default btn-sm" th:onclick="|fnGrpUpdate('${row.role.authority}')|" th:text="${msg.get('M00087')}">수정</button> <!-- 수정 -->
+                  <!-- AS-IS도 삭제 버튼을 주석처리해 두었다:
+                  <button type="button" class="btn btn-default btn-sm" onclick="fnGrpDelete(...)">삭제</button> -->
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="no_content" th:if="${#lists.isEmpty(list)}">
+          <p th:text="${msg.get('M00170')}">등록된 내용이 없습니다.</p>
+        </div>
+      </div>
+
+
+        <div class="pagination-wrap">
+            <div class="pagination-wrap" th:if="${not #lists.isEmpty(list)}">
+                <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+            </div>
+        </div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script type="text/javascript">
+
+// 권한그룹 생성
+function fnGrpCreate(){
+    Common.popup('/admin/roles/create', 'createGroup', 800, 330, 1);
+}
+
+// 권한그룹 수정
+function fnGrpUpdate(id) {
+  Common.popup('/admin/roles/edit?authority=' + encodeURIComponent(id), 'editGroup', 800, 330, 1);
+}
+
+// 권한그룹 삭제 - AS-IS도 호출 버튼이 주석처리돼 있어 쓰이지 않는다(엔드포인트는 유지)
+function fnGrpDelete(id) {
+  Common.confirm(Message.get("M00196"), function() {
+        $.post("/admin/roles/delete", {"authority" : id}, function(response) {
+            Common.responseHandler(response, function() {
+                alert(Message.get("M00205"));
+                location.reload();
+            });
+        });
+    });
+}
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

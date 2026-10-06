@@ -3,7 +3,7 @@ import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
-import { formatN } from '../../utils/format'
+import { formatN, formatTextOption } from '../../utils/format'
 import MypageLnb from '../../components/MypageLnb.vue'
 
 // AS-IS mypage/orderDetail.html 레이아웃 재현 - 주문번호/일자, 지자체 그룹 + 답례품정보/
@@ -47,17 +47,21 @@ function formatDate(iso) {
   return String(iso).slice(0, 10).replace(/-/g, '.')
 }
 
-const statusClass = computed(() => {
-  if (!order.value) return ''
-  if (order.value.orderStatus === 'PENDING') return 'pending'
-  if (order.value.orderStatus === 'CONFIRMED') return 'confirmed'
+function statusClass(status) {
+  if (status === 'PENDING') return 'pending'
+  if (status === 'CONFIRMED') return 'confirmed'
+  if (status === 'PARTIALLY_CONFIRMED') return 'confirmed'
   return 'cancelled'
-})
+}
 
-async function cancelOrder() {
-  if (!(await modalConfirm('주문을 취소하시겠습니까?'))) return
+// 품목 단위 부분취소 (발송 전). 레거시 단일품목 주문(orderItemId 없음)은 주문 단위 취소로.
+async function cancelItem(item) {
+  if (!(await modalConfirm('해당 답례품을 취소하시겠습니까?'))) return
   try {
-    await api.post('order', `/api/orders/${orderId}/cancel`)
+    const url = item.orderItemId
+      ? `/api/orders/${orderId}/items/${item.orderItemId}/cancel`
+      : `/api/orders/${orderId}/cancel`
+    await api.post('order', url)
     modalAlert('취소신청 되었습니다.') // AS-IS modal-order_cancle.vue:360
     await load()
   } catch (e) {
@@ -68,14 +72,22 @@ async function cancelOrder() {
 // AS-IS는 반품/교환/취소를 유형별 모달로 확인받고 각각 다른 완료 문구를 띄운다.
 const CLAIM_LABEL = { RETURN: '반품', EXCHANGE: '교환', CANCEL: '취소' }
 const CLAIM_DONE = { RETURN: '반품신청 되었습니다.', EXCHANGE: '교환신청 되었습니다.', CANCEL: '취소신청 되었습니다.' }
+const claimItem = ref(null)
+
+function openClaim(item) {
+  claimItem.value = item
+  showClaim.value = true
+}
 
 async function submitClaim() {
   const t = claimForm.claimType
+  if (!claimItem.value) return
   if (!(await modalConfirm(`${CLAIM_LABEL[t] ?? ''}을(를) 신청하시겠습니까?`))) return
   try {
-    await api.post('order', `/api/orders/${orderId}/claim`, { claimType: t, reason: claimForm.reason })
+    await api.post('order', `/api/orders/${orderId}/items/${claimItem.value.orderItemId}/claim`, { claimType: t, reason: claimForm.reason })
     modalAlert(CLAIM_DONE[t] ?? '신청 되었습니다.')
     showClaim.value = false
+    claimItem.value = null
     await load()
   } catch (e) {
     errorMessage.value = e.message
@@ -102,9 +114,17 @@ async function confirmReceipt() {
   }
 }
 
-function writeReview() {
-  router.push(`/gifts/${order.value.itemId}?orderCode=${order.value.orderId}`)
+function writeReview(itemId) {
+  router.push(`/gifts/${itemId}?orderCode=${order.value.orderId}`)
 }
+
+// 발송 전(배송상태 없음)인 출고가 하나라도 있으면 배송지 변경 가능
+const anyShippable = computed(() =>
+  !!order.value && (order.value.shipments || []).some((s) => !s.deliveryStatus &&
+    (s.shipmentStatus === 'CONFIRMED' || s.shipmentStatus === 'PARTIALLY_CONFIRMED')))
+// 확정(부분확정 포함) 상태면 반품/교환·주문취소 노출
+const isConfirmed = computed(() =>
+  !!order.value && (order.value.orderStatus === 'CONFIRMED' || order.value.orderStatus === 'PARTIALLY_CONFIRMED'))
 </script>
 
 <template>
@@ -134,10 +154,10 @@ function writeReview() {
           <div class="o__date"><span>주문일자 : </span><span>{{ formatDate(order.createdDate) }}</span></div>
         </div>
 
-        <!-- 답례품 목록 (지자체 그룹) -->
-        <div class="row_con">
+        <!-- 답례품 목록 (지자체=출고 그룹 · 그룹 내 품목 반복) -->
+        <div class="row_con" v-for="(ship, sIdx) in order.shipments" :key="ship.shipmentId || sIdx">
           <div class="row_con_wrap locGroup">
-            <div class="list_title_area">{{ order.locgovName }}</div>
+            <div class="list_title_area">{{ ship.locgovName }}</div>
             <div class="list-body">
               <div class="honor-list-wrap">
                 <div class="list-title">
@@ -145,15 +165,17 @@ function writeReview() {
                   <div class="date-col o_status">주문/배송상태</div>
                 </div>
                 <ul class="list-items-group">
-                  <li class="list-items">
+                  <li class="list-items" v-for="(it, iIdx) in ship.items" :key="it.orderItemId || iIdx">
                     <div class="date-col g_info">
                       <div class="g_info_wrap">
                         <div class="g_info__txt">
-                          <div class="info_title">{{ order.itemName }}</div>
+                          <div class="info_title">{{ it.itemName }}</div>
+                          <div class="info_opt" v-if="it.optionName">옵션 [ {{ it.optionName }}<template v-if="it.optionPrice"> +{{ formatN(it.optionPrice) }}P</template> ]</div>
+                          <div class="info_opt" v-if="it.textOption"><span v-html="formatTextOption(it.textOption)"></span></div>
                           <div class="info_total">
-                            <span class="deepBlue">{{ formatN(order.quantity) }}</span>개
+                            <span class="deepBlue">{{ formatN(it.quantity) }}</span>개
                             <span class="dvide"></span>
-                            <span class="deepBlue">{{ formatN(order.pointAmount) }}P</span>
+                            <span class="deepBlue">{{ formatN(it.pointAmount) }}P</span>
                           </div>
                         </div>
                       </div>
@@ -161,19 +183,19 @@ function writeReview() {
                     <div class="date-col o_status">
                       <div class="o_status_wrap">
                         <div class="o_status-spteps">
-                          <div class="spteps_status" :class="statusClass">{{ order.orderStatusLabel }}</div>
-                          <div class="spteps_status" v-if="order.deliveryStatusLabel">
-                            {{ order.deliveryStatusLabel }}
-                            <template v-if="order.invoiceNo"> · {{ order.carrierLabel }} {{ order.invoiceNo }}</template>
+                          <div class="spteps_status" :class="statusClass(it.itemStatus)">{{ it.itemStatusLabel }}</div>
+                          <div class="spteps_status" v-if="ship.deliveryStatusLabel">
+                            {{ ship.deliveryStatusLabel }}
+                            <template v-if="ship.invoiceNo"> · {{ ship.carrierLabel }} {{ ship.invoiceNo }}</template>
                           </div>
-                          <div class="spteps_status s_txt" v-if="order.orderStatus === 'PENDING'">재고·포인트 처리 중입니다 (자동 새로고침)...</div>
-                          <div class="spteps_status pointRed" v-if="order.cancelReason">사유 : {{ order.cancelReason }}</div>
+                          <div class="spteps_status s_txt" v-if="it.itemStatus === 'PENDING'">재고·포인트 처리 중입니다 (자동 새로고침)...</div>
+                          <div class="spteps_status pointRed" v-if="it.cancelReason">사유 : {{ it.cancelReason }}</div>
                         </div>
                         <div class="o_status-btn">
-                          <button type="button" class="orderBtn" v-if="order.orderStatus === 'CONFIRMED' && !order.deliveryStatus" @click="cancelOrder">주문취소</button>
-                          <button type="button" class="orderBtn comp" v-if="order.deliveryStatus === 'DELIVERED'" @click="confirmReceipt">구매확정</button>
-                          <button type="button" class="orderBtn" v-if="order.orderStatus === 'CONFIRMED'" @click="showClaim = !showClaim">교환/반품신청</button>
-                          <button type="button" class="orderBtn comp" v-if="order.orderStatus === 'CONFIRMED'" @click="writeReview">후기작성</button>
+                          <button type="button" class="orderBtn" v-if="it.itemStatus === 'CONFIRMED' && !ship.deliveryStatus" @click="cancelItem(it)">주문취소</button>
+                          <button type="button" class="orderBtn comp" v-if="ship.deliveryStatus === 'DELIVERED'" @click="confirmReceipt">구매확정</button>
+                          <button type="button" class="orderBtn" v-if="it.orderItemId && it.itemStatus === 'CONFIRMED' && (ship.deliveryStatus === 'DELIVERED' || ship.deliveryStatus === 'CONFIRMED')" @click="openClaim(it)">교환/반품신청</button>
+                          <button type="button" class="orderBtn comp" v-if="it.itemStatus === 'CONFIRMED'" @click="writeReview(it.itemId)">후기작성</button>
                         </div>
                       </div>
                     </div>
@@ -183,6 +205,7 @@ function writeReview() {
             </div>
           </div>
         </div>
+
 
         <!-- 배송지 정보 + 결제정보 -->
         <div class="row_con flex">
@@ -209,7 +232,7 @@ function writeReview() {
                 </li>
                 <li class="payment_list">
                   <span class="payment__label">배송비</span>
-                  <span class="payment__val">{{ order.deliveryFee ? formatN(order.deliveryFee) + ' P' : '무료배송' }}</span>
+                  <span class="payment__val">{{ order.deliveryFeeTotal ? formatN(order.deliveryFeeTotal) + ' P' : '무료배송' }}</span>
                 </li>
               </ul>
               <div class="payment_list total_pay">
@@ -221,7 +244,7 @@ function writeReview() {
         </div>
 
         <!-- 발송 전 배송지 변경 -->
-        <div class="row_con" v-if="order.orderStatus === 'CONFIRMED' && !order.deliveryStatus">
+        <div class="row_con" v-if="anyShippable">
           <div class="row_con_wrapper">
             <div class="list_title_area">배송지 변경 (발송 전)</div>
             <ul class="list_wrapper">
@@ -232,10 +255,10 @@ function writeReview() {
           </div>
         </div>
 
-        <!-- 반품/교환 신청 -->
-        <div class="row_con" v-if="showClaim && order.orderStatus === 'CONFIRMED'">
+        <!-- 반품/교환 신청 (선택 품목) -->
+        <div class="row_con" v-if="showClaim && claimItem">
           <div class="row_con_wrapper">
-            <div class="list_title_area">반품/교환 신청</div>
+            <div class="list_title_area">반품/교환 신청 - {{ claimItem.itemName }}</div>
             <ul class="list_wrapper">
               <li class="list_items">
                 <span class="label">유형</span>

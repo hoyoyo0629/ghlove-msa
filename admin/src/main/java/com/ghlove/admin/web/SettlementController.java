@@ -22,6 +22,7 @@ import java.util.Map;
 public class SettlementController {
 
     private final SettlementService settlementService;
+    private final com.ghlove.admin.web.support.FlashRedirect flashRedirect;
     private final CommonCodeService commonCodeService;
     private final GiftClient giftClient;
 
@@ -64,7 +65,7 @@ public class SettlementController {
         try {
             settlementService.generate();
         } catch (SettlementException e) {
-            return "redirect:/settlements?errorMessage=" + encode(e.getMessage());
+            return flashRedirect.to("/settlements", e.getMessage());
         }
         return "redirect:/settlements";
     }
@@ -85,7 +86,7 @@ public class SettlementController {
         try {
             settlementService.issueInvoice(id, invoiceNo);
         } catch (SettlementException e) {
-            return "redirect:/settlements/" + id + "?errorMessage=" + encode(e.getMessage());
+            return flashRedirect.to("/settlements/" + id, e.getMessage());
         }
         return "redirect:/settlements/" + id;
     }
@@ -95,7 +96,7 @@ public class SettlementController {
         try {
             settlementService.confirmDeposit(id);
         } catch (SettlementException e) {
-            return "redirect:/settlements/" + id + "?errorMessage=" + encode(e.getMessage());
+            return flashRedirect.to("/settlements/" + id, e.getMessage());
         }
         return "redirect:/settlements/" + id;
     }
@@ -105,7 +106,7 @@ public class SettlementController {
         try {
             settlementService.close(id);
         } catch (SettlementException e) {
-            return "redirect:/settlements/" + id + "?errorMessage=" + encode(e.getMessage());
+            return flashRedirect.to("/settlements/" + id, e.getMessage());
         }
         return "redirect:/settlements/" + id;
     }

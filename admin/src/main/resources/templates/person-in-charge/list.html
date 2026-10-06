@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>관리자 사후관리 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -9,14 +10,19 @@
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
 <!-- D6/D9 관리자 사후관리 - AS-IS LocgovPersonInChargeManagerController(지자체담당자) +
      OperPersonInChargeManagerController(운영담당자) 통합. 신규 등록은 관리자권한요청
      승인큐(/admin/manager-requests) 또는 관리자 계정관리(/admin/managers)에서 하고,
      이 화면은 이미 발급된 계정의 업무규칙(주담당자 인원제한/중지시 자동강등/삭제권한)만
      다룬다. -->
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <h3>관리자 사후관리</h3>
 
     <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
@@ -106,7 +112,10 @@
                th:href="@{/admin/person-in-charge(scope=${scope},fromDate=${fromDate},toDate=${toDate},page=${currentPage + 1},size=${size})}">다음</a>
         </div>
     </div>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

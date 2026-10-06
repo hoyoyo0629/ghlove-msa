@@ -4,13 +4,14 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
 import { formatN } from '../../utils/format'
 import BasePagination from '../../components/BasePagination.vue'
+import MapSelectPopup from '../../components/MapSelectPopup.vue'
 
-// AS-IS designated-donation/index-main.html 재현(donation 서비스 designated-list.html과 동일
-// 출처, GNB "기부 > 특정사업에 기부하기"). 상태(진행중/종료)·정렬(최근등록순/참여금액순/모금율순/
-// 종료임박순)·사업구분 필터와 페이지네이션을 그대로 재현한다. "지자체별 검색" 지도 팝업
-// (fragments/dsg-search-header.html)은 gift 답례품몰 라운드의 "지자체몰 선택하기"·order 장바구니
-// 라운드가 각각 자기 헤더의 같은 위젯을 미포팅으로 남긴 것과 동일한 경계로 이번 라운드도 범위
-// 밖(locgovCode 쿼리 파라미터 자체는 API가 이미 지원) - 대신 키워드 검색(q)은 단순 입력창이라 포함.
+// AS-IS designated-donation/index-main.html + 검색 GNB(header_dsg_g.vue) 재현(donation 서비스
+// designated-list.html과 동일 출처, GNB "기부 > 특정사업에 기부하기"). 상태(진행중/종료)·정렬
+// (최근등록순/참여금액순/모금율순/종료임박순)·사업구분 필터와 페이지네이션을 그대로 재현한다.
+// 검색 GNB는 AS-IS header_dsg_g.vue처럼 [키워드 검색 입력창] + [지자체별 검색(지도 팝업)] 두
+// 위젯으로 구성한다 - 지도 팝업은 gift/order와 동일하게 공용 MapSelectPopup을 재사용하고, 선택한
+// 시군구 locgovCode로 목록을 필터한다(API가 이미 locgovCode를 지원).
 const route = useRoute()
 const router = useRouter()
 
@@ -19,6 +20,9 @@ const loading = ref(true)
 const sortOpen = ref(false)
 const bsnsOpen = ref(false)
 const qInput = ref('')
+const mapOpen = ref(false)
+const DEFAULT_LOC = '지자체별 검색'
+const locLabel = ref(DEFAULT_LOC)
 
 const status = computed(() => route.query.status ?? 'OPEN')
 const bsnsType = computed(() => route.query.bsnsType ?? '')
@@ -28,6 +32,13 @@ const page = computed(() => Number(route.query.page ?? '1'))
 async function load() {
   loading.value = true
   qInput.value = route.query.q ?? ''
+  // 지자체 선택 라벨: 세션 중 선택으로 이미 채워져 있으면 유지(clobber 방지), locgovCode만 URL에
+  // 남은 딥링크/새로고침일 때만 이름을 조회해 복원한다. locgovCode가 없으면 기본 라벨로.
+  if (!route.query.locgovCode) {
+    locLabel.value = DEFAULT_LOC
+  } else if (locLabel.value === DEFAULT_LOC) {
+    resolveLocLabel(route.query.locgovCode)
+  }
   try {
     const params = {
       status: status.value,
@@ -74,6 +85,26 @@ function applyBsnsType(value) {
 function submitSearch() {
   reload({ q: qInput.value })
 }
+
+// 지자체별 검색(지도 팝업) - AS-IS header_dsg_g.vue의 local_shop 위젯 + searchByLocgov.
+function openMap() {
+  mapOpen.value = true
+}
+function onLocgovSelect(sel) {
+  mapOpen.value = false
+  locLabel.value = sel.code ? `${sel.upperNm} ${sel.nm}`.trim() : DEFAULT_LOC
+  reload({ locgovCode: sel.code })
+}
+let locgovCache = null
+async function resolveLocLabel(code) {
+  try {
+    if (!locgovCache) locgovCache = await api.get('donation', '/api/locgovs')
+    const hit = locgovCache.find((l) => l.locgovCode === code)
+    if (hit) locLabel.value = `${hit.upperLocgovNm ?? ''} ${hit.locgovNm}`.trim()
+  } catch {
+    /* 라벨 복원 실패는 무시 - 목록 필터 자체는 locgovCode로 이미 적용됨 */
+  }
+}
 function goPage(p) {
   router.push({ path: '/designated-donation', query: { ...route.query, page: String(p) } })
 }
@@ -92,6 +123,15 @@ function imgUrl(p) {
             <input type="text" v-model="qInput" placeholder="지자체별 특정사업 보기" title="특정사업에 기부하기 검색" />
             <button type="submit"><img class="icon-img" src="/images/icon/search-white.png" alt="검색하기" /></button>
           </form>
+          <span class="local_shop">
+            <button type="button" class="shop_select" @click="openMap">
+              <span class="local_shop_wrap">
+                <img class="icon-img" src="/images/goods/local-loc.png" alt="" />
+                <span class="locNameArea">{{ locLabel }}</span>
+              </span>
+              <img src="/images/goods/cli-icon_local-arrow.png" alt="지자체 선택 팝업 열기" />
+            </button>
+          </span>
         </div>
       </div>
     </div>
@@ -183,6 +223,8 @@ function imgUrl(p) {
       </div>
     </div>
   </section>
+
+  <MapSelectPopup v-if="mapOpen" @select="onLocgovSelect" @close="mapOpen = false" />
 </template>
 
 <style>
@@ -191,5 +233,20 @@ function imgUrl(p) {
    기존 버그 보정 - 공용 CSS는 건드리지 않는다). */
 .prj-filters input[type='radio']:checked {
   background-image: url('/images/icon/cli-icon_radio-c.png') !important;
+}
+</style>
+
+<style scoped>
+/* AS-IS header_dsg_g.vue 검색 input 스코프 스타일 - 파란 GNB 바 위라 배경 투명 + 흰 글자
+   (기본 흰 입력박스로 보이던 문제 보정, gift AppHeaderShopping.vue와 동일). */
+.goods_search input[type='text'] {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 14px;
+  outline: 1px;
+}
+.goods_search input[type='text']::placeholder {
+  color: #fff;
 }
 </style>

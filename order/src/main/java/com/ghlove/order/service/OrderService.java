@@ -1,6 +1,8 @@
 package com.ghlove.order.service;
 
 import com.ghlove.order.domain.Order;
+import com.ghlove.order.domain.OrderItem;
+import com.ghlove.order.domain.Shipment;
 import com.ghlove.order.event.OrderSagaPublisher;
 import com.ghlove.order.event.PointDeductFailedEvent;
 import com.ghlove.order.event.PointDeductedEvent;
@@ -43,6 +45,12 @@ public class OrderService {
     private final OrderSagaPublisher orderSagaPublisher;
     private final GiftClient giftClient;
     private final CouponService couponService;
+    // 멀티아이템 - 품목 단위 부분취소
+    private final com.ghlove.order.repository.OrderItemRepository orderItemRepository;
+    private final com.ghlove.order.repository.ShipmentRepository shipmentRepository;
+    private final ShipmentSagaService shipmentSagaService;
+    // 배송비 G4 - 우편번호로 제주/도서산간 판정(AS-IS OP_ISLAND)
+    private final com.ghlove.order.repository.IslandRepository islandRepository;
 
     public Map<String, String> codesOf(String codeType) {
         return commonCodeRepository.findByCodeTypeAndLanguageAndUseYnOrderByOrdering(codeType, "ko", "Y").stream()
@@ -95,9 +103,15 @@ public class OrderService {
      * 답례품 정보를 이미 조회해 둔 호출자(장바구니 체크아웃)가 같은 상품을 두 번 조회하지
      * 않도록 재사용하는 오버로드 - 검증/계산 규칙은 위 오버로드와 완전히 동일하다.
      */
-    @Transactional
     public Order createOrder(Long userId, GiftItemInfo gift, Integer quantity, DeliveryInfo deliveryInfo,
                               Integer couponIssueId) {
+        return createOrder(userId, gift, quantity, deliveryInfo, couponIssueId, null, 0);
+    }
+
+    /** 옵션 선택형 주문 - 옵션명 스냅샷 + 옵션 추가금액을 단가에 가산해 포인트를 계산한다(AS-IS 동일). */
+    @Transactional
+    public Order createOrder(Long userId, GiftItemInfo gift, Integer quantity, DeliveryInfo deliveryInfo,
+                              Integer couponIssueId, String optionName, Integer optionPrice) {
         if (userId == null || userId <= 0) {
             throw new OrderException("회원 ID를 입력해 주세요.");
         }
@@ -113,22 +127,25 @@ public class OrderService {
             throw new OrderException("재고가 부족합니다. (현재 재고: " + gift.stockQuantity() + ")");
         }
 
+        int optPrice = optionPrice != null ? optionPrice : 0;
         Order order = new Order();
         order.setOrderId(generateOrderId());
         order.setUserId(userId);
         order.setItemId(itemId);
         order.setSellerId(gift.sellerId());
         order.setItemName(gift.itemName());
+        order.setOptionName(optionName);
+        order.setOptionPrice(optPrice);
         order.setQuantity(quantity);
         order.setUnitPrice(gift.salePrice());
-        long lineTotal = (long) gift.salePrice() * quantity;
+        long lineTotal = (long) (gift.salePrice() + optPrice) * quantity;
 
         long discount = 0;
         if (couponIssueId != null) {
             discount = couponService.applyToOrder(userId, couponIssueId, order.getOrderId(), itemId, lineTotal, quantity);
         }
         long deliveryFee = deliveryFeeOf(gift, quantity, lineTotal,
-                deliveryInfo != null ? deliveryInfo.address() : null);
+                deliveryInfo != null ? deliveryInfo.zipcode() : null);
         order.setDiscountAmount(discount);
         order.setCouponIssueId(couponIssueId);
         order.setDeliveryFee(deliveryFee);
@@ -151,47 +168,32 @@ public class OrderService {
     }
 
     public record DeliveryInfo(String receiverName, String receiverPhone, String address,
-                                String addressDetail, String requestNote) {
+                                String addressDetail, String requestNote, String zipcode) {
     }
 
     /**
-     * SFR-005 "배송비·택배사 설정, 배송정책" (재검토 라운드) - gift가 답례품별로 관리하는
-     * 배송정책(GIFT_SHIPPING_TYPE 1~6)을 읽어 주문 시점 배송비를 계산한다. 출고지/반송지/
-     * 묶음배송 등 AS-IS의 세부 정책까지는 재현하지 않고, order가 실제로 참조할 수 있는
-     * 핵심(무료/조건부무료/개당/고정 + 제주·도서산간 추가배송비)만 다룬다.
+     * SFR-005 "배송비·택배사 설정, 배송정책" - 답례품별 배송정책(GIFT_SHIPPING_TYPE 1~6)을
+     * 읽어 주문 시점 배송비를 계산한다. 계산 로직 전체(무료/판매자·출고지·상품 조건부/개당
+     * BOX/고정 + 제주·도서산간 추가 + 묶음배송)는 AS-IS Shipping.getShippingGroups()를 옮긴
+     * {@link DeliveryFeeCalculator}에 있다. 이 메서드는 <b>단일 라인</b> 배송비(레거시 단건주문
+     * createOrder용)이며, 묶음배송 그룹 계산은 {@link DeliveryFeeCalculator#compute}를 라인 여러
+     * 개로 호출하는 {@code CartService}에서 이뤄진다.
+     *
+     * @param zipcode 수취인 우편번호(제주/도서산간 판정용). 없으면 추가배송비 없음.
      */
-    public long deliveryFeeOf(GiftItemInfo gift, int quantity, long lineTotal, String address) {
-        String shippingType = gift.shippingType();
-        long base = gift.shipping() != null ? gift.shipping() : 0;
-        long fee;
-        if (shippingType == null || "1".equals(shippingType)) {
-            fee = 0;
-        } else if ("5".equals(shippingType)) {
-            fee = base * quantity;
-        } else if ("2".equals(shippingType) || "3".equals(shippingType) || "4".equals(shippingType)) {
-            Integer freeAmount = gift.shippingFreeAmount();
-            fee = (freeAmount != null && lineTotal >= freeAmount) ? 0 : base;
-        } else {
-            fee = base;
-        }
-
-        if (address != null) {
-            if (address.contains("제주") && gift.shippingExtraCharge1() != null) {
-                fee += gift.shippingExtraCharge1();
-            } else if (isRemoteIsland(address) && gift.shippingExtraCharge2() != null) {
-                fee += gift.shippingExtraCharge2();
-            }
-        }
-        return fee;
+    public long deliveryFeeOf(GiftItemInfo gift, int quantity, long lineTotal, String zipcode) {
+        String islandType = islandTypeOf(zipcode);
+        var line = new DeliveryFeeCalculator.Line(0L, gift.shippingType(),
+                gift.shipping() != null ? gift.shipping() : 0, gift.shippingFreeAmount(),
+                gift.shippingItemCount(), gift.shippingExtraCharge1(), gift.shippingExtraCharge2(),
+                gift.shippingGroupCode(), gift.shipmentGroupCode(), null, quantity, lineTotal, 0L);
+        return DeliveryFeeCalculator.compute(List.of(line), islandType).getOrDefault(0L, 0L);
     }
 
-    /** 도서산간 간이 판정 - 전국 완전한 도서지역 목록이 이 프로젝트 어디에도 없어(우편번호
-     *  기반 판정표 부재), 주소 문자열에 흔한 도서지역명이 포함되는지만 본다(제주 전용
-     *  {@link #deliveryFeeOf}의 별도 분기와 동일한 느슨한 문자열 매칭 - donation의
-     *  residenceLocgovOf()와 같은 관행). */
-    private boolean isRemoteIsland(String address) {
-        return address.contains("울릉") || address.contains("백령") || address.contains("연평")
-                || address.contains("흑산") || address.contains("추자");
+    /** 수취인 우편번호로 제주(JEJU)/도서산간(ISLAND)을 판정한다 - AS-IS
+     *  OrderMapper.getIslandTypeByZipcode(OP_ISLAND 조회). 매칭 없으면 "". */
+    public String islandTypeOf(String zipcode) {
+        return islandRepository.islandTypeByZipcode(zipcode);
     }
 
     @Transactional
@@ -256,6 +258,36 @@ public class OrderService {
         Order saved = orderRepository.save(order);
         orderSagaPublisher.publishCancelled(saved);
         return saved;
+    }
+
+    /**
+     * 품목 단위 부분취소 (멀티아이템, 발송 전). 사용자가 주문상세에서 특정 답례품 한 줄만 취소한다.
+     * 그 품목이 확정 상태이고 소속 출고가 아직 발송되지 않았을 때만 가능하며, 취소·보상·집계는
+     * {@link ShipmentSagaService#cancelItem}이 처리한다(ITEM_CANCELLED로 재고·포인트 그 품목분만 복원).
+     */
+    @Transactional
+    public void cancelItem(String orderId, Long orderItemId, Long userId) {
+        Order order = detail(orderId);
+        if (!order.getUserId().equals(userId)) {
+            throw new OrderException("본인 주문만 취소할 수 있습니다.");
+        }
+        OrderItem item = orderItemRepository.findById(orderItemId)
+                .filter(i -> orderId.equals(i.getOrderId()))
+                .orElseThrow(() -> new OrderException("주문 품목을 찾을 수 없습니다."));
+        if (!STATUS_CONFIRMED.equals(item.getItemStatus())) {
+            throw new OrderException("확정된 품목만 취소할 수 있습니다.");
+        }
+        Shipment shipment = item.getShipmentId() != null
+                ? shipmentRepository.findById(item.getShipmentId()).orElse(null) : null;
+        if (shipment != null && isShipmentShipped(shipment.getDeliveryStatus())) {
+            throw new OrderException("이미 발송된 품목은 취소할 수 없습니다. 반품/교환을 신청해 주세요.");
+        }
+        shipmentSagaService.cancelItem(orderItemId, "고객 요청 취소");
+    }
+
+    private static boolean isShipmentShipped(String d) {
+        return DELIVERY_SHIPPED.equals(d) || DELIVERY_IN_TRANSIT.equals(d)
+                || DELIVERY_DELIVERED.equals(d) || DELIVERY_CONFIRMED.equals(d);
     }
 
     /**
@@ -453,7 +485,8 @@ public class OrderService {
         order.setCancelReason(order.getCancelReason() == null ? reason : order.getCancelReason() + "; " + reason);
     }
 
-    private String generateOrderId() {
+    /** 주문번호 생성 - 멀티아이템 체크아웃({@link CartService})도 헤더 주문번호를 이걸로 만든다. */
+    String generateOrderId() {
         int suffix = RANDOM.nextInt(9000) + 1000;
         return "O" + ID_FORMAT.format(LocalDateTime.now()) + suffix;
     }

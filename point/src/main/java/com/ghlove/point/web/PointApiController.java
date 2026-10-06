@@ -163,6 +163,25 @@ public class PointApiController {
         }
     }
 
+    /**
+     * admin 지자체관리(메뉴 4401) <b>목록</b>의 "포인트 지급률" 컬럼용 - 여러 지자체의 해당 연도
+     * 지급률을 한 번에 돌려준다. AS-IS는 목록 쿼리의 스칼라 서브쿼리였다(같은 DB라 가능).
+     *
+     * @return locgovCode -> 지급률. 그 연도에 설정이 없는 지자체는 결과에 없다.
+     */
+    @GetMapping("/api/admin/locgov-point-rates/current")
+    public Map<String, BigDecimal> currentLocgovPointRates(@RequestParam String stdrYear,
+                                                           @RequestParam List<String> locgovCodes) {
+        if (locgovCodes == null || locgovCodes.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, BigDecimal> result = new java.util.LinkedHashMap<>();
+        for (var rate : pointService.locgovPointRates(stdrYear, locgovCodes)) {
+            result.put(rate.getLocgovCode(), rate.getPointRate());
+        }
+        return result;
+    }
+
     public record LocgovPointRateDto(String stdrYear, String locgovCode, BigDecimal pointRate,
                                       LocalDateTime lastUpdtPnttm, String lastUpdusrNm) {
     }

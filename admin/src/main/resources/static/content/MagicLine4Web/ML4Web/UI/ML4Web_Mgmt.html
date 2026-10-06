@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="format-detection" content="telephone=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no" />
+
+<title>인증서 관리</title>
+
+<!-- Draw -->
+<script type="text/javascript" src="UI/js/ML4Web_Draw.js"></script>
+<script type="text/javascript" src="UI/js/ML4Web_Main.js"></script>
+<script type="text/javascript" src="UI/js/ML4Web_Mgmt.js"></script>
+<script type="text/javascript" src="UI/js/ML4Web_Popup.js"></script>
+
+<title>전자서명</title>
+</head>
+
+<body vlink="gray">
+
+<div id="ML_window_admin">
+	<div id="ML_container">
+		<!-- Content AREA : S -->
+		<div class="ML_content">
+			<div class="ML_content-area" id="MagicLine">
+				<!-- Content : S -->
+				<div class="ML_cp_AD" ><img src="UI/images/ML5_banner.png" alt="매직라인4"></div>
+				<div id="ML_dp_01" class="ML_sub_tit">인증서 저장 위치 선택</div>
+				<div class="ML_storage_box">
+					<div class="ML_storage_box_sub">
+						<div class="MLstrSlide" id="MLstrSlide_admin">
+						<!-- <div class="MLstrSlide" id="MLstrSlide"> -->
+							<!-- // -->
+						</div>
+					</div>
+					<div class="customNavigation" id="0"><div class="str_add_li ne"><a class="next"><span class="btn_str_add"></span></a></div></div>
+					<!-- Drive list : S -->
+					<div id="driver_admin_div" class="drive_position pos_05"  style="display:none;">
+						<!-- // -->
+					</div>
+					<!-- Drive list : E -->
+				</div>
+				<!-- Certificate list : S -->
+				<div id="ML_dp_02" class="ML_sub_tit">사용할 인증서 선택</div>
+				<div class="ML_cert_list_area" id="ML_certlist_area">
+					<div id="dataTable_admin"></div>
+				</div>
+				<!-- Certificate list : E -->
+				<div class="ML_sub_tit">인증서 관리 메뉴</div>
+				<div class="ML_admin_box">
+					<div class="ML_admin_menu_dft">
+						<div class="ML_admin_menu_area">
+							<ul>
+								<li class="ad_cert_copy"><a href="#" id="btn_cert_copy"><span>인증서복사</span></a></li>
+								<li class="ad_cert_view"><a href="#" id="btn_cert_view"><span>인증서보기</span></a></li>
+								<li class="ad_cert_del"><a href="#" id="btn_cert_del"><span>인증서삭제</span></a></li>
+								<li class="ad_cert_pass_change"><a href="#" id="btn_cert_pass_change"><span>암호변경</span></a></li>
+								<li class="ad_cert_import"><a href="#" id="btn_cert_import"><span>가져오기</span></a></li>
+								<li class="ad_cert_send"><a href="#" id="btn_cert_export"><span>내보내기</span></a></li>
+							</ul>
+						</div>
+					</div>
+				</div>
+				<!-- BTN -->
+				<div class="ML_btn_area">
+					<span class="btn_row">
+						<p class="b_blue_btn"><button type="button" id="btn_mgmt_confirm" onClick="#"><span>닫기</span></button></p>
+<!--						<span class="w_space40"></span>
+						<p class="b_grey_btn"><button type="button" id="btn_mgmt_cancle" onClick="#" ><span>취소</span></button></p>-->
+					</span>
+				</div>
+				<!-- BTN -->
+				<!-- Content : E -->
+			</div>
+		</div>
+		<!-- Content AREA : E -->
+	</div>
+</div>
+
+<script type="text/javascript">
+$(document).ready(function() {
+	//sub dialog 깜빡임 방지.
+	$("#popup_mgmt_alert").hide();
+	$('#ML_Dialog_mgmt_common').hide();
+
+	funProcInit();
+	initEventHandler();
+	mgmtInit();
+
+	//key event 
+	$(this).keydown(function(e){
+		if(e.keyCode == "9"){
+			var targetElement = $(document.activeElement).attr("id");
+			var parentElement = $(document.activeElement).parent().attr("id");
+			
+			console.log("targetElement.id === " + targetElement);
+			console.log("parentElement.id === " + parentElement);
+
+			if(targetElement == "stg_smartcert" ){
+				var selection = $("#dataTable").MLjquiDataTable('getSelection');
+				if(selection && selection.length>0){
+					//$("#dataTable").focus();
+					//$("#dataTable").css("border","solid 1px red");
+				}else{
+					//$("#btn_viewCert").focus();
+					//$("#btn_viewCert").css("border","solid 1px red");
+				}
+			}else if(targetElement==null || targetElement=='undefined'){
+				
+			}
+		} else if (e.keyCode == "27"){
+			console.log("Esc keydown Esc keydown Esc keydown Esc keydown");
+			e.preventDefault();
+		}
+	});
+});
+
+function funProcInit() {
+	_createWindow();
+
+	//스토리지 목록 초기화
+	//ML4WebDraw.MakeStorageListDiv('mgmt');
+}
+
+function mgmtInit() {
+	//디폴트 스토리지 선택.
+	var default_stg = ML4WebApi.getProperty("defaultStorage");
+	if(default_stg!=null && default_stg != ""){
+		$("#stg_admin_"+default_stg).click();
+	}else{
+		//EmptyCertDiv();
+		ML4WebDraw.MakeCertiListDiv(null);
+	}
+
+	//메세지 초기화
+	MessageVO.applyMessage($('[id^="MSG_"]'));
+}
+
+
+
+function initEventHandler() {
+	var libType = ML4WebApi.getProperty('libType');
+	var browser = ML4WebApi.getProperty('browser');
+	
+	if(browser == 'MSIE 8' || browser == 'MSIE 9'){
+		$('.ad_cert_send').hide();
+	}
+	
+	initAdminMainEvent();
+	
+	//인증서복사
+	$('#btn_cert_copy').click(function () {
+		ML4WebLog.log("btn_cert_copy click()...");
+		var selection = $("#dataTable_admin").MLjquiDataTable('getSelection');
+		if(selection && selection.length>0){
+			openCopySelectStorageDialog(selection[0]);
+		}else{
+			ML4WebLog.log($.i18n.prop("ES021"));
+			//openMgmtAlertDialog($.i18n.prop("ES021"));
+			DSAlert.openAlert("mgmt", $.i18n.prop("ES021"), null);
+		}
+	});
+
+	//인증서보기
+	$('#btn_cert_view').click(function () {
+		ML4WebLog.log("btn_cert_view click()...");
+		var selection = $("#dataTable_admin").MLjquiDataTable('getSelection');
+		if(selection && selection.length>0){
+			for(var i=0 ; i<selection.length ; i++){
+				var rowData = selection[i];
+				//ML4WebLog.log("viewCert.click() rowData === " + JSON.stringify(rowData));
+
+				openCertViewDialog(rowData);
+			}
+		}else{
+			ML4WebLog.log($.i18n.prop("ES021"));
+			//openAlertDialog($.i18n.prop("ES021"));
+			DSAlert.openAlert("mgmt", $.i18n.prop("ES021"), null);
+		}
+	});
+
+	//인증서삭제
+	$('#btn_cert_del').click(function () {
+		ML4WebLog.log("btn_cert_del click()...");
+		var selection = $("#dataTable_admin").MLjquiDataTable('getSelection');
+
+		if(selection && selection.length>0){
+			//openCertDeleteDialog(selection[0]);
+			//openCertDeleteDialog('mgmt', selection[0]);
+			var stgKey =  ML4WebApi.getProperty('selectedStorage').key;
+			deleteCertNonePwd('mgmt', stgKey, selection[0]);
+		}else{
+			ML4WebLog.log($.i18n.prop("ES021"));
+			//openMgmtAlertDialog($.i18n.prop("ES021"));
+			DSAlert.openAlert("mgmt", $.i18n.prop("ES021"), null);
+		}
+	});
+
+	//암호변경
+	$('#btn_cert_pass_change').click(function () {
+		ML4WebLog.log("btn_cert_pass_change click()...");
+
+ 		var selection = $("#dataTable_admin").MLjquiDataTable('getSelection');
+
+		if(selection && selection.length>0){
+			openCertPassChangeDialog(selection[0]);
+		}else{
+			ML4WebLog.log($.i18n.prop("ES021"));
+			//openMgmtAlertDialog($.i18n.prop("ES021"));
+			DSAlert.openAlert("mgmt", $.i18n.prop("ES021"), null);
+		}
+	});
+
+	//가져오기 : Drag & Drop!!!
+	$('#btn_cert_import').click(function () {
+		ML4WebLog.log("btn_cert_import click()...");
+
+		//openSearchPfxDialog();
+
+		//var libType = obj.pfxOpt[0].libType;
+		if(libType==1 && browser!='MSIE 8'){
+			openSearchPfxDialog();//인증서찾기창
+		}else{
+			openSearchPfxByCDialog();//인증서찾기창
+		}
+	});
+
+	//내보내기 : Pure Javascript Download!!!
+	$('#btn_cert_export').click(function () {
+		ML4WebLog.log("btn_cert_export click()...");
+		var selection = $("#dataTable_admin").MLjquiDataTable('getSelection');
+		if(selection && selection.length>0){
+			for(var i=0 ; i<selection.length ; i++){
+				var rowData = selection[i];
+				//ML4WebLog.log("viewCert.click() rowData === " + JSON.stringify(rowData));
+				openExportPfxDialog(rowData);
+			}
+		}else{
+			ML4WebLog.log($.i18n.prop("ES021"));
+			//openMgmtAlertDialog($.i18n.prop("ES021"));
+			DSAlert.openAlert("mgmt", $.i18n.prop("ES021"), null);
+		}
+
+	});
+
+	//확인
+	$('#btn_mgmt_confirm').click(function () {
+		ML4WebLog.log("btn_mgmt_confirm click()...");
+		//$('#ML_window_admin').MLjquiWindow('close');
+		closeCertDialog('mgmt');
+	});
+
+	//취소
+	$('#btn_mgmt_cancle').unbind().click(function () {
+		ML4WebLog.log("btn_mgmt_cancle click()...");
+
+		closeCertDialog('mgmt');
+	});
+}
+
+function _createWindow() {
+	var isBanner = ML4WebApi.getProperty("adminBanner");
+	var window_admin_height = 558;
+
+	if(!isBanner){
+		$(".ML_cp_AD").hide();
+		window_admin_height = 498;
+	}
+
+	//-00. Mgmt
+	$('#ML_window_admin').MLjquiWindow({
+		title:'인증서 관리',
+		resizable: false,
+		position: 'center',
+		showCloseButton:false,
+//		closeButtonSize: 35,
+//		closeButtonAction:'destroy',
+		isModal: true,
+		modalOpacity: 0.3,
+		modalZIndex: 9999,
+		modalBackgroundZIndex: 9999,
+		showCollapseButton: false,
+		keyboardCloseKey: 0,
+		maxHeight: 600, maxWidth:420,
+		minHeight: 200, minWidth: 200,
+		height: window_admin_height, width: 418,
+		initContent: function () {
+			$('#ML_window_admin').MLjquiWindow('focus');
+		}
+	});
+
+	//-01. Alert
+	$('#popup_mgmt_alert').MLjquiWindow({
+		title:'알림',
+		resizable: false,
+		position: 'center',
+		closeButtonSize: 35,
+//		isModal: false,
+//		modalOpacity: 0.3,
+//		modalZIndex: 99999,
+//		modalBackgroundZIndex: 99999,
+		zIndex:999999,
+		showCollapseButton: false,
+		keyboardCloseKey: 0,
+		maxHeight: 600, maxWidth:420,
+		minHeight: 200, minWidth: 200,
+		height: 148, width: 368,
+		initContent: function () {
+			$('#popup_mgmt_alert').MLjquiWindow('close');
+		}
+	});
+	//$('#popup_mgmt_alert').attr("display","block");
+
+	//-02. Common
+	$('#ML_Dialog_mgmt_common').MLjquiWindow({
+//		autoOpen: false,
+		title:'알림',
+		resizable: false,
+		position: 'center',
+		showCloseButton:false,
+//		closeButtonSize: 35,
+//		draggable:false,
+		isModal: true,
+		modalOpacity: 0.3,
+		modalZIndex: 99999,
+		modalBackgroundZIndex: 99999,
+		showCollapseButton: false,
+		keyboardCloseKey: 0,
+		width: 398,
+		initContent: function () {
+			$('#ML_Dialog_mgmt_common').MLjquiWindow('close');
+		}
+	});
+	//$('#ML_Dialog_mgmt_common').attr("display","block");
+
+
+}
+
+function _initSlideEvent(){
+	$("#MLstrSlide_admin").owlCarousel({
+		autoPlay : false,
+		navigation : false,
+//		navigationText : ["prev","next"],
+		slideSpeed : 300,
+		pagination : false,
+		paginationSpeed : 400,
+		mouseDrag : false,
+		touchDrag : false,
+		// "singleItem:true" is a shortcut for:
+		// items : 5,
+		// itemsDesktop : [375,5],
+		// itemsDesktopSmall : false,
+		// itemsTablet: false,
+		// itemsMobile : false
+		singleItem : true
+	});
+
+	// Custom Navigation Events(슬라이딩 효과)
+	var owl = $("#MLstrSlide_admin");
+
+/*	$(".next").click(function(){
+		owl.trigger('owl.next');
+	})
+	$(".prev").click(function(){
+		owl.trigger('owl.prev');
+	})
+	$(".jump").click(function(){
+		owl.trigger('owl.jumpTo',5);
+	})
+
+	// Slide L&R Button
+	$(".customNavigation").click(function() {
+		var X=$(this).attr('id');
+		if(X==1) {
+			$(this).children(".str_add_li").removeClass('pr');
+			$(this).children(".str_add_li").addClass('ne');
+			$(this).attr('id', '0');
+		} else {
+			$(".str_add_li").attr('class', 'str_add_li pr');
+			$(this).children(".str_add_li").removeClass('ne');
+			$(this).children(".str_add_li").addClass('pr');
+			$(".customNavigation").attr('id', '0');
+			$(this).attr('id', '1');
+		}
+	});*/
+
+	$(".customNavigation").children(".str_add_li").removeClass('ne');
+	$(".customNavigation").children(".str_add_li").addClass('dis');
+}
+
+function openAdminAlertDialog(msg){
+	$('#alert_msg').html(msg);
+	$('#popup_alert').MLjquiWindow('open');
+}
+
+</script>
+
+
+<!-- 01. Alert dialog -->
+<div id="popup_mgmt_alert" class="ML_container_dialog">
+	<!-- Content AREA : S -->
+	<div class="ML_content">
+		<div class="ML_content-area" style="padding-top:5px;">
+			<!-- Content : S -->
+			<div class="ML_pw_dialog_status_area">
+				<div class="ML_pw_dialog_area">
+					<div id="mgmt_alert_msg" class="ML_pw_dialog_txt">비밀번호를 다시 입력하세요.</div>
+					<!-- BTN -->
+					<span class="btn_row">
+						<p class="b_blue_btn"><button type="button" name="btn_confirm" id="btn_alert_confirm" onClick="DSAlert.closeAlert();"><span>확인</span></button></p>
+<!--						<span class="w_space40"></span>
+						<p class="b_grey_btn"><button type="button" onClick="selfClose();"><span>취소</span></button></p>-->
+					</span>
+					<!-- BTN -->
+				</div>
+			</div>
+			<!-- Content : E -->
+		</div>
+	</div>
+	<!-- Content AREA : E -->
+</div>
+
+<!-- 02. Common -->
+<div id="ML_Dialog_mgmt_common">
+	<!-- Content AREA : S -->
+	<div class="ML_content">
+		<div id="ML_mgmt_content_area" class="ML_content-area" style="padding-top:7px;padding-bottom:5px">
+
+		</div>
+		<div class="ML_content-area ML_pw_popup_area" style="padding-top:5px; text-align:center; ">
+				<!-- BTN -->
+ 				<span class="btn_row">
+					<p class="b_blue_btn"><button type="button" id="btn_common_confirm" onClick="DSDialog.releaseDialog();"><span>확인</span></button></p>
+					<span class="w_space40"></span>
+					<p class="b_grey_btn"><button type="button" id="btn_common_cancle" onClick="DSDialog.closeDialog(function(code, obj){});" ><span>취소</span></button></p>
+				</span>
+				<!-- BTN -->
+			</div>
+	</div>
+	<!-- Content AREA : E -->
+</div>
+
+</body>
+</html>

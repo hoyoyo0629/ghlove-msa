@@ -27,6 +27,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/admin/excel-download-logs", "/api/admin/excel-download-logs/**",
                         "/api/admin/delivery-companies", "/api/admin/delivery-companies/**",
                         "/api/admin/shipment-returns", "/api/admin/shipment-returns/**",
+                        "/api/admin/reconciliation", "/api/admin/reconciliation/**",
                         "/claims", "/claims/*/approve", "/claims/*/reject", "/claims/*/complete",
                         "/orders/*/invoice", "/orders/*/delivery-status");
         // SFR-006 재검토 라운드 - /api/admin/orders/all(SFR-009 StatsService ReadModel

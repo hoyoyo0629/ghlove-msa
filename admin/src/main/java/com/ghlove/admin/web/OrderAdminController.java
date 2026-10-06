@@ -156,13 +156,14 @@ public class OrderAdminController {
                         @RequestParam(required = false) String keyword,
                         @RequestParam(required = false) String startDate,
                         @RequestParam(required = false) String endDate,
-                        @RequestParam String reason,
                         HttpSession session, HttpServletResponse response) throws IOException {
+        // 다운로드 사유는 AS-IS와 같이 이 요청 직전에 사유 모달이 /common/opmanager/privacy-access-log로
+        // 남긴다(fragments/privacy-access.html → PrivacyAccessLogService). 여기서 다시 받지 않는다.
         Manager manager = manager(session);
         String effectiveLocgov = MenuService.effectiveLocgovCode(manager, locgovCode);
         try {
             byte[] csv = orderAdminClient.export(manager, effectiveLocgov, orderStatus, searchType, keyword,
-                    startDate, endDate, reason);
+                    startDate, endDate);
             response.setContentType("text/csv; charset=UTF-8");
             response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
                     "attachment; filename=\"orders.csv\"; filename*=UTF-8''" + URLEncoder.encode("주문목록.csv", StandardCharsets.UTF_8));

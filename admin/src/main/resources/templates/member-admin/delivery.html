@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>배송지 관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<!-- AS-IS opmanager/i18n/user/popup/delivery.jsp 이식. layout=base 팝업(800x480).
+     일반회원관리(메뉴 4101) 상세의 "배송지 관리"가 띄운다.
+
+     AS-IS verbatim:
+     - 제목은 "배송지 관리"지만 **조회 전용**이다(추가·수정·삭제 버튼이 없다).
+     - 기본배송지면 배송지명 뒤에 "(기본)"을 붙인다.
+     - 빈 목록 문구가 "데이터가 없습니다."(다른 화면들과 다르다)이고 그 행에만 background가 있다.
+     - colgroup 5개(배송지/받는 사람/주소/휴대폰/연락처). -->
+<body>
+<div class="popup_wrap">
+	<div id="pop_header">
+		<h1 class="popup_title">배송지 관리</h1>
+		<a href="javascript:self.close();" class="btn_close"><img th:src="@{/content/opmanager/images/btn/btn_close.png}" alt="닫기"></a>
+	</div>
+
+	<div class="popup_contents">
+		<div class="board_list">
+			<table class="board_list_table" summary="배송지 관리">
+				<caption>배송지 관리</caption>
+				<colgroup>
+					<col style="width:150px;">
+					<col style="width:200px;">
+					<col style="width:400px;">
+					<col style="width:200px;">
+					<col style="width:200px;">
+				</colgroup>
+				<thead>
+					<tr>
+						<th scope="col">배송지</th>
+						<th scope="col">받는 사람</th>
+						<th scope="col">주소</th>
+						<th scope="col">휴대폰</th>
+						<th scope="col">연락처</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="item : ${list}" style="background:#fff;">
+						<td>
+							<div>
+								<span th:text="${item.title}"></span>
+								<th:block th:if="${item.defaultFlag == 'Y'}">(기본)</th:block>
+							</div>
+						</td>
+						<td>
+							<div th:text="${item.userName}"></div>
+						</td>
+						<td>
+							<div th:text="(${item.address} ?: '') + ' ' + (${item.addressDetail} ?: '')"></div>
+						</td>
+						<td>
+							<div th:text="${item.mobile}"></div>
+						</td>
+						<td>
+							<div th:text="${item.phone}"></div>
+						</td>
+					</tr>
+					<tr th:if="${#lists.isEmpty(list)}" style="background:#fff;">
+						<td colspan="5">데이터가 없습니다.</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+		<p class="popup_btns">
+			<button type="button" class="btn btn-active" onclick="self.close();">확인</button>
+		</p>
+	</div>
+</div>
+</body>
+</html>

@@ -19,9 +19,9 @@
 -->
 <body>
 <div th:fragment="gh-alert">
-    <div id="gh-alert" class="gh-alert-bg" th:classappend="${param.done != null} ? ' show' : ''">
+    <div id="gh-alert" class="gh-alert-bg" th:classappend="${redirectMessage != null} ? ' show' : ''">
         <div class="gh-alert-box" role="alertdialog" aria-modal="true" aria-labelledby="gh-alert-msg">
-            <div class="gh-alert-msg" id="gh-alert-msg" th:text="${param.done}"></div>
+            <div class="gh-alert-msg" id="gh-alert-msg" th:text="${redirectMessage}"></div>
             <div class="gh-alert-btns">
                 <button type="button" class="gh-alert-ok" onclick="ghAlertClose()">확인</button>
             </div>

@@ -95,11 +95,16 @@ public class GiftPublicApiController {
                 ? wishlistService.wishlistedItemIds(authUserId.get(), itemIds)
                 : Set.of();
 
+        // AS-IS op_item_option_soldout 요약이 하던 "아이템 단위 옵션 품절" 판정을 조회시점 계산으로 재현:
+        // 아이템 재고는 남아도 표시 옵션이 전부 품절이면 목록에서 품절로 뱃지한다.
+        Set<Long> optionSoldOutItemIds = giftOptionService.optionSoldOutItemIds(itemIds);
+
         List<GiftCardDto> cards = gifts.stream()
                 .map(g -> {
                     String imageName = thumbnails.get(g.getItemId());
+                    boolean soldOut = "1".equals(g.getSoldOut()) || optionSoldOutItemIds.contains(g.getItemId());
                     return new GiftCardDto(g.getItemId(), g.getItemName(), g.getSalePrice(),
-                            "1".equals(g.getSoldOut()), g.getLocgovCode(), locgovNames.get(g.getLocgovCode()),
+                            soldOut, g.getLocgovCode(), locgovNames.get(g.getLocgovCode()),
                             imageName != null ? "/uploads/" + imageName : null,
                             newItemIds.contains(g.getItemId()), wishlistedItemIds.contains(g.getItemId()));
                 })
@@ -121,15 +126,22 @@ public class GiftPublicApiController {
     public record SellerDto(String companyName, String telephoneNumber) {
     }
 
-    /** SFR-005 "카탈로그 관리: 옵션" - 카탈로그 정보 표시용(장바구니/주문에는 아직 반영 안 됨,
-     *  {@link com.ghlove.gift.domain.GiftOption} 클래스 주석 참고). */
-    public record OptionDto(Long itemOptionId, String optionName, Integer optionPrice, boolean soldOut) {
+    /** SFR-005 "카탈로그 관리: 옵션" - AS-IS와 동일하게 S/S2/S3/T 지원. optionName(=name1)은
+     *  기존 단일옵션 storefront 호환용, optionName2/3은 조합형(S2·S3)용. 옵션형태(itemOptionType)와
+     *  각인(itemTextOptionFlag/Title1~3)은 응답의 gift 필드에 실려 나간다. */
+    public record OptionDto(Long itemOptionId, String optionType, String optionName, String optionName2,
+                             String optionName3, Integer optionPrice, boolean soldOut,
+                             boolean stockTracked, Integer stockQuantity) {
+    }
+
+    /** 추가구성 답례품(op_item_addition) - 본품과 별도로 함께 담는 부가품. */
+    public record AdditionDto(Long itemId, String itemName, Integer salePrice, boolean soldOut) {
     }
 
     public record DetailResponse(Gift gift, List<String> imageUrls, String locgovName, String categoryLabel,
                                   SellerDto seller, boolean wishlisted, List<ReviewDto> reviews,
                                   double averageScore, List<InquiryDto> inquiries, List<OptionDto> options,
-                                  boolean restockRequested) {
+                                  List<AdditionDto> additions, boolean restockRequested) {
     }
 
     @GetMapping("/api/gifts/{itemId}/detail")
@@ -170,8 +182,15 @@ public class GiftPublicApiController {
                 .toList();
 
         List<OptionDto> optionDtos = giftOptionService.optionsOf(itemId).stream()
-                .map(o -> new OptionDto(o.getItemOptionId(), o.getOptionName1(), o.getOptionPrice(),
-                        "Y".equals(o.getOptionSoldOutFlag())))
+                .map(o -> new OptionDto(o.getItemOptionId(), o.getOptionType(), o.getOptionName1(),
+                        o.getOptionName2(), o.getOptionName3(), o.getOptionPrice(),
+                        "Y".equals(o.getOptionSoldOutFlag()),
+                        "Y".equals(o.getOptionStockFlag()), o.getOptionStockQuantity()))
+                .toList();
+
+        List<AdditionDto> additionDtos = giftOptionService.additionsOf(itemId).stream()
+                .map(a -> new AdditionDto(a.getItemId(), a.getItemName(), a.getSalePrice(),
+                        "Y".equals(a.getSoldOut())))
                 .toList();
 
         DetailResponse response = new DetailResponse(gift,
@@ -179,9 +198,36 @@ public class GiftPublicApiController {
                 locgovClient.namesByCode().get(gift.getLocgovCode()),
                 giftService.codesOf("GIFT_CATEGORY").get(gift.getCategoryCode()),
                 seller != null ? new SellerDto(seller.getCompanyName(), seller.getTelephoneNumber()) : null,
-                wishlisted, reviewDtos, averageScore, inquiryDtos, optionDtos,
+                wishlisted, reviewDtos, averageScore, inquiryDtos, optionDtos, additionDtos,
                 authUserId.isPresent() && restockNoticeService.isRequested(itemId.intValue(), authUserId.get()));
         return ResponseEntity.ok(response);
+    }
+
+    /** order 서비스가 장바구니 담기 시 옵션명·추가금액을 스냅샷하려고 호출하는 단건 옵션 조회. */
+    public record OptionInfoDto(Long itemOptionId, Long itemId, String optionName, Integer optionPrice, boolean soldOut) {
+    }
+
+    @GetMapping("/api/gifts/options/{itemOptionId}")
+    public ResponseEntity<?> option(@PathVariable Long itemOptionId) {
+        try {
+            var o = giftOptionService.optionById(itemOptionId);
+            return ResponseEntity.ok(new OptionInfoDto(o.getItemOptionId(), o.getItemId(), combinedOptionName(o),
+                    o.getOptionPrice(), "Y".equals(o.getOptionSoldOutFlag())));
+        } catch (GiftException e) {
+            return ResponseEntity.status(404).body(java.util.Map.of("message", e.getMessage()));
+        }
+    }
+
+    /** 조합형(S2·S3) 옵션명은 name1/2/3을 " / "로 이어 붙여 스냅샷한다(AS-IS 옵션명 표기). */
+    private String combinedOptionName(com.ghlove.gift.domain.GiftOption o) {
+        StringBuilder sb = new StringBuilder(o.getOptionName1() == null ? "" : o.getOptionName1());
+        if (o.getOptionName2() != null && !o.getOptionName2().isBlank()) {
+            sb.append(" / ").append(o.getOptionName2());
+        }
+        if (o.getOptionName3() != null && !o.getOptionName3().isBlank()) {
+            sb.append(" / ").append(o.getOptionName3());
+        }
+        return sb.toString();
     }
 
     @PostMapping(value = "/api/gifts/{itemId}/reviews", consumes = "multipart/form-data")

@@ -119,7 +119,7 @@ import { sitemapOpen, openSitemap, closeSitemap } from '../composables/useSitema
               </div>
             </nav>
           </div>
-          <a class="krds-btn icon btn-close close-modal" href="#">
+          <a class="krds-btn icon btn-close close-modal" href="#" @click.prevent="closeSitemap">
             <span class="btn-close-txt">닫기</span>
             <i class="svg-icon ico-popup-close"></i>
           </a>

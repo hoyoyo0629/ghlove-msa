@@ -19,6 +19,7 @@ import java.util.Map;
 public class OffgiveApiController {
 
     private final OffgiveService offgiveService;
+    private final com.ghlove.donation.repository.OffgiveAdminRepository offgiveAdminRepository;
 
     @GetMapping("/api/offgive")
     public List<DonationDto> list() {
@@ -31,6 +32,26 @@ public class OffgiveApiController {
                                      @RequestParam(required = false) String startDate,
                                      @RequestParam(required = false) String endDate) {
         return offgiveService.search(locgovCode, startDate, endDate).stream().map(DonationDto::of).toList();
+    }
+
+    /**
+     * 기부금 접수관리 목록 (admin 메뉴 15101) - AS-IS {@code POST /opmanager/offgive/list}의
+     * 검색조건 전체(검색구분·신청일·금액범위·기부상태·소속지점)와 11컬럼을 그대로 돌려준다.
+     * 이름은 회원(member) 소유라 USER_ID만 내려주고 admin이 채운다.
+     */
+    @GetMapping("/api/admin/offgive/search")
+    public List<com.ghlove.donation.repository.OffgiveAdminRepository.Row> adminSearch(
+            @RequestParam(required = false) String shKeyword,
+            @RequestParam(required = false) String shText,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) BigDecimal amountFrom,
+            @RequestParam(required = false) BigDecimal amountTo,
+            @RequestParam(required = false) String cntrSttusCode,
+            @RequestParam(required = false) String rceptBankCode,
+            @RequestParam(required = false) String rceptBankNm) {
+        return offgiveAdminRepository.search(shKeyword, shText, startDate, endDate, amountFrom, amountTo,
+                cntrSttusCode, rceptBankCode, rceptBankNm);
     }
 
     @GetMapping("/api/offgive/{cntrSn}")

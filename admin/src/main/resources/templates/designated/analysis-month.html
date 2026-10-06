@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <meta charset="UTF-8">
+    <!-- op.common.js 전역 ajax beforeSend가 xhr.setRequestHeader(Common.getCsrfHeader(), Common.getCsrf())로
+         CSRF 헤더를 붙인다. AS-IS opmanager 레이아웃은 이 두 meta(_csrf_header/_csrf)를 Spring Security에서
+         채워 내려줬다. TO-BE admin은 Spring Security/CSRF가 없어 meta가 없으면 getCsrfHeader()가 ''를 반환→
+         setRequestHeader('','')가 SyntaxError로 터져 모든 $.post가 발사 전 취소된다(차트 안 뜸·콘솔만 에러).
+         admin은 CSRF 미사용이라 유효한 헤더명만 넣고 토큰은 빈 값으로 둔다(서버는 이 헤더를 무시). -->
+    <meta name="_csrf_header" content="X-CSRF-TOKEN">
+    <meta name="_csrf" content="">
+    <title>월별 통계 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/designated-donation/analysis/month.jsp를 그대로 이식한 화면.
+     차트(Chart.js pie 2개 + op.chart.js drawChartMultiYaxis stacked bar 1개)·표 3개·필터 모두
+     AS-IS와 동일하다. JS도 AS-IS month.jsp 함수를 verbatim 재사용하되, 집계 3종 POST URL만
+     admin 경로로, 시도→시군구 캐스케이딩은 서버 재왕복 없이 로컬 필터로 치환했다
+     (차트 라이브러리/로직은 손대지 않음). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+    <p><a th:href="@{/designated-projects}">&larr; 지정기부 관리</a></p>
+
+    <div class="item_list">
+        <h3><span>월별 통계</span></h3>
+
+        <form id="locgovSearchParam" onsubmit="return false;">
+            <div class="board_write">
+                <table class="board_write_table" summary="특정사업에 기부하기 목록">
+                    <caption>특정사업에 기부하기 목록</caption>
+                    <colgroup>
+                        <col style="width: 150px" />
+                        <col style="width: auto;" />
+                        <col style="width: 150px" />
+                        <col style="width: auto;" />
+                    </colgroup>
+                    <tbody>
+                        <tr th:unless="${scoped}">
+                            <td class="label">지자체</td>
+                            <td>
+                                <div class="flex_box gap-08">
+                                    <select id="shWdr" name="shWdr" title="지자체" class="wd-150" onChange="wdrChange(this.value)">
+                                        <option value="">-전체-</option>
+                                        <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"></option>
+                                    </select>
+                                    <select id="shLocgovCode" name="shLocgovCode" title="지자체" class="wd-150">
+                                        <option value="">-시,군,구-</option>
+                                    </select>
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- 지자체 담당자는 자기 지자체로 강제 스코핑(필터 숨김) - AS-IS도 본사(ADMIN_1~4)만 노출. -->
+                        <tr th:if="${scoped}" style="display:none;">
+                            <td><input type="hidden" id="shWdr" value=""><input type="hidden" id="shLocgovCode" th:value="${myLocgovCode}"></td>
+                        </tr>
+                        <tr>
+                            <td class="label">조회년도</td>
+                            <td>
+                                <div>
+                                    <select id="selYear" name="selYear" title="년도" class="wd-150">
+                                        <option th:each="y : ${years}" th:value="${y}" th:text="${y}"></option>
+                                    </select>
+                                </div>
+                            </td>
+                            <td class="label">상태</td>
+                            <td>
+                                <div class="flex_box gap-12">
+                                    <div class="input-form"><label><input type="radio" name="prjStatus" value="0" checked="checked"> 전체</label></div>
+                                    <div class="input-form"><label><input type="radio" name="prjStatus" value="2"> 진행</label></div>
+                                    <div class="input-form"><label><input type="radio" name="prjStatus" value="9"> 종료</label></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="btn_all btn_left">
+                    <ul class="list-bullet point">
+                        <li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li>
+                    </ul>
+                </div>
+                <div class="btn_all btn_right">
+                    <div class="flex_box gap-08">
+                        <button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/designated-projects/analysis/month';">초기화</button>
+                        <button type="button" class="btn btn-dark-gray btn-mini" onclick="javascript:fnSearch();">검색</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="mainArea loc_details mb30" style="margin-top: 15px;">
+            <div class="graph_wrap all">
+                <div class="bd_gray mb15" style="float: left; width: 49%;">
+                    <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;">사업구분별 사업 진행건 비율</p>
+                    <div class="graph mb15" style="width:300px;margin: auto;">
+                        <canvas id="designatedLocgovMonthCampaignChart"></canvas>
+                    </div>
+                    <table class="board_write_table" style="margin-top: 15px;">
+                        <colgroup><col><col><col><col><col><col></colgroup>
+                        <tbody>
+                            <tr>
+                                <td class="label">사업구분</td>
+                                <td class="label">취약계층</td>
+                                <td class="label">문화/예술</td>
+                                <td class="label">자원봉사</td>
+                                <td class="label">복리증진</td>
+                                <td class="label">합계</td>
+                            </tr>
+                            <tr>
+                                <td id="tdCampaign1_1" class="label"></td>
+                                <td id="tdCampaign1_2" style="text-align:center;"></td>
+                                <td id="tdCampaign1_3" style="text-align:center;"></td>
+                                <td id="tdCampaign1_4" style="text-align:center;"></td>
+                                <td id="tdCampaign1_5" style="text-align:center;"></td>
+                                <td id="tdCampaign1_6" style="text-align:center;"></td>
+                            </tr>
+                            <tr>
+                                <td id="tdCampaign2_1" class="label"></td>
+                                <td id="tdCampaign2_2" style="text-align:center;" class="number"></td>
+                                <td id="tdCampaign2_3" style="text-align:center;" class="number"></td>
+                                <td id="tdCampaign2_4" style="text-align:center;" class="number"></td>
+                                <td id="tdCampaign2_5" style="text-align:center;" class="number"></td>
+                                <td id="tdCampaign2_6" style="text-align:center;" class="number"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="bd_gray mb15" style="float: left; width: 49%;">
+                    <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;">모금액 비율</p>
+                    <div class="graph mb15" style="width:300px;margin: auto;">
+                        <canvas id="designatedLocgovMonthAmountRaisedChart"></canvas>
+                    </div>
+                    <table class="board_write_table" style="margin-top: 15px;">
+                        <colgroup><col><col><col><col><col><col></colgroup>
+                        <tbody>
+                            <tr>
+                                <td class="label">사업구분</td>
+                                <td class="label">취약계층</td>
+                                <td class="label">문화/예술</td>
+                                <td class="label">자원봉사</td>
+                                <td class="label">복리증진</td>
+                                <td class="label">합계</td>
+                            </tr>
+                            <tr>
+                                <td id="tdAmountRaised1_1" class="label"></td>
+                                <td id="tdAmountRaised1_2" style="text-align:center;"></td>
+                                <td id="tdAmountRaised1_3" style="text-align:center;"></td>
+                                <td id="tdAmountRaised1_4" style="text-align:center;"></td>
+                                <td id="tdAmountRaised1_5" style="text-align:center;"></td>
+                                <td id="tdAmountRaised1_6" style="text-align:center;"></td>
+                            </tr>
+                            <tr>
+                                <td id="tdAmountRaised2_1" class="label"></td>
+                                <td id="tdAmountRaised2_2" style="text-align:center;" class="number"></td>
+                                <td id="tdAmountRaised2_3" style="text-align:center;" class="number"></td>
+                                <td id="tdAmountRaised2_4" style="text-align:center;" class="number"></td>
+                                <td id="tdAmountRaised2_5" style="text-align:center;" class="number"></td>
+                                <td id="tdAmountRaised2_6" style="text-align:center;" class="number"></td>
+                            </tr>
+                            <tr>
+                                <td id="tdAmountRaised3_1" class="label"></td>
+                                <td id="tdAmountRaised3_2" style="text-align:center;" class="number"></td>
+                                <td id="tdAmountRaised3_3" style="text-align:center;" class="number"></td>
+                                <td id="tdAmountRaised3_4" style="text-align:center;" class="number"></td>
+                                <td id="tdAmountRaised3_5" style="text-align:center;" class="number"></td>
+                                <td id="tdAmountRaised3_6" style="text-align:center;" class="number"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="bd_gray mb15">
+                    <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;">월별 모금액 추이</p>
+                    <div class="graph mb15">
+                        <canvas id="designatedLocgovMonthAmountChart" style="width:100%; height: 400px;"></canvas>
+                    </div>
+                    <table class="board_write_table">
+                        <colgroup><col style="width:130px;"><col><col><col><col><col><col></colgroup>
+                        <tbody>
+                            <tr>
+                                <td class="label">월</td>
+                                <td class="label">1월</td><td class="label">2월</td><td class="label">3월</td><td class="label">4월</td>
+                                <td class="label">5월</td><td class="label">6월</td><td class="label">7월</td><td class="label">8월</td>
+                                <td class="label">9월</td><td class="label">10월</td><td class="label">11월</td><td class="label">12월</td>
+                                <td class="label">합계</td>
+                            </tr>
+                            <tr>
+                                <td id="tdAmount1_1" class="label"></td>
+                                <td id="tdAmount1_2" style="text-align:center;" class="number"></td><td id="tdAmount1_3" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount1_4" style="text-align:center;" class="number"></td><td id="tdAmount1_5" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount1_6" style="text-align:center;" class="number"></td><td id="tdAmount1_7" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount1_8" style="text-align:center;" class="number"></td><td id="tdAmount1_9" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount1_10" style="text-align:center;" class="number"></td><td id="tdAmount1_11" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount1_12" style="text-align:center;" class="number"></td><td id="tdAmount1_13" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount1_14" style="text-align:center;" class="number"></td>
+                            </tr>
+                            <tr>
+                                <td id="tdAmount2_1" class="label"></td>
+                                <td id="tdAmount2_2" style="text-align:center;" class="number"></td><td id="tdAmount2_3" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount2_4" style="text-align:center;" class="number"></td><td id="tdAmount2_5" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount2_6" style="text-align:center;" class="number"></td><td id="tdAmount2_7" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount2_8" style="text-align:center;" class="number"></td><td id="tdAmount2_9" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount2_10" style="text-align:center;" class="number"></td><td id="tdAmount2_11" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount2_12" style="text-align:center;" class="number"></td><td id="tdAmount2_13" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount2_14" style="text-align:center;" class="number"></td>
+                            </tr>
+                            <tr>
+                                <td id="tdAmount3_1" class="label"></td>
+                                <td id="tdAmount3_2" style="text-align:center;" class="number"></td><td id="tdAmount3_3" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount3_4" style="text-align:center;" class="number"></td><td id="tdAmount3_5" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount3_6" style="text-align:center;" class="number"></td><td id="tdAmount3_7" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount3_8" style="text-align:center;" class="number"></td><td id="tdAmount3_9" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount3_10" style="text-align:center;" class="number"></td><td id="tdAmount3_11" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount3_12" style="text-align:center;" class="number"></td><td id="tdAmount3_13" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount3_14" style="text-align:center;" class="number"></td>
+                            </tr>
+                            <tr>
+                                <td id="tdAmount4_1" class="label"></td>
+                                <td id="tdAmount4_2" style="text-align:center;" class="number"></td><td id="tdAmount4_3" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount4_4" style="text-align:center;" class="number"></td><td id="tdAmount4_5" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount4_6" style="text-align:center;" class="number"></td><td id="tdAmount4_7" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount4_8" style="text-align:center;" class="number"></td><td id="tdAmount4_9" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount4_10" style="text-align:center;" class="number"></td><td id="tdAmount4_11" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount4_12" style="text-align:center;" class="number"></td><td id="tdAmount4_13" style="text-align:center;" class="number"></td>
+                                <td id="tdAmount4_14" style="text-align:center;" class="number"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<style>
+    td {background: #fff;}
+</style>
+
+<!-- op.common.js의 전역 ajax beforeSend가 로딩 스피너(Spinner, spin.min.js)를 쓰므로 반드시 먼저 로드.
+     없으면 beforeSend에서 'Spinner is not defined'로 모든 $.post가 중단돼 차트가 안 뜬다(AS-IS 로드순서 동일). -->
+<script type="text/javascript" th:src="@{/content/modules/chart.min.js}"></script>
+<script type="text/javascript" th:src="@{/content/modules/op.chart.js}"></script>
+<script th:inline="javascript">
+/*<![CDATA[*/
+
+    // 시도→시군구 캐스케이딩용 전체 지자체 목록(서버 재왕복 대신 로컬 필터 - 차트/집계 로직과 무관).
+    var ALL_LOCGOVS = /*[[${allLocgovs}]]*/ [];
+
+    let changeYn = "N";
+    let locgovChart;
+    let chartLoadingYn = true;
+
+    $(function () {
+        $("select[name='shWdr']").change(function() { changeYn = "Y"; });
+        fnSearch();
+    });
+
+    // 지자체 변경(시도 선택 → 시군구 옵션 재구성). AS-IS는 ajax였으나 로컬 필터로 동일 동작.
+    function wdrChange(value) {
+        $("#shLocgovCode option").remove();
+        if (value != "") {
+            $('#shLocgovCode').append('<option value="">-전체-</option>');
+            for (var i = 0; i < ALL_LOCGOVS.length; i++) {
+                if (ALL_LOCGOVS[i].upperLocgovCode == value) {
+                    $('#shLocgovCode').append('<option value="' + ALL_LOCGOVS[i].locgovCode + '">' + ALL_LOCGOVS[i].locgovNm + '</option>');
+                }
+            }
+        } else {
+            $('#shLocgovCode').append('<option value="">-시,군,구-</option>');
+        }
+    }
+
+    function fnSearch() {
+        designatedLocgovMonthCampaign();
+        designatedLocgovMonthAmountRaised();
+        designatedLocgovMonthAmount();
+    }
+
+    // 사업구분별 사업 진행건 비율
+    function designatedLocgovMonthCampaign() {
+        const labelArr = [];
+        const dataArr = [];
+        const backgroundColorArr = [];
+        $.post('/designated-projects/analysis/month/campaign', {"shWdr" : $('#shWdr').val(),  "shLocgovCode" : $('#shLocgovCode').val(), "selYear" : $("#selYear").val(), "prjStatus" : $("input[name='prjStatus']:checked").val()}, function(response) {
+            if (response.isSuccess) {
+                let label = '';
+                let prjBsns = '';
+                let backgroundColor = '';
+                label = '취약계층';
+                prjBsns = response.data[0].prjBsns100;
+                backgroundColor = 'rgb(255, 99, 132)';
+                labelArr.push(label);
+                dataArr.push(prjBsns);
+                backgroundColorArr.push(backgroundColor);
+
+                label = '문화/예술';
+                prjBsns = response.data[0].prjBsns200;
+                backgroundColor = 'rgb(54, 162, 235)';
+                labelArr.push(label);
+                dataArr.push(prjBsns);
+                backgroundColorArr.push(backgroundColor);
+
+                label = '자원봉사';
+                prjBsns = response.data[0].prjBsns300;
+                backgroundColor = 'rgb(255, 205, 86)';
+                labelArr.push(label);
+                dataArr.push(prjBsns);
+                backgroundColorArr.push(backgroundColor);
+
+                label = '복리증진';
+                prjBsns = response.data[0].prjBsns400;
+                backgroundColor = 'rgb(32, 169, 59)';
+                labelArr.push(label);
+                dataArr.push(prjBsns);
+                backgroundColorArr.push(backgroundColor);
+
+                $('#tdCampaign1_1').text(response.data[0].columnTpDesc);
+                $('#tdCampaign1_2').text(response.data[0].prjBsns100 + '%');
+                $('#tdCampaign1_3').text(response.data[0].prjBsns200 + '%');
+                $('#tdCampaign1_4').text(response.data[0].prjBsns300 + '%');
+                $('#tdCampaign1_5').text(response.data[0].prjBsns400 + '%');
+                $('#tdCampaign1_6').text(response.data[0].prjBsnsTot + '%');
+
+                $('#tdCampaign2_1').text(response.data[1].columnTpDesc);
+                $('#tdCampaign2_2').text(response.data[1].prjBsns100 + '건');
+                $('#tdCampaign2_3').text(response.data[1].prjBsns200 + '건');
+                $('#tdCampaign2_4').text(response.data[1].prjBsns300 + '건');
+                $('#tdCampaign2_5').text(response.data[1].prjBsns400 + '건');
+                $('#tdCampaign2_6').text(response.data[1].prjBsnsTot + '건');
+
+                let p = $('#designatedLocgovMonthCampaignChart').parent('div');
+                const ele = $('#designatedLocgovMonthCampaignChart').clone();
+                p.empty();
+                p.append(ele);
+                const context = document.getElementById('designatedLocgovMonthCampaignChart').getContext('2d');
+                const chartData = {
+                      labels: labelArr,
+                      datasets: [{
+                        label: '',
+                        data: dataArr,
+                        backgroundColor: backgroundColorArr,
+                        hoverOffset: 4
+                      }]
+                };
+
+                try {
+                    const c = new Chart(context, {
+                        type : 'pie',
+                        data : chartData
+                    });
+                } catch (e) {
+                    $.log(e);
+                    checkChartLib();
+                }
+            } else {
+                alert(response.errorMessage);
+            }
+        });
+    }
+
+    function designatedLocgovMonthAmountRaised() {
+        const labelArr = [];
+        const dataArr = [];
+        const backgroundColorArr = [];
+        $.post('/designated-projects/analysis/month/amountraised', {"shWdr" : $('#shWdr').val(),  "shLocgovCode" : $('#shLocgovCode').val(), "selYear" : $("#selYear").val(), "prjStatus" : $("input[name='prjStatus']:checked").val()}, function(response) {
+            if (response.isSuccess) {
+                let label = '';
+                let prjBsns = '';
+                let backgroundColor = '';
+
+                label = '취약계층';
+                prjBsns = response.data[0].prjBsns100;
+                backgroundColor = 'rgb(255, 99, 132)';
+                labelArr.push(label);
+                dataArr.push(prjBsns);
+                backgroundColorArr.push(backgroundColor);
+
+                label = '문화/예술';
+                prjBsns = response.data[0].prjBsns200;
+                backgroundColor = 'rgb(54, 162, 235)';
+                labelArr.push(label);
+                dataArr.push(prjBsns);
+                backgroundColorArr.push(backgroundColor);
+
+                label = '자원봉사';
+                prjBsns = response.data[0].prjBsns300;
+                backgroundColor = 'rgb(255, 205, 86)';
+                labelArr.push(label);
+                dataArr.push(prjBsns);
+                backgroundColorArr.push(backgroundColor);
+
+                label = '복리증진';
+                prjBsns = response.data[0].prjBsns400;
+                backgroundColor = 'rgb(32, 169, 59)';
+                labelArr.push(label);
+                dataArr.push(prjBsns);
+                backgroundColorArr.push(backgroundColor);
+
+                $('#tdAmountRaised1_1').text(response.data[0].columnTpDesc);
+                $('#tdAmountRaised1_2').text(response.data[0].prjBsns100 + '%');
+                $('#tdAmountRaised1_3').text(response.data[0].prjBsns200 + '%');
+                $('#tdAmountRaised1_4').text(response.data[0].prjBsns300 + '%');
+                $('#tdAmountRaised1_5').text(response.data[0].prjBsns400 + '%');
+                $('#tdAmountRaised1_6').text(response.data[0].prjBsnsTot + '%');
+
+                $('#tdAmountRaised2_1').text(response.data[1].columnTpDesc);
+                $('#tdAmountRaised2_2').text(Common.numberFormat(response.data[1].prjBsns100) + '원');
+                $('#tdAmountRaised2_3').text(Common.numberFormat(response.data[1].prjBsns200) + '원');
+                $('#tdAmountRaised2_4').text(Common.numberFormat(response.data[1].prjBsns300) + '원');
+                $('#tdAmountRaised2_5').text(Common.numberFormat(response.data[1].prjBsns400) + '원');
+                $('#tdAmountRaised2_6').text(Common.numberFormat(response.data[1].prjBsnsTot) + '원');
+
+                $('#tdAmountRaised3_1').text(response.data[2].columnTpDesc);
+                $('#tdAmountRaised3_2').text(Common.numberFormat(response.data[2].prjBsns100) + '원');
+                $('#tdAmountRaised3_3').text(Common.numberFormat(response.data[2].prjBsns200) + '원');
+                $('#tdAmountRaised3_4').text(Common.numberFormat(response.data[2].prjBsns300) + '원');
+                $('#tdAmountRaised3_5').text(Common.numberFormat(response.data[2].prjBsns400) + '원');
+                $('#tdAmountRaised3_6').text(Common.numberFormat(response.data[2].prjBsnsTot) + '원');
+
+                let p = $('#designatedLocgovMonthAmountRaisedChart').parent('div');
+                const ele = $('#designatedLocgovMonthAmountRaisedChart').clone();
+                p.empty();
+                p.append(ele);
+                const context = document.getElementById('designatedLocgovMonthAmountRaisedChart').getContext('2d');
+                const chartData = {
+                      labels: labelArr,
+                      datasets: [{
+                        label: '',
+                        data: dataArr,
+                        backgroundColor: backgroundColorArr,
+                        hoverOffset: 4
+                      }]
+                };
+
+                try {
+                    const c = new Chart(context, {
+                        type : 'pie',
+                        data : chartData
+                    });
+                } catch (e) {
+                    $.log(e);
+                    checkChartLib();
+                }
+            } else {
+                alert(response.errorMessage);
+            }
+        });
+    }
+
+    function designatedLocgovMonthAmount() {
+        const monthArr = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월', '12월'];
+        const monthColumnArr = ['m01','m02','m03','m04','m05','m06','m07','m08','m09','m10','m11', 'm12'];
+        const amountArr = [
+                            {label : '목표금액(원)', type : 'bar', data : [], backgroundColor:'#00215A', borderColor:'#00215A', minBarLength: 0, yAxisID: 'y'}
+                            , {label : '모금액(원)', type : 'bar', data : [], backgroundColor:'#09C2C7', borderColor:'#09C2C7', minBarLength: 0, yAxisID: 'y'}
+                        ];
+        $.post(
+            '/designated-projects/analysis/month/amount'
+            , {"shWdr" : $('#shWdr').val()
+                , "shLocgovCode" : $('#shLocgovCode').val()
+                , "selYear" : $("#selYear").val()
+                , "prjStatus" : $("input[name='prjStatus']:checked").val()
+            }
+            , function(response) {
+                if (response.isSuccess) {
+                    let monthLength = monthColumnArr.length;
+                    for(let i = 0 ; i < monthLength ; i++) {
+                        amountArr[0].data.push(!Common.isUndefined(response.data) && response.data.length > 0  ? response.data[0][monthColumnArr[i]] : 0);
+                        amountArr[1].data.push(!Common.isUndefined(response.data) && response.data.length > 0  ? response.data[1][monthColumnArr[i]] : 0);
+                    }
+
+                    $('#tdAmount1_1').text(!Common.isUndefined(response.data) && response.data.length > 0  ? response.data[0].columnTpDesc : 0);
+                    $('#tdAmount1_2').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[0].m01) : 0);
+                    $('#tdAmount1_3').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[0].m02) : 0);
+                    $('#tdAmount1_4').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[0].m03) : 0);
+                    $('#tdAmount1_5').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[0].m04) : 0);
+                    $('#tdAmount1_6').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[0].m05) : 0);
+                    $('#tdAmount1_7').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[0].m06) : 0);
+                    $('#tdAmount1_8').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[0].m07) : 0);
+                    $('#tdAmount1_9').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[0].m08) : 0);
+                    $('#tdAmount1_10').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[0].m09) : 0);
+                    $('#tdAmount1_11').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[0].m10) : 0);
+                    $('#tdAmount1_12').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[0].m11) : 0);
+                    $('#tdAmount1_13').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[0].m12) : 0);
+                    $('#tdAmount1_14').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[0].total) : 0);
+
+                    $('#tdAmount2_1').text(!Common.isUndefined(response.data) && response.data.length > 0  ? response.data[1].columnTpDesc : 0);
+                    $('#tdAmount2_2').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[1].m01) : 0);
+                    $('#tdAmount2_3').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[1].m02) : 0);
+                    $('#tdAmount2_4').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[1].m03) : 0);
+                    $('#tdAmount2_5').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[1].m04) : 0);
+                    $('#tdAmount2_6').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[1].m05) : 0);
+                    $('#tdAmount2_7').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[1].m06) : 0);
+                    $('#tdAmount2_8').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[1].m07) : 0);
+                    $('#tdAmount2_9').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[1].m08) : 0);
+                    $('#tdAmount2_10').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[1].m09) : 0);
+                    $('#tdAmount2_11').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[1].m10) : 0);
+                    $('#tdAmount2_12').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[1].m11) : 0);
+                    $('#tdAmount2_13').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[1].m12) : 0);
+                    $('#tdAmount2_14').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[1].total) : 0);
+
+                    $('#tdAmount3_1').text(!Common.isUndefined(response.data) && response.data.length > 0  ? response.data[2].columnTpDesc : 0);
+                    $('#tdAmount3_2').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[2].m01) : 0);
+                    $('#tdAmount3_3').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[2].m02) : 0);
+                    $('#tdAmount3_4').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[2].m03) : 0);
+                    $('#tdAmount3_5').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[2].m04) : 0);
+                    $('#tdAmount3_6').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[2].m05) : 0);
+                    $('#tdAmount3_7').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[2].m06) : 0);
+                    $('#tdAmount3_8').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[2].m07) : 0);
+                    $('#tdAmount3_9').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[2].m08) : 0);
+                    $('#tdAmount3_10').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[2].m09) : 0);
+                    $('#tdAmount3_11').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[2].m10) : 0);
+                    $('#tdAmount3_12').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[2].m11) : 0);
+                    $('#tdAmount3_13').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[2].m12) : 0);
+                    $('#tdAmount3_14').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[2].total) : 0);
+
+                    $('#tdAmount4_1').text(!Common.isUndefined(response.data) && response.data.length > 0  ? response.data[3].columnTpDesc : 0);
+                    $('#tdAmount4_2').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[3].m01) : 0);
+                    $('#tdAmount4_3').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[3].m02) : 0);
+                    $('#tdAmount4_4').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[3].m03) : 0);
+                    $('#tdAmount4_5').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[3].m04) : 0);
+                    $('#tdAmount4_6').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[3].m05) : 0);
+                    $('#tdAmount4_7').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[3].m06) : 0);
+                    $('#tdAmount4_8').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[3].m07) : 0);
+                    $('#tdAmount4_9').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[3].m08) : 0);
+                    $('#tdAmount4_10').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[3].m09) : 0);
+                    $('#tdAmount4_11').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[3].m10) : 0);
+                    $('#tdAmount4_12').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[3].m11) : 0);
+                    $('#tdAmount4_13').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[3].m12) : 0);
+                    $('#tdAmount4_14').text(!Common.isUndefined(response.data) && response.data.length > 0  ? Common.numberFormat(response.data[3].total) : 0);
+
+                    if (locgovChart) {
+                        try {
+                            removeChartData(locgovChart);
+                        } catch (e) {
+                            $.log(e);
+                        }
+                        try {
+                            addChartData(locgovChart, monthColumnArr, amountArr);
+                        } catch (e) {
+                            $.log(e);
+                        }
+                    } else {
+                        try {
+                            locgovChart = ChartCommon.drawChartMultiYaxis(
+                                'designatedLocgovMonthAmountChart'
+                                , 'bar'
+                                , {
+                                    scales:{
+                                        x:{ stacked:false },
+                                        y:{ stacked:false }
+                                    }
+                                }
+                                , monthArr
+                                , amountArr
+                                , {
+                                    x : '월'
+                                    , y : '원'
+                                }
+                                , "FIXED"
+                            );
+                        } catch (e) {
+                            $.log(e);
+                            checkChartLib();
+                        }
+                    }
+                } else {
+                    alert(response.errorMessage);
+                }
+            }
+        );
+    }
+
+    function addChartData(chart, label, data) {
+        let length = data.length;
+        for (let i = 0 ; i < length ; i++) {
+            chart.data.datasets.push(data[i]);
+        }
+        chart.update();
+    }
+
+    function removeChartData(chart) {
+        let length = chart.data.datasets.length;
+        for (let i = 0 ; i < length ; i++) {
+            chart.data.datasets.pop();
+        }
+        chart.update();
+    }
+
+    function checkChartLib() {
+        if (chartLoadingYn) {
+            chartLoadingYn = false;
+            alert("그래프 라이브러리를 읽어오는데 실패했습니다. 새로고침 해주세요.");
+        }
+    }
+/*]]>*/
+</script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

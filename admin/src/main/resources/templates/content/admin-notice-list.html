@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>공지사항 관리 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -10,16 +11,24 @@
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <h3>공지사항 관리</h3>
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+    <!-- 메뉴 5111 공지사항(전체공지)과 5110 지자체공지사항이 이 템플릿을 공유한다 -
+         AS-IS도 컨트롤러·매퍼만 둘이고 표(op_notice)는 하나다. 화면 제목과 분류탭 링크만
+         listUrl/screenTitle로 갈린다. -->
+    <h3 th:text="${screenTitle} + ' 관리'">공지사항 관리</h3>
     <p th:if="${errorMessage}" style="color:#c00;" th:text="${errorMessage}"></p>
     <p><a class="btn" th:href="@{/admin/notices/new}">+ 공지 등록</a></p>
 
     <div class="category-nav">
-        <a th:href="@{/admin/notices}" th:classappend="${selectedCategory == null} ? 'active'">전체</a>
-        <a th:each="c : ${categoryLabels}" th:href="@{/admin/notices(category=${c.key})}"
+        <a th:href="@{${listUrl}}" th:classappend="${selectedCategory == null} ? 'active'">전체</a>
+        <a th:each="c : ${categoryLabels}" th:href="@{${listUrl}(category=${c.key})}"
            th:classappend="${selectedCategory == c.key} ? 'active'" th:text="${c.value}"></a>
     </div>
 
@@ -62,7 +71,10 @@
         </tbody>
     </table>
     <p class="empty" th:if="${#lists.isEmpty(notices)}">등록된 공지사항이 없습니다.</p>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

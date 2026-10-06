@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>관리자 로그관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/log/login-log-details.jsp 이식. 로그인ID·권한그룹·접속IP를 보여주고
+     그 로그인 시각~다음 로그인 시각 사이의 메뉴사용이력을 ajax 조각으로 끼워 넣는다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span>관리자 로그관리</span></h3>
+
+<!-- Header -->
+<div class="board_write">
+	<table class="board_write_table" summary="사용자 로그관리">
+		<colgroup>
+			<col style="width:220px;">
+			<col>
+			<col style="width:220px;">
+			<col>
+		</colgroup>
+		<tbody>
+			<tr>
+				<td class="label">로그인 ID</td>
+				<td>
+					<div th:text="${details != null} ? ${details.loginId} : ''"></div>
+				</td>
+				<td class="label">권한그룹</td>
+				<td>
+					<div th:text="${details != null and details.loginType == 'seller'} ? '답례품관리자' : ${roleName}"></div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label">접속 IP</td>
+				<td colspan="3">
+					<div th:text="${details != null} ? ${details.remoteAddr} : ''"></div>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+<!--// Header -->
+
+<!-- List -->
+<div class="board_list mt-40" id="actionLogList"></div>
+<!--// List -->
+
+<!-- 목록 검색 조건 -->
+<input type="hidden" id="listSearchParam" />
+<!--// 목록 검색 조건  -->
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script th:inline="javascript">
+	var LOGIN_ID = /*[[${details != null} ? ${details.loginId} : '']]*/ '';
+	var LOGIN_LOG_ID = /*[[${loginLogId}]]*/ '';
+	var LOGIN_DATE = /*[[${details != null} ? ${details.loginDate} : '']]*/ '';
+	var NEXT_LOGIN_DATE = /*[[${nextLoginDate}]]*/ '';
+
+	$(function() {
+
+		// 페이지 유효성 확인
+		if(LOGIN_ID == "") {
+			alert("잘못된 접근입니다.");
+			moveListPage();
+		}
+
+		// 네비게이션 수정
+		$(".contents .contents_inner").find("div.location a").removeClass("on");
+		$(".contents .contents_inner").find("div.location").append('> <a href="'+location.pathname+'" class="on">상세</a>');
+
+		// 목록 검색 조건 저장
+		listSearchParamSave();
+
+		// 메뉴사용이력 조회
+		getActionLogList(1, 20);
+	});
+
+	/**
+	 *	함 수 명 : getActionLogList
+	 *	기	능  : 메뉴사용이력 조회
+	 *	파라미터  : page - 현재 페이지, itemPerPage - 목록수 (한 페이지에서 노출한 row)
+	 */
+	function getActionLogList(page, itemPerPage) {
+		var searchValue = "page="+page;
+		searchValue += "&srchStartCreated="+LOGIN_DATE;
+		searchValue += "&srchEndCreated="+NEXT_LOGIN_DATE;
+
+		if(itemPerPage) {
+			searchValue += "&itemsPerPage="+itemPerPage;
+		} else {
+			searchValue += "&itemsPerPage="+10;
+		}
+
+		$.get("/log/login/details/"+LOGIN_LOG_ID+"/action-log-list?"+searchValue, {}, function(result) {
+			$("#actionLogList").html(result);
+		}, "html");
+	}
+
+	/**
+	 *	함 수 명 : listSearchParamSave
+	 *	기	능  : 목록 검색 조건 저장
+	 */
+	function listSearchParamSave() {
+
+		// 목록 검색 조건 저장
+		$("#listSearchParam").val(location.search);
+
+		// 검색 조건 삭제
+		history.replaceState({}, null, location.pathname);
+	}
+
+	/**
+	 *	함 수 명 : moveListPage
+	 *	기	능  : 목록 페이지 이동
+	 */
+	function moveListPage() {
+		location.href = "/log/login"+$("#listSearchParam").val();
+	}
+</script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

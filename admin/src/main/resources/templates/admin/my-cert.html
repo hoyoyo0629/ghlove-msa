@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>인증서 등록/삭제 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -11,17 +12,24 @@
 
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <h3>인증서 등록/삭제</h3>
     <p style="color:#666; margin-bottom:16px;">
         금융인증서/공동인증서로 로그인하려면 먼저 인증서 파일(.der/.crt/.pem)을 등록해야 합니다.
         등록된 인증서와 일치하는 파일을 로그인 화면에서 다시 업로드하면 이메일 인증 없이 바로 로그인됩니다.
     </p>
 
-    <p class="success" th:if="${param.message}" th:text="${param.message}"></p>
-    <p class="error" th:if="${param.errorMessage}" th:text="${param.errorMessage}"></p>
+    <!--/* AS-IS ViewUtils.redirect는 성공·실패를 구분하지 않고 메시지 하나만 flash로 넘긴다
+           (FlashMapUtils.setMessage). 예전엔 ?message=와 ?errorMessage=로 갈라 두 줄로 찍었는데
+           flash 한 가지로 합치면서 같은 문구가 두 번 나오게 돼 한 줄로 정리했다. */-->
+    <p class="success" th:if="${redirectMessage}" th:text="${redirectMessage}"></p>
 
     <p><strong>현재 등록 상태:</strong>
         <span th:text="${manager.certSubjectDn} != null ? '등록됨 (' + ${manager.certSubjectDn} + ')' : '등록된 인증서 없음'"></span>
@@ -39,7 +47,10 @@
           th:if="${manager.certSubjectDn} != null" onsubmit="return confirm('등록된 인증서를 해제하시겠습니까?')">
         <button type="submit" class="small-btn danger">등록 해제</button>
     </form>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<META http-equiv="Expires" content="-1">
+	<META http-equiv="Pragma" content="no-cache">
+	<META http-equiv="Cache-Control" content="No-Cache">
+	<title>고향사랑e음 관리자</title>
+
+	<link rel="stylesheet" href="/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css">
+	<link rel="stylesheet" href="/content/opmanager/css/bootstrap/css/bootstrap.css">
+	<link rel="stylesheet" href="/content/opmanager/css/opmanager.css">
+	<link rel="stylesheet" href="/content/modules/jquery/jstree/dist/themes/default/style.min.css">
+
+</head>
+<body>
+<div class="popup_wrap">
+	<div class="popup_wrap">
+		<div id="pop_header" class="pop_header2">
+			<h1 id="popup_title2" class="popup_title" style="background: #434755 !important;"></h1>
+			<!-- <img
+				src="/content/opmanager/images/btn/btn_close.png"
+				alt="닫기"
+				style="position: absolute; top: 15px; right: 15px; cursor: pointer;"
+				onclick="javascript:self.close();"
+			> -->
+			<a href="javascript:self.close();" class="btn_close"><img
+				src="/content/opmanager/images/btn/btn_close.png" alt="닫기"></a>
+			<div id="popup_content2" style="padding:15px 30px 0px; line-height:1.5em; text-align:left; border-top:1px solid #dfdfdf; font-size: 11pt">
+			</div>
+		</div>
+
+		<p class="popup_btns" style="font-size:15px;">
+
+			  <!-- <input type='checkbox' name='chkbox' id='todaycloseyn2' value='Y' style="width: 25px; height: 18px;">오늘 하루 이 창을 열지 않음 -->
+			  <a id="closeA" href='#' onClick="closeWin()"><B>[닫기]</B></a>
+			  <input type="hidden" id="popupId2"></input>
+		</p>
+	</div>
+</div>
+
+<script type="text/javascript" src="../common/js/jquery-1.12.4.min.js"></script>
+<script type="text/javascript">
+
+$(function() {
+	;
+
+
+});
+
+//쿠키설정
+function setCookie( name, value, expiredays ) {
+	var todayDate = new Date();
+	todayDate.setDate( todayDate.getDate() + expiredays );
+	document.cookie = name + '=' + escape( value ) + '; path=/; expires=' + todayDate.toGMTString() + ';'
+}
+
+
+function closeWin()
+{
+	var id = $('#popupId2').val();
+    if($("#todaycloseyn2").prop("checked"))
+    {
+        setCookie('divpop'+id, 'Y' , 1 );
+    }
+    self.close();
+}
+
+
+
+</script>
+</body>
+
+</html>

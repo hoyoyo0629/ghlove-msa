@@ -19,20 +19,36 @@ import java.util.Map;
 public class MailConfigService {
 
     private final MailConfigRepository mailConfigRepository;
-    private final CommonCodeService commonCodeService;
+    private final MailTemplateCodes mailTemplateCodes;
 
     public record TemplateRow(String templateId, String label, boolean configured) {
     }
 
+    /**
+     * AS-IS MailTemplate.getTemplateCodes()의 고정 10종. 예전에는 공통코드 ORDER_STATUS로
+     * 목록을 만들었는데 그건 주문상태라 회원가입·임시비밀번호·문의답변·휴면안내·관리자 권한
+     * 승인/거절 템플릿이 아예 없었다 - AS-IS 목록으로 바로잡았다.
+     */
     public List<TemplateRow> templateList() {
-        Map<String, String> labels = commonCodeService.labelsOf("ORDER_STATUS");
         List<TemplateRow> rows = new java.util.ArrayList<>();
-        labels.forEach((id, label) -> rows.add(new TemplateRow(id, label, mailConfigRepository.findByTemplateId(id).isPresent())));
+        mailTemplateCodes.templateCodes().forEach((id, label) ->
+                rows.add(new TemplateRow(id, label, mailConfigRepository.findByTemplateId(id).isPresent())));
         return rows;
     }
 
     public String labelOf(String templateId) {
-        return commonCodeService.labelsOf("ORDER_STATUS").getOrDefault(templateId, templateId);
+        return mailTemplateCodes.templateCodeTitle(templateId);
+    }
+
+    /** AS-IS getMailConfigByTemplateId - 없으면 null(등록/수정 분기에 쓰인다). */
+    public MailConfig findByTemplateId(String templateId) {
+        return mailConfigRepository.findByTemplateId(templateId).orElse(null);
+    }
+
+    /** AS-IS deleteMailConfig - 목록의 삭제 링크. */
+    @Transactional
+    public void delete(Integer mailConfigId) {
+        mailConfigRepository.deleteById(mailConfigId);
     }
 
     public MailConfig getOrNew(String templateId) {
@@ -56,6 +72,13 @@ public class MailConfigService {
         target.setAdminContent(form.getAdminContent());
         target.setSellerSubject(form.getSellerSubject());
         target.setSellerContent(form.getSellerContent());
+        // AS-IS 폼이 보내는 발송여부 - buyerSendFlag는 라디오, adminSendFlag는 hidden('N')이다
+        target.setBuyerSendFlag(form.getBuyerSendFlag() != null ? form.getBuyerSendFlag() : "N");
+        target.setAdminSendFlag(form.getAdminSendFlag() != null ? form.getAdminSendFlag() : "N");
+        if (target.getCreatedDate() == null) {
+            target.setCreatedDate(java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss")));
+        }
         return mailConfigRepository.save(target);
     }
 }

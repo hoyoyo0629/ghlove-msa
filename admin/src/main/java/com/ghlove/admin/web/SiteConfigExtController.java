@@ -12,8 +12,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 /** 쇼핑몰 설정 허브의 잔여 서브화면 (AS-IS opmanager/config - ConfigManagerController,
  *  #33 gap). `site-config`(기본정보/SEO/가입불가아이디/금지어)와 `policy/*`를 제외한 나머지:
@@ -26,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 public class SiteConfigExtController {
 
     private final ShopConfigRepository shopConfigRepository;
+    private final com.ghlove.admin.web.support.FlashRedirect flashRedirect;
     private final OpConfigPgRepository opConfigPgRepository;
     private final OpConfigGoogleAnalyticsRepository opConfigGoogleAnalyticsRepository;
 
@@ -34,8 +33,7 @@ public class SiteConfigExtController {
     }
 
     private String redirectWithMessage(String path) {
-        return "redirect:" + path + "?message=" +
-                URLEncoder.encode("저장되었습니다.", StandardCharsets.UTF_8);
+        return flashRedirect.to(path, "저장되었습니다.");
     }
 
     // ---------------------------------------------------------------- 가입거부 블랙리스트(IP/이메일도메인)

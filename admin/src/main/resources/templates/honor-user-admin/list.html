@@ -1,44 +1,216 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>지자체 명예직원 관리 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <title>기부혜택증 기준목록 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <h3>지자체 명예직원(명예시도민증) 관리</h3>
-    <div class="tab_menu">
-        <a class="on" th:href="@{/admin/honor-users}">선정기준 관리</a>
-        <a th:href="@{/admin/honor-users/view-history}">열람이력 조회</a>
-    </div>
+<!-- AS-IS opmanager/i18n/lclgvHnrUser/lclgvHnrUserMng/list.jsp 이식(메뉴 19101 기부혜택증 설정 관리).
+     검색: 지자체(시도 → 시군구) / 6컬럼 / 출력개수 10·50·100·200·500.
 
-    <p><a class="btn" th:href="@{/admin/honor-users/new}">+ 지자체 선정기준 등록</a></p>
+     ★ AS-IS는 진입(GET) 시 조회하지 않는다 - 검색해야(POST) 조회된다.
+     ★ 이 목록은 시스템·행안부(ROLE_ADMIN_1~4)만 본다. 지자체 담당자(5·6)는 목록 대신
+        자기 지자체 설정 폼으로 리다이렉트된다(컨트롤러에서 처리).
+     ★ 구조갭 해소: TO-BE는 19101(목록)·19102(설정 폼)가 같은 URL이었다 - AS-IS는 별개 화면이라
+        /admin/honor-users(목록)와 /admin/honor-users/form/{지자체코드}(설정)로 분리했다.
 
-    <table class="board_list_table">
-        <thead>
-        <tr><th>지자체</th><th>제목</th><th>골드기준액</th><th>실버기준액</th><th>브론즈기준액</th><th>사용여부</th><th>최종수정일</th></tr>
-        </thead>
-        <tbody>
-        <tr th:each="r : ${rows}">
-            <td><a th:href="@{'/admin/honor-users/' + ${r.lclgvCd} + '/edit'}"
-                   th:text="${locgovNames.get(r.lclgvCd) ?: r.lclgvCd}"></a></td>
-            <td th:text="${r.hnrUserStngTtl}"></td>
-            <td th:text="${#numbers.formatInteger(r.gldGrdDntnAmt ?: 0, 0, 'COMMA')}"></td>
-            <td th:text="${#numbers.formatInteger(r.slvrGrdDntnAmt ?: 0, 0, 'COMMA')}"></td>
-            <td th:text="${#numbers.formatInteger(r.brnzGrdDntnAmt ?: 0, 0, 'COMMA')}"></td>
-            <td th:text="${r.useYn == 'Y' ? '사용' : '미사용'}"></td>
-            <td th:text="${r.lastRegDt != null ? #temporals.format(r.lastRegDt, 'yyyy-MM-dd HH:mm') : ''}"></td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(rows)}">등록된 지자체 선정기준이 없습니다.</p>
+     AS-IS verbatim:
+     - h3가 메뉴명(기부혜택증 설정 관리)이 아니라 **"기부혜택증 기준목록"**이다.
+     - 출력개수 select가 다른 화면들과 다르다(10/50/100/200/500).
+     - **골드·실버 등급 금액 컬럼은 주석처리**되어 있고 '발급기준금액'(브론즈) 하나만 보인다.
+     - **등록 버튼도 주석처리**되어 있다(지자체 설정은 지자체가 생길 때 같이 생기는 것이라
+       목록에서 새로 만들지 않는다).
+     - 지자체 칸만 설정 폼 링크다.
+     - 빈 목록 문구는 "조회 정보가 존재하지 않습니다."(colspan 6). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<div class="item_list">
+<h3><span>기부혜택증 기준목록</span></h3>
+
+<p class="error" th:if="${redirectMessage != null}" th:text="${redirectMessage}" style="color:#1a73e8;"></p>
+
+<form id="searchForm" method="post" th:action="@{/admin/honor-users}">
+	<input type="hidden" id="page" name="page" th:value="${searchParam.page}"/>
+
+	<div class="board_write">
+		<table class="board_write_table" summary="지자체 기부혜택증 기준목록">
+			<caption>지자체 기부혜택증 기준목록</caption>
+			<colgroup>
+				<col style="width:100px;" />
+				<col style="width:auto;" />
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="label">지자체</td>
+					<td>
+						<div class="flex_box gap-08">
+							<select id="upperLocgovCode" name="upperLocgovCode" class="wd-150" onchange="wdrChange(this.value)">
+								<option value="">-전체-</option>
+								<option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"
+								        th:selected="${p.key == searchParam.upperLocgovCode}"></option>
+							</select>
+							<select id="lclgvCd" name="lclgvCd" class="wd-150">
+								<option value="">-시·군·구-</option>
+							</select>
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
+		<div class="btn_all btn_left">
+			<ul class="list-bullet point">
+		        <li>
+		            검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.
+		        </li>
+	        </ul>
+	  	</div>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/admin/honor-users'">초기화</button>
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="search();">검색</button>
+			</div>
+		</div>
+	</div>
+
+	<div class="count_title mt-40">
+		<h5>총 <span th:text="${#numbers.formatInteger(count, 0, 'COMMA')}" th:remove="tag">0</span>건</h5>
+		<span>
+			<select id="itemsPerPage" name="itemsPerPage" title="화면 출력수" onchange="search();">
+				<option value="10" th:selected="${searchParam.itemsPerPage == 10}">10개 출력</option>
+				<option value="50" th:selected="${searchParam.itemsPerPage == 50}">50개 출력</option>
+				<option value="100" th:selected="${searchParam.itemsPerPage == 100}">100개 출력</option>
+				<option value="200" th:selected="${searchParam.itemsPerPage == 200}">200개 출력</option>
+				<option value="500" th:selected="${searchParam.itemsPerPage == 500}">500개 출력</option>
+			</select>
+		</span>
+	</div>
+</form>
+
+<div class="board_list">
+	<table class="board_list_table" summary="지자체 기부혜택증 기준 목록">
+		<caption>지자체 기부혜택증 기준 목록</caption>
+		<colgroup>
+			<col style="width:10px;">
+			<col style="width:100px;">
+			<col style="width:100px;">
+			<!-- <col style="width:100px;"> -->
+			<col style="width:100px;">
+			<col style="width:100px;">
+			<col style="width:100px;">
+		</colgroup>
+		<thead>
+			<tr>
+				<th>No.</th>
+				<th>시도</th>
+				<th>지자체</th>
+				<!-- <th>골드 등급 기부 금액</th>
+				<th>실버 등급 기부 금액</th>
+				<th>브론즈 등급 기부 금액</th> -->
+				<th>발급기준금액</th>
+				<th>기부혜택증 선정 구분 코드</th>
+				<th>사용 여부</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr th:each="item : ${list}">
+				<td th:text="${item.rowNumber}">0</td>
+				<td th:text="${item.upperLocgovNm}"></td>
+				<td>
+					<a th:href="|javascript:lclgvHnrUserDetail('${item.lclgvCd}')|" th:text="${item.lclgvCdNm}"></a>
+				</td>
+				<td th:text="${item.brnzGrdDntnAmtText}"></td>
+				<td th:text="${item.hnrUserSlctnSeCdNm}"></td>
+				<td th:text="${item.useYn}"></td>
+			</tr>
+			<tr th:if="${#lists.isEmpty(list)}">
+				<td colspan="6">조회 정보가 존재하지 않습니다.</td>
+			</tr>
+		</tbody>
+	</table>
+
+	<!-- AS-IS에서 주석처리된 등록 버튼 - 주석 상태 그대로 둔다
+	<div class="btn_all btn_right">
+		<div class="flex_box gap-08">
+			<button type="button" class="btn btn-default btn-mini">등록</button>
+		</div>
+	</div>
+	-->
 </div>
+
+<div class="pagination-wrap">
+	<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+</div>
+</div><!-- /.item_list -->
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript" th:inline="javascript">
+	var changeYn = "N";
+	var selectedUpperLocgovCode = [[${searchParam.upperLocgovCode}]];
+	var selectedLclgvCd = [[${searchParam.lclgvCd}]];
+	var allLocgovs = /*[[${locgovs}]]*/ [];
+	if(!allLocgovs) { allLocgovs = []; }
+
+	$("select[name='upperLocgovCode']").on('focus', function () {
+
+	}).change(function() {
+		changeYn = "Y";
+	})
+
+	$(function() {
+		if (selectedUpperLocgovCode) {
+			wdrChange(selectedUpperLocgovCode);
+		}
+	});
+
+	/**
+	 *	함 수 명 : wdrChange
+	 *	기	능  : 지자체(시도) 변경 - 시군구 목록을 다시 채운다
+	 *	(AS-IS는 /opmanager/give/give-state/options-by-locgovCode ajax로 받지만, TO-BE admin은
+	 *	 지자체 목록을 이미 갖고 있어 화면에 실어 보내고 여기서 걸러 쓴다 - 보이는 동작은 같다.)
+	 */
+	function wdrChange(value) {
+		$("#lclgvCd option").remove();
+
+		if (!value) {
+			$('#lclgvCd').append('<option value="">-시·군·구-</option>');
+			return;
+		}
+
+		$('#lclgvCd').append('<option value="">-전체-</option>');
+		$.each(allLocgovs, function(index, item) {
+			if (item.upperLocgovCode == value) {
+				$('#lclgvCd').append('<option value="' + item.locgovCode + '">' + item.locgovNm + '</option>');
+			}
+		});
+
+		// 조회된 값 유지
+		if (selectedLclgvCd && changeYn == 'N') {
+			$("#lclgvCd").val(selectedLclgvCd);
+		}
+	}
+
+	//지자체 기부혜택증 기준 목록 검색
+	function search() {
+		$("#page").val(1);
+		$("#searchForm").submit();
+	}
+
+	// 지자체 기부혜택증 상세 보기
+	function lclgvHnrUserDetail(lclgvCd) {
+		location.href = '/admin/honor-users/form/' + lclgvCd;
+	}
+</script>
 </body>
 </html>

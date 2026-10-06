@@ -1,6 +1,5 @@
 package com.ghlove.admin.web;
 
-import com.ghlove.admin.service.CommonCodeService;
 import com.ghlove.admin.service.FaqService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +18,6 @@ import java.util.List;
 public class FaqController {
 
     private final FaqService faqService;
-    private final CommonCodeService commonCodeService;
     private static final int PAGE_SIZE_DEFAULT = 10;
 
     @GetMapping("/faqs")
@@ -45,13 +43,14 @@ public class FaqController {
         model.addAttribute("size", pageSize);
         model.addAttribute("currentPage", currentPage);
         model.addAttribute("totalPages", totalPages);
-        model.addAttribute("faqTypes", commonCodeService.labelsOf("FAQ_TYPE"));
+        // AS-IS는 질문유형 목록을 공통코드가 아니라 FaqType enum에서 가져온다
+        model.addAttribute("faqTypes", faqService.faqTypes());
         return "faq/list";
     }
 
     /** 아코디언을 펼칠 때 AJAX로 조회수만 올린다. */
     @PostMapping("/faqs/{id}/hit")
-    public ResponseEntity<Void> hit(@PathVariable Integer id) {
+    public ResponseEntity<Void> hit(@PathVariable Long id) {
         faqService.addHit(id);
         return ResponseEntity.noContent().build();
     }

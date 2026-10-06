@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>지자체담당자관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/user/locgov-charger/edit.jsp 이식(메뉴 4402 상세/수정).
+     회원구분(주/부관리자) · 아이디 · 이름 · 휴대폰 · 지자체명 · 담당부서 · 직위 · 사용여부.
+
+     AS-IS 권한 분기:
+     - SYS(ROLE_ADMIN_1~4): 지자체를 시도·시군구 select로 바꿀 수 있다(시도 변경 시 시군구 ajax 조회).
+     - LOC(ROLE_ADMIN_5·6): 지자체명은 텍스트. 부관리자(S)는 **회원구분·사용여부 라디오 disabled**,
+       주관리자(M)가 **자기 자신**을 볼 때는 사용여부만 disabled.
+     - 담당부서·직위 입력칸은 SYS 또는 지자체 주관리자에게만.
+
+     AS-IS 비활성 상태 보존: 삭제 버튼은 style="display:none;"으로 보이지 않는다.
+     AS-IS verbatim: 목록 버튼 class가 `btn-defualt`(default 오타), 주담당자 정원 초과 문구는
+     "주관리자는 최대 2명까지만 등록이 가능합니다."다.
+
+     AS-IS는 상위 지자체 목록을 공통코드 WDR에서 가져오지만 TO-BE는 지자체 목록에서 시도를 추린다
+     (donation이 지자체를 소유하고 WDR 코드가 TO-BE 공통코드에 없다 - 값은 같은 시도 집합이다). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span th:text="${msg.get('MENU_4402')}">지자체담당자관리</span></h3>
+
+<!-- 수정/삭제/목록 버튼 -->
+<div class="btn_all btn_right mb15">
+	<div class="flex_box gap-08" th:if="${editable}">
+		<button type="button" class="btn btn-dark-gray btn-mini" onclick="chargerEdit();">수정</button>
+		<button type="button" class="btn btn-dark-gray btn-mini" onclick="chargerDelete();" style="display:none;">삭제</button>
+	</div>
+	<button type="button" class="btn btn-defualt btn-mini" onclick="moveListPage();">목록</button>
+</div>
+
+<div class="board_write">
+	<table class="board_write_table" summary="">
+		<colgroup>
+			<col style="width:220px;">
+		</colgroup>
+		<tbody>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>회원구분</td>
+				<td>
+					<div class="flex_box gap-12">
+						<div class="input-form">
+							<input id="authorityM" name="authority" type="radio" value="ROLE_ADMIN_5"
+							       th:checked="${details != null and details.authority == 'ROLE_ADMIN_5'}"
+							       th:disabled="${roleFieldsDisabled}">
+							<label for="authorityM">주관리자</label>
+						</div>
+						<div class="input-form">
+							<input id="authorityS" name="authority" type="radio" value="ROLE_ADMIN_6"
+							       th:checked="${details != null and details.authority == 'ROLE_ADMIN_6'}"
+							       th:disabled="${roleFieldsDisabled}">
+							<label for="authorityS">부관리자</label>
+						</div>
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>아이디</td>
+				<td><div th:text="${details != null} ? ${details.loginId} : ''"></div></td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>이름</td>
+				<td><div th:text="${details != null} ? ${details.userName} : ''"></div></td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>휴대폰</td>
+				<td><div th:text="${details != null} ? ${details.phoneNumber} : ''"></div></td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>지자체명</td>
+				<td>
+					<div class="flex_box gap-08">
+						<th:block th:if="${adminRoleType == 'SYS'}">
+							<select id="upperLocgovCode" title="시" class="wd-150" onchange="changeUpperLocgov('N');">
+								<option value="">- 시도 선택 -</option>
+								<option th:each="item : ${upperLocgovCodeList}" th:value="${item.id}"
+								        th:selected="${item.id == upperLocgovCode}" th:text="${item.label}"></option>
+							</select>
+							<select id="locgovCode" title="구" class="wd-150">
+								<option value="">- 시군구 -</option>
+							</select>
+						</th:block>
+						<th:block th:unless="${adminRoleType == 'SYS'}">
+							<input type="hidden" id="locgovCode" th:value="${details != null} ? ${details.locgovCode} : ''"/>
+							<span th:text="${upperLocgovNm} + ' ' + (${locgovNm} ?: '')"></span>
+						</th:block>
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label">담당부서</td>
+				<td>
+					<div>
+						<input th:if="${editable}" id="psitnDeptNm" title="담당부서"
+						       class="input_txt required _filter half" type="text"
+						       th:value="${details != null} ? ${details.psitnDeptNm} : ''">
+						<span th:unless="${editable}" th:text="${details != null} ? ${details.psitnDeptNm} : ''"></span>
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label">직위</td>
+				<td>
+					<div>
+						<input th:if="${editable}" id="ofcpsNm" title="직위"
+						       class="input_txt required _filter half" type="text"
+						       th:value="${details != null} ? ${details.ofcpsNm} : ''">
+						<span th:unless="${editable}" th:text="${details != null} ? ${details.ofcpsNm} : ''"></span>
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>사용여부</td>
+				<td>
+					<div class="flex_box gap-12">
+						<div class="input-form">
+							<input id="statusCode9" name="statusCode" type="radio" value="9"
+							       th:checked="${details != null and details.asIsStatusCode == '9'}"
+							       th:disabled="${statusDisabled}">
+							<label for="statusCode9">사용</label>
+						</div>
+						<div class="input-form">
+							<input id="statusCode2" name="statusCode" type="radio" value="2"
+							       th:checked="${details != null and details.asIsStatusCode == '2'}"
+							       th:disabled="${statusDisabled}">
+							<label for="statusCode2">중지</label>
+						</div>
+					</div>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+
+<!-- 목록 검색 조건 -->
+<input type="hidden" id="listSearchParam" />
+<!--// 목록 검색 조건  -->
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+<!-- AS-IS는 GET /op_security_logout으로 로그아웃하지만 TO-BE의 /admin/logout은 POST라서
+     본인 계정 삭제 후 로그아웃은 이 폼을 submit한다. -->
+<form id="logoutForm" method="post" th:action="@{/admin/logout}"></form>
+
+<script type="text/javascript" th:inline="javascript">
+	var userId = [[${details != null ? details.userId : null}]];
+	var adminRoleType = [[${adminRoleType}]];
+	var detailsLocgovCode = [[${details != null ? details.locgovCode : null}]];
+
+	$(function(){
+		// 목록 검색 조건 저장(AS-IS listSearchParamSave) - 주소창에서는 지우고 hidden에 보관한다
+		$("#listSearchParam").val(location.search);
+		history.replaceState({}, null, location.pathname);
+
+		// 시스템&행안부 관리자인 경우 지자체 선택 초기화
+		if(adminRoleType == "SYS") {
+			changeUpperLocgov('Y');
+		}
+	});
+
+	/**
+	 *	함 수 명 : moveListPage
+	 *	기	능  : 목록 페이지 이동
+	 */
+	function moveListPage() {
+		location.href = "/admin/person-in-charge/locgov" + $("#listSearchParam").val();
+	}
+
+	/**
+	 *	함 수 명 : changeUpperLocgov
+	 *	기	능  : 지자체(시도) 변경 이벤트
+	 *	파라미터  : 초기화 여부 - Y/N
+	 */
+	function changeUpperLocgov(initYn) {
+		var upperLocgovCode = $("#upperLocgovCode").val();
+		$("#locgovCode").html("<option value=''>- 시군구 -</option>");
+
+		if(upperLocgovCode) {
+			$.get("/admin/person-in-charge/locgov/locgov/"+upperLocgovCode+"/list", {}, function(response) {
+				if(response.isSuccess && response.data) {
+					$.each(response.data, function(index, item) {
+						$("#locgovCode").append('<option value="'+item.locgovCode+'">'+item.locgovNm+'</option>');
+					});
+
+					if(initYn == "Y") {
+						$("#locgovCode").val(detailsLocgovCode);
+					}
+				}
+			});
+		}
+	}
+
+	/**
+	 *	함 수 명 : chargerEdit
+	 *	기	능  : 지자체 담당자 수정
+	 */
+	function chargerEdit() {
+		if($("input[name='authority']:checked").length == 0 || $("input[name='authority']:checked").val() == "") {
+			alert("회원구분을 선택해 주세요.");
+			$("#authorityM").focus();
+			return false;
+		}
+
+		if(adminRoleType == "SYS" && $("#upperLocgovCode").val() == "") {
+			alert("상위 지자체를 선택해 주세요.");
+			$("#upperLocgovCode").focus();
+			return false;
+		}
+
+		if(adminRoleType == "SYS" && $("#locgovCode").val() == "") {
+			alert("지자체을 선택해 주세요.");
+			$("#locgovCode").focus();
+			return false;
+		}
+
+		if($("input[name='statusCode']:checked").length == 0 || $("input[name='statusCode']:checked").val() == "") {
+			alert("사용여부를 선택해 주세요.");
+			$("#statusCode9").focus();
+			return false;
+		}
+
+		if(confirm("정보를 수정 하시겠습니까?")) {
+			var param = {
+				"userId": userId,
+				"authority": $("input[name='authority']:checked").val(),
+				"locgovCode": $("#locgovCode").val(),
+				"psitnDeptNm": $("#psitnDeptNm").val(),
+				"ofcpsNm": $("#ofcpsNm").val(),
+				"statusCode": $("input[name='statusCode']:checked").val()
+			};
+
+			$.post("/admin/person-in-charge/locgov/edit", param, function(response) {
+				if(response.isSuccess && response.data) {
+					if(response.data.code == "SUCC") {
+						alert("수정되었습니다.");
+						$("#listSearchParam").val("");
+						moveListPage();
+					} else if(response.data.code == "ERR_MAIN_CNT") {
+						alert("주관리자는 최대 2명까지만 등록이 가능합니다.");
+					} else {
+						alert("오류가 발생했습니다.");
+					}
+				}
+			});
+		}
+	}
+
+	/**
+	 *	함 수 명 : chargerDelete
+	 *	기	능  : 지자체 담당자 삭제 (AS-IS에서도 버튼이 숨겨져 호출되지 않는다)
+	 */
+	function chargerDelete() {
+		if(!confirm("삭제하시겠습니까?")) {
+			return false;
+		}
+		$.post("/admin/person-in-charge/locgov/delete", {"userIdList": [userId]}, function(response) {
+			if(response.isSuccess && response.data) {
+				if(response.data.code == "SUCC") {
+					alert("삭제되었습니다.");
+					if(response.data.isLogout == "Y") {
+						$("#logoutForm").submit();
+					} else {
+						location.href = "/admin/person-in-charge/locgov";
+					}
+				} else {
+					alert("오류가 발생했습니다.");
+				}
+			}
+		});
+	}
+</script>
+</body>
+</html>

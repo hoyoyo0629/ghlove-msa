@@ -58,6 +58,11 @@ public class ManagerRequestService {
         return managerRequestRepository.save(request);
     }
 
+    /** AS-IS 승인관리 목록 조회 - 상태·등록일 범위로 거른다(아이디/이름/이메일은 컨트롤러에서). */
+    public List<ManagerRequest> search(String confmSttusCode, String startDate, String endDate) {
+        return managerRequestRepository.search(confmSttusCode, startDate, endDate);
+    }
+
     public List<ManagerRequest> pending() {
         return managerRequestRepository.findByConfmSttusCodeOrderByFrstRegistPnttmDesc(ManagerRequest.STATUS_PENDING);
     }

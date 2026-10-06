@@ -48,6 +48,7 @@ public class GiftController {
     private final JwtVerifier jwtVerifier;
     private final com.ghlove.gift.repository.SellerRepository sellerRepository;
     private final com.ghlove.gift.service.RestockNoticeService restockNoticeService;
+    private final com.ghlove.gift.service.GiftOptionService giftOptionService;
 
     /**
      * 로그인한 회원과 연결된 판매자 ID. <b>판매자 화면의 모든 쓰기·조회는 이 값만 쓴다.</b>
@@ -67,7 +68,8 @@ public class GiftController {
     }
 
     private String loginRedirect(String returnPath) {
-        return "redirect:http://localhost:8081/login?target=" + encode("http://localhost:8084" + returnPath);
+        // 로그인 화면은 storefront(5173)의 /login - member(8081)엔 /login HTML이 없어 404였다.
+        return "redirect:http://localhost:5173/login?target=" + encode("http://localhost:8084" + returnPath);
     }
 
     /**
@@ -168,6 +170,106 @@ public class GiftController {
             model.addAttribute("categories", giftService.codesOf("GIFT_CATEGORY"));
             model.addAttribute("displayTypes", giftService.codesOf("GIFT_DISPLAY_TYPE"));
             return "edit";
+        }
+    }
+
+    // ── 판매자 옵션 관리 (AJAX, 판매자 수정화면 edit.html이 호출) ────────────────
+    //   /api/admin/** 옵션 API는 InternalApiAuthInterceptor(X-Internal-Secret)로 내부전용이라
+    //   브라우저에서 못 부른다. 판매자 자기서비스는 여기서 currentSellerId 소유권 검사 후 처리.
+    //   AS-IS와 동일하게 S/S2/S3/T + 각인 + 추가구성을 전부 지원(S2·T 숨김은 edit.html 화면단).
+
+    public record SellerOptionsRequest(String optionType,
+                                       List<com.ghlove.gift.service.GiftOptionService.OptionRow> rows) {
+    }
+
+    public record SellerTextOptionsRequest(boolean use, String title1, String title2, String title3) {
+    }
+
+    public record SellerAdditionsRequest(List<com.ghlove.gift.service.GiftOptionService.AdditionRow> rows) {
+    }
+
+    /** 소유권 확인 - 로그인 판매자의 답례품이 아니면 비어 있음. */
+    private java.util.Optional<Long> ownedItem(Long itemId, HttpServletRequest request) {
+        var sellerId = currentSellerId(request);
+        if (sellerId.isEmpty()) {
+            return java.util.Optional.empty();
+        }
+        Gift gift = giftService.detail(itemId);
+        return gift.getSellerId().equals(sellerId.get()) ? sellerId : java.util.Optional.empty();
+    }
+
+    @GetMapping("/gifts/{itemId}/options")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<?> listOptions(@PathVariable Long itemId,
+                                                                  HttpServletRequest request) {
+        if (ownedItem(itemId, request).isEmpty()) {
+            return org.springframework.http.ResponseEntity.status(403).build();
+        }
+        return org.springframework.http.ResponseEntity.ok(giftOptionService.adminOptionsOf(itemId));
+    }
+
+    @PostMapping("/gifts/{itemId}/options")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<?> saveOptions(@PathVariable Long itemId,
+                                                                  @RequestBody SellerOptionsRequest req,
+                                                                  HttpServletRequest request) {
+        if (ownedItem(itemId, request).isEmpty()) {
+            return org.springframework.http.ResponseEntity.status(403).build();
+        }
+        try {
+            giftOptionService.saveOptions(itemId, req.optionType(), req.rows());
+            return org.springframework.http.ResponseEntity.ok().build();
+        } catch (GiftException e) {
+            return org.springframework.http.ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/gifts/{itemId}/text-options")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<?> saveTextOptions(@PathVariable Long itemId,
+                                                                      @RequestBody SellerTextOptionsRequest req,
+                                                                      HttpServletRequest request) {
+        if (ownedItem(itemId, request).isEmpty()) {
+            return org.springframework.http.ResponseEntity.status(403).build();
+        }
+        try {
+            giftOptionService.saveTextOptions(itemId, req.use(), req.title1(), req.title2(), req.title3());
+            return org.springframework.http.ResponseEntity.ok().build();
+        } catch (GiftException e) {
+            return org.springframework.http.ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /** 추가구성 자식 답례품 한 줄(판매자 편집화면 로드용). */
+    public record AdditionView(String additionItemName, Integer additionSalePrice, Integer stockQuantity) {
+    }
+
+    @GetMapping("/gifts/{itemId}/additions")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<?> listAdditions(@PathVariable Long itemId,
+                                                                    HttpServletRequest request) {
+        if (ownedItem(itemId, request).isEmpty()) {
+            return org.springframework.http.ResponseEntity.status(403).build();
+        }
+        List<AdditionView> views = giftOptionService.additionsOf(itemId).stream()
+                .map(a -> new AdditionView(a.getItemName(), a.getSalePrice(), a.getStockQuantity()))
+                .toList();
+        return org.springframework.http.ResponseEntity.ok(views);
+    }
+
+    @PostMapping("/gifts/{itemId}/additions")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<?> saveAdditions(@PathVariable Long itemId,
+                                                                    @RequestBody SellerAdditionsRequest req,
+                                                                    HttpServletRequest request) {
+        if (ownedItem(itemId, request).isEmpty()) {
+            return org.springframework.http.ResponseEntity.status(403).build();
+        }
+        try {
+            giftOptionService.saveAdditions(itemId, req.rows());
+            return org.springframework.http.ResponseEntity.ok().build();
+        } catch (GiftException e) {
+            return org.springframework.http.ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>오픈API 클라이언트 관리 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -10,13 +11,18 @@
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
 <!-- SFR-010 "민간개방 API 기능(민간 이용업체 데이터 통합관리)" - 이 프로젝트 신규 화면(AS-IS
      대응 없음, access/RBAC 화면들과 같은 성격). 발급한 API 키는 Kong 게이트웨이(key-auth
      컨슈머)로 실시간 등록/회수되고, 실제 데이터는 gift 서비스의 GET /open-api/gifts로
      제공된다. -->
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <h3><span>오픈API 클라이언트 관리</span></h3>
     <p style="color:#666; margin-bottom:16px;">
         외부 이용업체에게 발급하는 민간개방 API(<code>GET /open-api/gifts?apikey=...</code>) 접근 키를 관리합니다.
@@ -78,7 +84,10 @@
         </tbody>
     </table>
     <p class="empty" th:if="${#lists.isEmpty(clients)}">발급된 오픈API 클라이언트가 없습니다.</p>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

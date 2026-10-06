@@ -164,8 +164,10 @@ public class OrderAdminClient {
         }
     }
 
+    /** 다운로드 사유는 AS-IS와 같이 admin이 먼저 개인정보 접근로그에 남기므로(PrivacyAccessLogService)
+     *  order에는 넘기지 않는다 - order의 reason 파라미터는 하위호환으로만 남아 있다. */
     public byte[] export(Manager manager, String locgovCode, String orderStatus, String searchType,
-                          String keyword, String startDate, String endDate, String reason) {
+                          String keyword, String startDate, String endDate) {
         try {
             ResponseEntity<byte[]> response = restClient.get()
                     .uri(uriBuilder -> uriBuilder.path("/api/admin/orders/export")
@@ -175,7 +177,6 @@ public class OrderAdminClient {
                             .queryParamIfPresent("keyword", java.util.Optional.ofNullable(blankToNull(keyword)))
                             .queryParamIfPresent("startDate", java.util.Optional.ofNullable(blankToNull(startDate)))
                             .queryParamIfPresent("endDate", java.util.Optional.ofNullable(blankToNull(endDate)))
-                            .queryParam("reason", reason)
                             .build())
                     .headers(h -> applyHeaders(h, manager))
                     .retrieve().toEntity(byte[].class);

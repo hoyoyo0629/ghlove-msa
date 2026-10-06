@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<!--/* AS-IS layouts/opmanager/inc_head.jsp를 verbatim 이식한 공통 head 조각.
+     그동안 각 화면이 CSS 4개(ui-lightness/bootstrap/opmanager/print)만 골라 걸고 공통 JS를
+     거의 안 걸어서 폰트/검증/업로드/트리/브레드크럼이 계속 어긋났다 - inc_head가 head에서
+     로드하던 CSS 6종 + JS 12종을 그대로 싣는다(/content/modules 273개 전체 복사 선행).
+
+     - <head> 태그 자체가 아니라 '내부 요소 조각'(headContent)이라, 각 페이지는 자기 <head>
+       안에서 이 조각을 th:replace로 끼운 뒤 페이지 전용 <style>/<meta>를 덧붙일 수 있다.
+     - CSRF: op.common.js 전역 ajax beforeSend가 meta(_csrf_header/_csrf)를 읽어 헤더를 붙인다.
+       admin은 Spring Security/CSRF가 없으므로 헤더명만 유효하게(X-CSRF-TOKEN) 두고 토큰은 빈
+       값으로 둔다(서버가 무시). 이게 없으면 setRequestHeader('','')가 터져 모든 ajax가 죽는다
+       ([[admin-opmanager-ajax-needs-csrf-meta]]).
+     - 브레드크럼(.location)은 op.manager.js의 Manager.setLnbHeader()가 DOM ready에 nav(.gnb/.lnbs)의
+       .on 상태로부터 클라이언트에서 채운다(AS-IS와 동일, 서버 계산 없음). 각 페이지는 본문
+       최상단에 빈 .location 3-anchor 블록만 두면 된다. */-->
+<!--/* 각 페이지는 자기 <title>/<style>을 그대로 두고, <head> 맨 앞에 이 조각만 끼운다.
+     그래서 여기엔 <title>을 두지 않는다(페이지 title 보존·중복 방지). charset meta는 페이지에도
+     있을 수 있으나 동일값이라 무해. */-->
+<th:block th:fragment="headContent">
+    <meta charset="UTF-8" />
+    <meta name="_csrf" content="" />
+    <meta name="_csrf_header" content="X-CSRF-TOKEN" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" th:href="@{/content/images/common/favicon.ico}" />
+    <meta http-equiv="Expires" content="0" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Cache-Control" content="No-Cache, no-store, must-revalidate" />
+
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}" />
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}" />
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}" />
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print" />
+    <link rel="stylesheet" type="text/css" th:href="@{/content/modules/jquery/jstree/dist/themes/default/style.min.css}" />
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}" />
+
+    <script type="text/javascript">var OP_CONTEXT_PATH = '';</script>
+    <script type="text/javascript">var OP_LANGUAGE = 'ko';</script>
+    <!-- AS-IS layouts/common/inc_common.jsp가 내려주는 전역 객체. op.link.js(Link.view/Link.list)가
+         이 값을 읽는데 TO-BE에는 정의가 없어 그 모듈을 쓰는 화면에서 ReferenceError가 났다.
+         currentUrl은 "검색조건을 들고 상세로 갔다가 돌아오기"(Link.view가 ?url=로 붙인다)에 쓰고,
+         prevPageUrl은 AS-IS 프레임워크가 추적하던 값이라 TO-BE에는 없다 - 비워 두면
+         Link.list가 인자로 받은 목록 URL로 가는 폴백이 돈다(의도된 동작). -->
+    <script type="text/javascript" th:inline="javascript">var RequestContext = {
+        'currentUrl': /*[[${currentUrl}]]*/ '',
+        'prevPageUrl': ''
+    };</script>
+    <!-- AS-IS inc_head.jsp: ${shopContext.managerTimeout} - 자동 로그아웃까지의 "분"이다
+         (op.manager.js가 값 * 60 * 1000으로 쓴다). 초로 알고 '3600'을 넣어 60시간이 돼 있었다. -->
+    <script type="text/javascript" th:inline="javascript">var OP_MANAGER_TIMEOUT = /*[[${managerTimeout}]]*/ '60';</script>
+    <script type="text/javascript">var OP_MANAGER_TIMEOUT_TYPE = 'manager';</script>
+    <script type="text/javascript" th:src="@{/content/modules/jquery/jquery-1.11.0.min.js}"></script>
+    <script type="text/javascript" th:src="@{/content/modules/jquery/jquery.cookie.js}"></script>
+    <script type="text/javascript" th:src="@{/content/modules/jquery/jquery-ui-1.10.4.custom.js}"></script>
+    <script type="text/javascript" th:src="@{/content/modules/spin.min.js}"></script>
+    <script type="text/javascript" th:src="@{/content/modules/op.common.js}"></script>
+    <script type="text/javascript" th:src="@{/content/modules/op.main.js}"></script>
+    <script type="text/javascript" th:src="@{/content/modules/op.validator.js}"></script>
+    <script type="text/javascript" th:src="@{/content/modules/op.file.js}"></script>
+    <script type="text/javascript" th:src="@{/content/modules/op.shop.js}"></script>
+    <script type="text/javascript" th:src="@{/content/modules/op.manager.js}"></script>
+    <script type="text/javascript" th:src="@{/content/modules/op.manager.order.js}"></script>
+    <script type="text/javascript" th:src="@{/content/modules/css_browser_selector.js}"></script>
+    <script type="text/javascript" th:src="@{/content/modules/jquery/jstree/dist/jstree.js}"></script>
+    <script type="text/javascript" th:src="@{/content/modules/jquery/jstree/docs/assets/bootstrap/js/bootstrap.min.js}"></script>
+</th:block>
+</head>
+</html>

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>운영유지관리 게시판 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -9,9 +10,14 @@
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <h3>운영유지관리 게시판</h3>
 
     <form method="get" th:action="@{/admin/maintenance}" class="search_form">
@@ -32,9 +38,13 @@
 
     <p>
         <a class="btn" th:href="@{/admin/maintenance/new}">+ SR 등록</a>
-        <a class="btn"
-           th:href="@{/admin/maintenance/export(startDate=${startDate},endDate=${endDate},processState=${processState},keyword=${keyword})}">CSV 다운로드</a>
+        <!-- AS-IS PrivacyAccess.MAINTENANCE_EXCEL_DOWNLOAD("운영관리 SR게시판") - 개인정보 포함
+             다운로드라 사유 모달을 먼저 띄워 접근로그를 남긴다 -->
+        <a class="btn" href="javascript:;"
+           th:attr="data-download-url=@{/admin/maintenance/export(startDate=${startDate},endDate=${endDate},processState=${processState},keyword=${keyword})}"
+           onclick="openPrivacyModal(this.getAttribute('data-download-url'));">CSV 다운로드</a>
     </p>
+    <div th:replace="~{fragments/privacy-access :: modal}"></div>
 
     <table class="board_list_table">
         <thead>
@@ -54,7 +64,10 @@
         </tbody>
     </table>
     <p class="empty" th:if="${#lists.isEmpty(rows)}">등록된 SR이 없습니다.</p>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

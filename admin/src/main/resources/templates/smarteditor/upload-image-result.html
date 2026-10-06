@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/* AS-IS front/i18n/smarteditor/upload-image-result.jsp 이식 - 업로드 결과가 돌아오는 iframe 문서.
+       ★ AS-IS는 <c:out>으로 imageContent를 <b>이스케이프해서</b> 심고, JS가 innerHTML로 읽어
+       DOMParser의 textContent로 <b>되돌려</b> 에디터에 넣는다(pasteHtmlToEditor). 그 왕복을 그대로
+       재현해야 하므로 th:utext가 아니라 th:text를 쓴다 - utext로 바꾸면 이미지 태그가 이 문서에서
+       실제로 렌더되고 에디터로는 빈 값이 넘어간다. */-->
+<div id="image-content" th:text="${imageContent}"></div>
+<div id="err-msg" th:text="${errMsg}"></div>
+
+<script type="text/javascript">
+    let imageContent = document.getElementById('image-content').innerHTML;
+    let errMsg = document.getElementById('err-msg').innerHTML;
+    try {
+        parent.loadingHide();
+    } catch (e) {
+    	console.log(e);
+    }
+    if (errMsg) {
+    	alert(errMsg);
+    }
+    if (imageContent === "") {
+    	if (!errMsg) {
+            alert('이미지 파일만 등록이 가능합니다.');
+    	}
+    } else {
+        parent.pasteHtmlToEditor(imageContent);
+    }
+</script>
+</body>
+</html>

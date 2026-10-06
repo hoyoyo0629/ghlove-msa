@@ -33,7 +33,8 @@ public class CartApiController {
         return ResponseEntity.ok(cartService.view(userId));
     }
 
-    public record AddRequest(Long itemId, Integer quantity) {
+    public record AddRequest(Long itemId, Integer quantity, Long itemOptionId, String textOption,
+                             List<Long> additionItemIds) {
     }
 
     /**
@@ -51,7 +52,8 @@ public class CartApiController {
             return ResponseEntity.status(401).build();
         }
         try {
-            cartService.add(userId, req.itemId(), req.quantity());
+            cartService.add(userId, req.itemId(), req.quantity(), req.itemOptionId(),
+                    req.textOption(), req.additionItemIds());
             return ResponseEntity.noContent().build();
         } catch (OrderException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));

@@ -1,70 +1,269 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>메뉴 등록/수정 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <title>메뉴관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
+<!-- AS-IS opmanager/i18n/menu/form.jsp 이식. AS-IS는 layout="base"(관리셸 없음) 800x600 팝업.
+     카테고리 줄에서 1차·2차 메뉴를 고르면 menuType이 1→2→3으로 바뀌고 ajax로 메뉴ID를 채번한다
+     (수정 모드에서는 1·2차 셀렉트를 숨긴다). 저장하면 common/popup-result가 부모 목록을 새로
+     조회하고 창을 닫는다. -->
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
-
-<div class="contents contents_inner">
-    <div class="location"><a th:href="@{/admin/menus}">메뉴관리</a></div>
-    <h3><span th:text="${menu} != null ? '메뉴 수정' : '메뉴 등록'"></span></h3>
-    <p th:if="${errorMessage}" style="color:#c00;" th:text="${errorMessage}"></p>
-
-    <div class="board_write">
-        <table class="board_write_table" summary="메뉴 등록/수정">
-            <colgroup><col style="width:220px;"><col></colgroup>
-            <tbody>
-            <tr th:if="${menu} == null">
-                <td class="label">상위 그룹</td>
-                <td>
-                    <select id="parentId" name="parentId" form="menuForm">
-                        <option value="" th:selected="${selectedParentId} == null">(없음 - 새 최상위 그룹으로 등록)</option>
-                        <option th:each="t : ${topLevelMenus}" th:value="${t.menuId}" th:text="${t.menuName}"
-                                th:selected="${selectedParentId} != null and ${selectedParentId} == ${t.menuId}"></option>
-                    </select>
-                </td>
-            </tr>
-            <tr th:if="${menu} != null">
-                <td class="label">상위 그룹</td>
-                <td th:text="${menu.menuParentId} != null ? ${menu.menuParentId} : '(최상위 그룹)'"></td>
-            </tr>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>메뉴명</td>
-                <td><input type="text" id="menuName" name="menuName" th:value="${menu} != null ? ${menu.menuName} : ''" required form="menuForm"></td>
-            </tr>
-            <tr>
-                <td class="label">URL(경로)</td>
-                <td>
-                    <input type="text" id="menuUrl" name="menuUrl" th:value="${menu} != null ? ${menu.menuUrl} : ''" placeholder="/admin/example" form="menuForm">
-                    <p class="s_txt">최상위 그룹은 보통 URL 없이(빈칸) 등록합니다. 하위메뉴는 이 화면의 실제 컨트롤러 경로를 넣어야 접근권한이 매칭됩니다.</p>
-                </td>
-            </tr>
-            <tr th:if="${menu} != null">
-                <td class="label">노출순서</td>
-                <td><input type="number" id="menuSeq" name="menuSeq" th:value="${menu.menuSeq}" form="menuForm"></td>
-            </tr>
-            <tr>
-                <td class="label">지자체 담당자 접근허용</td>
-                <td>
-                    <label><input type="checkbox" name="grantLocgovMain" th:checked="${rights} != null and ${#lists.contains(rights, 'ROLE_ADMIN_5')}" form="menuForm"> 주담당자(ROLE_ADMIN_5)</label>
-                    <label style="margin-left:12px;"><input type="checkbox" name="grantLocgovSub" th:checked="${rights} != null and ${#lists.contains(rights, 'ROLE_ADMIN_6')}" form="menuForm"> 부담당자(ROLE_ADMIN_6)</label>
-                    <p class="s_txt">시스템/행안부 담당자(ROLE_ADMIN_1~4)는 별도 설정 없이 항상 모든 메뉴에 접근 가능합니다.</p>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+<div class="popup_wrap">
+    <div id="pop_header">
+        <h1 class="popup_title">메뉴관리</h1>
+        <a href="javascript:self.close();" class="btn_close"><img th:src="@{/content/opmanager/images/btn/btn_close.png}" alt="닫기"></a>
     </div>
-    <form id="menuForm" th:action="${menu} != null ? @{'/admin/menus/' + ${menu.menuId}} : @{/admin/menus}" method="post"></form>
-    <div class="btn_all btn_center">
-        <button type="submit" form="menuForm" class="btn btn-dark-gray btn-small">저장</button>
+    <div class="popup_contents">
+
+        <div class="board_guide" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <form id="menu" method="post" enctype="multipart/form-data"
+              th:action="${isNew} ? @{/admin/menus/create} : @{/admin/menus/edit}">
+            <input type="hidden" id="menuType" name="menuType" th:value="${menu.menuType} ?: 1" />
+            <input type="hidden" id="menuParentId" name="menuParentId" th:value="${menu.menuParentId} ?: 0" />
+            <input type="hidden" id="menuGubunHidden" name="menuGubun" th:value="${menuGubun}" />
+
+            <div class="board_write">
+
+                <table class="board_write_table">
+                    <caption>메뉴관리</caption> <!-- 메뉴관리 -->
+                    <colgroup>
+                        <col style="width:220px;">
+                        <col style="width:auto;">
+                    </colgroup>
+                    <tbody>
+                        <tr>
+                            <td class="label"><span class="required_mark">*</span>메뉴ID</td>
+                            <td>
+                                <div>
+                                    <input type="text" id="menuId" name="menuId" th:value="${menu.menuId}" title="메뉴ID" class="nine" readonly="readonly" maxlength="19"/>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label"><span class="required_mark">*</span>카테고리</td>
+                            <td>
+                                <div class="flex_box gap-08 item-center">
+                                    <select id="menuGubun" th:title="${msg.get('M00054')}" disabled="disabled"> <!-- 화면 선택 -->
+                                        <option value="OPMANAGER" th:selected="${menuGubun == 'OPMANAGER'}">관리자</option> <!-- 관리자 -->
+                                        <option value="SELLER" th:selected="${menuGubun == 'SELLER'}">답례품관리자</option> <!-- 답례품관리자 -->
+                                    </select>
+                                    <select id="firstMenu" onchange="getSecondMenuList()">
+                                        <option value="">1차</option>
+                                        <option th:each="m : ${firstMenuList}" th:value="${m.menuId}" th:text="${m.menuName}"></option>
+                                    </select>
+                                    <select id="secondMenu" onchange="getThirdMenuId()">
+                                        <option value="">2차</option>
+                                    </select>
+                                    <span class="wave" id="menuPath" th:text="${menuPath}"></span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label"><span class="required_mark">*</span>메뉴명</td>
+                            <td>
+                                <div>
+                                    <input type="text" id="menuName" name="menuName" th:value="${menu.menuName}" title="메뉴명" class="nine" maxlength="50"/>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label">메뉴코드</td>
+                            <td>
+                                <div>
+                                    <input type="text" id="menuCode" name="menuCode" th:value="${menu.menuCode}" title="메뉴코드" class="nine" maxlength="100"/>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label">페이지 URL</td>
+                            <td>
+                                <div>
+                                    <input type="text" id="menuUrl" name="menuUrl" th:value="${menu.menuUrl}" title="페이지 URL" class="nine" maxlength="100"/>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label"><span class="required_mark">*</span>메뉴순서</td>
+                            <td>
+                                <div>
+                                    <input type="text" id="menuSeq" name="menuSeq" th:value="${menu.menuSeq}" title="메뉴순서" class="nine _number" maxlength="19"/>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label">노출여부</td>
+                            <td>
+                                <div class="admin_wrap flex_box gap-12">
+                                    <div class="input-form">
+                                        <input type="radio" id="df1" name="displayFlag" value="Y" th:checked="${menu.displayFlag == null or menu.displayFlag == 'Y'}" /><label for="df1">Y</label>
+                                    </div>
+                                    <div class="input-form">
+                                        <input type="radio" id="df2" name="displayFlag" value="N" th:checked="${menu.displayFlag == 'N'}" /><label for="df2">N</label>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label">메뉴상태</td>
+                            <td>
+                                <div class="admin_wrap flex_box gap-12">
+                                    <div class="input-form">
+                                        <input type="radio" id="sc1" name="statusCode" value="1" th:checked="${menu.statusCode == null or menu.statusCode == '1'}" /><label for="sc1">사용</label>
+                                    </div>
+                                    <div class="input-form">
+                                        <input type="radio" id="sc2" name="statusCode" value="2" th:checked="${menu.statusCode == '2'}" /><label for="sc2">사용안함</label>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+             </div> <!--// board_write E-->
+
+            <!-- 버튼시작 -->
+            <div class="popup_btns">
+                <button type="submit" class="btn btn-active"><span th:text="${msg.get('M00101')}">저장</span></button> <!-- 저장 -->
+                <a href="JavaScript:self.close();" class="btn btn-default"><span th:text="${msg.get('M00569')}">닫기</span></a> <!-- 닫기 -->
+            </div>
+            <!-- 버튼 끝-->
+        </form>
     </div>
 </div>
-<div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+
+<script th:inline="javascript">
+    var mode = location.href.includes("edit");   // 편집상태 여부
+    var MENU_GUBUN = /*[[${menuGubun}]]*/ 'OPMANAGER';
+
+    $(document).ready(function(){
+        // AS-IS는 opener의 where 셀렉트에서 메뉴구분을 읽어오지만, 팝업 URL로 이미 받아 왔으므로
+        // 그 값을 그대로 쓴다(부모 창이 닫혀 있어도 동작한다).
+        $("#menuGubun").val(MENU_GUBUN);
+        if(mode) {
+            $("#firstMenu").hide();
+            $("#secondMenu").hide();
+        }
+    });
+
+    $(function() {
+
+        // validator
+        try{
+            $('#menu').validator(function() {
+
+                var menuId = $("#menuId").val();
+                var menuType = $("#menuType").val();
+                var firstMenu = $("#firstMenu option:selected").text();
+
+                if(menuId % 1000 == 0 && menuType == "2") {
+                    alert(firstMenu+"에 생성가능한 2레벨 허용범위를 초과하였습니다.");
+                    return false;
+                }
+
+                var menuName = $("#menuName").val();
+                var menuSeq = $("#menuSeq").val();
+                var menuCode = $("#menuCode").val();
+                var menuUrl = $("#menuUrl").val();
+
+                if (menuName.length==0) {
+                    alert("메뉴명은 필수 입력항목입니다.");
+                    $("#menuName").focus();
+                    return false;
+                }
+
+                if (menuType == "3" && menuCode.length==0) {
+                    alert("3레벨일 경우 메뉴코드는 필수 입력항목입니다.");
+                    $("#menuCode").focus();
+                    return false;
+                }
+
+                if (menuType == "3" && menuUrl.length==0) {
+                    alert("3레벨일 경우 페이지 URL은 필수 입력항목입니다.");
+                    $("#menuUrl").focus();
+                    return false;
+                }
+
+                if (menuSeq.length==0) {
+                    alert("메뉴순서는 필수 입력항목입니다.");
+                    $("#menuSeq").focus();
+                    return false;
+                }
+
+                if (!mode && !confirm('입력하신 정보로 메뉴를 생성 하시겠습니까?')) {
+                    return false;
+                } else if (mode && !confirm('정보를 저장하시겠습니까?')) {
+                    return false;
+                }
+
+            });
+        } catch(e) {
+            alert(e.message);
+        }
+
+    });
+
+    /**
+     *  함 수 명 : getSecondMenuList
+     *  기   능  : 2레벨 메뉴 조회
+     */
+    function getSecondMenuList() {
+
+        var firstMenu = $("#firstMenu").val();
+        $("#secondMenu").html('<option value="">2차</option>');
+
+        if(firstMenu != '') {
+            $("#menuType").val('2');
+        } else {
+            $("#menuType").val('1');
+        }
+
+        if(firstMenu) {
+            $.post('/admin/menus/secondMenuList', {"menuParentId": firstMenu, "menuGubun": MENU_GUBUN}, function(response) {
+                if(response.isSuccess && response.data) {
+                    $.each(response.data, function(index, item) {
+                        $("#secondMenu").append('<option value="'+item.menuId+'">'+item.menuName+'</option>');
+                    });
+                }
+            });
+        }
+
+        $.post('/admin/menus/menuId', {"menuParentId": firstMenu, "menuGubun": MENU_GUBUN, "menuType": $("#menuType").val()}, function(response) {
+            if(response.isSuccess && response.data) {
+                $("#menuId").val(response.data);
+                $("#menuParentId").val(firstMenu == "" ? 0 : firstMenu);
+            }
+        });
+
+    }
+
+    /**
+     *  함 수 명 : getThirdMenuId
+     *  기   능 : 메뉴ID 채번
+     */
+    function getThirdMenuId() {
+
+        var firstMenu = $("#firstMenu").val();
+        var secondMenu = $("#secondMenu").val();
+
+        if(secondMenu != '') {
+            $("#menuType").val('3');
+        } else {
+            $("#menuType").val('2');
+        }
+
+        var menuParentId = ($("#secondMenu").val() == '') ? firstMenu : secondMenu;
+        $("#menuParentId").val(menuParentId);
+
+        $.post('/admin/menus/menuId', {"menuParentId": menuParentId, "menuGubun": MENU_GUBUN, "menuType": $("#menuType").val()}, function(response) {
+            if(response.isSuccess && response.data) {
+                $("#menuId").val(response.data);
+            }
+        });
+
+    }
+
+</script>
 </body>
 </html>

@@ -29,6 +29,16 @@ public class OrderSagaPublisher {
         send(orderId, new StockReserveFailedEvent(orderId, itemId, reason, LocalDateTime.now()), "STOCK_RESERVE_FAILED");
     }
 
+    // ── 멀티아이템(출고 단위 SAGA) - key=orderId(한 주문의 출고 이벤트 순서 보존) ──
+    public void publishShipmentStockReserved(Long shipmentId, String orderId) {
+        send(orderId, new ShipmentStockReservedEvent(shipmentId, orderId, LocalDateTime.now()), "SHIPMENT_STOCK_RESERVED");
+    }
+
+    public void publishShipmentStockReserveFailed(Long shipmentId, String orderId, String reason) {
+        send(orderId, new ShipmentStockReserveFailedEvent(shipmentId, orderId, reason, LocalDateTime.now()),
+                "SHIPMENT_STOCK_RESERVE_FAILED");
+    }
+
     private void send(String key, Object event, String eventType) {
         ProducerRecord<String, Object> record = new ProducerRecord<>(TOPIC, null, key, event,
                 List.of(new RecordHeader(HEADER_EVENT_TYPE, eventType.getBytes(StandardCharsets.UTF_8))));

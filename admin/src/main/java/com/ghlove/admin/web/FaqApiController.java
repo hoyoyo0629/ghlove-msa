@@ -1,6 +1,5 @@
 package com.ghlove.admin.web;
 
-import com.ghlove.admin.service.CommonCodeService;
 import com.ghlove.admin.service.FaqService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,9 +20,8 @@ public class FaqApiController {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private final FaqService faqService;
-    private final CommonCodeService commonCodeService;
 
-    public record FaqRowDto(Integer id, String faqType, String faqTypeLabel, String subject, String content,
+    public record FaqRowDto(Long id, String faqType, String faqTypeLabel, String subject, String content,
                              String updatedDate) {
     }
 
@@ -38,15 +36,16 @@ public class FaqApiController {
                                  @RequestParam(required = false, defaultValue = "10") int size,
                                  @RequestParam(required = false, defaultValue = "1") int page) {
         var all = faqService.search(faqType, q, sort);
-        Map<String, String> faqTypes = commonCodeService.labelsOf("FAQ_TYPE");
+        // AS-IS는 질문유형 목록을 공통코드가 아니라 FaqType enum에서 가져온다
+        Map<String, String> faqTypes = faqService.faqTypes();
         int pageSize = size > 0 ? size : 10;
         int totalPages = (int) Math.ceil(all.size() / (double) pageSize);
         int currentPage = Math.max(1, Math.min(page, Math.max(totalPages, 1)));
         int from = Math.min((currentPage - 1) * pageSize, all.size());
         int to = Math.min(from + pageSize, all.size());
         List<FaqRowDto> rows = all.subList(from, to).stream()
-                .map(f -> new FaqRowDto(f.getId(), f.getFaqType(), faqTypes.get(f.getFaqType()), f.getSubject(),
-                        f.getContent(), f.getUpdatedDate() != null ? f.getUpdatedDate().format(DATE_FORMAT) : null))
+                .map(f -> new FaqRowDto(f.id(), f.faqType(), faqTypes.get(f.faqType()), f.subject(),
+                        f.content(), f.updatedDate() != null ? f.updatedDate().format(DATE_FORMAT) : null))
                 .toList();
         return new FaqListResponse(rows, all.size(), currentPage, Math.max(totalPages, 1), faqTypes);
     }

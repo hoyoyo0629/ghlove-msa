@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="ko">
+<head> 
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=660"/>
+<script type="text/javascript" src="../js/ext/jquery-1.10.2.js"></script>
+<link rel="stylesheet" href="css/install_guide.css" />
+<!-- <link rel="stylesheet" type="text/css" href="../js/dialog_css/mljquery-ui.min.css?v=20150722"/> -->
+<script type="text/javascript">
+$(document).ready(function() {
+	//setTimeout("getSetupDownLoad();", 1000);
+	getSetupDownLoad();
+});
+
+function goIndex(){
+	var host = location.protocol+'//'+location.host;
+	var path = '/MagicLine4Web/ML4WebExample/index.jsp';
+	
+	$(location).attr("href", host + path);
+	//$(location).attr("href", document.referrer);
+}
+
+function getBtnSetup(){
+	$('.menu_tab00').after().remove();
+	
+	getSetupDownLoad();
+}
+
+function getSetupDownLoad(){
+	
+	var os_ver = getOS();
+	var browser = getBrowser();
+	var html = "";
+	var csFile = "magicline4nx_setup.exe";
+
+	html += "<div class='content_img'>";
+	html += "	<div class='section3'>";
+	html += "		<span class='section_h_text'>보안프로그램 설치 안내</span>";
+	
+	if(os_ver == "windows 7"){
+		if(browser.indexOf("Chrome") > -1){
+			html += "<span class='section_h_text2'>-Win7 설치 (크롬)-</span>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt'>1.파일을 다운로드 합니다.</li>";
+			html += "	<li class='step_info'><img src='images/win7_chrome/win7_chrome1.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt'>2.파일을 열고, 보안경고 창에서 [실행]버튼을 클릭합니다.</li><li class='step_info'><img src='images/win7_chrome/win7_chrome2.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>3.프로그램을 실행하여 [설치]버튼을 클릭합니다.</li><li class='step_info'><img src='images/win7_chrome/win7_chrome3.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt2'>4.설치가 완료 되었으면 [마침]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/win7_chrome/win7_chrome4.png'></li>";
+			html += "</ul>";
+		}else if(browser.indexOf("Firefox") > -1){
+			html += "<span class='section_h_text2'>-Win7 설치 (파이어폭스)-</span>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>1.파일을 다운로드 합니다.</li>";
+			html += "	<li class='step_info'><img src='images/win7_fox/win7_fox1.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt2'>2.파일을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/win7_fox/win7_fox2.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt'>3.파일을 열고, 보안경고 창에서 [실행]버튼을 클릭합니다.</li><li class='step_info'><img src='images/win7_fox/win7_fox3.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt'>4.프로그램을 실행하여 [설치]버튼을 클릭합니다.</li><li class='step_info'><img src='images/win7_fox/win7_fox4.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>5.설치가 완료 되었으면 [마침]버튼을 클릭합니다.</li><li class='step_info'><img src='images/win7_fox/win7_fox5.png'></li>";
+			html += "</ul>";
+		}else if(browser.indexOf("Opera") > -1){
+			html += "<span class='section_h_text2'>-Win7 설치 (오페라)-</span>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>1.파일을 다운로드 합니다.</li><li class='step_info'><img src='images/win7_opera/win7_opera1.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt2'>2.파일을 클릭합니다.</li><li class='step_info'><img src='images/win7_opera/win7_opera2.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt'>3.파일을 열고, 보안경고 창에서 [실행]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/win7_opera/win7_opera3.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt'>4.프로그램을 실행하여 [설치]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/win7_opera/win7_opera4.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>5.설치가 완료 되었으면 [마침]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/win7_opera/win7_opera5.png'></li>";
+			html += "</ul>";
+		}else if(browser.indexOf("IE 8") > -1){
+			html += "<span class='section_h_text2'>-Win7 설치 (IE8)-</span>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt'>1.파일을 실행합니다.</li>";
+			html += "	<li class='step_info'><img src='images/win7_ie8/win7_ie8_1.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt'>2.파일을 열고, 보안경고 창에서 [실행]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/win7_ie8/win7_ie8_2.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>3.프로그램을 실행하여 [설치]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/win7_ie8/win7_ie8_3.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt2'>4.설치가 완료 되었으면 [마침]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/win7_ie8/win7_ie8_4.png'></li>";
+			html += "</ul>";
+		}else if(browser.indexOf("IE 9") > -1){
+			html += "<span class='section_h_text2'>-Win7 설치 (IE9)-</span>";
+			html += "<ul class='step1_left_575'>";
+			html += "	<li class='step_txt_575'>1.파일을 열고, 보안경고 창에서 [실행]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info_575'><img src='images/win7_ie9/win7_ie9_1.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>2.프로그램을 실행하여 [설치]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/win7_ie9/win7_ie9_2.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt2'>3.설치가 완료 되었으면 [마침]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/win7_ie9/win7_ie9_3.png'></li>";
+			html += "</ul>";
+		}else if(browser.indexOf("IE 7") > -1 || browser.indexOf("IE 10") > -1 || browser.indexOf("IE 11") > -1){
+			html += "<span class='section_h_text2'>-Win7 설치 (IE 7, 10,11)-</span>";
+			html += "<ul class='step1_left_575'>";
+			html += "	<li class='step_txt_575'>1.파일을 열고, 보안경고 창에서 [실행]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info_575'><img src='images/win7_ie10/win7_ie10_1.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>2.프로그램을 실행하여 [설치]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/win7_ie10/win7_ie10_2.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt2'>3.설치가 완료 되었으면 [마침]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/win7_ie10/win7_ie10_3.png'></li>";
+			html += "</ul>";
+		}
+	}else if(os_ver == "MAC"){
+		csFile = "MagicLine4NX.pkg";
+		
+		html += "<span class='section_h_text2'>-Mac 설치-</span>";
+		html += "<ul class='step1_left'>";
+		html += "	<li class='step_txt2'>1.파일을 다운로드 합니다.</li>";
+		html += "	<li class='step_info'><img src='images/mac/mac1.png'></li>";
+		html += "</ul>";
+		html += "<ul class='step1'>";
+		html += "	<li class='step_txt2'>2.파일을 열고, [계속]버튼을 클릭합니다.</li>";
+		html += "	<li class='step_info'><img src='images/mac/mac2.png'></li>";
+		html += "</ul>";
+		html += "<ul class='step1_left'>";
+		html += "	<li class='step_txt2'>3.설치 경로를 선택하여 [계속]버튼을 클릭합니다.</li>";
+		html += "	<li class='step_info'><img src='images/mac/mac3.png'></li>";
+		html += "</ul>";
+		html += "<ul class='step1'>";
+		html += "	<li class='step_txt2'>4.[설치]버튼을 클릭합니다.</li>";
+		html += "	<li class='step_info'><img src='images/mac/mac4.png'></li>";
+		html += "</ul>";
+		html += "<ul class='step1_left'>";
+		html += "	<li class='step_txt'>5.사용자 암호를 입력하고, [소프트웨어 설치]버튼<br/>&nbsp;&nbsp;을 클릭합니다.</li>";
+		html += "	<li class='step_info'><img src='images/mac/mac5.png'></li>";
+		html += "</ul>";
+		html += "<ul class='step1'>";
+		html += "	<li class='step_txt'>6.프로그램을 설치 중입니다.<br/>&nbsp;&nbsp;잠시만 기다려주세요.</li>";
+		html += "	<li class='step_info'><img src='images/mac/mac6.png'></li>";
+		html += "</ul>";
+		html += "<ul class='step1_left'>";
+		html += "	<li class='step_txt2'>7.프로그램이 설치되었습니다.</li>";
+		html += "	<li class='step_info'><img src='images/mac/mac7.png'></li>";
+		html += "</ul>";
+	}else if(os_ver == "UBUNTU64"){
+		csFile = "magicline4nx_x86_64.deb";
+	}else if(os_ver == "UBUNTU32"){
+		csFile = "magicline4nx_i386.deb";
+	}else if(os_ver == "FEDORA64"){
+		csFile = "magicline4nx_x86_64.rpm";
+	}else if(os_ver == "FEDORA32"){
+		csFile = "magicline4nx_i386.rpm";
+	}else if(os_ver == "LINUX64"){
+		html += "<span'>해당되는 os에 맞는 파일을 설치하시기 바랍니다.</span>";
+		html += "<ul class='centered_linux'><button class = 'button_linux' onclick = location.href='http://localhost:8080/NTSMagicLine4Web/ML4Web/install_bin/magicline4nx_i386.deb'>우분투 x86</button>";
+		html += "<button class = 'button_linux' onclick = location.href='http://localhost:8080/NTSMagicLine4Web/ML4Web/install_bin/magicline4nx_x86_64.deb'>우분투 x64</button>";
+		html += "<button class = 'button_linux' onclick = location.href='http://localhost:8080/NTSMagicLine4Web/ML4Web/install_bin/magicline4nx_i386.rpm'>페도라 x86</button>";
+		html += "<button class = 'button_linux' onclick = location.href='http://localhost:8080/NTSMagicLine4Web/ML4Web/install_bin/magicline4nx_x86_64.rpm'>페도라 x64</button></ul>";
+	}else{
+		if(browser.indexOf("Opera") > -1){
+			html += "<span class='section_h_text2'>-XP 설치 (오페라)-</span>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>1.파일을 다운로드 합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_opera/xp_opera1.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt2'>2.다운로드 완료 후, 파일을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_opera/xp_opera2.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt'>3.파일을 열고, 보안경고 창에서 [실행]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_opera/xp_opera3.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt'>4.프로그램을 실행하여 [설치]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_opera/xp_opera4.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>5.설치를 진행합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_opera/xp_opera5.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt2'>6.보안경고 창에서 [차단 해제]를 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_opera/xp_opera6.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>7.설치가 완료 되었으면 [마침]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_opera/xp_opera7.png'></li>";
+			html += "</ul>";
+		}else if(browser.indexOf("IE 8") > -1){
+			html += "<span class='section_h_text2'>-XP 설치 (IE8)-</span>";
+			html += "<ul class='step1_left_575'>";
+			html += "	<li class='step_txt_575'>1.보안창을 클릭하여,파일을 다운로드 합니다.</li>";
+			html += "	<li class='step_info_575'><img src='images/xp_ie8/xp_ie8_0.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>2.[실행]버튼을 클릭 후,파일을 다운로드 합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_ie8/xp_ie8_1.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt2'>3.파일을 다운로드 합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_ie8/xp_ie8_2.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt'>4.파일을 열고, 보안경고 창에서 [실행]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_ie8/xp_ie8_3.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt'>5.프로그램을 실행하여 [설치]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_ie8/xp_ie8_4.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>6.설치를 진행합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_ie8/xp_ie8_5.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt2'>7.보안경고 창에서 [차단 해제]를 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_ie8/xp_ie8_6.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>8.설치가 완료 되었으면 [마침]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_ie8/xp_ie8_7.png'></li>";
+			html += "</ul>";
+		}else if(browser.indexOf("IE 6") > -1 || browser.indexOf("IE 7") > -1){
+			html += "<span class='section_h_text2'>-XP 설치 (IE6,7)-</span>";
+			html += "<ul class='step1_left_575'>";
+			html += "	<li class='step_txt_575'>1.보안창을 클릭하여,파일을 다운로드 합니다.</li>";
+			html += "	<li class='step_info_575'><img src='images/xp_ie6/xp_ie6_0.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>2.[실행]버튼을 클릭 후,파일을 다운로드 합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_ie6/xp_ie6_1.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt2'>3.프로그램을 실행하여 [설치]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_ie6/xp_ie6_2.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>4.설치를 진행합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_ie6/xp_ie6_3.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt2'>5.보안경고 창에서 [차단 해제]를 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_ie6/xp_ie6_4.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>6.설치가 완료 되었으면 [마침]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_ie6/xp_ie6_5.png'></li>";
+			html += "</ul>";
+		}else if(browser.indexOf("Chrome") > -1){
+			html += "<span class='section_h_text2'>-XP 설치 (크롬)-</span>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt'>1.파일을 다운로드 합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_chrome/xp_chrome1.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt'>2.파일을 열고, 보안경고 창에서 [실행]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_chrome/xp_chrome2.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>3.프로그램을 실행하여 [설치]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_chrome/xp_chrome3.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt2'>4.설치를 진행합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_chrome/xp_chrome4.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>5.보안경고 창에서 [차단 해제]를 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_chrome/xp_chrome5.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt2'>6.설치가 완료 되었으면 [마침]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_chrome/xp_chrome6.png'></li>";
+			html += "</ul>";
+		}else if(browser.indexOf("Firefox") > -1){
+			html += "<span class='section_h_text2'>-XP 설치 (파이어폭스)-</span>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>1.[파일 저장]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_fox/xp_fox1.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt2'>2.파일을 다운로드 합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_fox/xp_fox2.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt'>3.파일을 열고, 보안경고 창에서 [실행]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_fox/xp_fox3.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt'>4.프로그램을 실행하여 [설치]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_fox/xp_fox4.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>5.설치를 진행합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_fox/xp_fox5.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1'>";
+			html += "	<li class='step_txt2'>6.보안경고 창에서 [차단 해제]를 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_fox/xp_fox6.png'></li>";
+			html += "</ul>";
+			html += "<ul class='step1_left'>";
+			html += "	<li class='step_txt2'>7.설치가 완료 되었으면 [마침]버튼을 클릭합니다.</li>";
+			html += "	<li class='step_info'><img src='images/xp_fox/xp_fox7.png'></li>";
+			html += "</ul>";
+		}
+	}
+	
+	html += "	</div>";
+	html += "</div>";
+	
+	$('.menu_tab00').after(html);
+
+	if(os_ver !== "LINUX64"){
+		setTimeout(function(){
+			$(location).attr("href", "../install_bin/" + csFile);
+		}, 1000);
+	}
+}
+
+function getOS(){
+	try{
+		var OsVersion = navigator.userAgent;
+		OsVersion = OsVersion.toUpperCase();
+		if( OsVersion.indexOf("NT 5.1") != -1 ){
+			return "windows XP";
+		}else if( OsVersion.indexOf("NT 6.0") != -1 ){
+			return "windows vista";
+		}else if( OsVersion.indexOf("NT 6.1") != -1 ){
+			return "windows 7";
+		}else if( OsVersion.indexOf("NT 6.2") != -1 ){
+			return "windows 8";
+		}else if( OsVersion.indexOf("NT 6.3") != -1 ){
+			return "windows 8.1";
+		}else if( OsVersion.indexOf("NT 10.0") != -1 ){
+			return "windows 10";
+		}else if( OsVersion.indexOf("MAC") != -1 ){
+			return "MAC";
+		}else if( OsVersion.indexOf("SYMBIAN") != -1 ){
+			return "Symbian";
+		}else if( OsVersion.indexOf("UBUNTU") != -1 ){
+			if( OsVersion.indexOf("86_64") != -1 ){
+				return "UBUNTU64";
+			}else{
+				return "UBUNTU32";
+			}
+		}else if( OsVersion.indexOf("FEDORA") != -1 ){
+			if( OsVersion.indexOf("86_64") != -1 ){
+				return "FEDORA64";
+			}else{
+				return "FEDORA32";
+			}
+		}
+		else if( OsVersion.indexOf("LINUX") != -1 ){
+			if( OsVersion.indexOf("86_64") != -1 ){
+				return "LINUX64";
+			}else{
+				return "LINUX32";
+			}
+		}
+		else return "Unknown";
+	}catch( ex ){
+		return "Unknown";
+	}
+}
+
+function getBrowser(){
+	var MagicLineNpBrowser="";
+	try{
+		var ua= navigator.userAgent, tem;
+		var ualow = ua.toLowerCase(); 
+		
+		if( ualow.indexOf("edge")>-1){
+			MagicLineNpBrowser = "Edge"+ualow.substr(ualow.indexOf("edge")+4,3);
+			MagicLineNpBrowser = MagicLineNpBrowser.replace("/"," ");
+			return MagicLineNpBrowser;
+		}else{
+			M= ua.match(/(OPR|edge|opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || [];
+			
+			if(/trident/i.test(M[1])){
+				tem=  /\brv[ :]+(\d+)/g.exec(ua) || [];
+				MagicLineNpBrowser = 'IE '+(tem[1] || '');
+				return MagicLineNpBrowser;
+			}
+			if( M[1]=== 'Chrome'){
+				tem= ua.match(/\bOPR\/(\d+)/);
+				if( tem!== null){
+					 MagicLineNpBrowser = 'Opera '+tem[1];
+					 return MagicLineNpBrowser;
+				}
+			}
+			M= M[2]? [M[1], M[2]]: [navigator.appName, navigator.appVersion, '-?'];
+			if((tem= ua.match(/version\/(\d+)/i))!== null){
+				M.splice(1, 1, tem[1]);
+			}
+			
+			MagicLineNpBrowser =  M.join(' ');
+			return MagicLineNpBrowser;
+		}
+	}catch(ex){
+		console.log("[ getBrowser ][ error ][ "+ex.message+" ]");
+		return "";
+	}
+}
+
+// 탭 메뉴 
+function tab_menu(num){	
+	var f = $('.menu_tab').find('li');
+	for ( var i = 0; i < f.length; i++ ) {
+		if ( i == num) {
+			f.eq(i).addClass('active');
+			$('.menu_tab0' + i ).show();
+		} else {
+			f.eq(i).removeClass('active');
+			$('.menu_tab0' + i ).hide();
+		}
+	}
+}
+function tab_menu2(num){
+	var f = $('.menu_tab2').find('li');
+	for ( var i = 0; i < f.length; i++ ) {
+		if ( i == num) {
+			f.eq(i).addClass('active');
+			$('.menu_tab0' + i ).show();
+		} else {
+			f.eq(i).removeClass('active');
+			$('.menu_tab0' + i ).hide();
+		}
+	}
+}
+</script>
+<title>보안프로그램 설치안내</title>
+</head> 
+<body>
+<div id="wrap">
+	<div id="header"><img src="images/setup_header.png" alt="보안프로그램 설치"/></div>
+	<!--컨텐츠-->
+	<div id="content_wrap">
+		<div class="section1">
+			<span class="loadbar"><img src="images/setup_loadbar.gif" alt="로딩중"/></span>
+			<span class="loadbar_txt">고객님의 컴퓨터 성능에 따라 10초~1분 정도 소요되며,<br/>설치가 정상적으로 완료되면 확인 버튼을 누르시기 바랍니다.</span>
+		</div>
+		<div class="section2">
+			<p>자동으로 설치되지 않는 경우나, 정지가 되어있는 경우, [보안 프로그램 수동 설치] 버튼을 클릭하여 수동으로 설치하시기 바랍니다.</p>
+			<span class="btn_install"><a id="btn_setup" href="javascript:getBtnSetup();"><img src="images/btn_install.png" alt="보안프로그램 수동 설치"/></a></span>
+		</div>
+		<div class="menu_tab2">
+			<ul>
+				<li class="fst active"><a href="#" onClick="tab_menu2(0);"><img src="images/setup_tab_ov.png" alt="보안프로그램 설치 안내"/></a></li>
+				<li><a  href="#" onClick="tab_menu2(1);"><img src="images/setup_tab2.png" alt="faq"/></a></li>
+			</ul>
+		</div>
+	<!--탭메뉴1-->
+		<div class="menu_tab00 mTs">
+		</div>
+<!--//탭메뉴1-->
+<!--탭메뉴2-->
+	<div class="menu_tab01 mTs" style="display:none;">
+		<div id="content_img"> 
+			<div class="section4">
+				<span class="section_h_text">FAQ</span>
+				<span class="section_h_text2"></span>
+			</div>
+		</div>
+	</div>
+</div>
+<!--//탭메뉴2-->
+<!--//컨텐츠-->
+</div><br/>
+<iframe id = "autoDownload" style="display:none" ></iframe>
+
+<div id="return_page" align="center">
+	<ul>
+		<li><a href="javascript:goIndex();"><img src="images/btn_ok.png" onmouseover="this.src='images/btn_ok_ov.png'" onmouseout="this.src='images/btn_ok.png'" alt="확인"/></a></li>
+	</ul>
+</div>
+</body> 
+</html> 

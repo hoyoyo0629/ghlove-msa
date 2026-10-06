@@ -1,0 +1,352 @@
+@charset "utf-8";
+
+
+/******************* common *******************/
+html,body{height:100%}
+*{margin:0;padding:0;font-family:"맑은고딕",Malgun Gothic,"돋움",Dotum,"굴림",Gulim,Helvetica,"애플고딕",AppleGothic,Sans-serif;-webkit-text-size-adjust:none}
+body{background:#fff;color:#5e5e5e;word-wrap:break-word;word-break:break-all}
+body,input,select,textarea{font-size:12px}
+textarea{border:1px solid #bcbcbc}
+li{list-style:none}
+table{border-collapse:collapse}
+img,fieldset{border:none}
+a{text-decoration:none;cursor:pointer}
+label{cursor:pointer}
+strong{font-weight:normal}
+em,address{font-style:normal}
+input{outline-style:none;}
+
+/******************* key Select *******************/
+.ML_key_box {position:relative; margin:0; background:;}
+
+.ML_key_box .ML_key_caps a {position:absolute; top:107px; left:4px; width:45px; height:30px; background:url(../images/key/caps.gif) no-repeat; text-indent:-5000px; cursor:pointer;}
+.ML_key_box .ML_key_caps a:hover {background:url(../images/key/caps_ovr.gif) no-repeat;}
+.ML_key_box .ML_key_shift a {position:absolute; top:141px; left:4px; width:98px; height:30px; background:url(../images/key/shift.gif) no-repeat; text-indent:-5000px; cursor:pointer;}
+.ML_key_box .ML_key_shift a:hover {background:url(../images/key/shift_ovr.gif) no-repeat;}
+.ML_key_box .ML_key_space a {position:absolute; top:141px; left:106px; width:351px; height:30px; background:url(../images/key/space.gif) no-repeat; text-indent:-5000px; cursor:pointer;}
+.ML_key_box .ML_key_space a:hover {background:url(../images/key/space_ovr.gif) no-repeat;}
+.ML_key_box .ML_key_enter a {position:absolute; top:107px; right:4px; width:84px; height:64px; background:url(../images/key/enter.gif) no-repeat; text-indent:-5000px; cursor:pointer;}
+.ML_key_box .ML_key_enter a:hover {background:url(../images/key/enter_ovr.gif) no-repeat;}
+.ML_key_box .ML_key_reset a {position:absolute; top:73px; right:4px; width:65px; height:30px; background:url(../images/key/reset.gif) no-repeat; text-indent:-5000px; cursor:pointer;}
+.ML_key_box .ML_key_reset a:hover {background:url(../images/key/reset_ovr.gif) no-repeat;}
+.ML_key_box .ML_key_back a {position:absolute; top:5px; right:4px; width:30px; height:30px; background:url(../images/key/back.gif) no-repeat; text-indent:-5000px; cursor:pointer;}
+.ML_key_box .ML_key_back a:hover {background:url(../images/key/back_ovr.gif) no-repeat;}
+
+.ML_key_area {margin:0 2px 2px; padding-top:2px; width:544px; height:170px; border-top:1px solid #d9d9d9;}
+.ML_key_area ul {text-align:center;}
+.ML_key_area li {float:left;margin:2px;background:;}
+.ML_key_area li a{display:block; width:30px; height:30px; overflow:hidden; color:#34373b; font-size:11px; font-weight:bold; letter-spacing:-1px; background:url(../images/key/nor/keylay.png) no-repeat; cursor:pointer; vertical-align:center; text-indent:-5000px;}
+.ML_key_area li span{display:inline-block;}
+
+/* positioning */
+.ML_key_area li.gap1 {width:30px; height:30px;}
+.ML_key_area li.gap2 {width:15px; height:30px;}
+.ML_key_area li.gap3 {width:45px; height:30px;}
+.ML_key_area li.ML_key_blank a {width:30px; height:30px; background-position: -150px -180px;}
+
+.ML_key_area li.ML_key_num1{width:506px; height:30px; background:url(../images/key/nor/key_num1.png) no-repeat;}
+.ML_key_area li.ML_key_num2{width:506px; height:30px; background:url(../images/key/nor/key_num2.png) no-repeat;}
+.ML_key_area li.ML_key_num3{width:438px; height:30px; background:url(../images/key/nor/key_num3.png) no-repeat;}
+.ML_key_area li.ML_key_num4{width:404px; height:30px; background:url(../images/key/nor/key_num4.png) no-repeat;}
+
+.ML_key_area li.ML_key_ac a {width:30px; height:30px; background-position: 0 0;}
+.ML_key_area li.ML_key_ac a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_1 a {width:30px; height:30px; background-position: -30px 0;}
+.ML_key_area li.ML_key_1 a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_2 a {width:30px; height:30px; background-position: -60px 0;}
+.ML_key_area li.ML_key_2 a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_3 a {width:30px; height:30px; background-position: -90px 0;}
+.ML_key_area li.ML_key_3 a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_4 a {width:30px; height:30px; background-position: -120px 0;}
+.ML_key_area li.ML_key_4 a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_5 a {width:30px; height:30px; background-position: -150px 0;}
+.ML_key_area li.ML_key_5 a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_6 a {width:30px; height:30px; background-position: -180px 0;}
+.ML_key_area li.ML_key_6 a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_7 a {width:30px; height:30px; background-position: 0 -30px;}
+.ML_key_area li.ML_key_7 a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_8 a {width:30px; height:30px; background-position: -30px -30px;}
+.ML_key_area li.ML_key_8 a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_9 a {width:30px; height:30px; background-position: -60px -30px;}
+.ML_key_area li.ML_key_9 a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_0 a {width:30px; height:30px; background-position: -90px -30px;}
+.ML_key_area li.ML_key_0 a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_hp a {width:30px; height:30px; background-position: -120px -30px;}
+.ML_key_area li.ML_key_hp a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_eq a {width:30px; height:30px; background-position: -150px -30px;}
+.ML_key_area li.ML_key_eq a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_q a {width:30px; height:30px; background-position: -180px -30px;}
+.ML_key_area li.ML_key_q a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_w a {width:30px; height:30px; background-position: 0 -60px;}
+.ML_key_area li.ML_key_w a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_e a {width:30px; height:30px; background-position: -30px -60px;}
+.ML_key_area li.ML_key_e a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_r a {width:30px; height:30px; background-position: -60px -60px;}
+.ML_key_area li.ML_key_r a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_t a {width:30px; height:30px; background-position: -90px -60px;}
+.ML_key_area li.ML_key_t a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_y a {width:30px; height:30px; background-position: -120px -60px;}
+.ML_key_area li.ML_key_y a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_u a {width:30px; height:30px; background-position: -150px -60px;}
+.ML_key_area li.ML_key_u a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_i a {width:30px; height:30px; background-position: -180px -60px;}
+.ML_key_area li.ML_key_i a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_o a {width:30px; height:30px; background-position: 0 -90px;}
+.ML_key_area li.ML_key_o a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_p a {width:30px; height:30px; background-position: -30px -90px;}
+.ML_key_area li.ML_key_p a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_sb1 a {width:30px; height:30px; background-position: -60px -90px;}
+.ML_key_area li.ML_key_sb1 a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_sb2 a {width:30px; height:30px; background-position: -90px -90px;}
+.ML_key_area li.ML_key_sb2 a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_bs a {width:30px; height:30px; background-position: -120px -90px;}
+.ML_key_area li.ML_key_bs a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_a a {width:30px; height:30px; background-position: -150px -90px;}
+.ML_key_area li.ML_key_a a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_s a {width:30px; height:30px; background-position: -180px -90px;}
+.ML_key_area li.ML_key_s a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_d a {width:30px; height:30px; background-position: 0 -120px;}
+.ML_key_area li.ML_key_d a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_f a {width:30px; height:30px; background-position: -30px -120px;}
+.ML_key_area li.ML_key_f a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_g a {width:30px; height:30px; background-position: -60px -120px;}
+.ML_key_area li.ML_key_g a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_h a {width:30px; height:30px; background-position: -90px -120px;}
+.ML_key_area li.ML_key_h a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_j a {width:30px; height:30px; background-position: -120px -120px;}
+.ML_key_area li.ML_key_j a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_k a {width:30px; height:30px; background-position: -150px -120px;}
+.ML_key_area li.ML_key_k a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_l a {width:30px; height:30px; background-position: -180px -120px;}
+.ML_key_area li.ML_key_l a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_sc a {width:30px; height:30px; background-position: 0 -150px;}
+.ML_key_area li.ML_key_sc a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_as a {width:30px; height:30px; background-position: -30px -150px;}
+.ML_key_area li.ML_key_as a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_z a {width:30px; height:30px; background-position: -60px -150px;}
+.ML_key_area li.ML_key_z a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_x a {width:30px; height:30px; background-position: -90px -150px;}
+.ML_key_area li.ML_key_x a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_c a {width:30px; height:30px; background-position: -120px -150px;}
+.ML_key_area li.ML_key_c a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_v a {width:30px; height:30px; background-position: -150px -150px;}
+.ML_key_area li.ML_key_v a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_b a {width:30px; height:30px; background-position: -180px -150px;}
+.ML_key_area li.ML_key_b a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_n a {width:30px; height:30px; background-position: 0 -180px;}
+.ML_key_area li.ML_key_n a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_m a {width:30px; height:30px; background-position: -30px -180px;}
+.ML_key_area li.ML_key_m a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_cm a {width:30px; height:30px; background-position: -60px -180px;}
+.ML_key_area li.ML_key_cm a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_pr a {width:30px; height:30px; background-position: -90px -180px;}
+.ML_key_area li.ML_key_pr a:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_fs a {width:30px; height:30px; background-position: -120px -180px;}
+.ML_key_area li.ML_key_fs a:hover {background-position: -75px -150px;}
+
+.ML_key_area li a.sf{display:block; width:30px; height:30px; overflow:hidden; color:#34373b; font-size:11px; font-weight:bold; letter-spacing:-1px; background:url(../images/key/shift/keylay.png) no-repeat; cursor:pointer; vertical-align:center; text-indent:-5000px;}
+.ML_key_area li.ML_key_ac a.sf {width:30px; height:30px; background-position: 0 0;}
+.ML_key_area li.ML_key_ac a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_1 a.sf {width:30px; height:30px; background-position: -30px 0;}
+.ML_key_area li.ML_key_1 a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_2 a.sf {width:30px; height:30px; background-position: -60px 0;}
+.ML_key_area li.ML_key_2 a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_3 a.sf {width:30px; height:30px; background-position: -90px 0;}
+.ML_key_area li.ML_key_3 a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_4 a.sf {width:30px; height:30px; background-position: -120px 0;}
+.ML_key_area li.ML_key_4 a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_5 a.sf {width:30px; height:30px; background-position: -150px 0;}
+.ML_key_area li.ML_key_5 a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_6 a.sf {width:30px; height:30px; background-position: -180px 0;}
+.ML_key_area li.ML_key_6 a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_7 a.sf {width:30px; height:30px; background-position: 0 -30px;}
+.ML_key_area li.ML_key_7 a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_8 a.sf {width:30px; height:30px; background-position: -30px -30px;}
+.ML_key_area li.ML_key_8 a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_9 a.sf {width:30px; height:30px; background-position: -60px -30px;}
+.ML_key_area li.ML_key_9 a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_0 a.sf {width:30px; height:30px; background-position: -90px -30px;}
+.ML_key_area li.ML_key_0 a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_hp a.sf {width:30px; height:30px; background-position: -120px -30px;}
+.ML_key_area li.ML_key_hp a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_eq a.sf {width:30px; height:30px; background-position: -150px -30px;}
+.ML_key_area li.ML_key_eq a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_q a.sf {width:30px; height:30px; background-position: -180px -30px;}
+.ML_key_area li.ML_key_q a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_w a.sf {width:30px; height:30px; background-position: 0 -60px;}
+.ML_key_area li.ML_key_w a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_e a.sf {width:30px; height:30px; background-position: -30px -60px;}
+.ML_key_area li.ML_key_e a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_r a.sf {width:30px; height:30px; background-position: -60px -60px;}
+.ML_key_area li.ML_key_r a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_t a.sf {width:30px; height:30px; background-position: -90px -60px;}
+.ML_key_area li.ML_key_t a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_y a.sf {width:30px; height:30px; background-position: -120px -60px;}
+.ML_key_area li.ML_key_y a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_u a.sf {width:30px; height:30px; background-position: -150px -60px;}
+.ML_key_area li.ML_key_u a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_i a.sf {width:30px; height:30px; background-position: -180px -60px;}
+.ML_key_area li.ML_key_i a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_o a.sf {width:30px; height:30px; background-position: 0 -90px;}
+.ML_key_area li.ML_key_o a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_p a.sf {width:30px; height:30px; background-position: -30px -90px;}
+.ML_key_area li.ML_key_p a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_sb1 a.sf {width:30px; height:30px; background-position: -60px -90px;}
+.ML_key_area li.ML_key_sb1 a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_sb2 a.sf {width:30px; height:30px; background-position: -90px -90px;}
+.ML_key_area li.ML_key_sb2 a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_bs a.sf {width:30px; height:30px; background-position: -120px -90px;}
+.ML_key_area li.ML_key_bs a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_a a.sf {width:30px; height:30px; background-position: -150px -90px;}
+.ML_key_area li.ML_key_a a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_s a.sf {width:30px; height:30px; background-position: -180px -90px;}
+.ML_key_area li.ML_key_s a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_d a.sf {width:30px; height:30px; background-position: 0 -120px;}
+.ML_key_area li.ML_key_d a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_f a.sf {width:30px; height:30px; background-position: -30px -120px;}
+.ML_key_area li.ML_key_f a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_g a.sf {width:30px; height:30px; background-position: -60px -120px;}
+.ML_key_area li.ML_key_g a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_h a.sf {width:30px; height:30px; background-position: -90px -120px;}
+.ML_key_area li.ML_key_h a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_j a.sf {width:30px; height:30px; background-position: -120px -120px;}
+.ML_key_area li.ML_key_j a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_k a.sf {width:30px; height:30px; background-position: -150px -120px;}
+.ML_key_area li.ML_key_k a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_l a.sf {width:30px; height:30px; background-position: -180px -120px;}
+.ML_key_area li.ML_key_l a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_sc a.sf {width:30px; height:30px; background-position: 0 -150px;}
+.ML_key_area li.ML_key_sc a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_as a.sf {width:30px; height:30px; background-position: -30px -150px;}
+.ML_key_area li.ML_key_as a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_z a.sf {width:30px; height:30px; background-position: -60px -150px;}
+.ML_key_area li.ML_key_z a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_x a.sf {width:30px; height:30px; background-position: -90px -150px;}
+.ML_key_area li.ML_key_x a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_c a.sf {width:30px; height:30px; background-position: -120px -150px;}
+.ML_key_area li.ML_key_c a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_v a.sf {width:30px; height:30px; background-position: -150px -150px;}
+.ML_key_area li.ML_key_v a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_b a.sf {width:30px; height:30px; background-position: -180px -150px;}
+.ML_key_area li.ML_key_b a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_n a.sf {width:30px; height:30px; background-position: 0 -180px;}
+.ML_key_area li.ML_key_n a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_m a.sf {width:30px; height:30px; background-position: -30px -180px;}
+.ML_key_area li.ML_key_m a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_cm a.sf {width:30px; height:30px; background-position: -60px -180px;}
+.ML_key_area li.ML_key_cm a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_pr a.sf {width:30px; height:30px; background-position: -90px -180px;}
+.ML_key_area li.ML_key_pr a.sf:hover {background-position: -75px -150px;}
+.ML_key_area li.ML_key_fs a.sf {width:30px; height:30px; background-position: -120px -180px;}
+.ML_key_area li.ML_key_fs a.sf:hover {background-position: -75px -150px;}
+
+.ML_key_area {*zoom:1;}
+.ML_key_area li:after{display:block; content:'';clear:both;}
+
+.ML_key_area_upper {position:absolute; top:0; left:0; margin:0 2px 2px; padding-top:2px; width:544px; height:170px; /*background:rgba(0,0,0,0.3);*/}
+.ML_key_area_upper li {float:left;margin:2px;background:;}
+.ML_key_area_upper li a{display:block; width:30px; height:30px; overflow:hidden; color:#34373b; font-size:11px; font-weight:bold; letter-spacing:-1px; cursor:pointer; vertical-align:center; text-indent:-5000px;}
+.ML_key_area_upper li a:hover {background:url(../images/key/key_upper.png) no-repeat;}
+/* positioning */
+.ML_key_area_upper li.gap1 {width:30px; height:30px;}
+.ML_key_area_upper li.gap2 {width:15px; height:30px;}
+.ML_key_area_upper li.gap3 {width:45px; height:30px;}
+.ML_key_area_upper li.ML_key_blank a {width:30px; height:30px; background-position: -150px -180px;}
+
+.ML_key_area_upper li.ML_key_ac a {width:30px; height:30px; background-position: 0 0;}
+.ML_key_area_upper li.ML_key_ac a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_1 a {width:30px; height:30px; background-position: -30px 0;}
+.ML_key_area_upper li.ML_key_1 a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_2 a {width:30px; height:30px; background-position: -60px 0;}
+.ML_key_area_upper li.ML_key_2 a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_3 a {width:30px; height:30px; background-position: -90px 0;}
+.ML_key_area_upper li.ML_key_3 a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_4 a {width:30px; height:30px; background-position: -120px 0;}
+.ML_key_area_upper li.ML_key_4 a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_5 a {width:30px; height:30px; background-position: -150px 0;}
+.ML_key_area_upper li.ML_key_5 a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_6 a {width:30px; height:30px; background-position: -180px 0;}
+.ML_key_area_upper li.ML_key_6 a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_7 a {width:30px; height:30px; background-position: 0 -30px;}
+.ML_key_area_upper li.ML_key_7 a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_8 a {width:30px; height:30px; background-position: -30px -30px;}
+.ML_key_area_upper li.ML_key_8 a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_9 a {width:30px; height:30px; background-position: -60px -30px;}
+.ML_key_area_upper li.ML_key_9 a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_0 a {width:30px; height:30px; background-position: -90px -30px;}
+.ML_key_area_upper li.ML_key_0 a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_hp a {width:30px; height:30px; background-position: -120px -30px;}
+.ML_key_area_upper li.ML_key_hp a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_eq a {width:30px; height:30px; background-position: -150px -30px;}
+.ML_key_area_upper li.ML_key_eq a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_q a {width:30px; height:30px; background-position: -180px -30px;}
+.ML_key_area_upper li.ML_key_q a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_w a {width:30px; height:30px; background-position: 0 -60px;}
+.ML_key_area_upper li.ML_key_w a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_e a {width:30px; height:30px; background-position: -30px -60px;}
+.ML_key_area_upper li.ML_key_e a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_r a {width:30px; height:30px; background-position: -60px -60px;}
+.ML_key_area_upper li.ML_key_r a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_t a {width:30px; height:30px; background-position: -90px -60px;}
+.ML_key_area_upper li.ML_key_t a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_y a {width:30px; height:30px; background-position: -120px -60px;}
+.ML_key_area_upper li.ML_key_y a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_u a {width:30px; height:30px; background-position: -150px -60px;}
+.ML_key_area_upper li.ML_key_u a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_i a {width:30px; height:30px; background-position: -180px -60px;}
+.ML_key_area_upper li.ML_key_i a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_o a {width:30px; height:30px; background-position: 0 -90px;}
+.ML_key_area_upper li.ML_key_o a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_p a {width:30px; height:30px; background-position: -30px -90px;}
+.ML_key_area_upper li.ML_key_p a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_sb1 a {width:30px; height:30px; background-position: -60px -90px;}
+.ML_key_area_upper li.ML_key_sb1 a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_sb2 a {width:30px; height:30px; background-position: -90px -90px;}
+.ML_key_area_upper li.ML_key_sb2 a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_bs a {width:30px; height:30px; background-position: -120px -90px;}
+.ML_key_area_upper li.ML_key_bs a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_a a {width:30px; height:30px; background-position: -150px -90px;}
+.ML_key_area_upper li.ML_key_a a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_s a {width:30px; height:30px; background-position: -180px -90px;}
+.ML_key_area_upper li.ML_key_s a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_d a {width:30px; height:30px; background-position: 0 -120px;}
+.ML_key_area_upper li.ML_key_d a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_f a {width:30px; height:30px; background-position: -30px -120px;}
+.ML_key_area_upper li.ML_key_f a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_g a {width:30px; height:30px; background-position: -60px -120px;}
+.ML_key_area_upper li.ML_key_g a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_h a {width:30px; height:30px; background-position: -90px -120px;}
+.ML_key_area_upper li.ML_key_h a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_j a {width:30px; height:30px; background-position: -120px -120px;}
+.ML_key_area_upper li.ML_key_j a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_k a {width:30px; height:30px; background-position: -150px -120px;}
+.ML_key_area_upper li.ML_key_k a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_l a {width:30px; height:30px; background-position: -180px -120px;}
+.ML_key_area_upper li.ML_key_l a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_sc a {width:30px; height:30px; background-position: 0 -150px;}
+.ML_key_area_upper li.ML_key_sc a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_as a {width:30px; height:30px; background-position: -30px -150px;}
+.ML_key_area_upper li.ML_key_as a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_z a {width:30px; height:30px; background-position: -60px -150px;}
+.ML_key_area_upper li.ML_key_z a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_x a {width:30px; height:30px; background-position: -90px -150px;}
+.ML_key_area_upper li.ML_key_x a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_c a {width:30px; height:30px; background-position: -120px -150px;}
+.ML_key_area_upper li.ML_key_c a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_v a {width:30px; height:30px; background-position: -150px -150px;}
+.ML_key_area_upper li.ML_key_v a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_b a {width:30px; height:30px; background-position: -180px -150px;}
+.ML_key_area_upper li.ML_key_b a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_n a {width:30px; height:30px; background-position: 0 -180px;}
+.ML_key_area_upper li.ML_key_n a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_m a {width:30px; height:30px; background-position: -30px -180px;}
+.ML_key_area_upper li.ML_key_m a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_cm a {width:30px; height:30px; background-position: -60px -180px;}
+.ML_key_area_upper li.ML_key_cm a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_pr a {width:30px; height:30px; background-position: -90px -180px;}
+.ML_key_area_upper li.ML_key_pr a:hover {background-position: -75px -150px;}
+.ML_key_area_upper li.ML_key_fs a {width:30px; height:30px; background-position: -120px -180px;}
+.ML_key_area_upper li.ML_key_fs a:hover {background-position: -75px -150px;}
+
+.ML_key_area_upper {*zoom:1;}
+.ML_key_area_upper li:after{display:block; content:'';clear:both;}

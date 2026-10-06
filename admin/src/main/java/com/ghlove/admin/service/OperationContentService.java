@@ -22,6 +22,11 @@ public class OperationContentService {
 
     private static final String USE_Y = "Y";
     private static final String USE_N = "N";
+
+    /** AS-IS 팝업상태(POPUP_CLOSE) - '1'=사용 '2'=일시정지 '3'=종료 (popup/form.jsp 라디오). */
+    private static final String POPUP_CLOSE_IN_USE = "1";
+    /** AS-IS 팝업형태(POPUP_STYLE) '3'=이미지등록 - 이미지를 쓰는 유일한 형태다. */
+    private static final String POPUP_STYLE_IMAGE = "3";
     private static final String BANNER_TYPE_MAIN = "MAIN";
     private static final java.util.Set<String> BANNER_TYPES = java.util.Set.of("MAIN", "LOGIN_WEB", "LOGIN_MOBILE");
     private static final DateTimeFormatter NOTICE_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
@@ -29,6 +34,7 @@ public class OperationContentService {
     private final NoticeRepository noticeRepository;
     private final BannerRepository bannerRepository;
     private final PopupRepository popupRepository;
+    private final PopupImageStorageService popupImageStorageService;
 
     // ---- 공지사항 ----
 
@@ -108,6 +114,96 @@ public class OperationContentService {
 
     public Banner banner(Integer id) {
         return bannerRepository.findById(id).orElseThrow(() -> new ContentException("배너를 찾을 수 없습니다."));
+    }
+
+    /** 수정화면 진입용 - AS-IS는 없는 배너면 pageValidFlag='N'으로 "잘못된 접근" 처리를 한다. */
+    public Banner bannerOrNull(Integer id) {
+        return id == null ? null : bannerRepository.findById(id).orElse(null);
+    }
+
+    /**
+     * AS-IS mainBannerCreateProcess - 배너명·내용·이미지링크·사용여부 + PC/모바일 이미지.
+     * 노출순서는 AS-IS가 등록 시 받지 않고 목록의 순서 저장으로만 바꾸므로 마지막 순서 뒤에 붙인다.
+     */
+    @Transactional
+    public Banner createMainBanner(String title, String contents, String linkUrl, String displayFlag,
+                                    String pcFileName, String pcOrgFileName,
+                                    String mFileName, String mOrgFileName) {
+        if (title == null || title.isBlank()) {
+            throw new ContentException("배너명을 입력해 주세요.");
+        }
+        Banner banner = new Banner();
+        banner.setTitle(title);
+        banner.setContents(contents);
+        banner.setLinkUrl(linkUrl);
+        banner.setDisplayFlag(USE_Y.equals(displayFlag) ? USE_Y : USE_N);
+        banner.setPcFileName(pcFileName);
+        banner.setPcOrgFileName(pcOrgFileName);
+        banner.setMFileName(mFileName);
+        banner.setMOrgFileName(mOrgFileName);
+        banner.setBannerType(normalizeBannerType(null));
+        banner.setDisplayOrder(nextBannerDisplayOrder());
+        banner.setCreatedDate(NOTICE_DATE_FORMAT.format(LocalDateTime.now()));
+        return bannerRepository.save(banner);
+    }
+
+    /** AS-IS mainBannerEditProcess - 이미지는 새로 올린 쪽만 바꾼다. */
+    @Transactional
+    public Banner updateMainBanner(Integer id, String title, String contents, String linkUrl, String displayFlag,
+                                    String pcFileName, String pcOrgFileName,
+                                    String mFileName, String mOrgFileName) {
+        if (title == null || title.isBlank()) {
+            throw new ContentException("배너명을 입력해 주세요.");
+        }
+        Banner banner = banner(id);
+        banner.setTitle(title);
+        banner.setContents(contents);
+        banner.setLinkUrl(linkUrl);
+        banner.setDisplayFlag(USE_Y.equals(displayFlag) ? USE_Y : USE_N);
+        if (pcFileName != null) {
+            banner.setPcFileName(pcFileName);
+            banner.setPcOrgFileName(pcOrgFileName);
+        }
+        if (mFileName != null) {
+            banner.setMFileName(mFileName);
+            banner.setMOrgFileName(mOrgFileName);
+        }
+        return bannerRepository.save(banner);
+    }
+
+    /**
+     * AS-IS changeDisplayOrder - 목록의 순서 셀렉트들을 "bannerId|순서" 문자열 배열로 받아 반영한다.
+     * 중복 순서는 화면 JS(validator)가 먼저 막는다.
+     */
+    @Transactional
+    public void changeBannerDisplayOrder(List<String> displayOrderList) {
+        if (displayOrderList == null) {
+            return;
+        }
+        for (String entry : displayOrderList) {
+            if (entry == null || !entry.contains("|")) {
+                continue;
+            }
+            String[] parts = entry.split("\\|", 2);
+            try {
+                Integer bannerId = Integer.valueOf(parts[0].trim());
+                Integer order = Integer.valueOf(parts[1].trim());
+                bannerRepository.findById(bannerId).ifPresent(banner -> {
+                    banner.setDisplayOrder(order);
+                    bannerRepository.save(banner);
+                });
+            } catch (NumberFormatException e) {
+                // AS-IS도 잘못된 값은 조용히 건너뛴다
+            }
+        }
+    }
+
+    private int nextBannerDisplayOrder() {
+        return bannerRepository.findAllByOrderByDisplayOrderAsc().stream()
+                .map(Banner::getDisplayOrder)
+                .filter(java.util.Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(0) + 1;
     }
 
     @Transactional
@@ -203,18 +299,35 @@ public class OperationContentService {
         return popupRepository.findAllByOrderByPopupIdDesc();
     }
 
+    /** AS-IS popupList(popup-mapper.xml) - 검색조건 적용 후 POPUP_ID DESC. */
+    public List<Popup> popupSearch(com.ghlove.admin.web.support.PopupSearchParam param) {
+        return popupRepository.search(param.popupCloseCondition(), param.popupStyleCondition(),
+                param.startDateCondition(), param.endDateCondition(), param.queryCondition());
+    }
+
     /**
-     * storefront 공개 노출용 - 현재 노출기간 안에 있고 사용중(useYn='Y')인 팝업.
-     * AS-IS `displayPopupList`(popup-mapper.xml)는 CONCAT(START_DATE,START_TIME) ~
-     * CONCAT(END_DATE,END_TIME) 사이(단위: yyyyMMddHH)를 본다. AS-IS는 그 쿼리에서
-     * POPUP_CLOSE=1도 걸지만 MSA는 POPUP_CLOSE를 "닫기버튼 노출여부"로 쓰므로(엔티티 주석)
-     * 노출 여부는 운영자 토글값인 useYn으로 판정한다. 팝업은 소량이라 필터는 인메모리로 처리한다.
+     * storefront 공개 노출용 - 현재 노출기간 안에 있고 팝업상태가 '사용'인 팝업.
+     * AS-IS `displayPopupList`(popup-mapper.xml)는
+     * {@code DATE_FORMAT(NOW(),'%Y%m%d%H') BETWEEN CONCAT(START_DATE,START_TIME) AND CONCAT(END_DATE,END_TIME)
+     * AND POPUP_CLOSE = 1}이다. POPUP_CLOSE는 AS-IS 등록화면(popup/form.jsp)에서 팝업상태
+     * 라디오(1=사용/2=일시정지/3=종료)로 쓰이는 값이고, 예전에 이걸 "닫기버튼 노출여부"로
+     * 잘못 해석해 운영자 토글값 useYn으로 판정하고 있었다 - AS-IS 기준으로 바로잡았다.
+     * 팝업은 소량이라 기간 필터는 인메모리로 처리한다.
      */
     public List<Popup> displayPopups() {
         String nowHour = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHH"));
-        return popupRepository.findByUseYnOrderByPopupIdDesc(USE_Y).stream()
+        return popupRepository.findByPopupCloseOrderByPopupIdDesc(POPUP_CLOSE_IN_USE).stream()
                 .filter(p -> withinDisplayWindow(p, nowHour))
                 .toList();
+    }
+
+    /** AS-IS deletePopupData(listParam) - 목록에서 체크한 팝업 일괄 삭제. */
+    @Transactional
+    public void deletePopups(List<Integer> popupIds) {
+        if (popupIds == null || popupIds.isEmpty()) {
+            return;
+        }
+        popupRepository.deleteAllById(popupIds);
     }
 
     private boolean withinDisplayWindow(Popup p, String nowHour) {
@@ -237,49 +350,103 @@ public class OperationContentService {
 
     @Transactional
     public Popup createPopup(String subject, String content, String popupType, String startDate, String endDate) {
-        return createPopup(subject, content, popupType, startDate, endDate, null, null, null);
+        Popup form = new Popup();
+        form.setSubject(subject);
+        form.setContent(content);
+        form.setPopupType(popupType);
+        form.setStartDate(startDate);
+        form.setEndDate(endDate);
+        return createPopup(form, null);
     }
 
+    /**
+     * AS-IS insertPopup(popup-mapper.xml)의 컬럼 전부를 저장한다 - POPUP_CLOSE, POPUP_TYPE,
+     * POPUP_STYLE, SUBJECT, CONTENT, START_DATE/TIME, END_DATE/TIME, WIDTH, HEIGHT, IMAGE_LINK,
+     * TOP_POSITION, LEFT_POSITION, POPUP_IMAGE, BACKGROUND_COLOR. 예전엔 등록화면이 넘기는
+     * 시간·크기·위치·이미지링크를 받지 않아 저장 시 버려지고 있었다.
+     */
     @Transactional
-    public Popup createPopup(String subject, String content, String popupType, String startDate, String endDate,
-                              String popupStyle, String popupClose, String popupImage) {
-        if (subject == null || subject.isBlank()) {
+    public Popup createPopup(Popup form, String popupImage) {
+        if (form.getSubject() == null || form.getSubject().isBlank()) {
             throw new ContentException("제목을 입력해 주세요.");
         }
         Popup popup = new Popup();
-        popup.setSubject(subject);
-        popup.setContent(content);
-        popup.setPopupType(popupType);
-        popup.setStartDate(startDate);
-        popup.setEndDate(endDate);
-        popup.setPopupStyle(popupStyle != null ? popupStyle : "1");
-        popup.setPopupClose(popupClose != null ? popupClose : USE_Y);
-        popup.setPopupImage(popupImage);
+        applyPopupForm(popup, form);
+        // AS-IS insertPopup: 이미지는 팝업형태가 '3'(이미지등록)일 때만 쓴다. 파일이 없으면
+        // 이미지링크·배경색을 비운다(AS-IS는 popupImageFile.size()==0 분기에서 ""로 덮는다).
+        if (POPUP_STYLE_IMAGE.equals(popup.getPopupStyle())) {
+            if (popupImage != null) {
+                popup.setPopupImage(popupImage);
+                popup.setContent("");   // AS-IS saveImage 마지막 줄: 이미지 팝업은 내용을 비운다
+            } else {
+                popup.setImageLink("");
+                popup.setBackgroundColor("");
+            }
+        }
         popup.setUseYn(USE_Y);
         popup.setCreatedDate(LocalDateTime.now());
         return popupRepository.save(popup);
+    }
+
+    private void applyPopupForm(Popup popup, Popup form) {
+        popup.setSubject(form.getSubject());
+        popup.setContent(form.getContent());
+        popup.setPopupType(form.getPopupType() != null ? form.getPopupType() : "1");
+        popup.setPopupStyle(form.getPopupStyle() != null ? form.getPopupStyle() : "1");
+        popup.setPopupClose(form.getPopupClose() != null ? form.getPopupClose() : POPUP_CLOSE_IN_USE);
+        popup.setStartDate(form.getStartDate());
+        popup.setStartTime(form.getStartTime());
+        popup.setEndDate(form.getEndDate());
+        popup.setEndTime(form.getEndTime());
+        popup.setWidth(form.getWidth());
+        popup.setHeight(form.getHeight());
+        popup.setTopPosition(form.getTopPosition());
+        popup.setLeftPosition(form.getLeftPosition());
+        popup.setImageLink(form.getImageLink());
+        popup.setBackgroundColor(form.getBackgroundColor());
     }
 
     public Popup popup(Integer id) {
         return popupRepository.findById(id).orElseThrow(() -> new ContentException("팝업을 찾을 수 없습니다."));
     }
 
+    /**
+     * AS-IS updatePopup(PopupServiceImpl)의 이미지 분기를 그대로 옮긴다.
+     * <ul>
+     *   <li>형태 '3' + 새 파일 → 기존 이미지가 있으면 <b>파일까지 지우고</b> 새 이미지로 바꾼다</li>
+     *   <li>형태 '3' + 새 파일 없음 → 기존 POPUP_IMAGE를 유지한다</li>
+     *   <li>형태 '3'이 아니면 → 기존 이미지를 <b>파일까지 지우고</b> 컬럼을 비우고,
+     *       이미지링크·배경색도 ""로 비운다</li>
+     * </ul>
+     * 예전 TO-BE는 "새 파일이 있으면 교체"만 해서, 이미지등록 → 텍스트입력으로 바꿔 저장해도
+     * 이미지와 이미지링크가 그대로 남았고 교체·삭제한 파일이 디스크에 계속 쌓였다.
+     */
     @Transactional
-    public Popup updatePopup(Integer id, String subject, String content, String popupType, String startDate, String endDate,
-                              String popupStyle, String popupClose, String popupImage) {
-        if (subject == null || subject.isBlank()) {
+    public Popup updatePopup(Integer id, Popup form, String popupImage) {
+        if (form.getSubject() == null || form.getSubject().isBlank()) {
             throw new ContentException("제목을 입력해 주세요.");
         }
         Popup popup = popup(id);
-        popup.setSubject(subject);
-        popup.setContent(content);
-        popup.setPopupType(popupType);
-        popup.setStartDate(startDate);
-        popup.setEndDate(endDate);
-        popup.setPopupStyle(popupStyle);
-        popup.setPopupClose(popupClose != null ? USE_Y : USE_N);
-        if (popupImage != null) {
-            popup.setPopupImage(popupImage);
+        String previousImage = popup.getPopupImage();
+        applyPopupForm(popup, form);
+
+        if (POPUP_STYLE_IMAGE.equals(popup.getPopupStyle())) {
+            if (popupImage != null) {
+                if (previousImage != null) {
+                    popupImageStorageService.delete(previousImage);
+                }
+                popup.setPopupImage(popupImage);
+                popup.setContent("");
+            } else {
+                popup.setPopupImage(previousImage);
+            }
+        } else {
+            if (previousImage != null) {
+                popupImageStorageService.delete(previousImage);
+            }
+            popup.setPopupImage(null);
+            popup.setImageLink("");
+            popup.setBackgroundColor("");
         }
         return popupRepository.save(popup);
     }
@@ -289,10 +456,15 @@ public class OperationContentService {
         popupRepository.deleteById(id);
     }
 
+    /** AS-IS deletePopupImage - <b>① 디스크 파일을 지우고 ② 그다음</b> POPUP_IMAGE를 null로
+     *  만든다(등록화면의 이미지 삭제 아이콘). 예전 TO-BE는 ②만 해서 파일이 남았다. */
     @Transactional
-    public Popup togglePopup(Integer id) {
-        Popup popup = popupRepository.findById(id).orElseThrow(() -> new ContentException("팝업을 찾을 수 없습니다."));
-        popup.setUseYn(USE_Y.equals(popup.getUseYn()) ? USE_N : USE_Y);
-        return popupRepository.save(popup);
+    public void deletePopupImage(Integer id) {
+        Popup popup = popup(id);
+        if (popup.getPopupImage() != null) {
+            popupImageStorageService.delete(popup.getPopupImage());
+        }
+        popup.setPopupImage(null);
+        popupRepository.save(popup);
     }
 }

@@ -1,140 +1,355 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
     <title>회원관리 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<!-- D3 일반회원 검색/상세 (AS-IS opmanager/user/general-customer - GeneralCustomerManagerController).
-     실제 데이터는 member 서비스에 있고(MemberAdminClient), 여기는 admin 콘솔의 로그인/RBAC과
-     화면만 담당한다. [[admin-pii-display-no-masking]] 관행대로 이 목록화면은 마스킹 없이 그대로
-     노출한다(전화번호는 상세화면에서만 재확인 게이트 대상). -->
-<div class="contents contents_inner">
-    <h3>회원관리</h3>
-    <p style="margin-bottom:12px;">
-        <a th:href="@{/admin/members/batch}">회원 배치관리(휴면전환/데이터파기)</a> ·
-        <a th:href="@{/log/user-change}">권한/상태변경 이력 관리</a>
-    </p>
+<!-- AS-IS opmanager/i18n/user/customer/list.jsp 이식(메뉴 4101 일반회원관리).
+     검색구분(아이디/이름/주소) + 가입일 범위(필수, 기본 오늘, 전체(all-1) 포함) +
+     가입구분(전체/온라인/오프라인) + Email 수신동의(전체/동의/비동의) + 화면출력 + 9컬럼.
 
-    <form th:action="@{/admin/members}" method="get" id="searchForm">
-        <div class="board_write">
-            <table class="board_write_table" summary="회원 검색조건">
-                <colgroup><col style="width:150px;"><col><col style="width:150px;"><col></colgroup>
-                <tbody>
-                <tr>
-                    <td class="label">가입일자</td>
-                    <td colspan="3">
-                        <div class="flex_box gap-08">
-                            <input type="date" name="fromDate" th:value="${fromDate}">
-                            <span class="wave">~</span>
-                            <input type="date" name="toDate" th:value="${toDate}">
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="label">검색조건</td>
-                    <td>
-                        <div class="flex_box gap-08">
-                            <select name="srchKey">
-                                <option value="LOGIN_ID" th:selected="${srchKey == 'LOGIN_ID' or srchKey == null}">아이디</option>
-                                <option value="USER_NAME" th:selected="${srchKey == 'USER_NAME'}">이름</option>
-                                <option value="ADDRESS" th:selected="${srchKey == 'ADDRESS'}">주소</option>
-                            </select>
-                            <input type="text" name="srchValue" th:value="${srchValue}" placeholder="검색어">
-                        </div>
-                    </td>
-                    <td class="label">가입구분</td>
-                    <td>
-                        <select name="sbscrbSeCode">
-                            <option value="">전체</option>
-                            <option value="GENERAL" th:selected="${sbscrbSeCode == 'GENERAL'}">일반회원</option>
-                            <option value="OVERSEAS" th:selected="${sbscrbSeCode == 'OVERSEAS'}">재외국민</option>
-                            <option value="LOCALGOV" th:selected="${sbscrbSeCode == 'LOCALGOV'}">지자체 담당자</option>
-                            <option value="PROVIDER" th:selected="${sbscrbSeCode == 'PROVIDER'}">답례품 제공자</option>
-                        </select>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="label">이메일 수신동의</td>
-                    <td colspan="3">
-                        <select name="receiveEmail">
-                            <option value="">전체</option>
-                            <option value="Y" th:selected="${receiveEmail == 'Y'}">동의</option>
-                            <option value="N" th:selected="${receiveEmail == 'N'}">미동의</option>
-                        </select>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="btn_all btn_right" style="margin-bottom:16px;">
-            <div class="flex_box gap-08">
-                <button type="button" class="btn btn-dark-gray btn-small" onclick="searchClear()">초기화</button>
-                <button type="submit" class="btn btn-dark-gray btn-small">검색</button>
-            </div>
-        </div>
-    </form>
+     ★ AS-IS는 진입(GET) 시 조회하지 않는다 - 검색해야(POST) 조회된다.
+     ★ 목록 모집단은 정상회원만이다(AS-IS WHERE U.STATUS_CODE = 9). 탈퇴·휴면 회원은
+        4105 탈퇴회원리스트 / 4107 휴면회원관리에서 본다.
 
-    <div class="count_title mt-40">
-        <h5>총 <span th:text="${totalCount}" th:remove="tag"></span>건</h5>
-    </div>
+     AS-IS verbatim:
+     - h3가 메뉴명(일반회원관리)이 아니라 M00210이다.
+     - colgroup에 col이 1개뿐이다(컬럼은 9개).
+     - 아이디·이름 두 칸이 모두 상세 링크다.
+     - 이메일 수신동의는 '0'이면 동의, 그 외(1·미설정)는 비동의.
+     - 기부누적액·포인트잔액은 #,###.## 포맷이고 값이 없으면 '-'.
+     - 엑셀 다운로드 버튼이 없다(구버전 list-old.jsp에만 있었다).
+     - 검색 시 가입일이 비어 있으면 "가입일을 입력 하십시오"로 막는다.
+     - 빈 목록 행에는 background 스타일이 없다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <table class="board_list_table" summary="회원목록">
-        <caption>회원목록</caption>
-        <thead>
-        <tr>
-            <th scope="col">아이디</th>
-            <th scope="col">이름</th>
-            <th scope="col">이메일</th>
-            <th scope="col">휴대폰</th>
-            <th scope="col">가입구분</th>
-            <th scope="col">상태</th>
-            <th scope="col">가입일</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="m : ${list}">
-            <td><a th:href="@{'/admin/members/' + ${m.userId}}" th:text="${m.loginId}"></a></td>
-            <td th:text="${m.userName}"></td>
-            <td th:text="${m.email}"></td>
-            <td th:text="${m.phoneNumber}"></td>
-            <td th:text="${m.sbscrbSeCode}"></td>
-            <td th:text="${m.statusCode == 'ACTIVE' ? '정상' : (m.statusCode == 'DORMANT' ? '휴면' : (m.statusCode == 'LOCKED' ? '잠금' : (m.statusCode == 'WITHDRAWN' ? '탈퇴' : m.statusCode)))}"></td>
-            <td th:text="${m.createdDate != null and #strings.length(m.createdDate) >= 8}
-                          ? ${#strings.substring(m.createdDate,0,4) + '-' + #strings.substring(m.createdDate,4,6) + '-' + #strings.substring(m.createdDate,6,8)}
-                          : ''"></td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(list)}">조건에 맞는 회원이 없습니다.</p>
+<h3><span th:text="${msg.get('M00210')}">회원관리</span></h3>
 
-    <div class="pagination-wrap" th:if="${totalPages > 1}">
-        <div class="pagination">
-            <a th:if="${currentPage > 0}" class="prev"
-               th:href="@{/admin/members(fromDate=${fromDate},toDate=${toDate},srchKey=${srchKey},srchValue=${srchValue},sbscrbSeCode=${sbscrbSeCode},receiveEmail=${receiveEmail},page=${currentPage - 1},size=${size})}">이전</a>
-            <span th:each="p : ${#numbers.sequence(0, totalPages - 1)}">
-                <strong th:if="${p == currentPage}" th:text="${p + 1}"></strong>
-                <a th:unless="${p == currentPage}"
-                   th:href="@{/admin/members(fromDate=${fromDate},toDate=${toDate},srchKey=${srchKey},srchValue=${srchValue},sbscrbSeCode=${sbscrbSeCode},receiveEmail=${receiveEmail},page=${p},size=${size})}"
-                   th:text="${p + 1}"></a>
-            </span>
-            <a th:if="${currentPage < totalPages - 1}" class="next"
-               th:href="@{/admin/members(fromDate=${fromDate},toDate=${toDate},srchKey=${srchKey},srchValue=${srchValue},sbscrbSeCode=${sbscrbSeCode},receiveEmail=${receiveEmail},page=${currentPage + 1},size=${size})}">다음</a>
-        </div>
-    </div>
+<!-- Search -->
+<form id="searchForm" class="opmanager-search-form clear" method="post" th:action="@{/admin/members}">
+	<input type="hidden" id="sort" name="sort" th:value="${searchParam.sort}"/>
+	<input type="hidden" id="orderBy" name="orderBy" th:value="${searchParam.orderBy}"/>
+	<input type="hidden" id="itemsPerPage" name="itemsPerPage" th:value="${searchParam.itemsPerPage}"/>
+	<input type="hidden" id="query" name="query" th:value="${searchParam.query}"/>
+
+	<div class="board_write">
+		<table class="board_write_table" summary="">
+			<colgroup>
+				<col style="width:220px;">
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="label">검색구분</td>
+					<td>
+						<div class="flex_box gap-08">
+							<select id="srchKey" name="srchKey" title="아이디" class="wd-150">
+								<option value="LOGIN_ID" th:selected="${searchParam.srchKey == 'LOGIN_ID'}">아이디</option>
+								<option value="USER_NAME" th:selected="${searchParam.srchKey == 'USER_NAME'}">이름</option>
+								<option value="ADDRESS" th:selected="${searchParam.srchKey == 'ADDRESS'}">주소</option>
+							</select>
+							<input type="text" id="srchValue" name="srchValue" title="검색구분"
+							       class="input_txt required _filter half" th:value="${searchParam.srchValue}"/>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label"><span class="required_mark">*</span>가입일</td>
+					<td>
+						<div>
+							<span class="datepicker"><input type="text" id="srchStartCreated" name="srchStartCreated" class="datepicker optional " th:title="${msg.get('M00507')}" th:value="${searchParam.srchStartCreated}" /></span>
+							<span class="wave">~</span>
+							<span class="datepicker"><input type="text" id="srchEndCreated" name="srchEndCreated" class="datepicker optional " th:title="${msg.get('M00509')}" th:value="${searchParam.srchEndCreated}" /></span>
+							<span class="day_btns">
+								<a href="javascript:void(0);" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+								<a href="javascript:void(0);" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a>
+								<a href="javascript:void(0);" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>
+								<a href="javascript:void(0);" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+								<a href="javascript:void(0);" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a>
+								<a href="javascript:void(0);" class="btn_date all-1" th:text="${msg.get('M00039')}">전체</a>
+							</span>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">가입구분</td>
+					<td>
+						<div class="flex_box gap-12">
+							<div class="input-form">
+								<input type="radio" id="srchSbscrbSeCode0" name="srchSbscrbSeCode" value=""
+								       th:checked="${#strings.isEmpty(searchParam.srchSbscrbSeCode)}"/>
+								<label for="srchSbscrbSeCode0">전체</label>
+							</div>
+							<div class="input-form">
+								<input type="radio" id="srchSbscrbSeCode100" name="srchSbscrbSeCode" value="100"
+								       th:checked="${searchParam.srchSbscrbSeCode == '100'}"/>
+								<label for="srchSbscrbSeCode100">온라인</label>
+							</div>
+							<div class="input-form">
+								<input type="radio" id="srchSbscrbSeCode200" name="srchSbscrbSeCode" value="200"
+								       th:checked="${searchParam.srchSbscrbSeCode == '200'}"/>
+								<label for="srchSbscrbSeCode200">오프라인</label>
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">Email 수신동의</td>
+					<td>
+						<div class="flex_box gap-12">
+							<div class="input-form">
+								<input type="radio" id="srchReceiveEmail0" name="srchReceiveEmail" value=""
+								       th:checked="${#strings.isEmpty(searchParam.srchReceiveEmail)}"/>
+								<label for="srchReceiveEmail0">전체</label>
+							</div>
+							<div class="input-form">
+								<input type="radio" id="srchReceiveEmailY" name="srchReceiveEmail" value="0"
+								       th:checked="${searchParam.srchReceiveEmail == '0'}"/>
+								<label for="srchReceiveEmailY">동의</label>
+							</div>
+							<div class="input-form">
+								<input type="radio" id="srchReceiveEmailN" name="srchReceiveEmail" value="1"
+								       th:checked="${searchParam.srchReceiveEmail == '1'}"/>
+								<label for="srchReceiveEmailN">비동의</label>
+							</div>
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<div class="btn_all btn_left">
+			<ul class="list-bullet point">
+		        <li>
+		            검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.
+		        </li>
+	        </ul>
+	  	</div>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/admin/members'">초기화</button>
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="search();">검색</button>
+			</div>
+		</div>
+	</div>
+</form>
+<!--// Search -->
+
+<!-- List Header -->
+<div class="count_title mt-40">
+	<h5>총 <span th:text="${#numbers.formatInteger(count, 0, 'COMMA')}" th:remove="tag">0</span>건</h5>
+	<span>
+		<select name="displayCount" id="displayCount" th:title="${msg.get('M00239')}">
+			<option value="10" th:text="${msg.get('M00240')}">10개 출력</option>
+			<option value="20" th:text="${msg.get('M00241')}">20개 출력</option>
+			<option value="50" th:text="${msg.get('M00242')}">50개 출력</option>
+			<option value="100" th:text="${msg.get('M00243')}">100개 출력</option>
+		</select>
+	</span>
 </div>
+<!--// List Header -->
 
-<script th:inline="none">
-function searchClear() {
-    location.href = /*[[@{/admin/members}]]*/ '/admin/members';
-}
-</script>
+<!-- List -->
+<div class="board_list">
+	<table class="board_list_table" summary="일반회원관리">
+		<caption>일반회원관리</caption>
+		<colgroup>
+			<col style="width:5%;">
+		</colgroup>
+		<thead>
+			<tr>
+				<th scope="col">No.</th>
+				<th scope="col">가입일</th>
+				<th scope="col">아이디</th>
+				<th scope="col">이름</th>
+				<th scope="col">주소</th>
+				<th scope="col">이메일 수신동의</th>
+				<th scope="col">기부누적액</th>
+				<th scope="col">포인트잔액</th>
+				<th scope="col">가입경로</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr th:each="item, i : ${list}" style="background:#fff;">
+				<td th:text="${pagination.itemNumber - i.count}">0</td>
+				<td th:text="${item.createdDate}"></td>
+				<td><a th:href="|javascript:customerDetails('${item.userId}');|" th:text="${item.loginId}"></a></td>
+				<td><a th:href="|javascript:customerDetails('${item.userId}');|" th:text="${item.userName}"></a></td>
+				<td th:text="${item.addressText}"></td>
+				<td th:text="${item.receiveEmailText}"></td>
+				<td th:text="${item.totalCntrAmt != null}
+				             ? ${#numbers.formatDecimal(item.totalCntrAmt, 1, 'COMMA', 2, 'POINT')} : '-'"></td>
+				<td th:text="${item.totalCntrBlcePoint != null}
+				             ? ${#numbers.formatDecimal(item.totalCntrBlcePoint, 1, 'COMMA', 2, 'POINT')} : '-'"></td>
+				<td th:text="${item.sbscrbSeNm}"></td>
+			</tr>
+			<tr th:if="${#lists.isEmpty(list)}">
+				<td colspan="9">일반회원 정보가 존재하지 않습니다.</td>
+			</tr>
+		</tbody>
+	</table>
+	<div class="pagination-wrap" th:if="${not #lists.isEmpty(list)}">
+		<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+	</div>
+</div>
+<!--// List -->
+
+<!-- 날짜 셋팅 영역 -->
+<div style="display: none;">
+	<span id="today" th:text="${searchDates.today}"></span>
+	<span id="week" th:text="${searchDates.week}"></span>
+	<span id="month1" th:text="${searchDates.month1}"></span>
+	<span id="month3" th:text="${searchDates.month3}"></span>
+	<span id="year1" th:text="${searchDates.year1}"></span>
+</div>
+<!--// 날짜 셋팅 영역  -->
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript" th:inline="javascript">
+	$(function(){
+
+		// 기간 검색 적용 (검색조건 : 가입일)
+		serachDate();
+
+		// 한 페이지 출력 갯수 변경 이벤트
+		displayChange();
+
+		// 선택된 페이지 출력 갯수 셋팅
+		displaySelected();
+
+		// 날짜 변경 이벤트
+		datepickerChange();
+
+		// 검색 enter key
+		searchEnterKey();
+
+		Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="srchStartCreated"]' , 'input[name="srchEndCreated"]');
+		EventHandler.calendarStartDateAndEndDateVaild();
+	});
+
+	/**
+	 *	함 수 명 : serachDate
+	 *	기	능  : 기간 검색 적용
+	 */
+	function serachDate() {
+		$(".btn_date").on('click',function(){
+			var $id = $(this).attr('class').replace('btn_date ','');
+			if ($id == 'all') {
+				$("input[type=text]",$(this).parent().parent()).val('');
+
+			} else {
+				var today = $("#today").text();
+				var date1 = '';
+				var date2 = '';
+
+				if ($id == 'today') {
+					date1 = today;
+					date2 = today;
+				} else {
+					date1 = $("#"+$id).text();
+					date2 = today;
+				}
+
+				$("input[type=text]",$(this).parent().parent()).eq(0).val(date1);
+				$("input[type=text]",$(this).parent().parent()).eq(1).val(date2);
+			}
+		});
+	}
+
+	/**
+	 *	함 수 명 : displayChange
+	 *	기	능  : 한 페이지 출력 갯수 변경 이벤트
+	 */
+	function displayChange() {
+		$("#displayCount").on('change', function(){
+			$("#itemsPerPage").val($(this).val());
+			search();
+		});
+	}
+
+	/**
+	 *	함 수 명 : displaySelected
+	 *	기	능  : 선택된 페이지 출력 갯수 셋팅
+	 */
+	function displaySelected(){
+		$("#displayCount").val($("#itemsPerPage").val());
+	}
+
+	/**
+	 *	함 수 명 : customerDetails
+	 *	기	능  : 일반회원 상세 조회
+	 *	파라미터  : userId - 사용자 ID
+	 */
+	function customerDetails(userId) {
+		location.href = "/admin/members/details/"+userId+location.search;
+	}
+
+	/**
+	 *	함 수 명 : datepickerChange
+	 *	기	능  : 날짜 변경 이벤트
+	 */
+	function datepickerChange() {
+		if($("input.datepicker").length) {
+			$("input.datepicker").keyup(function(e) {
+				if(e && e.target && e.target.value) {
+					var value = e.target.value.replace(/[^0-9]/g, "");
+					if(value.length > 8) { value = value.slice(0, 8); }
+					e.target.value = value;
+				}
+			});
+		}
+	}
+
+	/**
+	 *	함 수 명 : search
+	 *	기	능  : 검색
+	 */
+	function search() {
+		var strStartDate = $("#srchStartCreated").val();
+		var strEndDate = $("#srchEndCreated").val();
+
+		if(strStartDate === '' || strEndDate === '') {
+			alert('가입일을 입력 하십시오');
+			return false;
+		}
+		if(strStartDate && strStartDate.length == 8 && strEndDate && strEndDate.length == 8) {
+			var startDate = new Date(strStartDate.substr(0, 4), strStartDate.substr(4, 2), strStartDate.substr(6, 2));
+			var endDate = new Date(strEndDate.substr(0, 4), strEndDate.substr(4, 2), strEndDate.substr(6, 2));
+
+			if(startDate > endDate) {
+				alert("종료일이 시작일보다 빠릅니다.");
+				var value = $("#srchEndCreated").val();
+				$("#srchEndCreated").val("");
+				$("#srchEndCreated").focus();
+				$("#srchEndCreated").val(value);
+				return false;
+			}
+		}
+
+		$("#searchForm").submit();
+	}
+
+	/**
+	 *	함 수 명 : searchEnterKey
+	 *	기	능  : 검색 엔터키 이벤트
+	 */
+	function searchEnterKey() {
+		$("#srchValue, #srchStartCreated, #srchEndCreated").on('keydown', function(e){
+			if (e.keyCode == '13') {
+				search();
+			}
+		});
+	}
+</script>
 </body>
 </html>

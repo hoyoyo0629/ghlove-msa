@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>답례품 카테고리 관리 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -25,9 +26,14 @@
     </style>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <h3>답례품 카테고리 관리</h3>
     <p style="color:#666; margin-bottom:12px;">
         답례품몰 GNB "전체 카테고리" 메가메뉴가 실제로 읽는 대분류(GIFT_CATEGORY) &gt; 중분류 &gt; 개별품목 3단계 트리입니다.
@@ -110,7 +116,10 @@
         <p th:if="${#lists.isEmpty(m.subcategories())}" class="empty" style="margin-left:20px; color:#999;">등록된 중분류가 없습니다.</p>
     </div>
     <p class="empty" th:if="${#lists.isEmpty(majors)}">등록된 카테고리가 없습니다.</p>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

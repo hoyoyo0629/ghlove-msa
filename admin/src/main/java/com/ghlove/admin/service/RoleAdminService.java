@@ -42,9 +42,31 @@ public class RoleAdminService {
     private final RoleRepository roleRepository;
     private final MenuRepository menuRepository;
     private final MenuRightRepository menuRightRepository;
+    private final com.ghlove.admin.repository.ManagerRepository managerRepository;
 
     public List<Role> list() {
         return roleRepository.findAllByOrderByRoleSeq();
+    }
+
+    /**
+     * AS-IS 권한그룹 목록(user-group/list.jsp) - 그룹명·설명·인원·생성일자를 함께 보여준다.
+     * AS-IS는 OP_ROLE LEFT JOIN OP_USER_ROLE으로 인원을 세지만 TO-BE는 매니저가 AUTHORITY를
+     * 직접 들고 있어 그 역할의 매니저 수로 센다.
+     */
+    public List<AdminRoleRow> adminRoleRows() {
+        return roleRepository.findAdminRoles().stream()
+                .map(r -> new AdminRoleRow(r, managerRepository.countByAuthority(r.getAuthority())))
+                .toList();
+    }
+
+    /** AS-IS가 목록 첫 행을 기본 선택하는 동작(role/list.jsp fnGroupSearch의 target==null 분기)용. */
+    public String firstAdminAuthority() {
+        List<AdminRoleRow> rows = adminRoleRows();
+        return rows.isEmpty() ? null : rows.get(0).role().getAuthority();
+    }
+
+    /** 목록 한 줄 - AS-IS UserGroupResult(groupName=ROLE_NAME, groupExplanation=ROLE_DESC, userCount). */
+    public record AdminRoleRow(Role role, long userCount) {
     }
 
     public Role get(String authority) {
@@ -71,6 +93,9 @@ public class RoleAdminService {
         role.setRoleName(roleName);
         role.setRoleDesc(roleDesc);
         role.setRoleSeq(roleSeq != null ? roleSeq : nextSeq());
+        // AS-IS insertRole은 CREATED_DATE/UPDATED_DATE를 CommonMapper.datetime(yyyyMMddHHmmss)로 넣는다
+        role.setCreatedDate(nowStamp());
+        role.setUpdatedDate(nowStamp());
         return roleRepository.save(role);
     }
 
@@ -85,7 +110,15 @@ public class RoleAdminService {
         if (roleSeq != null) {
             role.setRoleSeq(roleSeq);
         }
+        // AS-IS updateRole이 갱신하는 컬럼은 ROLE_NAME, ROLE_DESC, UPDATED_DATE 셋이다
+        role.setUpdatedDate(nowStamp());
         roleRepository.save(role);
+    }
+
+    /** AS-IS CommonMapper.datetime - 운영관리 전역에서 쓰는 yyyyMMddHHmmss 문자열. */
+    private static String nowStamp() {
+        return java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
     }
 
     @Transactional
@@ -110,7 +143,7 @@ public class RoleAdminService {
             }
         }
         List<Menu> topMenus = all.stream()
-                .filter(m -> m.getMenuParentId() == null)
+                .filter(Menu::isTopLevel)
                 .sorted(Comparator.comparing(Menu::getMenuSeq, Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
         Set<Integer> checked = menuRightRepository.findByAuthority(authority).stream()

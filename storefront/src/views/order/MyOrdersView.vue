@@ -104,7 +104,7 @@ function writeReview(o) {
                   <td class="date-col">{{ formatN(o.pointAmount) }}P</td>
                   <td class="date-col">
                     {{ o.orderStatusLabel }}
-                    <button v-if="o.orderStatus === 'CONFIRMED'" type="button" class="formBtn" style="display:block; margin-top:4px; padding:2px 8px; font-size:12px;" @click="writeReview(o)">후기작성</button>
+                    <button v-if="o.orderStatus === 'CONFIRMED' && o.itemCount <= 1" type="button" class="formBtn" style="display:block; margin-top:4px; padding:2px 8px; font-size:12px;" @click="writeReview(o)">후기작성</button>
                   </td>
                 </tr>
               </tbody>

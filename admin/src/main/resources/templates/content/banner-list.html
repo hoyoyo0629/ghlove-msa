@@ -1,58 +1,171 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>배너 관리 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <title>메인 배너관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <h3>배너 관리</h3>
-    <p><a class="btn" th:href="@{/banners/new}">+ 배너 등록</a></p>
+<!-- AS-IS opmanager/i18n/banner/main/list.jsp 이식. 5컬럼(배너명/내용/사용여부/관리/순서) 표이고
+     등록된 배너 뒤는 10행까지 빈 행으로 채워 그 자리에 등록 버튼을 둔다. 행마다 순서 셀렉트를
+     고르고 하단 저장으로 한 번에 반영한다(중복 순서는 JS가 먼저 막는다). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <table class="board_list_table">
-        <thead>
-        <tr>
-            <th>ID</th>
-            <th>이미지</th>
-            <th>제목</th>
-            <th>링크</th>
-            <th>노출위치</th>
-            <th>순서</th>
-            <th>상태</th>
-            <th>처리</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="b : ${banners}">
-            <td th:text="${b.bannerId}"></td>
-            <td><img th:if="${b.imageUrl}" th:src="${b.imageUrl}" alt="" style="height:32px;"></td>
-            <td th:text="${b.title}"></td>
-            <td th:text="${b.linkUrl}"></td>
-            <td th:text="${b.bannerType == 'LOGIN_WEB' ? '로그인(웹)' : (b.bannerType == 'LOGIN_MOBILE' ? '로그인(모바일)' : '메인')}"></td>
-            <td th:text="${b.displayOrder}"></td>
-            <td>
-                <span class="pill" th:classappend="${b.displayFlag == 'Y'} ? 'on' : 'off'"
-                      th:text="${b.displayFlag == 'Y'} ? '노출중' : '중지'"></span>
-            </td>
-            <td>
-                <a th:href="@{'/banners/' + ${b.bannerId} + '/edit'}" class="small-btn">수정</a>
-                <form th:action="@{'/banners/' + ${b.bannerId} + '/toggle'}" method="post" class="inline-form">
-                    <button type="submit" class="small-btn ghost" th:text="${b.displayFlag == 'Y'} ? '중지' : '노출'"></button>
-                </form>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(banners)}">등록된 배너가 없습니다.</p>
+<h3><span>메인 배너관리</span></h3>
+
+<div class="board_list">
+	<table class="board_list_table" summary="메인 배너관리">
+		<caption>메인 배너관리</caption>
+		<colgroup>
+			<col style="width:100px;">
+			<col style="width:300px;">
+			<col style="width:150px;">
+			<col style="width:150px;">
+			<col style="width:150px;">
+		</colgroup>
+		<thead>
+			<tr>
+				<th scope="col">배너명</th>
+				<th scope="col">내용</th>
+				<th scope="col">사용여부</th>
+				<th scope="col">관리</th>
+				<th scope="col">순서</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr th:each="item : ${list}" style="background:#fff;">
+				<td>
+					<div th:text="${item.title}"></div>
+				</td>
+				<td>
+					<div th:text="${item.contents}"></div>
+				</td>
+				<td>
+					<div th:text="${item.displayFlag == 'Y'} ? '사용' : '중지'"></div>
+				</td>
+				<td>
+					<div class="flex_box juc-center gap-08">
+						<button type="button" class="btn btn-dark-gray btn-sm" th:onclick="|bannerEdit('${item.bannerId}')|">수정</button>
+					</div>
+				</td>
+				<td>
+					<div class="flex_box juc-center">
+						<select name="displayOrder" th:attr="data-id=${item.bannerId}" title="순서" class="wd-80">
+							<option th:each="ord : ${#numbers.sequence(1, #lists.size(list))}"
+							        th:value="${ord}" th:selected="${item.displayOrder == ord}" th:text="${ord}"></option>
+						</select>
+					</div>
+				</td>
+			</tr>
+			<!-- AS-IS도 빈 행의 등록 버튼을 3번째 td(사용여부 칸)에 둔다 - 그대로 옮겼다 -->
+			<tr th:each="ban : ${#numbers.sequence(#lists.size(list) + 1, 10)}" th:if="${#lists.size(list) < 10}" style="background:#fff;">
+				<td>
+					<div></div>
+				</td>
+				<td>
+					<div></div>
+				</td>
+				<td>
+					<div class="flex_box juc-center gap-08">
+						<button type="button" class="btn btn-default btn-sm" onclick="bannerCreate();">등록</button>
+					</div>
+				</td>
+				<td>
+					<div></div>
+				</td>
+				<td>
+					<div></div>
+				</td>
+			</tr>
+		</tbody>
+	</table>
 </div>
+<div class="btn_all btn_center mt40">
+	<div class="flex_box gap-08">
+		<button type="button" class="btn btn-dark-gray btn-small" onclick="displayOrderSave();">저장</button>
+	</div>
+</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script type="text/javascript">
+	/**
+	 *	함 수 명 : bannerCreate
+	 *	기	능  : 배너 등록
+	 */
+	function bannerCreate() {
+		location.href = "/banners/create";
+	}
+
+	/**
+	 *	함 수 명 : bannerEdit
+	 *	기	능  : 배너 수정
+	 */
+	function bannerEdit(bannerId) {
+		 location.href = "/banners/edit/"+bannerId;
+	}
+
+	/**
+	 *	함 수 명 : displayOrderSave
+	 *	기	능  : 배열 순서 저장
+	 */
+	function displayOrderSave() {
+		if(!validator() || !confirm("저장하시겠습니까?")) return false;
+
+		var arrDisplayOrder = [];
+		$("select[name='displayOrder']").each(function(idx, item) {
+			if($(item).val() && $(item).attr("data-id")) {
+				arrDisplayOrder.push($(item).attr("data-id") + "|" + $(item).val());
+			}
+		});
+
+		$.post("/banners/change-display-order", {"displayOrderList": arrDisplayOrder}, function(response) {
+			if(response.isSuccess && response.data) {
+				alert("저장되었습니다.");
+				location.reload();
+			}
+		});
+	}
+
+	/**
+	 *	함 수 명 : validator
+	 *	기	능  : 유효성 검사
+	 */
+	function validator() {
+		var arrDisplayOrder = $("select[name='displayOrder']");
+		var arrTempDisplayOrder = [];
+		var isDup = false;
+
+		if(!arrDisplayOrder && !arrDisplayOrder.length) {
+			alert("변경할 메인 배너 정보가 없습니다.");
+			return false;
+		}
+
+		$(arrDisplayOrder).each(function(idx, item) {
+			if(arrTempDisplayOrder.indexOf($(item).val()) > -1) {
+				isDup = true;
+				return false;
+			} else {
+				arrTempDisplayOrder.push($(item).val());
+			}
+		});
+
+		if(isDup) {
+			alert("중복된 순서가 있어 저장되지 않았습니다. 확인해 주세요.");
+			return false;
+		}
+
+		return true;
+	}
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

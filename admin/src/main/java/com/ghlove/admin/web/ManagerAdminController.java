@@ -22,6 +22,7 @@ import java.util.Map;
 public class ManagerAdminController {
 
     private final ManagerAdminService managerAdminService;
+    private final com.ghlove.admin.web.support.FlashRedirect flashRedirect;
     private final RoleRepository roleRepository;
     private final LocgovClient locgovClient;
 
@@ -115,7 +116,7 @@ public class ManagerAdminController {
         try {
             managerAdminService.delete(userId, viewer.getUserId());
         } catch (ManagerException e) {
-            return "redirect:/admin/managers?errorMessage=" + encode(e.getMessage());
+            return flashRedirect.to("/admin/managers", e.getMessage());
         }
         return "redirect:/admin/managers";
     }

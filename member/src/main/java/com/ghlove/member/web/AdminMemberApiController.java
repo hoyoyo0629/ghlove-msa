@@ -4,6 +4,7 @@ import com.ghlove.member.domain.UserDataDestructionLog;
 import com.ghlove.member.service.AdminMemberService;
 import com.ghlove.member.service.MemberException;
 import com.ghlove.member.service.MemberService;
+import com.ghlove.member.service.OnePassMemberException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -49,14 +50,75 @@ public class AdminMemberApiController {
         }
     }
 
+    /**
+     * 관리자에 의한 회원탈퇴.
+     *
+     * <p>AS-IS 일반회원관리(4101)의 결과코드를 구분해야 해서 응답 본문에 {@code code}를 담는다 -
+     * 이미 탈퇴면 {@code ERR_ALR_SECEDE}, 디지털원패스 회원이면 {@code ERR_ONE_PASS}다.
+     * {@code leaveUserId}는 탈퇴를 처리한 운영자이고, 탈퇴회원리스트(4105)의 탈퇴구분·담당자
+     * 컬럼이 이 값으로 갈린다.
+     */
     @PostMapping("/members/{userId}/withdraw")
-    public ResponseEntity<?> withdraw(@PathVariable Long userId, @RequestParam(required = false) String reason) {
+    public ResponseEntity<?> withdraw(@PathVariable Long userId, @RequestParam(required = false) String reason,
+                                      @RequestParam(required = false) Long leaveUserId) {
         try {
-            adminMemberService.adminWithdraw(userId, reason);
+            adminMemberService.adminWithdraw(userId, reason, leaveUserId);
             return ResponseEntity.noContent().build();
+        } catch (OnePassMemberException e) {
+            return ResponseEntity.badRequest().body(Map.of("code", "ERR_ONE_PASS", "message", e.getMessage()));
         } catch (MemberException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+            String code = e.getMessage() != null && e.getMessage().contains("이미 탈퇴")
+                    ? "ERR_ALR_SECEDE" : "FAIL";
+            return ResponseEntity.badRequest().body(Map.of("code", code, "message", e.getMessage()));
         }
+    }
+
+    /**
+     * 회원 이름 일괄 조회 - admin 목록화면이 회원ID만 가졌을 때 이름을 채운다.
+     * 없는 ID는 결과에 들어있지 않다(AS-IS가 INNER JOIN이라 호출부가 그 행을 버린다).
+     */
+    @GetMapping("/members/names")
+    public Map<Long, String> userNames(@RequestParam List<Long> userIds) {
+        return adminMemberService.userNames(userIds);
+    }
+
+    /** 회원ID → 로그인ID 일괄조회. admin Q&A 관리(5112) 목록이 AS-IS의 OP_USER 조인 대신 쓴다. */
+    @GetMapping("/members/login-ids")
+    public Map<Long, String> userLoginIds(@RequestParam List<Long> userIds) {
+        return adminMemberService.userLoginIds(userIds);
+    }
+
+    /** 로그인ID 부분일치 회원ID 목록. admin Q&A 관리(5112)의 검색구분 '아이디'용. */
+    @GetMapping("/members/ids-by-login")
+    public List<Long> userIdsByLoginIdLike(@RequestParam String keyword) {
+        return adminMemberService.userIdsByLoginIdLike(keyword);
+    }
+
+    /**
+     * 국민비서(IPS) 문자 수신자 정보. admin Q&A 관리(5112) 답변 저장이 AS-IS
+     * {@code QnaMapper.getQnaUserInfo}(OP_QNA·OP_USER·OP_USER_DETAIL INNER JOIN) 대신 쓴다.
+     * 회원이나 상세정보가 없으면 AS-IS와 같이 <b>본문 없이</b>(204) 돌려준다.
+     */
+    @GetMapping("/members/{userId}/sms-receiver")
+    public ResponseEntity<AdminMemberService.SmsReceiverDto> smsReceiver(@PathVariable Long userId) {
+        AdminMemberService.SmsReceiverDto receiver = adminMemberService.smsReceiver(userId);
+        return receiver == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(receiver);
+    }
+
+    /** 일반회원관리(4101) 상세 > 배송지 관리 팝업. */
+    @GetMapping("/members/{userId}/deliveries")
+    public List<AdminMemberService.UserDeliveryRowDto> deliveries(@PathVariable Long userId) {
+        return adminMemberService.deliveries(userId);
+    }
+
+    /**
+     * 일반회원관리(4101) 상세 > 개인정보 열람 이력 기록 (AS-IS G_INDVDLINFO_READNG_HIST).
+     * admin이 운영자 비밀번호를 재확인한 뒤 비마스킹 정보를 보여주기 직전에 호출한다.
+     */
+    @PostMapping("/members/{userId}/pii-access")
+    public ResponseEntity<?> recordPiiAccess(@PathVariable Long userId, @RequestParam Long managerUserId) {
+        adminMemberService.recordPiiAccess(managerUserId, userId);
+        return ResponseEntity.noContent().build();
     }
 
     /** D4 탈퇴회원 조회. */

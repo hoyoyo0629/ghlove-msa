@@ -103,6 +103,62 @@ public class RepresentativeBannerService {
         return repository.save(banner);
     }
 
+    /**
+     * AS-IS {@code /banner/change-ordering} + {@code updateRepresentativeBanneOrdering} -
+     * 목록에서 노출순서를 한꺼번에 바꾼다.
+     *
+     * <p>AS-IS는 {@code id[]}와 {@code ordering[]} <b>두 배열을 같은 인덱스로 짝지어</b> 돌며
+     * 배너별 {@code DISPLAY_ORDER}를 UPDATE한다. 길이가 다르면 AS-IS는
+     * {@code ArrayIndexOutOfBoundsException}으로 터지므로 짝이 맞는 만큼만 처리한다.
+     */
+    @Transactional
+    public int changeOrdering(List<Integer> ids, List<Integer> orderings, Long managerId) {
+        if (ids == null || orderings == null || ids.isEmpty()) {
+            return 0;
+        }
+        int changed = 0;
+        int size = Math.min(ids.size(), orderings.size());
+        for (int i = 0; i < size; i++) {
+            Integer id = ids.get(i);
+            Integer ordering = orderings.get(i);
+            if (id == null || ordering == null) {
+                continue;
+            }
+            RepresentativeBanner banner = repository.findById(id).orElse(null);
+            if (banner == null) {
+                continue;
+            }
+            banner.setDisplayOrder(ordering);
+            banner.setLastUpdusrId(managerId);
+            banner.setLastUpdtPnttm(LocalDateTime.now());
+            repository.save(banner);
+            changed++;
+        }
+        return changed;
+    }
+
+    /**
+     * AS-IS {@code /banner/delete} + {@code deleteRepresentativeBanner} -
+     * <b>이름은 "삭제"지만 배너 행을 지우지 않는다</b>. {@code deleteFlag}가 가리키는
+     * <b>이미지 파일명만 비운다</b>({@code pc} → {@code FILE_NAME_PC=''},
+     * {@code mobile} → {@code FILE_NAME_MOBILE=''}). 배너 자체를 내리는 수단은 사용여부 전환이다.
+     *
+     * <p>AS-IS는 둘 중 어느 값도 아니면 수정자·수정일시만 바꾸고 끝난다 - 그 동작도 그대로 둔다.
+     * 디스크 파일은 AS-IS도 남긴다(컬럼만 비운다).
+     */
+    @Transactional
+    public RepresentativeBanner clearImage(Integer id, String deleteFlag, Long managerId) {
+        RepresentativeBanner banner = get(id);
+        if ("pc".equals(deleteFlag)) {
+            banner.setFileNamePc("");
+        } else if ("mobile".equals(deleteFlag)) {
+            banner.setFileNameMobile("");
+        }
+        banner.setLastUpdusrId(managerId);
+        banner.setLastUpdtPnttm(LocalDateTime.now());
+        return repository.save(banner);
+    }
+
     private void validate(String title, Integer displayOrder, Integer editingId) {
         if (title == null || title.isBlank()) {
             throw new RepresentativeBannerException("제목을 입력해 주세요.");

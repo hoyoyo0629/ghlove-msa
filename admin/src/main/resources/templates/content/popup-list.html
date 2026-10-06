@@ -1,58 +1,202 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>팝업 관리 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <title>팝업 목록 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <h3>팝업 관리</h3>
-    <p><a class="btn" th:href="@{/popups/new}">+ 팝업 등록</a></p>
+<!-- AS-IS opmanager/i18n/popup/list.jsp 이식. 검색폼(팝업상태/팝업형태/검색구분/사용기간) ·
+     건수표시 · 8컬럼 목록 · 선택삭제 · 페이지네이션까지 마크업 그대로 옮겼다. 라벨은 전부
+     op_common_message 코드로 조회한다(${msg.get('M00730')} = AS-IS ${op:message('M00730')}).
+     팝업상태/형태/타입 값은 AS-IS처럼 컨트롤러가 문구로 치환해 내려준다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <table class="board_list_table">
-        <thead>
-        <tr>
-            <th>ID</th>
-            <th>유형</th>
-            <th>제목</th>
-            <th>노출기간</th>
-            <th>상태</th>
-            <th>처리</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="p : ${popups}">
-            <td th:text="${p.popupId}"></td>
-            <td th:text="${typeLabels.get(p.popupType)} ?: ${p.popupType}"></td>
-            <td><a th:href="@{'/popups/' + ${p.popupId} + '/edit'}" th:text="${p.subject}"></a></td>
-            <td th:text="${p.startDate} + ' ~ ' + ${p.endDate}"></td>
-            <td>
-                <span class="pill" th:classappend="${p.useYn == 'Y'} ? 'on' : 'off'"
-                      th:text="${p.useYn == 'Y'} ? '노출중' : '중지'"></span>
-            </td>
-            <td>
-                <a class="small-btn" th:href="@{'/popups/' + ${p.popupId} + '/edit'}">수정</a>
-                <form th:action="@{'/popups/' + ${p.popupId} + '/toggle'}" method="post" class="inline-form">
-                    <button type="submit" class="small-btn ghost" th:text="${p.useYn == 'Y'} ? '중지' : '노출'"></button>
-                </form>
-                <form th:action="@{'/popups/' + ${p.popupId} + '/delete'}" method="post" class="inline-form"
-                      onsubmit="return confirm('삭제하시겠습니까?')">
-                    <button type="submit" class="small-btn danger">삭제</button>
-                </form>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(popups)}">등록된 팝업이 없습니다.</p>
-</div>
+        <!--팝업 리스트 시작-->
+        <h3><span>팝업관리</span></h3>
+        <form id="popupSearchParam" th:action="@{/popups}" method="post" enctype="multipart/form-data">
+            <div class="board_write">
+                <table class="board_write_table" summary="팝업관리">
+                    <caption>팝업관리</caption>
+                    <colgroup>
+                        <col style="width:150px;" />
+                        <col style="width:auto;" />
+                        <col style="width:150px;" />
+                        <col style="width:auto;" />
+                    </colgroup>
+                    <tbody>
+                         <tr>
+                            <td class="label" th:text="${msg.get('M00730')}">팝업상태</td> <!-- 팝업상태 -->
+                            <td>
+                                <div>
+                                    <select id="popupClose" name="popupClose" th:title="${msg.get('M00731')}"> <!-- 팝업상태선택 -->
+                                        <option value="0" th:text="${msg.get('M00039')}" th:selected="${popupSearchParam.popupClose == '0'}">전체</option>
+                                        <option value="1" th:text="${msg.get('M00083')}" th:selected="${popupSearchParam.popupClose == '1'}">사용</option>
+                                        <option value="2" th:text="${msg.get('M00732')}" th:selected="${popupSearchParam.popupClose == '2'}">일시정지</option>
+                                        <option value="3" th:text="${msg.get('M00733')}" th:selected="${popupSearchParam.popupClose == '3'}">종료</option>
+                                    </select>
+                                </div>
+                            </td>
+                            <td class="label" th:text="${msg.get('M00734')}">팝업형태</td> <!-- 팝업형태 -->
+                            <td>
+                                <div>
+                                    <select id="popupStyle" name="popupStyle" th:title="${msg.get('M00735')}"> <!-- 팝업형태선택 -->
+                                        <option value="0" th:text="${msg.get('M00039')}" th:selected="${popupSearchParam.popupStyle == '0'}">전체</option>
+                                        <option value="1" th:text="${msg.get('M00736')}" th:selected="${popupSearchParam.popupStyle == '1'}">텍스트입력</option>
+                                        <option value="2" th:text="${msg.get('M00737')}" th:selected="${popupSearchParam.popupStyle == '2'}">테두리없음</option>
+                                        <option value="3" th:text="${msg.get('M00738')}" th:selected="${popupSearchParam.popupStyle == '3'}">이미지등록</option>
+                                    </select>
+                                </div>
+                            </td>
+                         </tr>
+                        <tr>
+                            <td class="label" th:text="${msg.get('M00011')}">검색구분</td> <!-- 검색구분 -->
+                            <td colspan="3">
+                                <div>
+                                    <select id="where" name="where" th:title="${msg.get('M00468')}"> <!-- 키워드선택 -->
+                                        <option value="SUBJECT" th:text="${msg.get('M00739')}">팝업제목</option>
+                                    </select>
+                                    <input type="text" id="query" name="query" class="three" th:value="${popupSearchParam.query}" th:title="${msg.get('M00740')}" /> <!-- 팝업제목 입력 -->
+                                </div>
+                            </td>
+                        </tr>
+                         <tr>
+                            <td class="label" th:text="${msg.get('M00496')}">사용기간</td> <!-- 사용기간 -->
+                            <td colspan="3">
+                                <div>
+                                    <span class="datepicker"><input type="text" id="startDate" name="startDate" maxlength="8" class="datepicker" th:value="${popupSearchParam.startDate}" th:title="${msg.get('M00507')}" /></span> <!-- 팝업시작일자 -->
+                                    <span class="wave">~</span>
+                                    <span class="datepicker"><input type="text" id="endDate" name="endDate" maxlength="8" class="datepicker" th:value="${popupSearchParam.endDate}" th:title="${msg.get('M00509')}" /></span> <!-- 팝업종료일자 -->
+                                </div>
+                            </td>
+                         </tr>
+                    </tbody>
+                </table>
+            </div> <!-- // board_write -->
+
+            <!-- 버튼시작 -->
+            <div class="btn_all btn_right">
+                <div class="flex_box gap-08">
+                    <button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/popups';"><span class="glyphicon glyphicon-repeat"></span> <span th:text="${msg.get('M00047')}">초기화</span></button> <!-- 초기화 -->
+                    <button type="submit" class="btn btn-dark-gray btn-mini"><span class="glyphicon glyphicon-search"></span> <span th:text="${msg.get('M00048')}">검색</span></button> <!-- 검색 -->
+                </div>
+            </div>
+            <!-- 버튼 끝-->
+        </form>
+
+        <div class="count_title mt20">
+            <h5>
+                <span th:text="${msg.get('M00039')}" th:remove="tag">전체</span> : <span th:text="${popupCount}" th:remove="tag">0</span> <span th:text="${msg.get('M00743')}" th:remove="tag">건 조회</span>
+            </h5>  <!-- 전체 -->   <!-- 건 조회 -->
+        </div>
+
+        <form id="listForm">
+            <div class="board_write">
+                <table class="board_list_table" th:summary="${msg.get('M00273')}"> <!-- 주문내역 리스트 -->
+                    <caption th:text="${msg.get('M00273')}">주문내역 리스트</caption>
+                    <colgroup>
+                        <col style="width:8%;" />
+                        <col style="width:7%;" />
+                        <col style="width:auto;" />
+                        <col style="width:14%;" />
+                        <col style="width:11%;" />
+                        <col style="width:10%;" />
+                        <col style="width:10%;" />
+                        <col style="width:16%;" />
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th scope="col"><input type="checkbox" id="check_all" th:title="${msg.get('M00169')}" /></th>
+                            <th scope="col">NO</th>
+                            <th scope="col" th:text="${msg.get('M00739')}">팝업제목</th>  <!-- 팝업제목 -->
+                            <th scope="col" th:text="${msg.get('M00496')}">사용기간</th> <!-- 사용기간 -->
+                            <th scope="col" th:text="${msg.get('M00730')}">팝업상태</th> <!-- 팝업상태 -->
+                            <th scope="col" th:text="${msg.get('M00744')}">팝업타입</th> <!-- 팝업타입 -->
+                            <th scope="col" th:text="${msg.get('M00734')}">팝업형태</th> <!-- 팝업형태 -->
+                            <th scope="col" th:text="${msg.get('M00087')} + '/' + ${msg.get('M00074')}">수정/삭제</th> <!-- 수정 --> <!-- 삭제 -->
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="list, i : ${popupList}">
+                            <td><input type="checkbox" name="id" id="check" th:value="${list.popupId}" th:title="${msg.get('M00169')}" /></td>
+                            <td th:text="${pagination.itemNumber - i.count}">0</td>
+                            <td class="tleft">
+                                <div>
+                                    <a th:href="@{'/popups/' + ${list.popupId} + '/edit'}" th:text="${list.subject}"></a>
+                                </div>
+                            </td>
+                            <td th:text="${list.startDate} + ' ~ ' + ${list.endDate}"></td>
+                            <td th:text="${list.popupClose}"></td>
+                            <td th:text="${list.popupType}"></td>
+                            <td th:text="${list.popupStyle}"></td>
+                            <td class="red">
+                                <div class="btn_all btn_center">
+                                    <div class="flex_box gap-08">
+                                        <a th:href="@{'/popups/' + ${list.popupId} + '/edit'}" class="btn btn-gradient btn-sm" th:text="${msg.get('M00087')}">수정</a>
+                                        <a th:href="|javascript:deleteCheck('${list.popupId}');|" class="btn btn-gradient btn-sm" th:text="${msg.get('M00074')}">삭제</a>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div><!--// board_write E-->
+
+            <div class="no_content" th:if="${#lists.isEmpty(popupList)}" th:text="${msg.get('M00473')}">
+                데이터가 없습니다.
+            </div>
+
+            <div class="btn_all btn_right">
+                <div class="flex_box gap-08">
+                    <a id="delete_list_data" href="#" class="btn btn-default btn-mini" th:text="${msg.get('M00576')}">선택삭제</a> <!-- 선택삭제 -->
+                    <a th:href="@{/popups/new}" class="btn btn-active btn-mini"><span class="glyphicon glyphicon-plus"></span> <span th:text="${msg.get('M00088')}">등록</span></a> <!-- 등록 -->
+                </div>
+            </div>
+
+            <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div><br/>
+            <!--// 전체주문 내역 끝-->
+        </form>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script type="text/javascript" th:inline="javascript">
+
+/* AS-IS ViewUtils.redirect(url, message)가 띄우던 등록/수정/삭제 안내.
+   메시지는 flash scope로 1회만 넘어온다 - URL에 ?errorMessage=가 붙지 않고 새로고침해도
+   다시 뜨지 않는다(AS-IS FlashMapUtils.setMessage와 같은 방식).
+   AS-IS는 저장 후 검색조건·페이지 없이 목록으로 돌아간다(2페이지에서 수정해도 1페이지로
+   간다 - AS-IS 동작 그대로다). */
+var redirectMessage = /*[[${redirectMessage}]]*/ null;
+
+$(function() {
+
+    if (redirectMessage) {
+        alert(redirectMessage);
+    }
+
+    //목록데이터 - 삭제처리
+    $('#delete_list_data').on('click', function() {
+        Common.updateListData("/popups/delete-list", Message.get("M00306"));    // 선택된 데이터를 삭제하시겠습니까?
+    });
+});
+
+function deleteCheck(popupId) {
+    if (confirm(Message.get("M00745"))) {       // 해당 팝업을 삭제하시겠습니까?
+        location.replace("/popups/" + popupId + "/delete");
+    } else {
+        return;
+    }
+}
+
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

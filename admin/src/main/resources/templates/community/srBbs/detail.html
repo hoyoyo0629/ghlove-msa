@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>SR 게시판 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/community/srBbs/detail.jsp 이식(메뉴 11404 SR 게시판 상세).
+     게시글 + 본문 첨부 + 댓글(등록/수정/삭제) + 댓글 첨부(등록/삭제/다운로드).
+
+     AS-IS verbatim:
+     - 댓글 <b>입력칸이 목록 위</b>에 있다(소통방은 아래). 댓글 정렬도 등록일시 오름차순이다.
+     - 작성자 표기: 1·2는 "시스템 관리자"만, 3·4는 "행정안전부" + 이름, 그 외는 지자체명 + 이름.
+     - 본문 첨부 영역은 글이 없어도 '첨부자료' 라벨 줄이 항상 보인다(테두리만 남는다).
+     - 본인 댓글에만 [파일등록(녹색)] [삭제(주황 #fb502e)] [수정] 버튼이 보인다.
+     - 댓글 첨부의 X(삭제) 아이콘은 <b>파일 등록자 또는 ROLE_ADMIN_1·2</b>에게만 보인다.
+     - 게시글 수정·삭제 버튼은 작성자 본인에게만 보인다.
+     - 삭제 확인문구 "등록된 게시글을 삭제합니다. 글 삭제 시 댓글도 함께 삭제됩니다."
+     - 댓글 첨부 선택 시 클라이언트 검사는 <b>30MB</b>인데 서버는 50MB다(AS-IS 불일치 - 그대로 둔다).
+     - 파일 삭제 확인문구 "파일이 실제로 삭제됩니다.\n삭제하시겠습니까?"
+
+     ★ AS-IS 결함 2건을 고쳐 둔 자리:
+       ① 본문 첨부 크기를 AS-IS는 스칼라 서브쿼리 하나로 뽑아 모든 첨부에 같은 값을 찍고,
+          첨부가 2건 이상이면 SQL이 실패해 화면이 500이 된다 → 파일마다 자기 크기를 쓴다.
+       ② 댓글 첨부 크기는 AS-IS 매퍼가 채우지 않아 괄호만 나왔다 → 같은 공식으로 채웠다.
+       자세한 내용은 CmntySrBbsAdminService 클래스 주석.
+
+     ★ 의도적 차이(보안): 댓글 본문은 AS-IS가 raw 렌더링(저장형 XSS)이라 이스케이프했다.
+       <pre>가 줄바꿈을 살리므로 정상 글은 보이는 모습이 같다. 본문은 에디터 HTML이라 raw 유지. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span th:text="${msg.get('MENU_11404')}">SR 게시판</span></h3>
+
+<input type="hidden" id="bbsId" th:value="${detail.bbsId}"/>
+<section id="contents">
+	<div class="contents-wrap">
+		<div class="center">
+			<div class="s-contents list-page-wrapper">
+
+				<!-- 게시글 영역 -->
+				<div class="list-page-area">
+					<div class="list-page-body notice">
+						<div class="page-title" style="border-top: 1px solid black; margin-top: 50px; text-align: left;"
+							 th:text="${detail.bbsTtl}"></div>
+
+						<!-- 게시글 헤더 영역 -->
+						<div class="page-info">
+							<div class="page-info-list">
+								<span style="color: black; font-size: 14px; padding: 5px;">작성자 : </span>
+								<th:block th:if="${detail.authority == 'ROLE_ADMIN_1' or detail.authority == 'ROLE_ADMIN_2'}">
+									<span style="color: black; font-size: 14px; font-weight:bold; padding: 5px;">시스템 관리자</span>
+								</th:block>
+								<th:block th:if="${detail.authority == 'ROLE_ADMIN_3' or detail.authority == 'ROLE_ADMIN_4'}">
+									<span style="color: black; font-size: 14px; font-weight:bold; padding: 5px;">행정안전부</span>
+									<span style="color: black; font-size: 14px; padding: 5px;" th:text="${detail.userName}"></span>
+								</th:block>
+								<th:block th:unless="${detail.authority == 'ROLE_ADMIN_1' or detail.authority == 'ROLE_ADMIN_2'
+													   or detail.authority == 'ROLE_ADMIN_3' or detail.authority == 'ROLE_ADMIN_4'}">
+									<span style="color: black; font-size: 14px; font-weight:bold; padding: 5px;"
+										  th:text="${detail.upperLocgovNm} + ' ' + ${detail.locgovNm}"></span>
+									<span style="color: black; font-size: 14px; padding: 5px;" th:text="${detail.userName}"></span>
+								</th:block>
+							</div>
+							<div class="page-info-list">
+								<span style="color: black; font-size: 14px; padding: 5px;">작성일시 : </span>
+								<div class="date-created" style="color: black; padding: 5px; display: flex;"
+									 th:text="${detail.frstCrtDt != null} ? ${#temporals.format(detail.frstCrtDt, 'yyyy-MM-dd HH:mm:ss')} : ''"></div>
+								<div class="views" style="color: black; padding: 5px;">조회 <span th:text="${detail.inqCnt}">0</span></div>
+							</div>
+						</div>
+						<!-- 게시글 헤더 영역 -->
+
+						<!-- 게시글 본문 영역 -->
+						<div class="page-contents" style="min-height: 400px; padding: 53px 15px 53px 15px; text-align: start;"
+							 th:utext="${bbsCnHtml}"></div>
+						<div style="padding: 10px; border-bottom:1px solid #000; border-top:1px solid #dfdede; display:flex;">
+							<div class="file-list-label" style=" line-height: 2.0; margin-right:20px;">
+								<img th:src="@{/content/images/icon/cli-icon_file-list.png}" alt="첨부자료"> 첨부자료
+							</div>
+							<div class="file-list-title">
+								<div class="file_camera" th:each="file : ${fileList}" th:id="'fileId_' + ${file.fileId}">
+									<a th:href="|javascript:downloadItemImage(${file.fileId});|" th:text="${file.orgnlAtchFileNm}"></a>
+									<span style="padding:3px" th:text="'(' + ${file.fileSize} + ')'"></span>
+								</div>
+							</div>
+						</div>
+						<!-- 게시글 본문 영역 -->
+					</div>
+				</div>
+				<!-- 게시글 영역 -->
+
+				<!-- 댓글 영역 -->
+				<div>
+					<div style="padding: 10px 0px; margin: 10px 0px; font-size: 20px; border-bottom: 1px solid #000">댓글<span style="color: red; margin-left: 10px;" th:text="'[' + ${srBbsCmntListCnt} + ']'">[0]</span></div>
+					<div class="comment-wrap" style="margin: 10px 0px">
+						<textarea id="cmntCn" class="reply_area" rows="3" cols="60" maxlength="1000" placeholder="댓글을 입력하세요"></textarea>
+						<button type="button" class="commentButton" onclick="addCmnt()" style="background: #004CCE;">등록</button>
+					</div>
+					<div id="cmntList" style="border-top: 1px solid #000">
+						<th:block th:each="cmnt : ${cmntList}">
+						<li style="border-bottom: 1px solid #ccc; padding: 15px 10px; margin-bottom: 10px; display:inline-block; width:100%">
+							<th:block th:if="${cmnt.authority == 'ROLE_ADMIN_1' or cmnt.authority == 'ROLE_ADMIN_2'}">
+								<span style="font-size: 14px; font-weight:bold">시스템 관리자</span>
+							</th:block>
+							<th:block th:if="${cmnt.authority == 'ROLE_ADMIN_3' or cmnt.authority == 'ROLE_ADMIN_4'}">
+								<span style="font-size: 14px; font-weight:bold">행정안전부</span>
+								<span style="font-size: 14px;" th:text="${cmnt.userName}"></span>
+							</th:block>
+							<th:block th:unless="${cmnt.authority == 'ROLE_ADMIN_1' or cmnt.authority == 'ROLE_ADMIN_2'
+												   or cmnt.authority == 'ROLE_ADMIN_3' or cmnt.authority == 'ROLE_ADMIN_4'}">
+								<span style="font-size: 14px; font-weight:bold"
+									  th:text="${cmnt.upperLocgovNm} + ' ' + ${cmnt.locgovNm}"></span>
+								<span style="font-size: 14px;" th:text="${cmnt.userName}"></span>
+							</th:block>
+							<span th:text="${cmnt.frstCrtDt != null} ? ${#temporals.format(cmnt.frstCrtDt, 'yyyy-MM-dd HH:mm:ss')} : ''"></span>
+							<th:block th:if="${userId != null and cmnt.frstCrtId == userId}">
+								<button type="button" style="float: right; margin-left:10px; background-color: green;"
+										th:attr="data-bbsid=${cmnt.bbsId},data-cmntid=${cmnt.cmntId}"
+										class="btn btn-dark-gray btn-sm fileUpload">파일등록</button>
+								<button type="button" style="float: right; margin-left:10px; background-color: #fb502e;"
+										class="btn btn-dark-gray btn-sm delete" th:attr="cmntId=${cmnt.cmntId}">삭제</button>
+								<button type="button" style="float: right;" class="btn btn-dark-gray btn-sm openUpdate"
+										th:attr="cmntId=${cmnt.cmntId}">수정</button>
+							</th:block>
+							<div style="margin-top: 20px; font-size: 13px;">
+								<p>
+									<pre class="cmntCn" style="white-space:pre-wrap; word-wrap:break-word" th:text="${cmnt.cmntCn}"></pre>
+								</p>
+							</div>
+							<div style="position: relative; top: 12px; width: 90%; display:none;" class="updateArea">
+								<textarea rows="3" cols="60" maxlength="1000" placeholder="댓글을 입력하세요" th:text="${cmnt.cmntCn}"></textarea>
+								<button class="commentButton2 update" style="background: #004CCE;" th:attr="cmntId=${cmnt.cmntId}">완료</button>
+							</div>
+							<div style="padding: 10px; display:flex;" th:if="${not #lists.isEmpty(cmnt.files)}">
+								<div class="file-list-label" style=" line-height: 2.0; margin-right:20px;">
+									<img th:src="@{/content/images/icon/cli-icon_file-list.png}" alt="첨부자료"> 첨부자료
+								</div>
+								<div class="file-list-title">
+									<div class="file_camera" th:each="cmntFile : ${cmnt.files}" th:id="'fileId_' + ${cmntFile.fileId}">
+										<a style="color:black;" th:href="|javascript:downloadCmntItemImage(${cmntFile.fileId});|"
+										   th:text="${cmntFile.orgnlAtchFileNm}"></a>
+										<span style="padding:3px" th:text="'(' + ${cmntFile.fileSize} + ')'"></span>
+										<span style="padding:3px" th:text="${cmntFile.frstCrtDt != null} ? ${#temporals.format(cmntFile.frstCrtDt, 'yyyy-MM-dd HH:mm:ss')} : ''"></span>
+										<a th:if="${(userId != null and cmntFile.frstCrtId == userId) or role == 'ROLE_ADMIN_1' or role == 'ROLE_ADMIN_2'}"
+										   th:href="|javascript:deleteItemImage(${cmntFile.fileId});|">
+											<img th:src="@{/content/images/btn/file_close.gif}" alt="close">
+										</a>
+									</div>
+								</div>
+							</div>
+						</li>
+						<form class="cmntFileUploadForm" th:id="'cmntFileUploadForm' + ${cmnt.cmntId}" method="post"
+							  th:action="@{/community/sr-bbs/cmnt/upload}" enctype="multipart/form-data">
+							<input type="file" th:id="'cmntFileUpload' + ${cmnt.cmntId}" name="detailImageFile" style="display:none">
+							<input type="hidden" name="cmntId" th:value="${cmnt.cmntId}">
+							<input type="hidden" name="bbsId" th:value="${cmnt.bbsId}">
+						</form>
+						</th:block>
+					</div>
+
+
+				</div>
+			</div>
+			<div class="btn-box">
+				<button type="button" class="btn btn-defualt btn-small list">목록</button>
+				<th:block th:if="${userId != null and detail.frstCrtId == userId}">
+					<button type="button" class="btn btn-dark-gray btn-small"
+							th:attr="onclick=|location.href='/community/sr-bbs/edit/${detail.bbsId}'|"
+							th:text="${msg.get('M00087')}">수정</button>
+					<button type="button" class="btn btn-danger btn-small"
+							th:attr="onclick=|deleteItem(${detail.bbsId})|"
+							th:text="${msg.get('M00074')}">삭제</button>
+				</th:block>
+			</div>
+		</div>
+	</div>
+</section>
+
+    </div>
+    </div>
+</div>
+</div>
+
+<div th:replace="~{fragments/file-upload-agree :: modal}"></div>
+
+<link rel="stylesheet" type="text/css" th:href="@{/content/css/community.css}">
+
+<script type="text/javascript" th:src="@{/content/modules/cmnty/srBbsCmnt.js}"></script>
+<script type="text/javascript" th:inline="javascript">
+
+// AS-IS ViewUtils.redirect(url, message) - 안내문구를 alert으로 띄운다
+var redirectMessage = /*[[${redirectMessage}]]*/ null;
+
+$(function(){
+	if (redirectMessage) {
+		alert(redirectMessage);
+	}
+	cmnt.init();
+})
+
+function downloadItemImage(fileId) {
+	location.href = '/community/sr-bbs/file-download/'+fileId
+}
+
+function deleteItem(bbsId) {
+	var url = "/community/sr-bbs/deleteSrBbs/" + bbsId
+	if(confirm("등록된 게시글을 삭제합니다. 글 삭제 시 댓글도 함께 삭제됩니다.")){
+	$.post(url, {}, function(response) {
+		Common.responseHandler(response, function() {
+			alert(response.data);
+			location.href = "/community/sr-bbs/list";
+		});
+	});
+	}
+}
+
+function addCmnt() {
+	let message = '댓글을 등록하시겠습니까?';
+	if (!confirm(message)) return;
+
+	let cmntySrBbsCmntDto = {bbsId : $('#bbsId').val(), cmntCn : $('#cmntCn').val()};
+	$.post("/community/sr-bbs/cmnt/add", cmntySrBbsCmntDto, function(response) {
+		Common.responseHandler(response, function() {
+			if(response.isSuccess) {
+				alert(response.data);
+				location.href = "/community/sr-bbs/detail/"+$('#bbsId').val();
+			}
+		});
+	});
+}
+
+
+$(".fileUpload").on("click", function(){
+	var cmntFileId = "cmntFileUpload" + $(this).data("cmntid");
+	fileUploadPopupOpen(cmntFileId);
+})
+
+$(".cmntFileUploadForm").on("change", function(){
+	let size = 30 * 1024 * 1024;
+	let fileTypes = ['jpg', 'jpeg', 'gif', 'bmp', 'png', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'pdf', 'tif', 'tiff', 'hwp', 'hwpx','zip', '7z'] // 파일 확장자 , 이후에도 확장자 추가 가능
+
+	let file = this[0].files[0];
+
+	let type = file.name.split('.').pop().toLowerCase(); // 파일 확장자 가져오기
+
+	if(file.size > size) {
+		alert("첨부파일 용량은 최대 30MB 까지 가능합니다.");
+		$(this).find("input[type='file']").val("");
+		return false;
+	}else if($.inArray(type, fileTypes) == -1) {
+		alert("등록할 수 없는 첨부파일 입니다.")
+		$(this).find("input[type='file']").val("");
+		return false;
+	}
+
+
+	if(confirm("파일을 등록하시겠습니까?")){
+		this.submit();
+	}else{
+		$(this).find("input[type='file']").val("");
+		return false;
+	}
+})
+
+function deleteItemImage(fileId) {
+	var message = '파일이 실제로 삭제됩니다.\n삭제하시겠습니까?';
+	if (!confirm(message)) {
+		return;
+	}
+
+	var param = {'fileId': fileId};
+	$.post('/community/sr-bbs/cmnt/deleteFile', param, function(response){
+		Common.responseHandler(response);
+		$("#fileId_"+fileId).remove();
+		alert("파일이 삭제되었습니다.");
+	});
+}
+
+function downloadCmntItemImage(fileId) {
+	location.href = '/community/sr-bbs/cmnt/file-download/'+fileId
+}
+</script>
+</body>
+</html>

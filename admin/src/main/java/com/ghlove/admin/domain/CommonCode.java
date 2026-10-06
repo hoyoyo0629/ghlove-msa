@@ -49,4 +49,13 @@ public class CommonCode {
 
     @Column(name = "CODE_VALUE")
     private String codeValue;
+
+    /** AS-IS EXTENSION_CODE - 등록/수정 폼의 "확장코드"(M01684). AS-IS 도메인 필드명은
+     *  extentionCode지만(오타) 컬럼은 EXTENSION_CODE다. */
+    @Column(name = "EXTENSION_CODE")
+    private String extensionCode;
+
+    /** AS-IS MAPPING_CODE - 등록/수정 폼의 "매핑코드"(M01685). */
+    @Column(name = "MAPPING_CODE")
+    private String mappingCode;
 }

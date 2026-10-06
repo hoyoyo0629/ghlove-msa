@@ -1,8 +1,9 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
 import { formatN } from '../../utils/format'
+import { modalAlert } from '../../composables/useModal'
 
 // AS-IS designated-donation/details.html 재현(donation 서비스 designated-detail.html과 동일
 // 출처). 이미지 갤러리는 AS-IS도 대표 이미지 1장 구조가 대부분이라(donation 서비스 라운드에서
@@ -25,14 +26,25 @@ async function load() {
     project.value = await api.get('donation', `/api/designated-donation/projects/${route.params.id}`)
   } catch {
     router.push('/designated-donation')
+    return
   } finally {
     loading.value = false
   }
+  // 프로젝트가 렌더된 뒤에 탭 바의 실제 위치를 잡아야 한다 - 로딩 중에는 v-if로 탭 바가
+  // 아직 DOM에 없어 offsetTop을 0으로 잡게 되고, 그러면 조금만 스크롤해도 sticky가 켜져
+  // 탭 바가 position:fixed로 헤더 뒤에 숨는다(탭이 안 보이던 원인).
+  await nextTick()
+  captureTabOffset()
 }
 onMounted(load)
 
 let tabOffsetTop = 0
 function onScroll() {
+  // 고정되기 전에는 실제 흐름상 위치를 다시 잡아둔다 - 대표이미지 로드 등으로 탭 바 위치가
+  // 바뀌어도 정확한 임계점에서만 sticky가 켜지도록(고정 상태에선 offsetTop이 고정좌표라 갱신 X).
+  if (!sticky.value) {
+    captureTabOffset()
+  }
   sticky.value = window.pageYOffset >= tabOffsetTop
 }
 function captureTabOffset() {
@@ -57,6 +69,22 @@ function toggleNotice(id) {
 }
 function goDonate() {
   router.push({ path: '/donate', query: { locgovCode: project.value.lclgvCd, prjId: String(project.value.dsgnDntnBizId) } })
+}
+
+// AS-IS designated-donation/details.html saveCheerMsg - 본인 기부건(giveOrder==1)의 응원메시지 저장.
+async function saveCheerMsg(c) {
+  const msg = c.cheerMsg ?? ''
+  if (msg.length > 30) {
+    modalAlert('30자 까지 입력가능합니다.')
+    return
+  }
+  try {
+    await api.post('donation', '/api/designated-donation/saveCheerMsg', { cntrSn: c.cntrSn, cheerMsg: msg })
+    await load()
+    activeTab.value = 'review'
+  } catch (e) {
+    modalAlert(e.message)
+  }
 }
 function imgUrl() {
   return project.value.imageUrl || '/images/thumb.png'
@@ -198,8 +226,15 @@ function imgUrl() {
                       <div class="review_para" style="width: 70%">
                         <p class="prj-tab-list_point-txt"><strong class="pointRed">{{ formatN(c.cntrAmt) }}</strong>원 참여</p>
                       </div>
-                      <div class="review_para" style="width: 100%">
-                        <p v-if="c.cheerMsg">{{ c.cheerMsg }}</p>
+                      <div class="review_para" style="display:flex; justify-content:space-between; align-items:center; width:100%">
+                        <!-- AS-IS: 본인 기부건(giveOrder==1)만 인라인 입력+적용, 남의 건은 읽기전용 -->
+                        <template v-if="c.giveOrder === 1">
+                          <input type="text" style="width:100%" maxlength="30" v-model="c.cheerMsg" />
+                          <div class="review_id" style="padding-left:10px">
+                            <button class="formBtn" style="font-size:13px" type="button" @click="saveCheerMsg(c)">적용</button>
+                          </div>
+                        </template>
+                        <p v-else-if="c.cheerMsg" style="white-space:normal">{{ c.cheerMsg }}</p>
                       </div>
                       <div class="m-field" style="min-width: 30%">
                         <div class="review_id"><p>{{ c.maskedUserName }}</p></div>

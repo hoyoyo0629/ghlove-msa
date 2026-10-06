@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="format-detection" content="telephone=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no" />
+
+<script type="text/javascript">
+var certData = {};
+$(document).ready(function () {
+	funDetailViewInit();
+
+	funDetailProcInit();
+
+	initDetailEventHandler();
+
+	//key event 
+	$(this).keydown(function(e){
+		if(e.keyCode == "9"){
+			var targetElement = $(document.activeElement).attr("id");
+			var parentElement = $(document.activeElement).parent().attr("id");
+			
+			//console.log("targetElement.id === " + targetElement);
+			//console.log("parentElement.id === " + parentElement);
+
+			if(targetElement == "stg_smartcert" ){
+				var selection = $("#dataTable").MLjquiDataTable('getSelection');
+				if(selection && selection.length>0){
+					console.log("ifififififififififififif");
+					//$("#dataTable").focus();
+					//$("#dataTable").css("border","solid 1px red");
+				}else{
+					console.log("elseelseelseelseelseelse");
+					//$("#btn_viewCert").focus();
+					//$("#btn_viewCert").css("border","solid 1px red");
+				}
+			}else if(targetElement==null || targetElement=='undefined'){
+				
+			}
+		} else if (e.keyCode == "27"){
+			console.log("Esc keydown Esc keydown Esc keydown Esc keydown");
+			e.preventDefault();
+		} else if(e.keyCode == "13"){
+			if(typeof(document.querySelector(":focus").id) != "undefined"){
+				selectCertField(document.querySelector(":focus").id);
+			}
+		}
+	});
+});
+
+function funDetailViewInit(){
+	// tab (5/38)
+	$('ul.tabs').each(function(){
+		var $active, $content, $links = $(this).find('a');
+
+		$active = $($links.filter('[href="'+location.hash+'"]')[0] || $links[0]);
+		$active.addClass('active');
+
+		$content = $($active[0].hash);
+
+		// Hide the remaining content
+		$links.not($active).each(function () {
+			$(this.hash).hide();
+		});
+
+		// Bind the click event handler
+		$(this).on('click', 'a', function(e){
+			// Make the old tab inactive.
+			$active.removeClass('active');
+			$content.hide();
+
+			// Update the variables with the new link and content
+			$active = $(this);
+			$content = $(this.hash);
+
+			// Make the tab active.
+			$active.addClass('active');
+			$content.show();
+
+			// Prevent the anchor's default click action
+			e.preventDefault();
+		});
+	});
+
+	//초기값 일반탭 선택...
+	$('#ML_cert_orgtext_area1').click();
+}
+
+function funDetailProcInit() {
+	_createDetailWindow();
+}
+
+function transKeyusage(data){
+	var val = "";
+	if(data!=null && data!=""){
+		$(data.split(",")).each(function(){
+//			console.log(this);
+//			console.log($.i18n.prop(this));
+			if(val == "")
+				val += $.i18n.prop($.trim(this));
+			else
+				val += ", " + $.i18n.prop($.trim(this));
+		});
+	}
+	return val;
+}
+
+function refreshCertView(data){
+	certData = data;
+	//------------------------------------------------- startdatetime 구분
+	var start_date_div = data.startdatetime.split("-");
+	var start_daytime_div = start_date_div[2].split(" ");
+	
+	var start_date_year = start_date_div[0];
+	var start_date_month = start_date_div[1];
+	var start_date_day = start_daytime_div[0];
+	var start_date_time = start_daytime_div[1];
+	
+	if(start_date_month < 10 && start_date_month.length < 2){
+		start_date_month = '0' + start_date_month;
+	}
+	if(start_date_day < 10 && start_date_day.length < 2){
+		start_date_day = '0' + start_date_day;
+	}
+	
+	var startdatetime = start_date_year + '-' + start_date_month + '-' + start_date_day + ' ' + start_date_time;
+	data.startdatetime = startdatetime;
+
+	//-------------------------------------------------- enddatetime 구분
+	var end_date_div = data.enddatetime.split("-");
+	var end_daytime_div = end_date_div[2].split(" ");
+	
+	var end_date_year = end_date_div[0];
+	var end_date_month = end_date_div[1];
+	var end_date_day = end_daytime_div[0];
+	var end_date_time = end_daytime_div[1];
+	
+	if(end_date_month < 10 && end_date_month.length < 2){
+		end_date_month = '0' + end_date_month;
+	}
+	if(end_date_day < 10 && end_date_day.length < 2){
+		end_date_day = '0' + end_date_day;
+	}	
+	var enddatetime = end_date_year + '-' + end_date_month + '-' + end_date_day + ' ' + end_date_time;
+	data.enddatetime = enddatetime;
+
+	//-------------------------------------------------- startdate 구분
+	var start_date = data.startdate.split("-");
+	var start_year = start_date[0];
+	var start_month = (start_date[1]);
+	var start_day = start_date[2];
+	
+	if(start_month < 10 && start_month.length < 2){
+		start_month = '0' + start_month;
+	}
+	if(start_day < 10 && start_day.length < 2){
+		start_day = '0' + start_day;
+	}
+	
+	var startdate = start_year + '-' + start_month + '-' + start_day;
+
+	//--------------------------------------------------- enddate 구분
+	var end_date = data.enddate.split("-");
+	var end_year = end_date[0];
+	var end_month = (end_date[1]);
+	var end_day = end_date[2];
+	
+	if(end_month < 10 && end_month.length < 2){
+		end_month = '0' + end_month;
+	}
+	if(end_day < 10 && end_day.length < 2){
+		end_day = '0' + end_day;
+	}
+
+	var enddate = end_year + '-' + end_month + '-' + end_day;
+
+	//----------------------------------------------------
+	
+	//tab-일반
+	var htmlTxt = '';
+	if(data!=null && !$.isEmptyObject(data)){
+		var kyStr = transKeyusage(data.keyusage);
+
+		htmlTxt += '<span class="dtltit01">' + $.i18n.prop("TS044") + '</span>';
+		htmlTxt += '<span class="dtltxt01">';
+		htmlTxt += $.i18n.prop("TS079") + ' : '+kyStr+'<br><br>';
+		htmlTxt += $.i18n.prop("ES043") + '<br><br>';
+		htmlTxt += $.i18n.prop("TS076") + ' : '+data.Cn+'<br>';
+		htmlTxt += $.i18n.prop("TS063") + ' : '+data.Issuer+'<br>';
+		if(data.startdatetime!=null && data.startdatetime!=""){
+			htmlTxt += $.i18n.prop("TS080") + ' : <br>&nbsp;&nbsp;&nbsp;&nbsp;'+data.startdatetime+' '+$.i18n.prop("TS081")+' '+data.enddatetime+' '+$.i18n.prop("TS082")+'<br>';
+		}else{
+			htmlTxt += $.i18n.prop("TS080") + ' : <br>&nbsp;&nbsp;&nbsp;&nbsp;'+data.startdate+' '+$.i18n.prop("TS081")+' '+data.enddate+' '+$.i18n.prop("TS082")+'<br>';
+		}
+		htmlTxt += $.i18n.prop("TS083")+' : '+data.Policy+'<br>';
+		htmlTxt += '</span>';
+	}
+	$('#detail_text01').empty().html(htmlTxt);
+
+	$('#span_policynotice').empty().html(' '+data.policynotice);
+
+
+	//tab-자세히
+	var htmlTxt_tb = '';
+	if(data != null && !$.isEmptyObject(data)){
+		if(data.version!=null && data.version!=""){
+			htmlTxt_tb += '<tr onClick="selectCertField(\'version\');" tabindex="0" id="version">';
+			htmlTxt_tb += '	<td class="td_title">'+$.i18n.prop("TS047")+'</td>';
+			htmlTxt_tb += '	<td>'+data.version+'</td>';
+			htmlTxt_tb += '</tr>';
+		}
+		if(data.serialnum!=null && data.serialnum!=""){
+			htmlTxt_tb += '<tr onClick="selectCertField(\'serialnum\');" tabindex="0" id="serialnum">';
+			htmlTxt_tb += '	<td class="td_title">'+$.i18n.prop("TS048")+'</td>';
+			htmlTxt_tb += '	<td>'+data.serialnum+'</td>';
+			htmlTxt_tb += '</tr>';
+		}
+		if(data.signaturealgorithm!=null && data.signaturealgorithm!=""){
+			htmlTxt_tb += '<tr onClick="selectCertField(\'signaturealgorithm\');" tabindex="0" id="signaturealgorithm">';
+			htmlTxt_tb += '	<td class="td_title">'+$.i18n.prop("TS058")+'</td>';
+			htmlTxt_tb += '	<td>'+data.signaturealgorithm+'</td>';
+			htmlTxt_tb += '</tr>';
+		}
+		if(data.issuername!=null && data.issuername!=""){
+			htmlTxt_tb += '<tr onClick="selectCertField(\'issuername\');" tabindex="0" id="issuername">';
+			htmlTxt_tb += '	<td class="td_title">'+$.i18n.prop("TS063")+'</td>';
+			htmlTxt_tb += '	<td>'+data.issuername+'</td>';
+			htmlTxt_tb += '</tr>';
+		}
+		if(data.startdatetime!=null && data.startdatetime!=""){
+			htmlTxt_tb += '<tr onClick="selectCertField(\'startdatetime\');" tabindex="0" id="startdatetime">';
+			htmlTxt_tb += '	<td class="td_title">'+$.i18n.prop("TS050")+'</td>';
+			htmlTxt_tb += '	<td>'+data.startdatetime+'</td>';
+			htmlTxt_tb += '</tr>';
+			htmlTxt_tb += '<tr onClick="selectCertField(\'enddatetime\');" tabindex="0" id="enddatetime">';
+			htmlTxt_tb += '	<td class="td_title">'+$.i18n.prop("TS051")+'</td>';
+			htmlTxt_tb += '	<td>'+data.enddatetime+'</td>';
+			htmlTxt_tb += '</tr>';
+		}else{
+			htmlTxt_tb += '<tr onClick="selectCertField(\'startdate\');" tabindex="0" id="startdate">';
+			htmlTxt_tb += '	<td class="td_title">'+$.i18n.prop("TS050")+'</td>';
+			htmlTxt_tb += '	<td>'+data.startdate+'</td>';
+			htmlTxt_tb += '</tr>';
+			htmlTxt_tb += '<tr onClick="selectCertField(\'enddate\');" tabindex="0" id="enddate">';
+			htmlTxt_tb += '	<td class="td_title">'+$.i18n.prop("TS051")+'</td>';
+			htmlTxt_tb += '	<td>'+data.enddate+'</td>';
+			htmlTxt_tb += '</tr>';
+		}
+		if(data.subjectname!=null && data.subjectname!=""){
+			htmlTxt_tb += '<tr onClick="selectCertField(\'subjectname\');" tabindex="0" id="subjectname">';
+			htmlTxt_tb += '	<td class="td_title">'+$.i18n.prop("TS076")+'</td>';
+			htmlTxt_tb += '	<td>'+data.subjectname+'</td>';
+			htmlTxt_tb += '</tr>';
+		}
+		if(data.pubkey!=null && data.pubkey!=""){
+			htmlTxt_tb += '<tr onClick="selectCertField(\'pubkey\');" tabindex="0" id="pubkey">';
+			htmlTxt_tb += '	<td class="td_title">'+$.i18n.prop("TS077")+'</td>';
+			htmlTxt_tb += '	<td>'+data.pubkey+'</td>';
+			htmlTxt_tb += '</tr>';
+		}
+		if(data.authkeyid!=null && data.authkeyid!=""){
+			htmlTxt_tb += '<tr onClick="selectCertField(\'authkeyid\');" tabindex="0" id="authkeyid">';
+			htmlTxt_tb += '	<td class="td_title">'+$.i18n.prop("TS078")+'</td>';
+			htmlTxt_tb += '	<td>'+data.authkeyid+'</td>';
+			htmlTxt_tb += '</tr>';
+		}
+		if(data.keyusage!=null && data.keyusage!=""){
+			htmlTxt_tb += '<tr onClick="selectCertField(\'keyusage\');" tabindex="0" id="keyusage">';
+			htmlTxt_tb += '	<td class="td_title">'+$.i18n.prop("TS053")+'</td>';
+			htmlTxt_tb += '	<td>'+data.keyusage+'</td>';
+			htmlTxt_tb += '</tr>';
+		}
+		if(data.certpolicy!=null && data.certpolicy!=""){
+			htmlTxt_tb += '<tr onClick="selectCertField(\'certpolicy\');" tabindex="0" id="certpolicy">';
+			htmlTxt_tb += '	<td class="td_title">'+$.i18n.prop("TS054")+'</td>';
+			htmlTxt_tb += '	<td>'+data.certpolicy+'</td>';
+			htmlTxt_tb += '</tr>';
+		}
+		if(data.subjectaltname!=null && data.subjectaltname!=""){
+			htmlTxt_tb += '<tr onClick="selectCertField(\'subjectaltname\');" tabindex="0" id="subjectaltname">';
+			htmlTxt_tb += '	<td class="td_title">'+$.i18n.prop("TS055")+'</td>';
+			htmlTxt_tb += '	<td>'+data.subjectaltname+'</td>';
+			htmlTxt_tb += '</tr>';
+		}
+		if(data.crldp!=null && data.crldp!=""){
+			htmlTxt_tb += '<tr onClick="selectCertField(\'crldp\');" tabindex="0" id="crldp">';
+			htmlTxt_tb += '	<td class="td_title">'+$.i18n.prop("TS056")+'</td>';
+			htmlTxt_tb += '	<td>'+data.crldp+'</td>';
+			htmlTxt_tb += '</tr>';
+		}
+		if(data.aia!=null && data.aia!=""){
+			htmlTxt_tb += '<tr onClick="selectCertField(\'aia\');" tabindex="0" id="aia">';
+			htmlTxt_tb += '	<td class="td_title">'+$.i18n.prop("TS057")+'</td>';
+			htmlTxt_tb += '	<td>'+data.aia+'</td>';
+			htmlTxt_tb += '</tr>';
+		}
+		if(data.certpath!=null && data.certpath != ""){
+			htmlTxt_tb += '<tr onClick="selectCertField(\'certpath\');" tabindex="0" id="certpath">';
+			htmlTxt_tb += '	<td class="td_title">'+$.i18n.prop("TS097")+'</td>';
+			htmlTxt_tb += '	<td>'+data.certpath+'</td>';
+			htmlTxt_tb += '</tr>';
+		}
+	}
+
+	$('#detail_tbody_text02').empty().html(htmlTxt_tb);
+}
+
+function selectCertField(key){
+//	console.log("selectCertField() data === " + certData[key]);
+	var detailTxt = "";
+	switch (key) {
+		case "version":
+			detailTxt = $.i18n.prop("TS047") + " : " + certData[key];
+			break;
+		case "serialnum":
+			detailTxt = $.i18n.prop("TS048") + " : " + certData[key];
+			break;
+		case "signaturealgorithm":
+			detailTxt = $.i18n.prop("TS058") + " : " + certData[key];
+			break;
+		case "issuername":
+			detailTxt = $.i18n.prop("TS063") + " : " + certData[key];
+			break;
+		case "startdatetime":
+			detailTxt = $.i18n.prop("TS050") + " : " + certData[key];
+			break;
+		case "enddatetime":
+			detailTxt = $.i18n.prop("TS051") + " : " + certData[key];
+			break;
+		case "startdate":
+			detailTxt = $.i18n.prop("TS050") + " : " + certData[key];
+			break;
+		case "enddate":
+			detailTxt = $.i18n.prop("TS051") + " : " + certData[key];
+			break;
+		case "subjectname":
+			detailTxt = $.i18n.prop("TS076") + " : " + certData[key];
+			break;
+		case "pubkey":
+			detailTxt = $.i18n.prop("TS077") + " : " + certData[key];
+			break;
+		case "authkeyid":
+			detailTxt = $.i18n.prop("TS078") + " : " + certData[key];
+			break;
+		case "keyusage":
+			detailTxt = $.i18n.prop("TS053") + " : " + certData[key];
+			break;
+		case "certpolicy":
+			detailTxt = $.i18n.prop("TS054") + " : " + certData[key];
+			break;
+		case "subjectaltname":
+			detailTxt = $.i18n.prop("TS055") + " : " + certData[key];
+			break;
+		case "crldp":
+			detailTxt = $.i18n.prop("TS056") + " : " + certData[key];
+			break;
+		case "aia":
+			detailTxt = $.i18n.prop("TS057") + " : " + certData[key];
+			break;
+		case "certpath":
+			detailTxt = $.i18n.prop("TS097") + " : " + certData[key];
+			break;
+	}
+	$('#detail_cert_field').empty().html(detailTxt);
+}
+
+function _createDetailWindow(){
+	var os_ver = ML4WebApi.getProperty("os");
+	var popup = 600;
+	if( ! ( ( os_ver=="Android" && navigator.userAgent.toUpperCase().indexOf("MOBILE") >-1)|| os_ver=="IPHONE" || os_ver=="BlackBerry" || os_ver=="IPAD" || os_ver=="Android" ) ){
+		popup = 500;
+	}
+	
+//console.log("#ML_window_detail load load load load load load load load load load ");
+	$('#ML_window_detail').MLjquiWindow({
+		title: $.i18n.prop("TS006"),
+		resizable: false,
+		position: 'center',
+		closeButtonSize: 35,
+		draggable:false,
+		showCloseButton:false,
+		isModal: true,
+		modalOpacity: 0.3,
+		modalZIndex: 9996,
+		modalBackgroundZIndex: 9996,
+		showCollapseButton: false, 
+		keyboardCloseKey: 0,
+		maxHeight: popup, 
+		minHeight: 200, minWidth: 200, 
+		height: 600, width: 390,
+		initContent: function(){
+			//$('#ML_window_detail').MLjquiWindow('close');
+		}
+	});
+}
+
+function initDetailEventHandler(){
+	$("#tr_version").unbind().click(function(){
+		//console.log("selectCertField() data === " + certData.version);
+		$('#detail_cert_field').empty().html("[1]버전 : " + certData.version);
+	});
+
+	$("#btn_detail_verify").unbind().click(function(){
+		ML4WebLog.log("인증서 검증 호출...");
+		//TODO Develope...
+
+	});
+
+	$("#btn_detail_arlam").unbind().click(function(){
+		ML4WebLog.log("사용자 알림 호출...");
+		//TODO Develope...
+
+	});
+
+	$("#btn_detail_confirm").unbind().click(function(){
+		$('#ML_window_detail').MLjquiWindow('destroy');
+		//20200310 mj
+		$('#btn_viewCert').focus();
+	});
+	
+	$("#text_normal").text($.i18n.prop("TS073"));
+	$("#text_detail").text($.i18n.prop("TS074"));
+	$("#text_userAlert").text($.i18n.prop("TS075"));
+	$("#text_field").text($.i18n.prop("TS045"));
+	$("#text_content").text($.i18n.prop("TS046"));
+	$("#text_confirm").text($.i18n.prop("TS014"));
+}
+</script>
+</head>
+<!--<body oncontextmenu="return false" ondragstart="return false" onselectstart="return false">-->
+<body>
+<div id="ML_window_detail">
+	<div class="ML_container">
+		<!-- Content AREA : S -->
+		<div class="ML_content">
+			<div id="MagicLine" class="ML_content-area">
+				<!-- Content : S -->
+
+				<!-- Certificate org text : S -->
+				<div id="ML_tabs">
+					<ul class='tabs'>
+						<li><a href='#ML_cert_orgtext_area1' id="text_normal"></a></li>
+						<li><a href='#ML_cert_orgtext_area2' id="text_detail"></a></li>
+					</ul>
+					<div id="ML_cert_orgtext_area1">
+						<div id="ML_cert_detail_area01">
+							<h6 class="blind">일반 인증서 정보</h6>
+							<div id="detail_text01">
+								<!-- //contents here -->
+								
+							</div>
+						</div>
+						<!-- BTN : S -->
+						
+						<div class="ML_cert_detail_btn">
+							<span class="btn_row">
+								<span class="btn_cell_center">
+									<!--
+									<p class="whtgrey_btn"><button type="button" id="btn_detail_verify" onClick="#"><span><img src="UI/images/icon_verify.png" alt="인증서 검증">인증서 검증</span></button></p>
+									<span class="w_space15"></span>
+									<p class="whtgrey_btn"><button type="button" id="btn_detail_arlam" onClick="#" class="modal_close"><span><img src="UI/images/icon_alert.png" alt="사용자 알림">사용자 알림</span></button></p>
+									-->
+									<p class="whtgrey_btn"><img src="UI/images/icon_alert.png" alt="" ><span id="text_userAlert"></span><span id="span_policynotice"></span></p>
+								</span>
+							</span>
+						</div>
+						
+						<!-- BTN : E -->
+					</div>
+
+					<div id="ML_cert_orgtext_area2">
+						<div id="ML_cert_detail_area02">
+							<h6 class="blind">자세히 인증서 정보</h6>
+							<div id="detail_text02">
+								<table class="detail_tb">
+									<caption class="blind">인증서 정보 자세히 보기</caption>
+									<thead>
+										<tr>
+											<th class="td_title" id="text_field"></th>
+											<th id="text_content"></th>
+										</tr>
+									</thead>
+									<tbody id="detail_tbody_text02">
+										<!-- //contents here -->
+										<tr id="tr_version">
+											<!--<td class="td_title">버전</td>
+											<td>'+data.version+'</td>-->
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+						<!-- info detail : S -->
+						<div id="ML_cert_detail_area03">
+							<div id="detail_text03">
+								<span id="detail_cert_field" class="dtltxt03"></span>
+							</div>
+						</div>
+						<!-- info detail : E -->
+					</div>
+				</div> <!-- tab 전체 wrap-->
+				<!-- Certificate org text : E -->
+				<div class="ML_pw_detail_status_area" >
+					<div class="ML_pw_detail_area">
+						<!-- BTN -->
+						<span class="btn_row">
+							<span class="btn_cell_center">
+								<p class="b_blue_btn"><button type="button" id="btn_detail_confirm"><span id="text_confirm"></span></button></p>
+							</span>
+						</span> 
+					</div>
+				</div>
+				<!-- Content : E -->
+			</div>
+		</div>
+		<!-- Content AREA : E -->
+	</div>
+</div>
+
+</body>
+
+
+
+</html>

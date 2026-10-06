@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>사업부서 관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/designated-donation/part/form.jsp 이식 - 사업부서 등록·수정.
+     AS-IS는 한 화면이 등록(form/0)과 수정(form/{id})을 함께 쓰고, 저장도 한 엔드포인트
+     (/part/save)가 id로 갈라 처리한다.
+
+     AS-IS verbatim:
+     - 지자체 선택은 <b>최고관리자만</b> 바꿀 수 있다 - 그 외는 자기 지자체가 미리 들어가 있다.
+     - 저장 문구: 등록 M00288("등록되었습니다.") / 수정 M00289("수정되었습니다.") /
+       실패 "저장에 실패했습니다.".
+     - 목록에 체크박스 일괄처리가 없으므로(주석처리) <b>사용유무는 이 화면에서 바꾼다</b>. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span th:text="${department != null} ? '사업부서 수정' : '사업부서 등록'">사업부서 등록</span></h3>
+
+<form id="partForm" method="post" th:action="@{/designated-projects/departments/save}">
+    <input type="hidden" name="deptId" th:value="${deptId}"/>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="사업부서 등록">
+            <colgroup>
+                <col style="width:220px;">
+                <col>
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td class="label"><span class="required_mark">*</span>지자체</td>
+                    <td>
+                        <!-- AS-IS: 지자체담당자는 자기 지자체가 고정이고 바꿀 수 없다 -->
+                        <th:block th:if="${locgovScoped}">
+                            <div th:text="${locgovNames.get(ownLocgovCode)} ?: ${ownLocgovCode}"></div>
+                            <input type="hidden" name="locgovCode" th:value="${ownLocgovCode}"/>
+                        </th:block>
+                        <div class="flex_box gap-08" th:unless="${locgovScoped}">
+                            <select id="upperLocgovCode" class="wd-150" onchange="wdrChange(this.value);">
+                                <option value="">-시,도-</option>
+                                <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"></option>
+                            </select>
+                            <select id="locgovCode" name="locgovCode" class="wd-150 required" required title="지자체">
+                                <option value="">-시,군,구-</option>
+                            </select>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><span class="required_mark">*</span>부서명</td>
+                    <td>
+                        <input type="text" id="deptNm" name="deptNm" class="input_txt required _filter wd-500"
+                               required maxlength="100" title="부서명"
+                               th:value="${department != null} ? ${department.deptNm} : ''"/>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><span class="required_mark">*</span>사용유무</td>
+                    <td>
+                        <div class="flex_box gap-12">
+                            <div class="input-form"><span class="radio">
+                                <input type="radio" id="use_y" name="useYn" value="Y"
+                                       th:checked="${department == null or department.useYn == 'Y'}"/>
+                                <label for="use_y">사용</label></span></div>
+                            <div class="input-form"><span class="radio">
+                                <input type="radio" id="use_n" name="useYn" value="N"
+                                       th:checked="${department != null and department.useYn == 'N'}"/>
+                                <label for="use_n">미사용</label></span></div>
+                        </div>
+                    </td>
+                </tr>
+                <tr th:if="${department != null}">
+                    <td class="label">등록일시</td>
+                    <td><div th:text="${department.createdDate} ?: '-'"></div></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="btn_all btn_center">
+        <div class="flex_box gap-08">
+            <button type="submit" class="btn btn-dark-gray btn-small"
+                    th:text="${department != null} ? '수정' : '등록'">등록</button>
+            <button type="button" class="btn btn-default btn-small"
+                    onclick="location.href='/designated-projects/departments'">취소</button>
+        </div>
+    </div>
+</form>
+
+    </div>
+    </div>
+</div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript" th:inline="javascript">
+var redirectMessage = /*[[${redirectMessage}]]*/ null;
+var allLocgovs = /*[[${allLocgovs}]]*/ [];
+var currentLocgovCode = /*[[${department != null} ? ${department.locgovCode} : null]]*/ null;
+
+$(function() {
+	if (redirectMessage) {
+		alert(redirectMessage);
+	}
+	// 수정일 때는 저장된 지자체의 광역을 먼저 고른 뒤 시군구를 채운다
+	if (currentLocgovCode) {
+		for (var i = 0; i < allLocgovs.length; i++) {
+			if (allLocgovs[i].locgovCode === currentLocgovCode) {
+				$('#upperLocgovCode').val(allLocgovs[i].upperLocgovCode);
+				wdrChange(allLocgovs[i].upperLocgovCode);
+				break;
+			}
+		}
+	}
+});
+
+function wdrChange(upperLocgovCode) {
+	var $locgov = $('#locgovCode');
+	if ($locgov.length === 0) {
+		return;
+	}
+	$locgov.find('option').not(':first-child').remove();
+	if (!upperLocgovCode) {
+		return;
+	}
+	for (var i = 0; i < allLocgovs.length; i++) {
+		var l = allLocgovs[i];
+		if (l.upperLocgovCode === upperLocgovCode) {
+			$locgov.append($('<option></option>').attr('value', l.locgovCode).text(l.locgovNm));
+		}
+	}
+	if (currentLocgovCode) {
+		$locgov.val(currentLocgovCode);
+	}
+}
+</script>
+</body>
+</html>

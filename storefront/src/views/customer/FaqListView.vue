@@ -139,7 +139,9 @@ function toggle(f) {
                     <img class="faq-icon" src="/images/icon/cli-icon_faq-a.png" alt="답변" />
                     <div class="header-faq">
                       <span class="status_c category">&nbsp;</span>
-                      <div class="faq_txt">{{ f.content }}</div>
+                      <!-- AS-IS는 답변 본문을 v-html로 렌더링한다 - 운영자 FAQ 관리(5104)가
+                           스마트에디터로 작성한 HTML이라 그대로 그려야 한다. -->
+                      <div class="faq_txt" v-html="f.content"></div>
                     </div>
                   </div>
                 </div>

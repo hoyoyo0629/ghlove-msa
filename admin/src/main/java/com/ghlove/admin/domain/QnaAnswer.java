@@ -35,4 +35,19 @@ public class QnaAnswer {
 
     @Column(name = "USER_ID")
     private Long userId;
+
+    /**
+     * AS-IS insertQnaAnswer/updateQnaAnswer가 매번 써 넣는 값 - 화면에 체크박스가 없어
+     * <b>항상 'N'</b>이다(원제품 SalesOn의 메일·문자 발송 플래그 잔재).
+     * Q&A 답변 문자는 이 플래그와 무관하게 국민비서 연계로 나간다({@code SmsIpsService}).
+     */
+    @Column(name = "SEND_SMS_FLAG")
+    private String sendSmsFlag;
+
+    @Column(name = "SEND_MAIL_FLAG")
+    private String sendMailFlag;
+
+    /** AS-IS insert는 '0'을 넣고, 답변 삭제는 소프트삭제가 아니라 행을 지운다. */
+    @Column(name = "DATA_STATUS_CODE")
+    private String dataStatusCode;
 }

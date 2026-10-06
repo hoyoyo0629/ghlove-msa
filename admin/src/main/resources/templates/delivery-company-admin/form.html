@@ -1,58 +1,111 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>택배사 등록/수정 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <title>배송업체 등록/수정 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
-<div class="contents contents_inner">
-    <div class="location"><a th:href="@{/admin/delivery-companies}">택배사관리</a></div>
-    <h3><span th:text="${company} != null ? '택배사 수정' : '택배사 등록'"></span></h3>
-    <div class="board_write">
-        <table class="board_write_table" summary="택배사 등록/수정">
-            <colgroup><col style="width:220px;"><col></colgroup>
-            <tbody>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>택배사명</td>
-                <td><input type="text" name="deliveryCompanyName" th:value="${company?.deliveryCompanyName()}" required form="dcForm"></td>
-            </tr>
-            <tr>
-                <td class="label">대표연락처</td>
-                <td><input type="text" name="telNumber" th:value="${company?.telNumber()}" form="dcForm"></td>
-            </tr>
-            <tr>
-                <td class="label">배송조회 URL</td>
-                <td><input type="text" name="deliveryCompanyUrl" th:value="${company?.deliveryCompanyUrl()}" placeholder="예: https://.../tracking" style="width:400px;" form="dcForm"></td>
-            </tr>
-            <tr>
-                <td class="label">송장번호 파라미터</td>
-                <td><input type="text" name="deliveryNumberParameter" th:value="${company?.deliveryNumberParameter()}" placeholder="예: invoiceNo" form="dcForm"></td>
-            </tr>
-            <tr>
-                <td class="label">전송방법</td>
-                <td>
-                    <select name="sendFlag" form="dcForm">
-                        <option value="1" th:selected="${company == null or company.sendFlag() == '1'}">GET</option>
-                        <option value="2" th:selected="${company != null and company.sendFlag() == '2'}">POST</option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <td class="label">사용</td>
-                <td><input type="checkbox" name="useFlag" value="Y" th:checked="${company == null or company.useFlag() == 'Y'}" form="dcForm"></td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
-    <form id="dcForm" th:action="${company} != null ? @{'/admin/delivery-companies/' + ${company.deliveryCompanyId()}} : @{/admin/delivery-companies}" method="post"></form>
-    <div class="btn_all btn_center">
-        <button type="submit" form="dcForm" class="btn btn-dark-gray btn-small">저장</button>
-        <a class="btn" th:href="@{/admin/delivery-companies}">목록</a>
-    </div>
-</div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/delivery-company/form.jsp 이식. 배송업체명·대표연락처·배송 조회 URL·
+     사용유무 4항목이고, 전송방법(sendFlag 라디오)과 송장번호 파라미터는 AS-IS에서 주석처리돼
+     노출되지 않는다(sendFlag는 hidden으로만 넘긴다) - 비활성 상태까지 그대로 맞췄다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+            <h3><span th:text="${msg.get('M00670')}">배송업체 등록/수정</span></h3> <!-- 배송업체 등록/수정 -->
+            <form id="deliveryCompany" method="post" enctype="multipart/form-data"
+                  th:action="${deliveryCompany != null}
+                             ? @{'/admin/delivery-companies/edit/' + ${deliveryCompany.deliveryCompanyId}}
+                             : @{/admin/delivery-companies/create}">
+                <input type="hidden" id="kind" th:value="${kind}" />
+                <input type="hidden" id="sendFlag" name="sendFlag" th:value="${deliveryCompany != null} ? ${deliveryCompany.sendFlag} : ''" />
+                <input type="hidden" id="deliveryNumberParameter" name="deliveryNumberParameter" th:value="${deliveryCompany != null} ? ${deliveryCompany.deliveryNumberParameter} : ''" />
+                <div class="board_write">
+                    <table class="board_write_table">
+                        <caption th:text="${msg.get('M00055')}"></caption> <!-- 전체주문 내역 -->
+                        <colgroup>
+                            <col style="width:150px;" />
+                            <col style="width:auto;" />
+                        </colgroup>
+                        <tbody>
+                             <tr>
+                                <td class="label"><span class="required_mark">*</span><span th:text="${msg.get('M00665')}">배송업체명</span></td> <!-- 배송 업체명 -->
+                                <td>
+                                    <div class="flex_box gap-08">
+                                        <input type="text" id="deliveryCompanyName" name="deliveryCompanyName" class="required full"
+                                               th:value="${deliveryCompany != null} ? ${deliveryCompany.deliveryCompanyName} : ''" th:title="${msg.get('M00665')}" />
+                                    </div>
+                                </td>
+                             </tr>
+                             <tr>
+                                <td class="label" th:text="${msg.get('M00666')}">대표연락처</td> <!-- 대표연락처 -->
+                                <td>
+                                    <div class="flex_box gap-08">
+                                        <input type="text" id="telNumber" name="telNumber" class="full"
+                                               th:value="${deliveryCompany != null} ? ${deliveryCompany.telNumber} : ''" th:title="${msg.get('M00666')}" />
+                                    </div>
+                                </td>
+                             </tr>
+                             <tr>
+                                <td class="label"><span class="required_mark">*</span><span th:text="${msg.get('M00671')}">배송 조회 URL</span></td> <!-- 배송 조회 URL -->
+                                <td>
+                                    <div class="flex_box gap-08">
+                                        <input type="text" id="deliveryCompanyUrl" name="deliveryCompanyUrl" class="required full"
+                                               th:value="${deliveryCompany != null} ? ${deliveryCompany.deliveryCompanyUrl} : ''" th:title="${msg.get('M00671')}" />
+                                    </div>
+                                </td>
+                             </tr>
+                            <!-- AS-IS도 아래 두 행은 주석처리되어 있다(전송방법 M00672 / 송장번호 파라미터 M00673) -->
+                             <tr>
+                                <td class="label" th:text="${msg.get('M00669')}">사용유무</td> <!-- 사용유무 -->
+                                <td>
+                                    <div class="flex_box gap-12 item-center">
+                                        <div class="input-form">
+                                            <input type="radio" id="useFlagY" name="useFlag" value="Y"
+                                                   th:checked="${deliveryCompany == null or deliveryCompany.useFlag == null or deliveryCompany.useFlag == 'Y'}" /><label for="useFlagY" th:text="${msg.get('M00083')}">사용</label> <!-- 사용 -->
+                                        </div>
+                                        <div class="input-form">
+                                            <input type="radio" id="useFlagN" name="useFlag" value="N"
+                                                   th:checked="${deliveryCompany != null and deliveryCompany.useFlag == 'N'}" /><label for="useFlagN" th:text="${msg.get('M00089')}">사용안함</label> <!-- 사용안함 -->
+                                        </div>
+                                    </div>
+                                </td>
+                             </tr>
+                        </tbody>
+                    </table>
+                </div> <!-- // board_write -->
+
+                <div class="btn_all btn_center">
+                    <div class="flex_box gap-08">
+                        <button type="submit" class="btn btn-active"><span th:text="${msg.get('M00101')}">저장</span></button> <!-- 저장 -->
+                        <a th:href="@{/admin/delivery-companies}" class="btn btn-default"><span th:text="${msg.get('M00037')}">취소</span></a> <!-- 취소 -->
+                    </div>
+                </div>
+            </form>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script type="text/javascript">
+$(function() {
+
+	$('#deliveryCompany').validator(function() {
+		if (confirm("배송업체 정보를 " + $('#kind').val() + "하시겠습니까?")) {
+
+		} else {
+			return false;
+		}
+	});
+
+});
+
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

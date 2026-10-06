@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>회원탈퇴 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<!-- AS-IS opmanager/i18n/user/popup/customer-secede-write.jsp 이식. layout=base 팝업(600x330).
+     일반회원관리(메뉴 4101) 상세의 "회원탈퇴"가 띄운다.
+
+     AS-IS verbatim:
+     - 기부누적액·포인트잔액을 먼저 보여주고 탈퇴사유(250자)를 받는다.
+     - 사유가 비면 "탈퇴사유 항목을 입력해 주세요."로 막고, 확인문구는 "회원을 탈퇴 시키겠습니까?"다.
+     - 응답코드별 문구: SUCC "탈퇴되었습니다." / ERR_ALR_SECEDE "이미 탈퇴된 회원입니다."
+       / ERR_ONE_PASS "디지털원패스 회원은 탈퇴 처리 불가능합니다." / 그 외 "오류가 발생했습니다."
+     - 성공·이미탈퇴 모두 부모창의 customerSecedeCallBack을 호출하고 팝업을 닫는다.
+     - 취소 버튼 class가 btn-normal이다(다른 팝업은 btn-default).
+     - 표의 첫 행만 4칸이고 탈퇴사유 행은 colspan=3이다(2열 colgroup과 어긋나 있는데 그대로 둔다). -->
+<body>
+<div class="popup_wrap">
+	<div id="pop_header">
+		<h1 class="popup_title">회원탈퇴</h1>
+		<a href="javascript:self.close();" class="btn_close"><img th:src="@{/content/opmanager/images/btn/btn_close.png}" alt="닫기"></a>
+	</div>
+
+	<div class="popup_contents">
+		<table class="board_write_table" summary="회원탈퇴">
+			<caption>회원탈퇴</caption>
+			<colgroup>
+				<col style="width: 150px" />
+				<col />
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="label">기부누적액</td>
+					<td>
+						<div th:text="${#numbers.formatDecimal(cumclativeTotal.totalCntrAmt, 1, 'COMMA', 2, 'POINT')}">0</div>
+					</td>
+					<td class="label">포인트잔액</td>
+					<td>
+						<div th:text="${#numbers.formatDecimal(cumclativeTotal.totalCntrBlcePoint, 1, 'COMMA', 2, 'POINT')}">0</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">탈퇴사유</td>
+					<td colspan="3">
+						<div>
+							<span class="placeholder_wrap">
+								<span class="placeholder"></span>
+								<textarea id="leaveReason" cols="30" rows="10" maxlength="250" class="required _filter" title="탈퇴사유"></textarea>
+							</span>
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<p class="popup_btns">
+			<button type="button" class="btn btn-active" onclick="secede();">회원탈퇴</button>
+			<button type="button" class="btn btn-normal" onclick="self.close();">취소</button>
+		</p>
+	</div>
+</div>
+
+<script type="text/javascript" th:inline="javascript">
+	var userId = [[${userId}]];
+
+	/**
+	 *	함 수 명 : secede
+	 *	기	능  : 회원탈퇴 처리
+	 */
+	function secede() {
+		if($.trim($("#leaveReason").val()) == "") {
+			alert("탈퇴사유 항목을 입력해 주세요.")
+			$("#leaveReason").focus();
+			return false;
+		}
+
+		if(confirm("회원을 탈퇴 시키겠습니까?")) {
+			var param = {
+				"userId": userId,
+				"leaveReason" : $("#leaveReason").val()
+			};
+
+			$.post("/admin/members/secede", param, function(response) {
+				if(response.isSuccess && response.data) {
+					if(response.data.code == "SUCC") {
+						alert("탈퇴되었습니다.");
+						opener.customerSecedeCallBack(response.data.isLogout);
+						self.close();
+					} else if(response.data.code == "ERR_ALR_SECEDE") {
+						alert("이미 탈퇴된 회원입니다.");
+						opener.customerSecedeCallBack();
+						self.close();
+					} else if(response.data.code == "ERR_ONE_PASS") {
+						alert("디지털원패스 회원은 탈퇴 처리 불가능합니다.");
+					} else {
+						alert("오류가 발생했습니다.")
+					}
+				}
+			});
+		}
+	}
+</script>
+</body>
+</html>

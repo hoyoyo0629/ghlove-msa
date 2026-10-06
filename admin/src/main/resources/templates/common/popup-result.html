@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>처리 결과</title>
+</head>
+<!-- AS-IS ViewUtils.redirect(url, message, javascript)의 팝업용 처리결과 페이지 대응.
+     AS-IS 운영관리 팝업 화면들은 저장 후 javascript="opener.fnSearch(); self.close()"로
+     부모 목록을 갱신하고 창을 닫는다(공통코드 등록/수정 등). 그 동작을 그대로 고정해 둔 것으로,
+     스크립트 문자열을 모델로 받아 심지 않는다(주입 위험). 레이아웃이 layout="base"(관리셸 없음)인
+     응답이라 여기도 셸을 쓰지 않는다.
+     쓰는 쪽: 컨트롤러가 model에 message를 담고 "common/popup-result"를 리턴한다. -->
+<body>
+<script th:inline="javascript">
+    var popupMessage = /*[[${message}]]*/ '';
+    if (popupMessage) {
+        alert(popupMessage);
+    }
+    try {
+        if (window.opener && typeof window.opener.fnSearch === 'function') {
+            window.opener.fnSearch();
+        }
+    } catch (e) {
+        // 부모 창이 이미 닫혔거나 다른 화면으로 이동한 경우 - AS-IS도 여기서 멈추지 않는다
+    }
+    self.close();
+</script>
+</body>
+</html>

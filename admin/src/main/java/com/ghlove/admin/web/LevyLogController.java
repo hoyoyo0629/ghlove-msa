@@ -9,8 +9,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.client.RestClientException;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 /** 연계 로그 관리 (AS-IS opmanager/log의 gif-stnd-buga/sunap, gif-seoul-buga/sunap 재구현) -
  *  세외수입 부과·전자기부금영수증 국세청 연계(NextBugaRequestLog/NextSunapRequestLog 대응).
@@ -22,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 public class LevyLogController {
 
     private final DonationClient donationClient;
+    private final com.ghlove.admin.web.support.FlashRedirect flashRedirect;
 
     @GetMapping("/log/levy")
     public String list(Model model) {
@@ -35,12 +34,11 @@ public class LevyLogController {
     public String backfill() {
         try {
             var result = donationClient.backfillLevy();
-            return "redirect:/log/levy?message=" + URLEncoder.encode(
-                    "백필 완료: 신규 " + result.filled() + "건, 기존 " + result.alreadyOk() + "건, 실패 " + result.failed() + "건",
-                    StandardCharsets.UTF_8);
+            return flashRedirect.to("/log/levy",
+                    "백필 완료: 신규 " + result.filled() + "건, 기존 " + result.alreadyOk() + "건, 실패 " + result.failed() + "건");
         } catch (RestClientException e) {
             log.warn("Levy backfill call failed", e);
-            return "redirect:/log/levy?errorMessage=" + URLEncoder.encode("백필 실행에 실패했습니다.", StandardCharsets.UTF_8);
+            return flashRedirect.to("/log/levy", "백필 실행에 실패했습니다.");
         }
     }
 }

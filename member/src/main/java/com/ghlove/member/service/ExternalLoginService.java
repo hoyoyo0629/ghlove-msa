@@ -57,6 +57,7 @@ public class ExternalLoginService {
     private final UserRoleRepository userRoleRepository;
     private final UserSnsRepository userSnsRepository;
     private final PasswordEncoder passwordEncoder;
+    private final com.ghlove.member.event.MemberEventPublisher eventPublisher;
 
     /** 외부 신원 확인 결과 - {@code newlyJoined}는 AS-IS KakaoLinkServiceImpl이 돌려주던
      *  code(JOIN_MEMBER/LOGIN)와 같은 구분이다. 회원가입 화면에서 들어온 인증은 이 값이
@@ -184,9 +185,12 @@ public class ExternalLoginService {
                 user.setKakaoUserKey(identity.externalId());
             }
         }
-        if (SNS_PASSWORD_TYPE_PROVIDERS.contains(identity.provider())) {
-            user.setPasswordType(PASSWORD_TYPE_SNS);
-        }
+        // OP_USER.PASSWORD_TYPE은 NOT NULL이다 - SNS(카카오/네이버)는 'P'(만료·실패잠금 제외),
+        // 그 밖의 외부 인증수단(원패스/금융인증서/간편인증)은 AS-IS 기본값 'N'을 넣는다
+        // (AS-IS UserServiceImpl의 일반 계정 생성 경로도 setPasswordType("N")). 이 값을 비우면
+        // 원패스 등 신규 간편가입이 INSERT 단계에서 NOT NULL 위반으로 실패한다.
+        user.setPasswordType(SNS_PASSWORD_TYPE_PROVIDERS.contains(identity.provider())
+                ? PASSWORD_TYPE_SNS : "N");
         User saved = userRepository.save(user);
 
         UserDetail detail = new UserDetail();
@@ -227,6 +231,11 @@ public class ExternalLoginService {
             sns.setCertifiedDate(DATE_FORMAT.format(LocalDateTime.now()));
             userSnsRepository.save(sns);
         }
+
+        // 외부 인증(원패스/카카오/네이버) 경유 신규 간편가입도 회원가입 완료 이벤트를 발행한다
+        // (가입경로 loginPathCode만 다름) - MemberRegistered.
+        eventPublisher.publishMemberJoined(saved.getUserId(), saved.getLoginId(),
+                saved.getLoginPathCode(), saved.getSbscrbSeCode());
 
         return saved;
     }

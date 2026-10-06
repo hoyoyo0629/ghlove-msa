@@ -48,7 +48,8 @@ public class SellerPortalController {
     public String dashboard(HttpServletRequest request, Model model) {
         var authUserId = jwtVerifier.currentUserId(request);
         if (authUserId.isEmpty()) {
-            return "redirect:http://localhost:8081/login?target="
+            // 로그인 화면은 storefront(5173)의 /login - member(8081)엔 /login HTML이 없어 404였다.
+            return "redirect:http://localhost:5173/login?target="
                     + URLEncoder.encode("http://localhost:8084/seller/dashboard", StandardCharsets.UTF_8);
         }
 

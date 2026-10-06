@@ -1,55 +1,76 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>역할 등록/수정 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <title>사용자 권한그룹 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
+<!-- AS-IS opmanager/i18n/user-group/form.jsp 이식. AS-IS는 layout="base"(관리셸 없음) 팝업창
+     800x330이고, 입력 필드는 그룹명·그룹설명 둘뿐이다. 제목/버튼 라벨이 등록/수정에 따라 갈린다
+     (AS-IS는 type 값 '등록'/'수정'으로 분기). 수정 모드에서는 authority를 hidden으로 넘긴다. -->
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div class="popup_wrap">
+    <h1 class="popup_title">
+        <span th:if="${type == '등록'}" th:text="${msg.get('M01695')}">사용자 권한그룹 생성</span> <!-- 권한그룹 생성 -->
+        <span th:if="${type == '수정'}" th:text="${msg.get('M01698')}"></span> <!-- 권한그룹 수정 -->
+    </h1>
+    <div class="popup_contents">
 
-<div class="contents contents_inner">
-    <div class="location"><a th:href="@{/admin/roles}">역할·메뉴권한 관리</a></div>
-    <h3><span th:text="${role} != null ? '역할 수정' : '역할 등록'"></span></h3>
+        <div class="board_guide" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
-    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+        <form id="role" th:action="${type == '등록'} ? @{/admin/roles/create} : @{/admin/roles/edit}"
+              method="post" enctype="multipart/form-data">
+            <input type="hidden" name="authority" id="authority" th:value="${role != null} ? ${role.authority} : ''" />
 
-    <div class="board_write">
-        <table class="board_write_table" summary="역할 등록/수정">
-            <colgroup><col style="width:220px;"><col></colgroup>
-            <tbody>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>권한코드</td>
-                <td>
-                    <input type="text" name="authority" th:value="${role != null ? role.authority : ''}" required form="roleForm"
-                           th:readonly="${role} != null" placeholder="예: ROLE_ADMIN_9" autocomplete="off">
-                </td>
-            </tr>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>역할명</td>
-                <td><input type="text" name="roleName" th:value="${role != null ? role.roleName : ''}" required form="roleForm"></td>
-            </tr>
-            <tr>
-                <td class="label">설명</td>
-                <td><textarea name="roleDesc" rows="3" style="width:100%;" form="roleForm" th:text="${role != null ? role.roleDesc : ''}"></textarea></td>
-            </tr>
-            <tr>
-                <td class="label">순서</td>
-                <td><input type="number" name="roleSeq" th:value="${role != null ? role.roleSeq : ''}" form="roleForm"></td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
-    <form id="roleForm"
-          th:action="${role} != null ? @{'/admin/roles/' + ${role.authority}} : @{/admin/roles}"
-          method="post"></form>
-    <div class="btn_all btn_center">
-        <button type="submit" form="roleForm" class="btn btn-dark-gray btn-small">저장</button>
+            <table class="board_write_table" th:summary="${type == '등록'} ? '사용자 권한 그룹 생성' : '사용자 권한 그룹 수정'">
+                <caption>
+                    <span th:if="${type == '등록'}" th:text="${msg.get('M01695')}">사용자 권한그룹 생성</span> <!-- 권한그룹 생성 -->
+                    <span th:if="${type == '수정'}" th:text="${msg.get('M01698')}"></span> <!-- 권한그룹 수정 -->
+                </caption>
+                <colgroup>
+                    <col style="width: 150px" />
+                    <col/>
+                </colgroup>
+                <tbody>
+                    <tr>
+                        <td class="label"><span class="required_mark">*</span><span th:text="${msg.get('M00571')}">그룹명</span></td> <!-- 그룹명 -->
+                        <td>
+                            <div>
+                                <input type="text" id="roleName" name="roleName" th:value="${role != null} ? ${role.roleName} : ''"
+                                       th:title="${msg.get('M00571')}" class="input_txt required _filter seven" maxlength=""/>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="label" th:text="${msg.get('M01696')}">그룹설명</td> <!-- 그룹설명 -->
+                        <td>
+                            <div>
+                                <input type="text" id="roleDesc" name="roleDesc" th:value="${role != null} ? ${role.roleDesc} : ''"
+                                       th:title="${msg.get('M01696')}" class="input_txt required _filter seven" maxlength=""/>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- 버튼시작 -->
+            <p class="popup_btns">
+                <button type="submit" class="btn btn-active" th:if="${type == '등록'}" th:text="${msg.get('M01697')}">생성하기</button> <!-- 생성하기 -->
+                <button type="submit" class="btn btn-active" th:if="${type == '수정'}" th:text="${msg.get('M00101')}">저장</button> <!-- 저장 -->
+                <button type="" class="btn btn-default" onclick="self.close()" th:text="${msg.get('M00037')}">취소</button> <!-- 취소 -->
+            </p>
+            <!-- 버튼 끝-->
+        </form>
     </div>
 </div>
-<div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript">
+
+$(function() {
+
+    // AS-IS도 validator 블록 전체가 주석처리되어 있다(코드폼에서 복사해 온 흔적)
+
+});
+
+</script>
 </body>
 </html>

@@ -42,6 +42,12 @@ public class UserDetail {
     @Column(name = "LEAVE_CODE")
     private String leaveCode;
 
+    /** 탈퇴를 처리한 관리자의 USER_ID - 본인탈퇴면 비어 있다. admin 회원탈퇴관리(메뉴 4105)의
+     *  "탈퇴구분"(값 있으면 관리자탈퇴)과 "담당자"가 이 값으로 갈린다
+     *  (AS-IS secedeuser-mapper의 UD.LEAVE_USER_ID). 컬럼은 원래 있었고 매핑만 없었다. */
+    @Column(name = "LEAVE_USER_ID")
+    private Long leaveUserId;
+
     /** 우편번호 (AS-IS users/modify.html "주소" - Daum 우편번호 API 없이 평문 입력). */
     @Column(name = "POST")
     private String post;

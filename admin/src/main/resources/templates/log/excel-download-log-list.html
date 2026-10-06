@@ -1,47 +1,168 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>엑셀다운로드 로그 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <title>엑셀다운로드 사유 관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<!-- AS-IS opmanager/log의 exceldownload-log 재현. 관리자가 회원/주문/통계 등에서 엑셀(CSV)을
-     다운로드할 때마다 사유를 입력하고 그 이력을 남기는 개인정보 접근·이용 감사로그다. 실제
-     다운로드는 각 도메인을 소유한 서비스에서 일어나므로("출처" 열 참고) 이 화면은 그 이력을
-     한데 모아 조회만 한다(ExcelDownloadLogAdminController 참고). -->
-<div class="contents contents_inner">
-    <h3>엑셀다운로드 로그</h3>
-    <p style="color:#666; margin-bottom:12px;">관리자가 개인정보가 포함된 엑셀(CSV)을 다운로드할 때마다 입력한 사유와 이력입니다.</p>
+<!-- AS-IS opmanager/i18n/log/exceldownload-log-list.jsp 이식. 검색구분(관리자ID/다운로드 메뉴/사유)
+     + 등록일 범위(기본 오늘) + 8컬럼. 사유는 50자까지만 보여주고 클릭하면 전문 팝업, 변경이력이
+     2건 이상이면 "이력보기" 팝업이 뜬다. 행안부/시스템 담당자가 아니면 본인 것만 보인다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <table class="board_list_table">
-        <thead>
-        <tr>
-            <th>출처</th><th>담당자ID</th><th>담당자명</th><th>다운로드 사유</th>
-            <th>검색조건</th><th>다운로드 건수</th><th>일시</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="r : ${rows}">
-            <td th:text="${r.source()}"></td>
-            <td th:text="${r.managerId()}"></td>
-            <td th:text="${r.managerName()}"></td>
-            <td th:text="${r.downloadReason()}"></td>
-            <td th:text="${r.searchCondition()}"></td>
-            <td th:text="${r.rowCount()}"></td>
-            <td th:text="${r.createdDate()}"></td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(rows)}">엑셀다운로드 이력이 존재하지 않습니다.</p>
+<h3><span>엑셀다운로드 사유 관리</span></h3>
+
+<form id="searchForm" class="opmanager-search-form clear" method="post" th:action="@{/admin/excel-download-logs}">
+	<input type="hidden" id="itemsPerPage" name="itemsPerPage" th:value="${privacyLogParam.itemsPerPage}"/>
+	<input type="hidden" id="itemsPerPageTemp" name="itemsPerPageTemp" th:value="${privacyLogParam.itemsPerPageTemp}"/>
+
+	<div class="board_write">
+		<table class="board_write_table" summary="엑셀다운로드 사유 관리">
+			<colgroup>
+				<col style="width:220px;">
+				<col>
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="label">검색구분</td>
+					<td>
+						<div class="flex_box gap-08">
+							<select id="srchKey" name="srchKey" title="아이디" class="wd-150">
+								<option value="LOGIN_ID" th:selected="${privacyLogParam.srchKey == 'LOGIN_ID'}">관리자ID</option>
+								<option value="DOWNLOAD_MENU" th:selected="${privacyLogParam.srchKey == 'DOWNLOAD_MENU'}">다운로드 메뉴</option>
+								<option value="REASON" th:selected="${privacyLogParam.srchKey == 'REASON'}">사유</option>
+							</select>
+							<input type="text" id="srchValue" name="srchValue" title="검색구분" class="input_txt required _filter wd-500" th:value="${privacyLogParam.srchValue}"/>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">등록일</td>
+					<td>
+						<div>
+							<span class="datepicker"><input type="text" id="srchStartLogDate" name="srchStartLogDate" class="datepicker optional " th:title="${msg.get('M00507')}" th:value="${privacyLogParam.srchStartLogDate}" /></span>
+							<span class="wave">~</span>
+							<span class="datepicker"><input type="text" id="srchEndLogDate" name="srchEndLogDate" class="datepicker optional " th:title="${msg.get('M00509')}" th:value="${privacyLogParam.srchEndLogDate}" /></span>
+							<span class="day_btns">
+								<a href="javascript:void(0);" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+								<a href="javascript:void(0);" class="btn_date week-1" th:text="${msg.get('M00027')}">1주</a>
+								<a href="javascript:void(0);" class="btn_date month-1" th:text="${msg.get('M00029')}">1개월</a>
+								<a href="javascript:void(0);" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+								<a href="javascript:void(0);" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a>
+							</span>
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/admin/excel-download-logs'">초기화</button>
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="search();">검색</button>
+			</div>
+		</div>
+	</div>
+</form>
+
+<div class="board_list mt-40">
+	<div class="count_title mt-40">
+		<h5>총 <span th:text="${#numbers.formatInteger(count, 0, 'COMMA')}" th:remove="tag">0</span> 건</h5>
+		<span>
+			<select name="displayCount" id="displayCount" th:title="${msg.get('M00239')}">
+				<option value="10" th:text="${msg.get('M00240')}">10개 출력</option>
+				<option value="20" th:text="${msg.get('M00241')}">20개 출력</option>
+				<option value="50" th:text="${msg.get('M00242')}">50개 출력</option>
+				<option value="100" th:text="${msg.get('M00243')}">100개 출력</option>
+			</select>
+		</span>
+	</div>
+
+	<table class="board_list_table" summary="엑셀다운로드 사유 관리">
+		<caption>엑셀다운로드 사유 관리</caption>
+		<thead>
+			<tr>
+				<th scope="col">No.</th>
+				<th scope="col">등록일</th>
+				<th scope="col">관리자ID</th>
+				<th scope="col">다운로드 메뉴</th>
+				<th scope="col">URL</th>
+				<th scope="col">사유</th>
+				<th scope="col">사유타입</th>
+				<th scope="col">수정이력</th>
+			</tr>
+		</thead>
+		<tbody>
+			<th:block th:if="${not #lists.isEmpty(list)}">
+				<tr th:each="row, i : ${list}" style="background:#fff;">
+					<td><div th:text="${pagination.itemNumber - i.count}">0</div></td>
+					<td><div th:text="${row.log.createdAtText}"></div></td>
+					<td><div th:text="${row.log.loginId}"></div></td>
+					<td><div th:text="${row.log.name}"></div></td>
+					<td><div th:text="${row.log.url}"></div></td>
+					<td>
+						<div>
+							<a th:href="|javascript:reasonPopup('${row.log.id}')|"
+							   th:text="${row.log.reason != null and #strings.length(row.log.reason) > 50}
+							            ? ${#strings.substring(row.log.reason,0,50)} + '...' : ${row.log.reason}"></a>
+						</div>
+					</td>
+					<td><div th:text="${row.log.reasonTypeName}"></div></td>
+					<td>
+						<div>
+							<a th:if="${row.histCnt > 1}" th:href="|javascript:reasonHistPopup('${row.log.id}')|">이력보기</a>
+							<span th:unless="${row.histCnt > 1}">-</span>
+						</div>
+					</td>
+				</tr>
+			</th:block>
+			<tr th:if="${#lists.isEmpty(list)}" style="background:#fff;">
+				<td colspan="8">엑셀다운로드 사유 정보가 없습니다.</td>
+			</tr>
+		</tbody>
+	</table>
+	<div class="pagination-wrap">
+		<div class="pagination-wrap" th:if="${not #lists.isEmpty(list)}">
+			<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+		</div>
+	</div>
 </div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script type="text/javascript">
+	$(function(){
+		$("#displayCount").val($("#itemsPerPage").val());
+		$("#displayCount").on('change', function(){
+			$("#itemsPerPage").val($(this).val());
+			$("#itemsPerPageTemp").val($(this).val());
+			search();
+		});
+
+		Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="srchStartLogDate"]' , 'input[name="srchEndLogDate"]');
+		EventHandler.calendarStartDateAndEndDateVaild();
+	});
+
+	function search() {
+		$("#searchForm").submit();
+	}
+
+	function reasonPopup(id) {
+		Common.popup('/admin/excel-download-logs/popup/' + id, 'reason', 600, 400, 1);
+	}
+
+	function reasonHistPopup(id) {
+		Common.popup('/admin/excel-download-logs/hist/' + id, 'reasonHist', 700, 500, 1);
+	}
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

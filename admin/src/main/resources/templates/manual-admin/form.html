@@ -1,58 +1,167 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>매뉴얼 등록/수정 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <title>사용자 매뉴얼 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <div class="location"><a th:href="@{/admin/manuals}">매뉴얼 관리</a></div>
-    <h3><span th:text="${manual.mnlSn} != null ? '매뉴얼 수정' : '매뉴얼 등록'"></span></h3>
+<!-- AS-IS opmanager/i18n/manual/user/form.jsp 이식(메뉴 5202 사용자매뉴얼 등록·수정).
+     AS-IS는 등록과 수정이 같은 화면이고 action은 "지금 보고 있는 주소"다.
+
+     AS-IS verbatim:
+     - 수정일 때만 상단에 [수정][삭제][목록] 버튼이 나온다.
+     - 등록일 때만 하단에 [등록][취소] 버튼이 나온다(가운데 정렬).
+     - 표는 페이지 구분 / 제목 / 첨부파일 / 내용 네 줄이고 셋에 필수표시(*)가 붙는다.
+     - 페이지 구분 select는 공통코드 MENU_URL의 detail(화면명)을 보여주고 id를 보낸다.
+     - 첨부는 한 건이고 input 이름이 detailImageFiles[]다. 수정일 때 "파일 수정 : " 라벨이 붙는다.
+     - 이미 붙은 파일은 파일명(다운로드)과 [x](삭제) 두 링크로 보여준다.
+     - 첨부 삭제 확인은 브라우저 confirm이고 문구가 '파일이 실제로 삭제됩니다.'다.
+     - 스마트에디터는 <b>주석처리</b>되어 있다 - 내용은 평범한 textarea다(켜지 않는다). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span>사용자 매뉴얼</span></h3>
+
+<!-- AS-IS는 action을 요청 주소로 둔다(/admin/manuals/create 또는 /admin/manuals/edit/{mnlSn}) -->
+<form id="manual" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="mnlSn" th:value="${manual.mnlSn}"/>
+    <input type="hidden" name="manualParam" id="manualParam"/>
+
+    <div class="btn_all btn_right mb15" th:if="${manual.mnlSn != null}">
+        <div class="flex_box gap-08">
+            <button type="submit" class="btn btn-dark-gray btn-mini">수정</button>
+            <button type="button" class="btn btn-dark-gray btn-mini"
+                    th:attr="onclick=|deleteManual(${manual.mnlSn})|">삭제</button>
+            <button type="button" class="btn btn-dark-default btn-mini" onclick="location.href='/admin/manuals'">목록</button>
+        </div>
+    </div>
 
     <div class="board_write">
-        <table class="board_write_table" summary="매뉴얼 등록/수정">
-            <colgroup><col style="width:220px;"><col></colgroup>
+        <table class="board_write_table" summary="">
+            <colgroup>
+                <col style="width:220px;">
+            </colgroup>
             <tbody>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>제목</td>
-                <td><input type="text" name="title" th:value="${manual.title}" required form="manualForm"></td>
-            </tr>
-            <tr>
-                <td class="label">연결 화면(메뉴URL)</td>
-                <td><input type="text" name="menuUrlCode" th:value="${manual.menuUrlCode}" placeholder="예: /admin/maintenance" form="manualForm"></td>
-            </tr>
-            <tr>
-                <td class="label">내용</td>
-                <td><textarea name="content" rows="10" th:text="${manual.content}" form="manualForm"></textarea></td>
-            </tr>
-            <tr>
-                <td class="label">첨부파일</td>
-                <td>
-                    <input type="file" name="file" form="manualForm">
-                    <p th:if="${manual.fileSrc != null and !#strings.isEmpty(manual.fileSrc)}">
-                        현재 파일: <a th:href="@{'/admin/manuals/' + ${manual.mnlSn} + '/download'}" th:text="${manual.orgnlFileNm}"></a>
-                    </p>
-                </td>
-            </tr>
+                <tr>
+                    <td class="label"><span class="required_mark">*</span>페이지 구분</td>
+                    <td>
+                        <div class="flex_box gap-08">
+                            <select id="menuSeCode" name="menuSeCode" title="페이지 구분" class="wd-350">
+                                <option th:each="code : ${menuUrlList}" th:value="${code.id}" th:text="${code.detail}"
+                                        th:selected="${manual.menuSeCode == code.id}"></option>
+                            </select>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><span class="required_mark">*</span>제목</td>
+                    <td>
+                        <div class="flex_box gap-08">
+                            <input type="text" id="menuSj" name="menuSj" th:value="${manual.menuSj}"
+                                   title="제목" class="input_txt required _filter half"/>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">첨부파일</td>
+                    <td>
+                        <div class="flex_box item-center">
+                            <span class="input_file_txt" th:if="${manual.mnlSn != null}">파일 수정 : </span>
+                            <input type="file" name="detailImageFiles[]"/>
+                        </div>
+
+                        <div class="file_camera" th:id="|file_camera_${manual.mnlSn}|"
+                             th:if="${manual.orginlFileNm != null}">
+                            <a th:href="|javascript:downloadItemImage(${manual.mnlSn});|" th:text="${manual.orginlFileNm}"></a>
+                            <a th:href="|javascript:deleteItemImage(${manual.mnlSn});|"><img src="/content/images/btn/file_close.gif" alt="close"></a>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><span class="required_mark">*</span>내용</td>
+                    <td>
+                        <div class="flex_box gap-08">
+                            <span class="placeholder_wrap">
+                                <span class="placeholder"></span>
+                                <textarea id="menuCn" name="menuCn" cols="30" rows="10"
+                                          class="required _filter" title="내용" th:text="${manual.menuCn}"></textarea>
+                            </span>
+                        </div>
+                    </td>
+                </tr>
             </tbody>
         </table>
     </div>
-    <form id="manualForm" enctype="multipart/form-data"
-          th:action="${manual.mnlSn} != null ? @{'/admin/manuals/' + ${manual.mnlSn}} : @{/admin/manuals}" method="post"></form>
-    <div class="btn_all btn_center">
-        <button type="submit" form="manualForm" class="btn btn-dark-gray btn-small">저장</button>
-        <form th:if="${manual.mnlSn} != null" th:action="@{'/admin/manuals/' + ${manual.mnlSn} + '/delete'}"
-              method="post" class="inline-form" onsubmit="return confirm('삭제하시겠습니까?')" style="display:inline;">
-            <button type="submit" class="btn btn-small">삭제</button>
-        </form>
+
+    <div class="btn_all btn_center" th:if="${manual.mnlSn == null}">
+        <div class="flex_box gap-08">
+            <button type="submit" class="btn btn-dark-gray btn-small">등록</button>
+            <button type="button" class="btn btn-default btn-small" onclick="location.href='/admin/manuals'">취소</button>
+        </div>
+    </div>
+</form>
+
+<!-- AS-IS 주석처리: 스마트에디터(smarteditorInit / smarteditor id="content") -->
+
+    </div>
     </div>
 </div>
-<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</div>
+
+<script type="text/javascript" th:inline="javascript">
+var redirectMessage = /*[[${redirectMessage}]]*/ null;
+var confirmDeleteMessage = /*[[${msg.get('M00196')}]]*/ '삭제하시겠습니까?';
+var deletedMessage = /*[[${msg.get('M00205')}]]*/ '삭제 되었습니다.';
+var menuSeCode = /*[[${manual.menuSeCode}]]*/ null;
+
+$(function() {
+	if (redirectMessage) {
+		alert(redirectMessage);
+	}
+
+	$( window ).scroll(function() {
+		setHeight();
+	});
+
+	if (menuSeCode) {
+		$("#menuSeCode").val(menuSeCode);
+	}
+});
+
+function downloadItemImage(id) {
+	location.href = '/admin/manuals/file-download/'+id;
+}
+
+function deleteManual(mnlSn) {
+	Common.confirm(confirmDeleteMessage, function() {
+		$.post("/admin/manuals/delete/" + mnlSn, {}, function(response) {
+			Common.responseHandler(response, function() {
+				alert(deletedMessage);
+				location.href = "/admin/manuals";
+			});
+		});
+	});
+}
+
+/* AS-IS deleteItemImage - 파라미터명(itemId)까지 그대로다. */
+function deleteItemImage(id, index) {
+	var message = '파일이 실제로 삭제됩니다.\n삭제하시겠습니까?';
+	if (!confirm(message)) {
+		return;
+	}
+
+	var param = {'itemId': id};
+	$.post('/admin/manuals/delete-item-image', param, function(response){
+		Common.responseHandler(response);
+		$("#file_camera_"+id).remove();
+	});
+}
+</script>
 </body>
 </html>

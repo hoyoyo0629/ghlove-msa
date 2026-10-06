@@ -57,6 +57,21 @@ public class Donation {
     @Column(name = "DSGN_DNTN_BIZ_ID")
     private Long dsgnDntnBizId;
 
+    /**
+     * 삭제여부 - AS-IS는 기부 집계 쿼리마다 {@code DELETE_AT='N'}을 건다(기부금모금현황·특정사업
+     * 집계 등). 컬럼은 TO-BE에도 있었으나 매핑이 없어 그 조건을 걸 수 없었다.
+     */
+    @Column(name = "DELETE_AT")
+    private String deleteAt;
+
+    /**
+     * 수납일 - AS-IS는 집계에서 {@code STTEMNT_PAY_DE IS NOT NULL}(수납완료)까지 요구한다.
+     * TO-BE는 수납확인 연계가 아직 이식되지 않아 <b>항상 비어 있다</b> - 집계에 그 조건을 걸면
+     * 전부 0이 되므로 지금은 걸지 않는다(연계 이식 라운드에서 켤 것).
+     */
+    @Column(name = "STTEMNT_PAY_DE")
+    private String sttemntPayDe;
+
     /** 기탁서(오프라인) 접수 시 입금 정보 메모 - AS-IS 컬럼이었으나 미매핑 상태였음. */
     @Column(name = "RCEPT_BANK_CODE")
     private String rceptBankCode;

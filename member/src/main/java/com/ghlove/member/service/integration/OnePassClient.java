@@ -40,6 +40,21 @@ public class OnePassClient {
         return enabled;
     }
 
+    /**
+     * 디지털원패스 연동해지 (AS-IS ApiSendHandler.InterLockRelease - 원패스 연계해지 API).
+     * 실연계가 열리면 원패스 연계해지 API를 호출한다 - 지금은 로그인과 마찬가지로 실연계가
+     * 꺼져 있어(enabled=false) 통과시킨다(호출측이 이어서 내부 탈퇴 처리를 한다). 방화벽/실
+     * IdP가 열리면 이 메서드 내부만 실제 연계해지 호출로 교체하면 된다.
+     * @return 연계해지 성공 여부
+     */
+    public boolean releaseInterlock() {
+        if (!enabled) {
+            return true;
+        }
+        // TODO 실연계 개방 시 원패스 연계해지(InterLockRelease) 호출로 교체
+        return true;
+    }
+
     public String buildLoginRedirectUrl() {
         String state = UUID.randomUUID().toString();
         return UriComponentsBuilder.fromHttpUrl(idpUrl)

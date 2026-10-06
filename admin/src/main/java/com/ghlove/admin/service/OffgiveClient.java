@@ -39,6 +39,56 @@ public class OffgiveClient {
     }
 
     /** AS-IS offgive/list.jsp 검색조건(지자체/접수일자 범위) 재현. */
+    /**
+     * 기부금 접수관리 목록(메뉴 15101) - AS-IS 검색조건 전체. 이름은 회원(member) 소유라
+     * USER_ID만 오고 admin이 채운다.
+     */
+    public List<AdminRow> adminSearch(String shKeyword, String shText, String startDate, String endDate,
+                                       java.math.BigDecimal amountFrom, java.math.BigDecimal amountTo,
+                                       String cntrSttusCode, String rceptBankCode, String rceptBankNm) {
+        try {
+            List<AdminRow> rows = restClient.get()
+                    .uri(uriBuilder -> {
+                        uriBuilder.path("/api/admin/offgive/search");
+                        addIfPresent(uriBuilder, "shKeyword", shKeyword);
+                        addIfPresent(uriBuilder, "shText", shText);
+                        addIfPresent(uriBuilder, "startDate", startDate);
+                        addIfPresent(uriBuilder, "endDate", endDate);
+                        if (amountFrom != null) {
+                            uriBuilder.queryParam("amountFrom", amountFrom);
+                        }
+                        if (amountTo != null) {
+                            uriBuilder.queryParam("amountTo", amountTo);
+                        }
+                        addIfPresent(uriBuilder, "cntrSttusCode", cntrSttusCode);
+                        addIfPresent(uriBuilder, "rceptBankCode", rceptBankCode);
+                        addIfPresent(uriBuilder, "rceptBankNm", rceptBankNm);
+                        return uriBuilder.build();
+                    })
+                    .retrieve()
+                    .body(new org.springframework.core.ParameterizedTypeReference<List<AdminRow>>() {
+                    });
+            return rows != null ? rows : List.of();
+        } catch (org.springframework.web.client.RestClientException e) {
+            return List.of();
+        }
+    }
+
+    private static void addIfPresent(org.springframework.web.util.UriBuilder uriBuilder, String name,
+                                      String value) {
+        if (value != null && !value.isBlank()) {
+            uriBuilder.queryParam(name, value);
+        }
+    }
+
+    /** AS-IS 목록 11컬럼의 원본 - 기부상태는 TO-BE 낱말, 이름은 USER_ID로만 온다. */
+    public record AdminRow(String cntrSn, String cntrSttusCode, String elctrnPayNo, String sttemntPayDe,
+                            String cntrLocgovCode, String upperLocgovNm, String locgovNm, Long userId,
+                            BigDecimal cntrAmt, String rceptBankCode, String rceptBankNm,
+                            String frstRegistPnttm, String prjSubject, Long cntrPoint,
+                            String rtnpsntReqstCode) {
+    }
+
     public List<Donation> search(String locgovCode, String startDate, String endDate) {
         try {
             List<Donation> list = restClient.get()

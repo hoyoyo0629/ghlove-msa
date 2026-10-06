@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>기부금 지출내역 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -11,13 +12,18 @@
 
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
 <!-- AS-IS opmanager/give/give-operation/list/{locgovCode}.jsp + popup/form.jsp를 한
      화면으로 합쳤다(팝업 대신 인라인 폼 - 이 프로젝트의 기존 서버렌더 폼 관행). "수정"을
      누르면 JS로 폼에 기존값을 채우고 action을 수정 URL로 바꾼다(파일은 보안상 재선택
      필요 - 기존 첨부는 별도 목록에서 개별 삭제). -->
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <p><a th:href="@{/give-operation}">&larr; 기부금 운용정보 목록</a></p>
     <h3 th:text="${locgovFullNm} + ' 지출내역'"></h3>
 
@@ -117,7 +123,10 @@
             <button type="button" class="btn btn-dark-default btn-small" onclick="resetForm()">취소</button>
         </div>
     </div>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 
 <script th:inline="none">
 var createAction = document.getElementById('opratnForm').action;

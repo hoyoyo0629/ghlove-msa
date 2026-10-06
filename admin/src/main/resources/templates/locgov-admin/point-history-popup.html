@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>포인트 지급률 변경이력 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<!-- AS-IS opmanager/i18n/user/popup/locgov-point-list.jsp 이식. layout=base 팝업(600x675).
+     지자체관리 목록의 "포인트 지급률" 칸과 수정화면의 [이력확인] 버튼이 띄운다.
+
+     AS-IS verbatim:
+     - 년도 select는 '-전체-' + 년도 공통코드(YYYY)이고, 바꾸면 GET으로 다시 조회한다.
+     - 5컬럼(no/변경일/년도/포인트률/작성자)이고 포인트률 포맷은 #.##다.
+     - 정렬은 변경일 내림차순, 같으면 년도 내림차순.
+     - 빈 목록 문구는 "포인트 지급률 변경이력이 존재하지 않습니다."이고 그 행에도 background가 있다.
+     - 하단에 [확인] 버튼으로 팝업을 닫는다.
+
+     TO-BE 차이: AS-IS는 G_CTBNY_SETUP을 읽지만, 지급률의 실제 소유는 point
+     (PT_LOCGOV_POINT_RATE)라 그쪽을 읽는다 - 연도별 행 자체가 이력이고 작성자명까지 들어 있어
+     AS-IS 팝업 컬럼과 1:1로 맞는다. -->
+<body>
+<div class="popup_wrap">
+	<div id="pop_header">
+		<h1 class="popup_title">포인트 지급률 변경이력</h1>
+		<a href="javascript:self.close();" class="btn_close">
+			<img th:src="@{/content/opmanager/images/btn/btn_close.png}" alt="닫기">
+		</a>
+	</div>
+	<div class="popup_contents">
+		<div class="count_title">
+			<span class="flex_box juc-right">
+				<select id="stdrYear" title="" class="wd-150" onchange="changeStdrYear();">
+					<option value="" th:selected="${#strings.isEmpty(stdrYear)}">-전체-</option>
+					<option th:each="code : ${yearCodeList}" th:value="${code.key}"
+					        th:selected="${code.key == stdrYear}" th:text="${code.value} + '년'"></option>
+				</select>
+			</span>
+		</div>
+		<div class="board_list">
+			<table class="board_list_table" summary="포인트 지급률 변경이력">
+				<caption>포인트 지급률 변경이력</caption>
+				<colgroup>
+					<col style="width:10%;">
+					<col style="width:20%;">
+					<col style="width:20%;">
+					<col style="width:20%;">
+					<col style="width:20%;">
+				</colgroup>
+				<thead>
+					<tr>
+						<th scope="col">no</th>
+						<th scope="col">변경일</th>
+						<th scope="col">년도</th>
+						<th scope="col">포인트률</th>
+						<th scope="col">작성자</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="item, i : ${list}" style="background:#fff;">
+						<td th:text="${pagination.itemNumber - i.count}">0</td>
+						<td th:text="${item.lastUpdtPnttm != null} ? ${#temporals.format(item.lastUpdtPnttm, 'yyyy-MM-dd')} : ''"></td>
+						<td th:text="${item.stdrYear}"></td>
+						<td th:text="${item.pointRate != null} ? ${item.pointRate.stripTrailingZeros().toPlainString()} : ''"></td>
+						<td th:text="${item.lastUpdusrNm}"></td>
+					</tr>
+					<tr th:if="${#lists.isEmpty(list)}" style="background:#fff;">
+						<td colspan="5">포인트 지급률 변경이력이 존재하지 않습니다.</td>
+					</tr>
+				</tbody>
+			</table>
+			<div class="pagination-wrap" th:if="${not #lists.isEmpty(list)}">
+				<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+			</div>
+		</div>
+
+		<p class="popup_btns">
+			<button type="button" class="btn btn-active" onclick="self.close();">확인</button>
+		</p>
+	</div>
+</div>
+
+<script type="text/javascript" th:inline="javascript">
+	var locgovCode = [[${locgovCode}]];
+
+	/**
+	 *	함 수 명 : changeStdrYear
+	 *	기	능  : 년도 변경
+	 */
+	function changeStdrYear() {
+		var form = document.createElement("form");
+		form.setAttribute("charset", "UTF-8");
+		form.setAttribute("method", "GET");
+		form.setAttribute("action", "/admin/locgovs/popup/point/list/" + locgovCode);
+
+		var hiddenField = document.createElement("input");
+		hiddenField.setAttribute("type", "hidden");
+		hiddenField.setAttribute("name", "stdrYear");
+		hiddenField.setAttribute("value", $("#stdrYear").val());
+		form.appendChild(hiddenField);
+
+		document.body.appendChild(form);
+		form.submit();
+	}
+
+	/**
+	 *	함 수 명 : movePage
+	 *	기	능  : 페이지 이동
+	 */
+	function movePage(page) {
+		var url = new URL(location.href);
+		url.searchParams.set("page", page);
+		location.href = url.toString();
+	}
+</script>
+</body>
+</html>

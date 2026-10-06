@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title th:text="${mode == 'create'} ? '모바일 카테고리 편집 등록 - 고향사랑e음 (admin service)' : '모바일 카테고리 편집 수정 - 고향사랑e음 (admin service)'"></title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -12,9 +13,14 @@
     .edit-preview { max-width:200px; display:block; margin-bottom:6px; }</style>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner" th:object="${row}">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner" th:object="${row}">
+    <!-- 메뉴 미등록(op_menu 없음) 화면이라 활성 메뉴 컨텍스트가 없어 브레드크럼 생략 -->
     <h3><span th:text="${mode == 'create'} ? '모바일 카테고리 편집 등록' : '모바일 카테고리 편집 수정'"></span></h3>
     <div class="error-box" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
@@ -52,7 +58,10 @@
         <button type="submit" form="editForm" class="btn btn-dark-gray btn-small">저장</button>
         <a class="btn btn-small" th:href="@{/admin/mobile-category-edit}">목록</a>
     </div>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

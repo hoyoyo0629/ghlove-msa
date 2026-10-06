@@ -39,6 +39,18 @@ public class Locgov {
     @Column(name = "USE_AT")
     private String useAt;
 
+    /** 기부불가 사유·제한기간 (AS-IS G_LOCGOV violtResnCn/lmttBgnDe/lmttEndDe) - 지자체 선택 시
+     *  오늘이 [lmttBgnDe, lmttEndDe] 사이면 "선택하신 지자체는 {violtResnCn}으로 …기부가
+     *  불가능합니다"로 차단한다. */
+    @Column(name = "VIOLT_RESN_CN")
+    private String violtResnCn;
+
+    @Column(name = "LMTT_BGN_DE")
+    private String lmttBgnDe;
+
+    @Column(name = "LMTT_END_DE")
+    private String lmttEndDe;
+
     /** 명예기부자(기부혜택증) 등급 구간 - 해당 연도 누적 기부액이 이 값을 넘으면 그 등급을 받는다. */
     @Column(name = "STDR_1LEVEL_AMT")
     private Integer stdr1LevelAmt;

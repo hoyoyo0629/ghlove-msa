@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Q&amp;A - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/qna-open/form.jsp 이식(메뉴 5112 Q&A 답변화면).
+     목록에서 제목을 누르면 이 화면으로 온다. 문의 내용을 보여주고 답변을 등록·수정·삭제한다.
+     AS-IS는 /answer/{qnaId}와 /edit/{qnaId} 두 GET이 이 한 화면을 쓴다(edit는 첨부만 안 내려준다).
+
+     AS-IS verbatim:
+     - 상단 [문의글 삭제] [목록] 버튼은 <b>답변이 없을 때만</b> 나온다(answerCount == 0).
+     - 문의 정보 표는 문의유형 / 작성자·작성일 / 제목 / 내용 / 첨부파일 순이다.
+     - 답변이 없으면 [답변 등록] 하나, 있으면 [답변 수정] [답변 삭제] [목록]이고 모두 오른쪽 정렬이다.
+     - 답변 작성자 칸은 <b>역할명 (관리자 로그인ID)</b>다 - 사람 이름이 아니다.
+     - 답변내용 textarea의 maxlength는 500이다.
+     - 답변 제목은 화면에 없고 <b>hidden에 "답변입니다."가 고정값</b>으로 들어간다.
+     - 답변이 없으면 answer 칸에 <b>인사말 기본값</b>을 채워 둔다.
+     - 작성자명은 목록과 달리 <b>마스킹하지 않는다</b>(AS-IS가 상세에서는 원문을 쓴다).
+     - 첨부 다운로드는 질문첨부를 뜻하는 <b>'Q'</b>를 보낸다.
+     - 첨부 삭제 확인은 Common.confirm이 아니라 브라우저 confirm이다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3>Q&amp;A</h3>
+
+<!-- AS-IS: 답변 없을 때 -->
+<div class="btn_all btn_right mb15" th:if="${qna.answerCount == null or qna.answerCount == 0}">
+    <div class="flex_box gap-08">
+        <button type="button" class="btn btn-dark-gray btn-mini"
+                th:attr="onclick=|deleteQna(${qna.qnaId})|">문의글 삭제</button>
+        <button type="button" class="btn btn-defualt btn-mini" onclick="goToList()">목록</button>
+    </div>
+</div>
+
+<div class="board_write">
+    <table class="board_write_table" summary="">
+        <colgroup>
+            <col style="width:220px;">
+            <col>
+            <col style="width:220px;">
+        </colgroup>
+        <tbody>
+            <tr>
+                <td class="label">문의유형</td>
+                <td colspan="3">
+                    <div th:text="${qnaAnswerTypeLabel}"></div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">작성자</td>
+                <td>
+                    <div>
+                        <th:block th:if="${qna.userId != null and qna.userId > 0 and askerLoginId != null and !askerLoginId.isEmpty()}">
+                            <span th:text="${qna.userName}"></span>
+                            <a th:href="@{'/admin/members/details/' + ${qna.userId}}" target="_blank" rel="noopener noreferrer"
+                               th:text="'(' + ${askerLoginId} + ')'"></a>
+                        </th:block>
+                        <th:block th:unless="${qna.userId != null and qna.userId > 0 and askerLoginId != null and !askerLoginId.isEmpty()}">
+                            <span th:if="${qna.userName != null and !qna.userName.isEmpty()}" th:text="${qna.userName}"></span>
+                            <span th:unless="${qna.userName != null and !qna.userName.isEmpty()}">-</span>
+                        </th:block>
+                    </div>
+                </td>
+                <!-- AS-IS op:date - 이 화면은 작성일을 날짜까지만 보여준다(목록은 op:datetime) -->
+                <td class="label">작성일</td>
+                <td>
+                    <div th:text="${#strings.length(qna.createdDate) >= 8}
+                                 ? ${#strings.substring(qna.createdDate,0,4)} + '-' + ${#strings.substring(qna.createdDate,4,6)} + '-' + ${#strings.substring(qna.createdDate,6,8)}
+                                 : ${qna.createdDate}"></div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">제목</td>
+                <td colspan="3">
+                    <div th:utext="${subjectHtml}"></div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">내용</td>
+                <td colspan="3">
+                    <div th:utext="${questionHtml}"></div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">첨부파일</td>
+                <td colspan="3">
+                    <div th:each="f, i : ${qnaImage}" th:class="|file_camera_${i.index}|">
+                        <a th:href="|javascript:downloadItemImage(${f.qnaFileId}, 'Q');|" th:text="${f.orgFileName}"></a>
+                        <a th:href="|javascript:deleteItemImage(${f.qnaFileId}, ${i.index});|"><img src="/content/images/btn/file_close.gif" alt="close"></a>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- AS-IS: 검색조건을 들고 목록으로 되돌아가기 위한 hidden 폼(qnaList()가 쓴다) -->
+<form id="qnaParam" method="post" th:action="@{/qna-admin}">
+    <input type="hidden" name="qnaOpenAnswerCode" th:value="${searchParam.qnaOpenAnswerCode}"/>
+    <input type="hidden" name="searchStartDate" th:value="${searchParam.searchStartDate}"/>
+    <input type="hidden" name="searchEndDate" th:value="${searchParam.searchEndDate}"/>
+    <input type="hidden" name="where" th:value="${searchParam.where}"/>
+    <input type="hidden" name="query" th:value="${searchParam.query}"/>
+    <input type="hidden" name="itemsPerPage" th:value="${searchParam.itemsPerPage}"/>
+</form>
+
+<form id="qnaAnswer" method="post" th:action="@{'/qna-admin/answer/' + ${qna.qnaId}}">
+    <input type="hidden" name="qnaAnswerId" th:value="${qnaAnswer != null} ? ${qnaAnswer.qnaAnswerId} : ''"/>
+    <input type="hidden" name="qnaDetailType" value="qna-open"/>
+
+    <div class="board_write mt30">
+        <table class="board_write_table" summary="">
+            <colgroup>
+                <col style="width:220px;">
+                <col>
+                <col style="width:220px;">
+            </colgroup>
+            <tbody>
+                <tr th:if="${qna.answerCount != null and qna.answerCount > 0}">
+                    <td class="label">작성자</td>
+                    <td>
+                        <!-- AS-IS: 역할명 (관리자 로그인ID) -->
+                        <div th:text="${answerer.roleName} + ' (' + ${answerer.loginId} + ')'"></div>
+                    </td>
+                    <td class="label">답변일</td>
+                    <td>
+                        <div th:text="${qnaAnswer != null and qnaAnswer.answerDate != null and #strings.length(qnaAnswer.answerDate) >= 8}
+                                     ? ${#strings.substring(qnaAnswer.answerDate,0,4)} + '-' + ${#strings.substring(qnaAnswer.answerDate,4,6)} + '-' + ${#strings.substring(qnaAnswer.answerDate,6,8)}
+                                     : (${qnaAnswer != null} ? ${qnaAnswer.answerDate} : '')"></div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><span class="required_mark">*</span>답변내용</td>
+                    <td colspan="3">
+                        <div class="flex_box gap-08 item-center">
+                            <span class="placeholder_wrap">
+                                <span class="placeholder"></span>
+                                <textarea id="answer" name="answer" cols="30" rows="10" style="height:200px"
+                                          maxlength="500" class="required _filter" title="답변내용"
+                                          th:text="${qnaAnswer != null} ? ${qnaAnswer.answer} : ''"></textarea>
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="btn_all btn_right" th:if="${qna.answerCount == null or qna.answerCount == 0}">
+        <div class="flex_box gap-08">
+            <button type="submit" class="btn btn-dark-gray btn-small">답변 등록</button>
+        </div>
+    </div>
+
+    <!-- AS-IS: 답변 있을 때 -->
+    <div class="btn_all btn_right" th:if="${qna.answerCount != null and qna.answerCount > 0}">
+        <div class="flex_box gap-08">
+            <button type="submit" class="btn btn-dark-gray btn-mini">답변 수정</button>
+            <button type="button" class="btn btn-dark-gray btn-mini"
+                    th:attr="onclick=|deleteQnaAnswer(${qna.qnaId}, ${answerId})|">답변 삭제</button>
+            <button type="button" class="btn btn-default btn-mini" onclick="goToList()">목록</button>
+        </div>
+    </div>
+
+    <input type="hidden" name="title" title="답변제목" class="input_txt required _filter full" value="답변입니다." maxlength="100"/>
+</form>
+
+    </div>
+    </div>
+</div>
+</div>
+
+<script type="text/javascript" th:inline="javascript">
+var redirectMessage = /*[[${redirectMessage}]]*/ null;
+var deletedMessage = /*[[${msg.get('M00205')}]]*/ '삭제 되었습니다.';
+var answerCount = /*[[${qna.answerCount}]]*/ 0;
+
+$(function() {
+	if (redirectMessage) {
+		alert(redirectMessage);
+	}
+	$('#qnaAnswer').validator();
+	Common.checkedMaxStringLength('textarea[name=answer]', null, 500);
+
+	// AS-IS: 답변이 없을 때 인사말을 기본값으로 채워 둔다
+	if (answerCount == 0) {
+		$('#answer').val("안녕하세요. 고향사랑e음 상담센터입니다.\n\n감사합니다.");
+	}
+});
+
+/* AS-IS qnaList() - 검색조건을 들고 목록으로 되돌아간다. */
+function qnaList() {
+	$("#qnaParam").attr("method", "get").attr("action", "/qna-admin").submit();
+}
+
+function goToList() {
+	location.href = '/qna-admin';
+}
+
+/* AS-IS: 문의글 삭제는 ajax GET /delete/{qnaId} 다(응답은 JSON). */
+function deleteQna(id) {
+	Common.confirm("삭제하시겠습니까?", function() {
+		$.get("/qna-admin/delete/" + id, {}, function(response) {
+			Common.responseHandler(response, function() {
+				alert(deletedMessage);
+				location.href = "/qna-admin";
+			});
+		});
+	});
+}
+
+/* AS-IS: 답변 삭제는 ajax GET /delete/{qnaId}/answer/{qnaAnswerId} 다. */
+function deleteQnaAnswer(qnaId, answerId) {
+	Common.confirm("삭제하시겠습니까?", function() {
+		$.get("/qna-admin/delete/" + qnaId + "/answer/" + answerId, {}, function(response) {
+			Common.responseHandler(response, function() {
+				alert(deletedMessage);
+				location.href = "/qna-admin";
+			});
+		});
+	});
+}
+
+/* AS-IS: 질문첨부는 qnaDetailType 'Q'로 받는다(답변첨부는 다른 표를 본다). */
+function downloadItemImage(id, qnaDetailType) {
+	location.href = '/qna-admin/file-download/' + encodeURIComponent(id) + '/' + qnaDetailType;
+}
+
+/* AS-IS deleteItemImage - 확인 문구와 파라미터명(itemId)까지 그대로다. */
+function deleteItemImage(id, index) {
+	var message = '파일이 실제로 삭제됩니다.\n삭제하시겠습니까?';
+	if (!confirm(message)) {
+		return;
+	}
+
+	var param = {'itemId': encodeURIComponent(id)};
+	$.post('/qna-admin/delete-item-image', param, function(response){
+		Common.responseHandler(response);
+		$(".file_camera_" + index).remove();
+	});
+}
+</script>
+</body>
+</html>

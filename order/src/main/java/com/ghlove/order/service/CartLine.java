@@ -12,5 +12,6 @@ package com.ghlove.order.service;
  */
 public record CartLine(Long cartItemId, Long itemId, String itemName, String thumbnailUrl,
                         Integer quantity, Integer unitPrice, long lineTotal,
-                        long deliveryFee, long payable) {
+                        long deliveryFee, long payable, String optionName, Integer optionPrice,
+                        String textOption) {
 }

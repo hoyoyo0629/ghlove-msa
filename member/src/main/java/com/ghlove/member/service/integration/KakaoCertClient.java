@@ -63,6 +63,19 @@ public class KakaoCertClient {
         return enabled;
     }
 
+    /**
+     * 카카오 계정 연동해제 (AS-IS kakaoLinkToolkitClear - 카카오싱크 톡키트 unlink).
+     * 실연계가 열리면 톡키트 unlink를 호출한다 - 지금은 꺼져 있어(enabled=false) 통과시킨다.
+     * @return 연동해제 성공 여부
+     */
+    public boolean unlink(String kakaoUserKey) {
+        if (!enabled) {
+            return true;
+        }
+        // TODO 실연계 개방 시 카카오싱크 톡키트 unlink 호출로 교체
+        return true;
+    }
+
     /** 화면이 카카오 JS SDK를 호출하는 데 필요한 값 묶음. signData는 요청마다 새로 만든다. */
     public record CertConfig(String jsKey, String settleId, String redirectUri,
                              String identifyItems, String signData) {}

@@ -1,13 +1,26 @@
 package com.ghlove.admin.web;
 
+import com.ghlove.admin.domain.IpsSendingMaster;
+import com.ghlove.admin.repository.IpsSendingMasterRepository;
 import com.ghlove.admin.repository.SendMailLogRepository;
 import com.ghlove.admin.repository.SendSmsLogRepository;
+import com.ghlove.admin.service.SmsType;
+import com.ghlove.admin.web.support.Pagination;
+import com.ghlove.admin.web.support.SmsLogParam;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /** 메일/SMS 발송 이력 조회 (AS-IS opmanager/send-mail-log, send-sms-log). 조회 전용 -
  * 실제 발송이력 기록은 MailConfigService/추후 SMS연동이 이 테이블에 쌓아야 하는데 아직
@@ -18,6 +31,7 @@ public class SendLogAdminController {
 
     private final SendMailLogRepository sendMailLogRepository;
     private final SendSmsLogRepository sendSmsLogRepository;
+    private final IpsSendingMasterRepository ipsSendingMasterRepository;
 
     @GetMapping("/admin/send-mail-logs")
     public String mailList(Model model) {
@@ -31,9 +45,61 @@ public class SendLogAdminController {
         return "send-log-admin/mail-detail";
     }
 
-    @GetMapping("/admin/send-sms-logs")
-    public String smsList(Model model) {
-        model.addAttribute("logs", sendSmsLogRepository.findAllByOrderBySendSmsLogIdDesc());
+    /**
+     * 문자전송이력(7208) - AS-IS saleson.shop.sms.SmsController(/opmanager/sms-log/list) 재현.
+     * AS-IS는 이 화면을 {@code op_send_sms_log}가 아니라 외부 문자발송 연계 표
+     * {@code TIF_IPS_SNDNG_M}에서 읽는다(SmsIpsService). 문자 구분·검색내용·생성일 범위로 걸러
+     * 9컬럼으로 보여준다. 예전 TO-BE는 TO-BE가 만든 op_send_sms_log를 검색 없이 전부 뿌렸다.
+     */
+    @RequestMapping(value = "/admin/send-sms-logs", method = { RequestMethod.GET, RequestMethod.POST })
+    public String smsList(@ModelAttribute("searchParam") SmsLogParam searchParam,
+                          HttpServletRequest request, Model model) {
+        if (searchParam.getItemsPerPage() <= 0) {
+            searchParam.setItemsPerPage(10);
+        }
+        List<IpsSendingMaster> all = ipsSendingMasterRepository.search(
+                blankToNull(searchParam.getSmsTypeStr()),
+                blankToNull(searchParam.getQuery()),
+                startOfDay(searchParam.getSearchStartDate()),
+                startOfNextDay(searchParam.getSearchEndDate()));
+
+        Pagination pagination = Pagination.of(all.size(), searchParam.getPage(), searchParam.getItemsPerPage())
+                .withLinkFrom(request);
+        model.addAttribute("smsLogList", all.stream()
+                .skip(pagination.getStartRow())
+                .limit(pagination.getItemsPerPage())
+                .toList());
+        model.addAttribute("count", all.size());
+        model.addAttribute("pagination", pagination);
+        model.addAttribute("smsTypes", SmsType.values());
+        model.addAttribute("smsTypeTitles", SmsType.options());
         return "send-log-admin/sms-list";
+    }
+
+    private static String blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value;
+    }
+
+    /** yyyyMMdd → 그 날 00:00. AS-IS도 생성일(DATETIME)을 날짜 범위로 비교한다. */
+    private static LocalDateTime startOfDay(String yyyymmdd) {
+        LocalDate date = parse(yyyymmdd);
+        return date == null ? null : date.atStartOfDay();
+    }
+
+    /** 종료일은 다음 날 00:00 미만으로 본다(그 날 전체 포함). */
+    private static LocalDateTime startOfNextDay(String yyyymmdd) {
+        LocalDate date = parse(yyyymmdd);
+        return date == null ? null : date.plusDays(1).atStartOfDay();
+    }
+
+    private static LocalDate parse(String yyyymmdd) {
+        if (yyyymmdd == null || yyyymmdd.length() != 8) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(yyyymmdd, DateTimeFormatter.ofPattern("yyyyMMdd"));
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 }

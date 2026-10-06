@@ -44,6 +44,14 @@ public class ProfileApiController {
         Map<String, String> provinces = new LinkedHashMap<>();
         locgovs.forEach(l -> provinces.putIfAbsent(l.upperLocgovCode(), l.upperLocgovNm()));
 
+        // AS-IS modify.html의 연동해지 버튼 표시조건 재현 - userKeyYN(원패스 연동)은 MSA에서
+        // 원패스 가입경로(loginPathCode 300), kakaoUserKeyYN(카카오 연동)은 카카오 가입경로(500)
+        // 또는 카카오 유저키 보유로 판정한다(docs/member-social-unlink-parity-audit.md §2).
+        String loginPathCode = user.getLoginPathCode();
+        String userKeyYN = "300".equals(loginPathCode) ? "Y" : "N";
+        String kakaoUserKeyYN = ("500".equals(loginPathCode)
+                || (user.getKakaoUserKey() != null && !user.getKakaoUserKey().isBlank())) ? "Y" : "N";
+
         return ResponseEntity.ok(new ProfileResponse(
                 user.getUserId(), user.getLoginId(), user.getUserName(),
                 memberService.codesOf("USER_TYPE").get(user.getSbscrbSeCode()),
@@ -54,7 +62,8 @@ public class ProfileApiController {
                 "Y".equals(profile.getReceivePbanc()), "Y".equals(profile.getReceiveEmail()), "Y".equals(profile.getReceiveSms()),
                 "Y".equals(profile.getReceiveKakao()),
                 donationClient.interestLocgovsOf(user.getUserId()),
-                locgovs, provinces));
+                locgovs, provinces,
+                loginPathCode, userKeyYN, kakaoUserKeyYN));
     }
 
     public record ProfileResponse(Long userId, String loginId, String userName, String userTypeLabel,
@@ -63,7 +72,8 @@ public class ProfileApiController {
                                    boolean receivePbanc, boolean receiveEmail, boolean receiveSms, boolean receiveKakao,
                                    java.util.List<DonationClient.InterestLocgovInfo> interestLocgovs,
                                    java.util.List<DonationClient.LocgovInfo> allLocgovs,
-                                   Map<String, String> provinces) {
+                                   Map<String, String> provinces,
+                                   String loginPathCode, String userKeyYN, String kakaoUserKeyYN) {
     }
 
     public record ProfileUpdateRequest(String phoneNumber, String email, String post, String address,

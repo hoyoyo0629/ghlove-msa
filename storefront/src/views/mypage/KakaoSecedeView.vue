@@ -1,0 +1,183 @@
+<script setup>
+import { modalAlert, modalConfirm } from '../../composables/useModal'
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { api } from '../../api/http'
+import { useAuthStore } from '../../stores/auth'
+import { formatN } from '../../utils/format'
+
+// AS-IS users/secede-kakao.html 재현 - 카카오 연동해제(= 탈퇴). 회원정보수정의 "카카오 연동
+// 해지"에서 서버가 CHECK_SECEDE로 응답할 때(카카오 가입경로=500) 진입한다. 잔여포인트 표는
+// 일반 회원탈퇴 화면과 동일하게 노출하고, 비밀번호 입력은 없다(카카오 회원은 비번 미사용).
+const router = useRouter()
+const auth = useAuthStore()
+
+const loading = ref(true)
+const userName = ref('')
+const leaveCodeList = ref({})
+const pointSummary = ref([])
+const leaveCode = ref('')
+const reason = ref('')
+
+onMounted(async () => {
+  try {
+    const data = await api.get('member', '/api/withdraw-info')
+    userName.value = data.userName
+    leaveCodeList.value = data.leaveCodeList
+    pointSummary.value = data.pointSummary
+  } finally {
+    loading.value = false
+  }
+})
+
+async function onSubmit() {
+  if (!leaveCode.value) {
+    modalAlert('탈퇴사유를 선택해 주세요')
+    return
+  }
+  if (!(await modalConfirm('회원 탈퇴 시 회원 서비스를 모두 사용할 수 없습니다. 정말 탈퇴하시겠습니까?'))) {
+    return
+  }
+  const res = await api.post('member', '/api/kakao-link/kakao-link-secede', { leaveCode: leaveCode.value, leaveReason: reason.value })
+  if (res.errMsg) {
+    modalAlert(res.errMsg)
+  } else if (res.result === 'SUCCESS') {
+    await auth.fetchMe()
+    await modalAlert('탈퇴처리가 정상처리 되었습니다.')
+    router.push('/')
+  } else {
+    modalAlert('문제가 발생했습니다.')
+  }
+}
+</script>
+
+<template>
+  <section class="find-idpw center" v-if="!loading">
+    <div class="page-title-box">
+      <span class="ali_breadcrumb">
+        <router-link to="/"><img class="icon-img" src="/images/icon/cli-icon_home.png" alt="홈으로" /></router-link>
+        <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+        회원정보 수정
+        <span class="txt-arrow"><span class="sr-only">&gt;</span></span>
+        회원탈퇴
+      </span>
+      <h2 class="page-title-txt">회원탈퇴</h2>
+    </div>
+
+    <form @submit.prevent="onSubmit">
+      <div class="change-info-area member-secession">
+        <div class="info-mess">
+          <p class="sub-title">회원 탈퇴 시 회원 서비스를 모두 사용할 수 없습니다.</p>
+          <p class="title pointRed">기부 포인트, 주문내역 등<br /><strong class="pointRed">모든 정보가 삭제</strong>됩니다.</p>
+          <p class="s-txt">탈퇴 시 기존 정보의 복구가 불가능 하므로 신중이 탈퇴를 진행해주시기 바랍니다.</p>
+        </div>
+        <div class="line"></div>
+        <div class="info-note">
+          <ul>
+            <li>
+              탈퇴 후, 서비스에 등록한 게시물 및 댓글은 삭제되지 않고 보존되며 탈퇴 후에는 회원정보가 삭제되어 본인 여부를 확인할 수 없으므로
+              게시글을 임의로 삭제해드릴 수 없습니다. 먼저 해당 게시물을 삭제하신 후 탈퇴를 신청하시기 바랍니다.
+            </li>
+            <li>회원 탈퇴후 재가입시에는 신규 회원 가입 처리 되며 탈퇴전 사용한 아이디로 재가입은 불가합니다.</li>
+          </ul>
+        </div>
+        <div class="line"></div>
+        <div class="info-field-group">
+          <div class="table-container">
+            <div class="table-result-body">
+              <table>
+                <caption>잔여포인트 - No, 기부지자체(시도/시군구), 잔여 포인트로 구성</caption>
+                <thead>
+                  <tr class="result-title">
+                    <th scope="col" rowspan="2">No.</th>
+                    <th scope="col" colspan="2">기부지자체</th>
+                    <th scope="col" rowspan="2">잔여 포인트</th>
+                  </tr>
+                  <tr class="result-title">
+                    <th scope="col">시 · 도</th>
+                    <th scope="col">시 · 군 · 구</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="result-row" v-for="(s, idx) in pointSummary" :key="s.locgovCode">
+                    <td class="idx">{{ pointSummary.length - idx }}</td>
+                    <td>{{ s.upperLocgovNm }}</td>
+                    <td>{{ s.locgovNm }}</td>
+                    <td class="amount">{{ formatN(s.remaining) }}</td>
+                  </tr>
+                  <tr class="result-row" v-if="pointSummary.length === 0">
+                    <td colspan="4">기부포인트가 없습니다.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="info-field-items" style="margin-bottom: 10px">
+            <label for="userNameConfirm" class="flied-title">회원명</label>
+            <div class="form-field"><input type="text" id="userNameConfirm" :value="userName" readonly /></div>
+          </div>
+        </div>
+      </div>
+      <div class="change-info-area member-secession">
+        <div class="info-field-group">
+          <div class="info-field-items">
+            <label class="flied-title">탈퇴사유</label>
+            <div class="form-field reason">
+              <div class="reason-select">
+                <ul>
+                  <li v-for="(label, code) in leaveCodeList" :key="code">
+                    <input type="radio" name="leaveCode" :id="code" :value="code" v-model="leaveCode" />
+                    <label :for="code">{{ label }}</label>
+                  </li>
+                </ul>
+              </div>
+              <div class="reason-typing">
+                <label for="reason" class="sr-only">불편사항</label>
+                <p>아래 항목에 불편하신 사항을 입력해 주세요</p>
+                <textarea id="reason" v-model="reason" placeholder="불편사항"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-box many">
+        <button type="button" class="blueBtn cancellation" @click="router.push('/mypage/profile')">
+          회원정보<span><img src="/images/icon/cli-icon_btn-hover-arrow.png" alt="" /></span>
+        </button>
+        <button type="submit" class="blueBtn u-confirm">
+          회원탈퇴<span><img src="/images/icon/cli-icon_btn-hover-arrow.png" alt="" /></span>
+        </button>
+      </div>
+    </form>
+  </section>
+</template>
+
+<style>
+@import '/css/change-pw.css';
+
+/* AS-IS secede-kakao.html의 페이지 인라인 <style>(잔여포인트 표)을 그대로 이식 - 외부 CSS엔 없음 */
+.table-container {
+  margin-bottom: 24px;
+}
+.result-title {
+  background-color: var(--gray5);
+}
+.result-title th {
+  color: var(--gray2);
+  font-weight: 500;
+  border: 1px solid var(--gray4);
+  padding: calc(var(--margin-padding-8) * 2) calc(var(--margin-padding-8) * 3);
+  white-space: nowrap;
+  text-align: center;
+  font-size: 14px;
+}
+.result-row td {
+  color: var(--gray3);
+  border: 1px solid var(--gray4);
+  padding: calc(var(--margin-padding-8) * 2) calc(var(--margin-padding-8) * 3);
+  white-space: nowrap;
+  text-align: center;
+  font-size: 14px;
+}
+</style>

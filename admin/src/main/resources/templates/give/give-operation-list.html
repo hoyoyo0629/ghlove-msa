@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>기부금 운용정보 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -11,13 +12,18 @@
 
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
 <!-- AS-IS opmanager/give/give-operation/list.jsp 재현 - 지자체별 기부금액/사용금액/잔액
      집계. 고향사랑기부금법상 지자체는 모금한 기부금의 사용내역(지출)을 공시해야 하며,
      이 화면은 그 지출 등록·조회의 입구다. 실제 지출 데이터는 donation 서비스
      (G_CTBNY_OPRATN)에 있고 admin은 CtbnyOpratnClient로 cross-service 호출한다. -->
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <h3>기부금 운용정보</h3>
     <p style="color:#666; margin-bottom:20px;">지자체별 기부금 모금액과 지출(사용)내역을 조회하고, 지출내역을 등록·관리합니다.</p>
 
@@ -59,7 +65,10 @@
         </tbody>
     </table>
     <p class="empty" th:if="${#lists.isEmpty(rows)}">조회된 기부금 모금현황이 없습니다.</p>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

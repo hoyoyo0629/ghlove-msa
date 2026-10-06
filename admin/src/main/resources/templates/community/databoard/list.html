@@ -1,45 +1,358 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>지자체 자료실 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <title>자료실 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <h3>지자체 자료실</h3>
-    <p style="color:#666; margin-bottom:16px;">지자체 담당자용 자료 공유 게시판입니다.</p>
-    <p><a class="btn" th:href="@{/community/databoard/new}">+ 자료 등록</a></p>
+<!-- AS-IS opmanager/i18n/community/databoard/list.jsp 이식(메뉴 11402 자료실).
+     소속(시스템/행안부/지자체 + 시도·시군구) + 검색구분(전체/제목) + 등록일자 + 5컬럼 + 등록.
 
-    <table class="board_list_table">
-        <thead>
-        <tr><th>제목</th><th>공지</th><th>조회수</th><th>등록일</th><th>처리</th></tr>
-        </thead>
-        <tbody>
-        <tr th:each="i : ${items}">
-            <td><a th:href="@{'/community/databoard/' + ${i.rpstrId} + '/edit'}" th:text="${i.rpstrTtl}"></a></td>
-            <td th:text="${i.noticeYn == 'Y' ? '공지' : ''}"></td>
-            <td th:text="${i.inqCnt}"></td>
-            <td th:text="${i.frstCrtDt != null ? #temporals.format(i.frstCrtDt, 'yyyy-MM-dd HH:mm') : ''}"></td>
-            <td>
-                <a class="small-btn" th:href="@{'/community/databoard/' + ${i.rpstrId} + '/edit'}">수정</a>
-                <form th:action="@{'/community/databoard/' + ${i.rpstrId} + '/delete'}" method="post" class="inline-form"
-                      onsubmit="return confirm('삭제하시겠습니까?')">
-                    <button type="submit" class="small-btn danger">삭제</button>
-                </form>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(items)}">등록된 자료가 없습니다.</p>
+     ★ AS-IS는 GET·POST 둘 다 같은 코드이고 진입에서도 조회한다.
+     ★ 이 화면은 담당자용 자료실(G_CMNTY_RPSTR)이고, 메뉴 5107 고객센터 자료실
+       (/admin/data-board, OP_DATA_BOARD)과는 다른 화면이다.
+
+     AS-IS verbatim:
+     - 댓글도 비밀글도 없다(표에 컬럼이 없다). 제목 옆 아이콘은 <b>첨부 유무</b>뿐이다.
+     - 컬럼은 No. / 소속 / 제목 / 조회수 / <b>등록일(yyyy-MM-dd, 시각 없음)</b> 5개다.
+       '작성자' 컬럼과 검색구분의 작성자 옵션은 주석처리돼 있다.
+     - 소속 표기: 1·2 "시스템 관리자", 3·4 "행정안전부", 그 외 상위지자체명 + 지자체명.
+     - 검색구분 행 라벨이 M00011("검색구분")이고 '전체' 옵션의 값은 <b>빈 문자열</b>이다
+       (다른 게시판은 'ALL').
+     - 제목 칸 래퍼 클래스가 databoard-title-wrap / databoard-title 이다.
+     - 목록 오른쪽 버튼 영역에 "체크박스 일괄 삭제" 주석이 남아 있고 등록(M00088) 버튼만 있다.
+     - 화면 맨 아래에 today/week/month1/month2를 담은 display:none 블록이 있다.
+
+     ★ AS-IS 죽은 코드는 옮기지 않았다: 체크박스 일괄삭제(deleteCheckDataboard·checkedEventSet)는
+       표에 체크박스 컬럼이 아예 없어 호출할 수 없고, 서버 엔드포인트도 다른 표를 지운다.
+       deleteNotice()도 호출하는 요소가 없다. 자세한 내용은 CmntyRpstrController 주석. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span th:text="${msg.get('MENU_11402')}">자료실</span></h3>
+
+<form id="searchParam" method="post" th:action="@{/community/databoard/list}">
+	<input type="hidden" id="sort" name="sort" th:value="${searchParam.sort}"/>
+	<input type="hidden" id="orderBy" name="orderBy" th:value="${searchParam.orderBy}"/>
+	<input type="hidden" id="itemsPerPage" name="itemsPerPage" th:value="${searchParam.itemsPerPage}"/>
+	<input type="hidden" id="page" name="page" th:value="${searchParam.page}"/>
+
+	<div class="board_write">
+		<table class="board_write_table" summary="">
+			<colgroup>
+				<col style="width: 220px;">
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="label">소속</td>
+					<td colspan="3">
+						<div class="flex_box gap-08">
+							<select id="searchRole" name="searchRole" title="소속" class="wd-150" onchange="adminChange(this.value)">
+								<option value="" th:selected="${searchParam.searchRole == null or searchParam.searchRole == ''}">전체</option>
+								<option value="ROLE_ADMIN_1" th:selected="${searchParam.searchRole == 'ROLE_ADMIN_1'}">시스템 관리자</option>
+								<option value="ROLE_ADMIN_3" th:selected="${searchParam.searchRole == 'ROLE_ADMIN_3'}">행정안전부</option>
+								<option value="ROLE_ADMIN_5" th:selected="${searchParam.searchRole == 'ROLE_ADMIN_5'}">지자체</option>
+							</select>
+							<!-- 지자체가 선택되면 2, 3차 카테고리(시도/군구) 선택 -->
+							<select id="shWdr" name="shWdr" class="wd-150" style="display:none" onchange="wdrChange(this.value)">
+								<option value="">-시·도 선택-</option>
+								<option th:each="w : ${wdr}" th:value="${w.id}" th:text="${w.label}"
+										th:selected="${searchParam.shWdr == w.id}"></option>
+							</select>
+
+							<select id="locgovCode" name="locgovCode" class="wd-150" style="display:none">
+								<option value="">-시·군·구-</option>
+							</select>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label" th:text="${msg.get('M00011')}">검색구분</td>
+					<td colspan="3">
+						<div class="flex_box gap-08">
+							<select id="where" name="where" class="wd-150">
+								<option value="" th:selected="${searchParam.where == null or searchParam.where == ''}">전체</option>
+								<option value="SUBJECT" th:text="${msg.get('M00275')}"
+										th:selected="${searchParam.where == 'SUBJECT'}">제목</option>
+								<!-- <option value="USERNAME">작성자</option> -->
+							</select>
+							<input type="text" id="query" name="query" class="input_txt required _filter half"
+								   th:title="${msg.get('M00021')}" th:value="${searchParam.query}"/>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">등록일자</td>
+					<td colspan="3">
+						<div class="search-date">
+							<span class="datepicker">
+								<input type="text" id="startDt" name="startDt" class="datepicker optional"
+									   th:title="${msg.get('M00507')}" th:value="${searchParam.startDt}"/>
+							</span>
+							<span class="wave">~</span>
+							<span class="datepicker">
+								<input type="text" id="endDt" name="endDt" class="datepicker optional"
+									   th:title="${msg.get('M00509')}" th:value="${searchParam.endDt}"/>
+							</span>
+							<span class="day_btns day_btn1">
+								<a href="javascript:void(0);" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+								<a href="javascript:void(0);" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a>
+								<a href="javascript:void(0);" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>
+								<a href="javascript:void(0);" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+								<a href="javascript:void(0);" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a>
+								<a href="javascript:void(0);" class="btn_date clear" th:text="${msg.get('M00039')}">전체</a>
+								<!-- 전체 -->
+							</span>
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<div class="btn_all btn_left">
+			<ul class="list-bullet point">
+				<li>
+					검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.
+				</li>
+			</ul>
+		</div>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-default btn-mini"
+						onclick="location.href='/community/databoard/list'" th:text="${msg.get('M00047')}">초기화</button>
+				<!-- 초기화 -->
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="search();"
+						th:text="${msg.get('M00048')}">검색</button>
+				<!-- 검색 -->
+			</div>
+		</div>
+	</div>
+</form>
+
+<div class="count_title mt-40">
+	<h5>
+		총 <span th:text="${#numbers.formatInteger(pagination.totalItems, 1, 'COMMA')}" th:remove="tag">0</span> 건
+	</h5>
+	<span>
+		<select name="displayCount" id="displayCount" th:title="${msg.get('M00239')}">
+			<option value="10" th:text="${msg.get('M00240')}">10개 출력</option>
+			<option value="20" th:text="${msg.get('M00241')}">20개 출력</option>
+			<option value="50" th:text="${msg.get('M00242')}">50개 출력</option>
+			<option value="100" th:text="${msg.get('M00243')}">100개 출력</option>
+		</select>
+	</span>
 </div>
-<div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<div class="board_list">
+	<table class="board_list_table" summary="">
+		<caption></caption>
+		<colgroup>
+			<col style="width: 50px;">
+			<col style="width: 150px;">
+			<!-- <col style="width: 50px;"> -->
+			<col style="width: 600px;">
+			<col style="width: 100px;">
+			<col style="width: 150px;">
+		</colgroup>
+		<thead>
+			<tr>
+				<th scope="col">No.</th>
+				<th scope="col">소속</th>
+				<!-- <th scope="col">작성자</th> -->
+				<th scope="col">제목</th>
+				<th scope="col">조회수</th>
+				<th scope="col">등록일</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr th:each="databoard, i : ${list}">
+				<td th:text="${pagination.itemNumber - i.count}">0</td>
+				<td th:if="${databoard.authority == 'ROLE_ADMIN_1' or databoard.authority == 'ROLE_ADMIN_2'}">시스템 관리자</td>
+				<td th:if="${databoard.authority == 'ROLE_ADMIN_3' or databoard.authority == 'ROLE_ADMIN_4'}">행정안전부</td>
+				<td th:unless="${databoard.authority == 'ROLE_ADMIN_1' or databoard.authority == 'ROLE_ADMIN_2'
+								 or databoard.authority == 'ROLE_ADMIN_3' or databoard.authority == 'ROLE_ADMIN_4'}"
+					th:text="${databoard.upperLocgovNm} + ' ' + ${databoard.locgovNm}"></td>
+				<td>
+					<div class="databoard-title-wrap">
+						<span class="label_notice" th:if="${databoard.noticeYn == 'Y'}">공지</span>
+						<a class="databoard-title" th:href="|javascript:databoardDetail(${databoard.rpstrId})|"
+						   th:text="${databoard.rpstrTtl}"></a>
+						<img class="databoard-icon" th:if="${databoard.attachedFileCnt > 0}"
+							 th:src="@{/content/images/icon/cli-icon_file-list.png}" alt="첨부자료 있음" />
+					</div>
+				</td>
+				<td th:text="${#numbers.formatInteger(databoard.inqCnt == null ? 0 : databoard.inqCnt, 1, 'COMMA')}">0</td>
+				<td th:text="${databoard.frstCrtDt != null} ? ${#temporals.format(databoard.frstCrtDt, 'yyyy-MM-dd')} : ''"></td>
+			</tr>
+		</tbody>
+	</table>
+
+	<div class="no_content" th:if="${#lists.isEmpty(list)}" th:text="${msg.get('M00170')}">등록된 내용이 없습니다.</div>
+	<div class="btn_all btn_right">
+		<div class="flex_box gap-08">
+			<!-- 체크박스 일괄 삭제  -->
+			<a th:href="@{/community/databoard/create}" class="btn btn-dark-gray btn-mini"
+			   th:text="${msg.get('M00088')}">등록</a>
+		</div>
+	</div>
+	<div class="pagination-wrap">
+		<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+	</div>
+</div>
+
+<div style="display: none;">
+	<span id="today" th:text="${today}"></span>
+	<span id="week" th:text="${week}"></span>
+	<span id="month1" th:text="${month1}"></span>
+	<span id="month2" th:text="${month2}"></span>
+</div>
+
+    </div>
+    </div>
+</div>
+</div>
+
+<link rel="stylesheet" type="text/css" th:href="@{/content/css/community.css}">
+<script type="text/javascript" th:inline="javascript">
+	// AS-IS ViewUtils.redirect(url, message) - 안내문구를 alert으로 띄운다
+	var redirectMessage = /*[[${redirectMessage}]]*/ null;
+
+	// AS-IS는 시군구 목록을 ajax로 받지만 TO-BE admin은 지자체 목록을 실어 보내 걸러 쓴다.
+	var allLocgovs = /*[[${locgovs}]]*/ [];
+	if(!allLocgovs) { allLocgovs = []; }
+	var selectedLocgovCode = /*[[${searchParam.locgovCode}]]*/ '';
+
+	$(function() {
+		if (redirectMessage) {
+			alert(redirectMessage);
+		}
+
+		searchEnterKey()
+		displayChange();
+		datepickerChange()
+		displaySelected();
+
+		adminChange($("#searchRole").val());
+		wdrChange($("#shWdr").val());
+
+		Common.DateButtonEvent.set('.day_btn1 > a[class^=btn_date]', '',
+				'input[name="startDt"]', 'input[name="endDt"]');
+		EventHandler.calendarStartDateAndEndDateVaild();
+
+	})
+
+	/**
+	 *	함 수 명 : adminChange
+	 *	기	능  : 소속 변경 이벤트, 지자체 선택 시 2, 3차 카테고리 보여줌
+	 */
+	function adminChange(value) {
+		if ($("#searchRole").val() == "ROLE_ADMIN_5") {
+			$("#shWdr").css('display', 'block');
+			$("#locgovCode").css('display', 'block');
+		} else {
+			$("#shWdr").css('display', 'none');
+			$("#locgovCode").css('display', 'none');
+			$("#shWdr").val('');
+			$("#locgovCode").val('');
+		}
+	}
+
+	function wdrChange(value) {
+		$("#locgovCode option").remove();
+		if ($("#shWdr").val() != "") {
+			$('#locgovCode').append('<option value="">-시·군·구-</option>');
+			$.each(allLocgovs, function(index, item) {
+				if (item.upperLocgovCode == value) {
+					$('#locgovCode').append('<option value="' + item.locgovCode + '">' + item.locgovNm + '</option>');
+				}
+			});
+
+			if (selectedLocgovCode) {
+				$("#locgovCode").val(selectedLocgovCode);
+			}
+		} else {
+			$('#locgovCode').append('<option value="">-시·군·구-</option>');
+		}
+	}
+
+	function displayChange() {
+		$("#displayCount").on('change', function() {
+			$("#itemsPerPage").val($(this).val());
+			$("#page").val(1);
+			$('#searchParam').submit();
+		});
+	}
+	function displaySelected() {
+		$("#displayCount").val($("#itemsPerPage").val());
+	}
+
+	/**
+	 *	함 수 명 : datepickerChange
+	 *	기	능  : 날짜 변경 이벤트
+	 */
+	function datepickerChange() {
+		if ($("input.datepicker").length) {
+			$("input.datepicker").keyup(function(e) {
+				if (e && e.target && e.target.value) {
+					var value = e.target.value.replace(/[^0-9]/g, "");
+					if (value.length > 8) {
+						value = value.slice(0, 8);
+					}
+					e.target.value = value;
+				}
+			});
+		}
+	}
+
+	/**
+	 *	함 수 명 : search
+	 *	기	능  : 검색
+	 */
+	function search() {
+		var strStartDate = $("#startDt").val();
+		var strEndDate = $("#endDt").val();
+
+		if (strStartDate && strStartDate.length == 8 && strEndDate
+				&& strEndDate.length == 8) {
+			var startDate = new Date(strStartDate.substr(0, 4), strStartDate
+					.substr(4, 2), strStartDate.substr(6, 2));
+			var endDate = new Date(strEndDate.substr(0, 4), strEndDate.substr(
+					4, 2), strEndDate.substr(6, 2));
+			if (startDate > endDate) {
+				alert("종료일이 시작일보다 빠릅니다.");
+				$("#endDt").focus();
+				return false;
+			}
+			var searchChk = Common.searchDateMonth(startDate, endDate);
+			if (!searchChk)
+				return false;
+		}
+
+		$("#page").val(1);
+		$("#searchParam").submit();
+	}
+
+	function databoardDetail(dataId) {
+		location.href = '/community/databoard/detail/' + dataId;
+	}
+
+	/**
+	 *	함 수 명 : searchEnterKey
+	 *	기	능  : 검색 엔터키 이벤트
+	 */
+	function searchEnterKey() {
+		$("#query").on('keydown', function(e) {
+			if (e.keyCode == '13') {
+				$("#page").val(1);
+				$("#searchParam").submit();
+			}
+		});
+	}
+</script>
 </body>
 </html>

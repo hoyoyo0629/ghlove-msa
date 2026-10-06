@@ -70,6 +70,27 @@ public class GiftClient {
         }
     }
 
+    /**
+     * 이메일 발송(AS-IS opmanager/email)에서 발송대상 "답례품"을 고른 경우의 수신자 -
+     * AS-IS {@code emailMapper.sendSellerUserList}와 같은 조건(승인된 입점업체)으로 gift가 걸러
+     * 내려준다. OP_SELLER는 gift 소유라 admin이 직접 보지 못한다.
+     */
+    public List<SellerEmailTarget> sellerEmailSendTargets() {
+        try {
+            List<SellerEmailTarget> list = restClient.get()
+                    .uri("/api/admin/sellers/email-send-targets")
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<SellerEmailTarget>>() {
+                    });
+            return list != null ? list : List.of();
+        } catch (RestClientException e) {
+            return List.of();
+        }
+    }
+
+    public record SellerEmailTarget(String userName, String email) {
+    }
+
     public SellerDetail sellerDetail(Long sellerId) {
         return restClient.get().uri("/api/admin/sellers/{id}", sellerId).retrieve().body(SellerDetail.class);
     }

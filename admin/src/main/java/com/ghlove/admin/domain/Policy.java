@@ -63,4 +63,26 @@ public class Policy {
     /** yyyyMMddHHmmss. */
     @Column(name = "EXHIBITION_END_DATE")
     private String exhibitionEndDate;
+
+    /**
+     * AS-IS saleson.shop.policy.domain.Policy#getPolicyTypeLabel() 그대로 - 목록의 "정책구분"
+     * 컬럼이 이 값을 쓴다. 주의: AS-IS 검색·등록 화면의 라디오에는 '6'(개인정보 수집·이용 동의)이
+     * 있는데 이 메서드에는 '6' 분기가 없어 목록에서 빈칸으로 보인다. AS-IS 동작이라 그대로 둔다
+     * ('1'의 라벨도 라디오는 "개인정보처리방침", 이 메서드는 "개인정보취급방침"으로 다르다).
+     */
+    @Transient
+    public String getPolicyTypeLabel() {
+        if (policyType == null || policyType.isEmpty()) {
+            return "";
+        }
+        return switch (policyType) {
+            case "0" -> "약관";
+            case "1" -> "개인정보취급방침";
+            case "2" -> "특정상거래법";
+            case "3" -> "마케팅이용약관";
+            case "4" -> "개인정보제3자동의";
+            case "5" -> "저작권정책";
+            default -> "";
+        };
+    }
 }

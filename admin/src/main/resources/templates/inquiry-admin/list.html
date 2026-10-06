@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>1:1 문의 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/qna/list.jsp 이식(메뉴 5102 1:1 문의).
+     공개 Q&A(5112)와 같은 OP_QNA를 쓰고 QNA_TYPE으로 갈린다('0'=1:1문의, '2'=Q&A).
+
+     ★ AS-IS는 진입(GET)에서 조회하지 않고 빈 목록을 내려준다 - 검색해야 조회된다.
+     ★ 정렬은 화면에서 바꿀 수 없다(컨트롤러가 CREATED_DATE/DESC로 고정).
+
+     AS-IS verbatim:
+     - h3가 "1:1 문의"다.
+     - 컬럼은 체크박스/No./문의유형/제목/작성자(아이디)/상태/등록일 <b>7개</b>다
+       (5112 Q&A는 11개 - 구분·조회수·답변자·답변일이 더 있다).
+     - 작성자명을 <b>마스킹하지 않는다</b>(5112는 마스킹한다).
+     - 검색구분은 문의유형/아이디/제목/내용 넷이고 '전체(ALL)'와 '이름(USER_NAME)'은 <b>주석처리</b>다.
+     - 문의유형 select와 답변상태 라디오(answerCount)도 <b>주석처리</b> 상태다 - 켜지 않는다.
+     - 날짜 버튼이 오늘·1주일·한달·3달·<b>전체</b> 다섯 개다(5112는 '전체'가 없다).
+     - 상태 라디오는 전체(기본)/답변완료(0)/답변미완료(1)이고 이름이 qnaAnswerCode다.
+     - 상태 컬럼 문구는 M00463(답변완료)/M00464(<b>답변대기</b>)다 - 검색 라디오 문구와 다르다.
+     - 등록일은 op:datetime(초까지)이다.
+     - 제목을 누르면 <b>답변 화면</b>으로 간다(검색조건을 그대로 들고 GET 전송).
+     - 빈 목록 문구는 M00473("데이터가 없습니다.")이고 표 밖 .no_content 다.
+     - 출력수 select는 10/20/50/100이고 path가 itemsPerPage 그 자체다(별도 displayCount가 없다).
+
+     ★ AS-IS 비활성 그대로: 엑셀 다운로드는 함수(downloadExcel)만 있고 호출하는 버튼이 없다.
+       숨은 iframe(#downloadFrame)만 남아 있어 모양대로 유지한다.
+     ★ AS-IS 잔재라 옮기지 않은 것: `$('#itemReview').validator()`(그 id의 폼이 없다),
+       `openerReload` 처리(팝업 로그인용). 둘 다 이 화면에서 아무 일도 하지 않는다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3>1:1 문의</h3>
+
+<form id="qna" method="post" th:action="@{/admin/inquiries}">
+	<input type="hidden" id="page" name="page" th:value="${searchParam.page}"/>
+
+	<div class="board_write">
+		<table class="board_write_table">
+			<caption th:text="${msg.get('M00458')}"></caption>
+			<colgroup>
+				<col style="width:220px;">
+			</colgroup>
+			<tbody>
+				<!-- AS-IS 주석처리: 문의유형 select -->
+				<!-- AS-IS 주석처리: 답변상태 라디오(answerCount) -->
+				<tr>
+					<td class="label">검색구분</td>
+					<td>
+						<div class="flex_box gap-08">
+							<select id="where" name="where" class="wd-150" th:title="${msg.get('M00468')}">
+								<!-- <option value="ALL">전체</option> -->
+								<!-- <option value="USER_NAME">이름</option> -->
+								<option value="GROUP" th:selected="${searchParam.where == 'GROUP'}">문의유형</option>
+								<option value="LOGIN_ID" th:selected="${searchParam.where == 'LOGIN_ID'}">아이디</option>
+								<option value="SUBJECT" th:selected="${searchParam.where == 'SUBJECT'}">제목</option>
+								<option value="QUESTION" th:selected="${searchParam.where == 'QUESTION'}">내용</option>
+							</select>
+							<input type="text" id="query" name="query" class="input_txt required _filter half"
+								   th:title="${msg.get('M00021')}" th:value="${searchParam.query}"/>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label" th:text="${msg.get('M00202')}">등록일</td>
+					<td>
+						<div class="search-date">
+							<span class="datepicker">
+								<input type="text" id="searchStartDate" name="searchStartDate" class="datepicker _number"
+									   th:title="${msg.get('M00507')}" th:value="${searchParam.searchStartDate}"/>
+							</span>
+							<span class="wave">~</span>
+							<span class="datepicker">
+								<input type="text" id="searchEndDate" name="searchEndDate" class="datepicker _number"
+									   th:title="${msg.get('M00509')}" th:value="${searchParam.searchEndDate}"/>
+							</span>
+							<span class="day_btns">
+								<a href="javascript:;" class="table_btn today" th:text="${msg.get('M00026')}">오늘</a>
+								<a href="javascript:;" class="table_btn week-1" th:text="${msg.get('M00027')}">1주일</a>
+								<a href="javascript:;" class="table_btn month-1" th:text="${msg.get('M00029')}">한달</a>
+								<a href="javascript:;" class="table_btn month-3" th:text="${msg.get('M00030')}">3개월</a>
+								<a href="javascript:;" class="table_btn clear" th:text="${msg.get('M00039')}">전체</a>
+							</span>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">상태</td>
+					<td>
+						<div class="flex_box gap-12">
+							<div class="input-form">
+								<span class="radio">
+									<input type="radio" id="answerAll" name="qnaAnswerCode" value=""
+										   th:checked="${searchParam.qnaAnswerCode == null or searchParam.qnaAnswerCode == ''}"/>
+									<label for="answerAll">전체</label>
+								</span>
+							</div>
+							<div class="input-form">
+								<span class="radio">
+									<input type="radio" id="answerDone" name="qnaAnswerCode" value="0"
+										   th:checked="${searchParam.qnaAnswerCode == '0'}"/>
+									<label for="answerDone">답변완료</label>
+								</span>
+							</div>
+							<div class="input-form">
+								<span class="radio">
+									<input type="radio" id="answerWait" name="qnaAnswerCode" value="1"
+										   th:checked="${searchParam.qnaAnswerCode == '1'}"/>
+									<label for="answerWait">답변미완료</label>
+								</span>
+							</div>
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+
+	<div class="btn_all btn_left">
+		<ul class="list-bullet point">
+			<li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li>
+		</ul>
+	</div>
+	<div class="btn_all btn_right">
+		<div class="flex_box gap-08">
+			<button type="button" class="btn btn-dark-gray btn-mini"
+					onclick="location.href='/admin/inquiries'" th:text="${msg.get('M00047')}">초기화</button>
+			<button type="button" class="btn btn-dark-gray btn-mini" onclick="search();"
+					th:text="${msg.get('M00048')}">검색</button>
+		</div>
+	</div>
+
+	<div class="count_title mt20">
+		<h5>총 <span th:text="${#numbers.formatInteger(qnaCount, 1, 'COMMA')}" th:remove="tag">0</span>건</h5>
+		<span>
+			<select id="itemsPerPage" name="itemsPerPage" th:title="${msg.get('M00239')}">
+				<option value="10" th:text="${msg.get('M00240')}" th:selected="${searchParam.itemsPerPage == 10}">10개 출력</option>
+				<option value="20" th:text="${msg.get('M00241')}" th:selected="${searchParam.itemsPerPage == 20}">20개 출력</option>
+				<option value="50" th:text="${msg.get('M00242')}" th:selected="${searchParam.itemsPerPage == 50}">50개 출력</option>
+				<option value="100" th:text="${msg.get('M00243')}" th:selected="${searchParam.itemsPerPage == 100}">100개 출력</option>
+			</select>
+		</span>
+	</div>
+</form>
+
+<form action="/admin/inquiries" method="post" id="listForm">
+	<div class="board_write">
+		<table class="board_list_table" th:attr="summary=${msg.get('M00273')}">
+			<caption th:text="${msg.get('M00273')}"></caption>
+			<colgroup>
+				<col style="width:50px;">
+				<col style="width:50px;">
+				<col style="width:150px;">
+				<col style="width:500px;">
+				<col style="width:150px;">
+				<col style="width:150px;">
+				<col style="width:150px;">
+			</colgroup>
+			<thead>
+				<tr>
+					<th scope="col"><input type="checkbox" id="check_all" th:title="${msg.get('M00169')}"/></th>
+					<th scope="col">No.</th>
+					<th scope="col">문의유형</th>
+					<th scope="col">제목</th>
+					<th scope="col">작성자(아이디)</th>
+					<th scope="col">상태</th>
+					<th scope="col">등록일</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr th:each="row, i : ${qnaList}">
+					<td><input type="checkbox" name="id" th:value="${row.qnaId}" th:title="${msg.get('M00169')}"/></td>
+					<td th:text="${pagination.itemNumber - i.count}">0</td>
+					<td th:text="${row.qnaGroupNm}"></td>
+					<td class="tex_l">
+						<a th:href="|javascript:qnaDetail(${row.qnaId});|" th:text="${row.subject}"></a>
+					</td>
+					<td>
+						<th:block th:if="${row.userId != null and row.userId > 0 and row.loginId != null and !row.loginId.isEmpty()}"
+								  th:text="${row.userName} + ' (' + ${row.loginId} + ')'"></th:block>
+						<th:block th:unless="${row.userId != null and row.userId > 0 and row.loginId != null and !row.loginId.isEmpty()}">
+							<span th:if="${row.userName != null and !row.userName.isEmpty()}" th:text="${row.userName}"></span>
+							<span th:unless="${row.userName != null and !row.userName.isEmpty()}">-</span>
+						</th:block>
+					</td>
+					<!-- AS-IS: 목록의 미답변 문구는 '답변대기'(M00464)다 - 검색 라디오의 '답변미완료'와 다르다 -->
+					<td th:text="${row.answered()} ? ${msg.get('M00463')} : ${msg.get('M00464')}"></td>
+					<td th:text="${#strings.length(row.createdDate) >= 14}
+								 ? ${#strings.substring(row.createdDate,0,4)} + '-' + ${#strings.substring(row.createdDate,4,6)} + '-' + ${#strings.substring(row.createdDate,6,8)} + ' ' + ${#strings.substring(row.createdDate,8,10)} + ':' + ${#strings.substring(row.createdDate,10,12)} + ':' + ${#strings.substring(row.createdDate,12,14)}
+								 : ${row.createdDate}"></td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+
+	<div class="no_content" th:if="${#lists.isEmpty(qnaList)}" th:text="${msg.get('M00473')}">데이터가 없습니다.</div>
+</form>
+
+<div class="btn_all btn_right">
+	<div class="flex_box gap-08">
+		<a id="delete_list_data" href="#" class="btn btn-dark-gray btn-mini"><span>삭제</span></a>
+	</div>
+</div>
+<div class="pagination-wrap">
+	<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+</div>
+
+<div style="display: none;">
+	<span id="today" th:text="${today}"></span>
+	<span id="week" th:text="${week}"></span>
+	<span id="month1" th:text="${month1}"></span>
+	<span id="month3" th:text="${month3}"></span>
+</div>
+
+<!-- AS-IS에 남아 있는 엑셀 다운로드용 숨은 iframe(진입 버튼은 없다) -->
+<iframe id="downloadFrame" name="downloadFrame" style="display: none;" title="download"></iframe>
+
+    </div>
+    </div>
+</div>
+</div>
+
+<script type="text/javascript" th:inline="javascript">
+var redirectMessage = /*[[${redirectMessage}]]*/ null;
+
+$(function() {
+	if (redirectMessage) {
+		alert(redirectMessage);
+	}
+
+	// 목록데이터 - 삭제처리
+	$('#delete_list_data').on('click', function() {
+		Common.updateListData("/admin/inquiries/delete", "정말로 삭제하시겠습니까?");
+	});
+
+	$('#itemsPerPage').on("change", function() {
+		$('#qna').submit();
+	});
+
+	Common.DateButtonEvent.set('.day_btns > a[class^=table_btn]', '', 'input[name="searchStartDate"]' , 'input[name="searchEndDate"]');
+	EventHandler.calendarStartDateAndEndDateVaild();
+	searchEnterKey();
+});
+
+/* AS-IS: 제목을 누르면 검색조건을 들고 답변화면으로 GET 전송한다. */
+function qnaDetail(qnaId) {
+	$("#qna").attr("method", "get").attr("action", "/admin/inquiries/answer/"+qnaId).submit();
+}
+
+function search() {
+	var strStartDate = $("#searchStartDate").val();
+	var strEndDate = $("#searchEndDate").val();
+
+	if(strStartDate && strStartDate.length == 8 && strEndDate && strEndDate.length == 8) {
+		if(strStartDate > strEndDate) {
+			alert("종료일이 시작일보다 빠릅니다.");
+			$("#endCreateDate").focus();
+			return false;
+		}
+	}
+
+	$("#qna").submit();
+}
+
+/**
+ *	함 수 명 : searchEnterKey
+ *	기	능  : 검색 엔터키 이벤트
+ */
+function searchEnterKey() {
+	$("#query").on('keydown', function(e) {
+		if (e.keyCode == '13') {
+			$("#qna").submit();
+		}
+	});
+}
+</script>
+</body>
+</html>

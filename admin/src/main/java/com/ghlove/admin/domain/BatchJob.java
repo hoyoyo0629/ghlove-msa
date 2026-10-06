@@ -52,4 +52,31 @@ public class BatchJob {
 
     @Column(name = "ORDERING")
     private Integer ordering;
+
+    /** AS-IS getBatchJobList의 CASE - 1=심플 2=크론, 그 외 '-'. 목록은 코드가 아니라 이 라벨을 보여준다. */
+    @Transient
+    public String getTriggerTypeLabel() {
+        if ("1".equals(triggerType)) {
+            return "심플";
+        }
+        return "2".equals(triggerType) ? "크론" : "-";
+    }
+
+    /** AS-IS CASE - 1=실행중 2=정지, 그 외 '-'. */
+    @Transient
+    public String getBatchStatusLabel() {
+        if ("1".equals(batchStatus)) {
+            return "실행중";
+        }
+        return "2".equals(batchStatus) ? "정지" : "-";
+    }
+
+    /** AS-IS CASE - 0=적용전 1=적용완료, 그 외 '-'. */
+    @Transient
+    public String getBatchApplyFlagLabel() {
+        if ("0".equals(batchApplyFlag)) {
+            return "적용전";
+        }
+        return "1".equals(batchApplyFlag) ? "적용완료" : "-";
+    }
 }

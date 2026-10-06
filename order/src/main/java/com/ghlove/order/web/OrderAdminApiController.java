@@ -111,7 +111,12 @@ public class OrderAdminApiController {
         return orderAdminService.bulkUpdateDeliveryStatus(orderIds, deliveryStatus, managerLocgovCode);
     }
 
-    /** 엑셀(CSV) 다운로드 - 사유 필수. 검색조건은 그대로 재사용해 결과셋을 만든다. */
+    /**
+     * 엑셀(CSV) 다운로드 - 검색조건은 그대로 재사용해 결과셋을 만든다.
+     * 다운로드 사유는 AS-IS와 같이 관리자 콘솔(admin)이 이 호출 직전에 개인정보 접근로그
+     * ({@code OP_PRIVACY_ACCESS_LOG})에 남긴다 - {@code reason}은 하위호환으로만 남겨 둔 값이고
+     * 여기서는 쓰지 않는다(2026-10-03, 기록 지점 이전).
+     */
     @GetMapping("/export")
     public ResponseEntity<?> export(@RequestParam(required = false) String locgovCode,
                                      @RequestParam(required = false) String orderStatus,
@@ -119,7 +124,7 @@ public class OrderAdminApiController {
                                      @RequestParam(required = false) String keyword,
                                      @RequestParam(required = false) String startDate,
                                      @RequestParam(required = false) String endDate,
-                                     @RequestParam String reason,
+                                     @RequestParam(required = false) String reason,
                                      @RequestHeader(value = AdminApiAuthInterceptor.HEADER_MANAGER_ID, required = false) Long managerId,
                                      @RequestHeader(value = AdminApiAuthInterceptor.HEADER_MANAGER_NAME, required = false) String managerNameEncoded) {
         try {

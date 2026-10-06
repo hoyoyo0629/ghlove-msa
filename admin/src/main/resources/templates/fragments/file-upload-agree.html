@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- AS-IS opmanager/i18n/include/modal/file-upload-agree.jsp 를 그대로 옮긴 것.
+     파일 선택창을 열기 전에 반드시 통과해야 하는 "자료 업로드 전 보안 점검" 모달이다 -
+     세 문항을 모두 '예'로 체크해야 숨은 input[type=file]이 열린다(checkFileUploadAgree).
+
+     쓰는 쪽:
+       <div th:replace="~{fragments/file-upload-agree :: modal}"></div>
+     그리고 파일 선택 버튼에서 fileUploadPopupOpen('<file input의 id>')를 호출한다.
+
+     AS-IS는 이 조각을 layouts/common/inc_common.jsp에서 전역 포함해 모든 운영관리 화면에
+     깔아 두었다. TO-BE는 파일 첨부가 있는 화면에서만 포함한다 - 숨어 있는 모달이라 동작은 같고,
+     전역 조각(admin-nav)을 건드리지 않아 210개 화면에 영향이 없다.
+
+     bootstrap(.modal)은 fragments/opmanager-head 가 이미 불러온다. -->
+<th:block th:fragment="modal">
+	<div class="modal fade" id="fileAgreeModal" tabindex="-1" role="dialog" aria-labelledby="fileUploadAgreeModal">
+
+		<div class="modal-dialog-centered" role="document" style="width: 782px">
+			<div class="modal-content popup_wrap">
+				<form id="formFileAgree">
+					<input type="hidden" name="uri" />
+					<input type="hidden" name="url" />
+					<!-- POST로 보낼 시 param에 주문번호(id)를 넣음 -->
+					<input type="hidden" name="param" />
+					<div id="pop_header">
+						<h1 class="popup_title">자료 업로드 전 보안 점검</h1>
+						<a href="javascript:fileUploadPopupClose();" class="btn_close">
+							<img th:src="@{/content/opmanager/images/btn/btn_close.png}" alt="닫기">
+						</a>
+					</div>
+					<div class="modal-body">
+						<div class="form-group">
+							<div class="security-check-wrap">
+								<div class="security-check-box">
+									<div class="security-title">
+										자료 업로드 전 보안 점검
+									</div>
+
+									<p class="security-desc">
+										개인정보 포함 여부와 암호화 상태를 확인한 뒤<br class="d-none d-md-block">
+										업로드할 수 있습니다.
+									</p>
+
+									<div class="security-question">
+										<p class="question-title">
+											주민등록번호, 계좌번호, 연락처 등 개인정보가 포함되어 있지 않습니다.
+										</p>
+
+										<div class="radio-group">
+											<div class="form-check form-check-inline">
+												<input class="form-check-input" type="radio" name="check01" id="check01Yes" value="Y">
+												<label class="form-check-label" for="check01Yes">예</label>
+											</div>
+
+											<div class="form-check form-check-inline">
+												<input class="form-check-input" type="radio" name="check01" id="check01No" checked="checked" value="N">
+												<label class="form-check-label" for="check01No">아니오</label>
+											</div>
+										</div>
+									</div>
+
+									<div class="security-question">
+										<p class="question-title">
+											개인정보가 포함된 경우 승인 - 승인된 방식으로 암호화했습니다.
+										</p>
+
+										<div class="radio-group">
+											<div class="form-check form-check-inline">
+												<input class="form-check-input" type="radio" name="check02" id="check02Yes" value="Y">
+												<label class="form-check-label" for="check02Yes">예</label>
+											</div>
+											<div class="form-check form-check-inline">
+												<input class="form-check-input" type="radio" name="check02" id="check02No" checked="checked" value="N">
+												<label class="form-check-label" for="check02No">아니오</label>
+											</div>
+										</div>
+									</div>
+
+									<div class="security-question security">
+										<p class="question-title">
+											업로드자료의 공유범위와 열람 권한을 다시 확인했습니다.
+										</p>
+										<div class="radio-group">
+											<div class="form-check form-check-inline">
+												<input class="form-check-input" type="radio" name="check03" id="check03Yes" value="Y">
+												<label class="form-check-label" for="check03Yes">예</label>
+											</div>
+
+											<div class="form-check form-check-inline">
+												<input class="form-check-input" type="radio" name="check03" id="check03No" checked="checked" value="N">
+												<label class="form-check-label" for="check03No">아니오</label>
+											</div>
+										</div>
+										<div class="info-text">
+											<span><i class="svg-icon file-text"></i>보안정보 정보</span>
+											<span><i class="svg-icon circle-close text-danger"></i>미확인 자료 업로드 금지</span>
+											<span><i class="svg-icon lock"></i>민감정보 포함 시 암호화 필수</span>
+										</div>
+									</div>
+
+									<div class="security-btn-area">
+										<button type="button" class="btn security-btn" onclick="checkFileUploadAgree()">
+											업로드 진행
+										</button>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<input type="hidden" id="fileBtnId" />
+				</form>
+			</div>
+		</div>
+	</div>
+
+<script type="text/javascript">
+	function checkFileUploadAgree(){
+		var fileRadioTotCnt = $("#formFileAgree .form-check-input[value='Y']").length;
+		var fileRadioCheckCnt = $("#formFileAgree .form-check-input[value='Y']:checked").length;
+		if(fileRadioTotCnt > fileRadioCheckCnt){
+			alert("모든 점검 항목이 체크되어야 업로드가 가능합니다.");
+			return false;
+		}else{
+			$("#fileAgreeModal").modal('hide');
+			$("#formFileAgree .form-check-input[value='N']").prop("checked", true);
+			$("#"+$("#fileBtnId").val()).trigger('click');	// 동일 name을 가진 input file이 많아서 id로 처리
+		}
+	}
+
+	function fileUploadPopupClose() {
+		$("#fileBtnId").val('');
+		$("#fileAgreeModal").modal('hide');
+		$("#formFileAgree .form-check-input[value='N']").prop("checked", true);
+	}
+
+	function fileUploadPopupOpen (fileBtnId) {
+		$("#fileBtnId").val(fileBtnId);
+		$("#fileAgreeModal").modal({backdrop: 'static'}, 'show');
+	}
+</script>
+</th:block>
+
+</body>
+</html>

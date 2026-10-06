@@ -23,6 +23,102 @@ const errorMessage = ref(route.query.errorMessage ?? '')
 const reviewForm = ref({ userName: '', orderCode: route.query.orderCode ?? '', subject: '', content: '', score: 5, recommend: false, images: null })
 const inquiryForm = ref({ question: '', secret: false })
 
+// 옵션 선택 (AS-IS 동일) - 옵션 있는 답례품은 선택해야 담기/구매 가능하다.
+// 단일형(S)은 selectedOptionId 드롭다운, 조합형(S2·S3)은 sel1→sel2→sel3 종속 드롭다운으로
+// 최종 옵션행(itemOptionId)을 해석한다. (S2·T는 판매자 화면에서 숨겨 사실상 S/S3만 노출되나,
+// 데이터가 있으면 구매자 화면은 AS-IS처럼 렌더한다.)
+const selectedOptionId = ref('')
+const sel1 = ref('')
+const sel2 = ref('')
+const sel3 = ref('')
+const optType = computed(() => detail.value?.gift?.itemOptionType || 'S')
+
+const level1 = computed(() =>
+  [...new Set((detail.value?.options || []).map((o) => o.optionName))].filter(Boolean))
+const level2 = computed(() =>
+  [...new Set((detail.value?.options || []).filter((o) => o.optionName === sel1.value)
+    .map((o) => o.optionName2))].filter(Boolean))
+const level3 = computed(() =>
+  [...new Set((detail.value?.options || [])
+    .filter((o) => o.optionName === sel1.value && o.optionName2 === sel2.value)
+    .map((o) => o.optionName3))].filter(Boolean))
+
+// 선택 결과를 최종 옵션행으로 해석 (단일: 드롭다운 값, 조합: name 조합 매칭).
+const chosenOption = computed(() => {
+  const opts = detail.value?.options || []
+  if (!opts.length) return null
+  if (optType.value === 'S') return opts.find((o) => o.itemOptionId === Number(selectedOptionId.value)) || null
+  return opts.find((o) => o.optionName === sel1.value
+    && o.optionName2 === sel2.value
+    && (optType.value !== 'S3' || o.optionName3 === sel3.value)) || null
+})
+
+// 각인(필수 추가정보) - itemTextOptionFlag=Y면 제목별 입력칸을 띄운다.
+const textValues = ref(['', '', ''])
+const textTitles = computed(() => {
+  const g = detail.value?.gift
+  if (!g || g.itemTextOptionFlag !== 'Y') return []
+  return [g.itemTextOptionTitle1, g.itemTextOptionTitle2, g.itemTextOptionTitle3].filter((t) => t && t.trim())
+})
+
+// 추가구성 - 본품과 별도로 함께 담을 부가 답례품 선택.
+const selectedAdditions = ref([])
+
+// 수량 선택 (AS-IS 답례품 상세 +/- · 최대 주문 수량) - 1 ~ min(최대주문수량, 재고).
+const quantity = ref(1)
+const maxQuantity = computed(() => {
+  const g = detail.value?.gift
+  if (!g) return 1
+  const stock = g.stockQuantity != null ? g.stockQuantity : Infinity
+  const max = g.orderMaxQuantity != null && g.orderMaxQuantity > 0 ? g.orderMaxQuantity : Infinity
+  const lim = Math.min(stock, max)
+  return Number.isFinite(lim) ? Math.max(1, lim) : 999
+})
+function incQuantity() {
+  if (quantity.value < maxQuantity.value) quantity.value++
+  else modalAlert(`최대 주문 수량은 ${maxQuantity.value}개입니다.`)
+}
+function decQuantity() {
+  if (quantity.value > 1) quantity.value--
+}
+function onQuantityInput() {
+  let q = Math.floor(Number(quantity.value) || 1)
+  if (q < 1) q = 1
+  if (q > maxQuantity.value) q = maxQuantity.value
+  quantity.value = q
+}
+
+function cartPayload() {
+  const payload = { itemId: Number(props.itemId), quantity: quantity.value }
+  if (detail.value?.options?.length) {
+    const opt = chosenOption.value
+    if (!opt) {
+      modalAlert('옵션을 선택해 주세요.')
+      return null
+    }
+    if (opt.soldOut) {
+      modalAlert('품절된 옵션입니다.')
+      return null
+    }
+    payload.itemOptionId = opt.itemOptionId
+  }
+  // 필수 추가정보 - AS-IS textOption 저장 포맷 "제목 : 값 || 제목 : 값".
+  if (textTitles.value.length) {
+    for (let i = 0; i < textTitles.value.length; i++) {
+      if (!textValues.value[i] || !textValues.value[i].trim()) {
+        modalAlert(`'${textTitles.value[i]}'을(를) 입력해 주세요.`)
+        return null
+      }
+    }
+    payload.textOption = textTitles.value.map((t, i) => `${t} : ${textValues.value[i].trim()}`).join('||')
+  }
+  // 추가구성 (order 장바구니/체크아웃 배선은 Phase 4에서 소비. 서버는 미지원 필드를 무시한다.)
+  if (selectedAdditions.value.length) {
+    payload.additionItemIds = [...selectedAdditions.value]
+  }
+  return payload
+}
+
 async function load() {
   loading.value = true
   try {
@@ -58,8 +154,10 @@ async function toggleWishlist() {
 
 async function addToCart() {
   if (!auth.loggedIn) return requireLogin()
+  const payload = cartPayload()
+  if (!payload) return
   try {
-    await api.post('order', '/api/cart/items', { itemId: Number(props.itemId), quantity: 1 })
+    await api.post('order', '/api/cart/items', payload)
     // 운영은 이동 여부를 묻지 않고 단순 알림(확인만)만 띄운다.
     modalAlert('장바구니에 담았습니다.')
   } catch (e) {
@@ -69,10 +167,13 @@ async function addToCart() {
 
 async function buyNow() {
   if (!auth.loggedIn) return requireLogin()
+  const payload = cartPayload()
+  if (!payload) return
   try {
-    await api.post('order', '/api/cart/items', { itemId: Number(props.itemId), quantity: 1 })
+    await api.post('order', '/api/cart/items', payload)
     const cart = await api.get('order', '/api/cart')
-    const line = cart.flatMap((g) => g.lines).find((l) => l.itemId === Number(props.itemId))
+    const line = cart.flatMap((g) => g.lines).find((l) => l.itemId === Number(props.itemId)
+      && (!payload.itemOptionId || l.optionName != null))
     if (!line) throw new Error('장바구니 담기에 실패했습니다.')
     router.push({ path: '/checkout', query: { cartItemId: [line.cartItemId] } })
   } catch (e) {
@@ -220,18 +321,73 @@ async function likeReview(r) {
             <div class="present_price"><strong>{{ formatN(detail.gift.salePrice) }}</strong> P</div>
           </div>
 
-          <!-- SFR-005 "카탈로그 관리: 옵션" - 카탈로그 정보 표시만(장바구니/주문에는 아직
-               반영 안 됨, admin에서 등록/관리는 완전히 동작). -->
-          <div class="info_row" v-if="detail.options.length">
+          <!-- SFR-005 옵션 선택 (AS-IS 동일) - 선택한 옵션이 장바구니·주문·주문상세까지 반영된다. -->
+          <!-- 단일형(S) -->
+          <div class="info_row" v-if="detail.options.length && optType === 'S'">
             <div class="s-txt" style="width: 100%">
-              <p style="font-weight: bold; margin-bottom: 4px">선택 가능 옵션</p>
-              <ul>
-                <li v-for="o in detail.options" :key="o.itemOptionId">
-                  {{ o.optionName }}
-                  <span v-if="o.optionPrice">(+{{ formatN(o.optionPrice) }}P)</span>
-                  <span v-if="o.soldOut" style="color: #c00">품절</span>
-                </li>
-              </ul>
+              <p style="font-weight: bold; margin-bottom: 4px">옵션 선택</p>
+              <select v-model="selectedOptionId" style="width: 100%; padding: 8px">
+                <option value="">옵션을 선택하세요</option>
+                <option v-for="o in detail.options" :key="o.itemOptionId" :value="o.itemOptionId" :disabled="o.soldOut">
+                  {{ o.optionName }}<template v-if="o.optionPrice"> (+{{ formatN(o.optionPrice) }}P)</template><template v-if="o.soldOut"> [품절]</template><template v-else-if="o.stockTracked && o.stockQuantity > 0"> | 재고 {{ o.stockQuantity }}개</template>
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 조합형(S2·S3) 종속 드롭다운 -->
+          <div class="info_row" v-if="detail.options.length && (optType === 'S2' || optType === 'S3')">
+            <div class="s-txt" style="width: 100%">
+              <p style="font-weight: bold; margin-bottom: 4px">옵션 선택</p>
+              <select v-model="sel1" @change="sel2 = ''; sel3 = ''" style="width: 100%; padding: 8px; margin-bottom: 4px">
+                <option value="">1단계 선택</option>
+                <option v-for="n in level1" :key="n" :value="n">{{ n }}</option>
+              </select>
+              <select v-if="sel1" v-model="sel2" @change="sel3 = ''" style="width: 100%; padding: 8px; margin-bottom: 4px">
+                <option value="">2단계 선택</option>
+                <option v-for="n in level2" :key="n" :value="n">{{ n }}</option>
+              </select>
+              <select v-if="optType === 'S3' && sel2" v-model="sel3" style="width: 100%; padding: 8px">
+                <option value="">3단계 선택</option>
+                <option v-for="n in level3" :key="n" :value="n">{{ n }}</option>
+              </select>
+              <p class="s-txt" v-if="chosenOption" style="margin-top: 4px">
+                선택: {{ chosenOption.optionName }}<template v-if="chosenOption.optionName2"> / {{ chosenOption.optionName2 }}</template><template v-if="chosenOption.optionName3"> / {{ chosenOption.optionName3 }}</template><template v-if="chosenOption.optionPrice"> (+{{ formatN(chosenOption.optionPrice) }}P)</template>
+              </p>
+            </div>
+          </div>
+
+          <!-- 필수 추가정보 (AS-IS itemTextOptionFlag) -->
+          <div class="info_row" v-if="textTitles.length">
+            <div class="s-txt" style="width: 100%">
+              <p style="font-weight: bold; margin-bottom: 4px">필수 추가정보 입력</p>
+              <div v-for="(t, i) in textTitles" :key="i" style="margin-bottom: 4px">
+                <input type="text" v-model="textValues[i]" :placeholder="t" maxlength="30" style="width: 100%; padding: 8px" />
+              </div>
+            </div>
+          </div>
+
+          <!-- 추가구성 -->
+          <div class="info_row" v-if="detail.additions && detail.additions.length">
+            <div class="s-txt" style="width: 100%">
+              <p style="font-weight: bold; margin-bottom: 4px">추가구성</p>
+              <label v-for="a in detail.additions" :key="a.itemId" style="display: block; margin-bottom: 2px">
+                <input type="checkbox" :value="a.itemId" v-model="selectedAdditions" :disabled="a.soldOut" />
+                {{ a.itemName }}<template v-if="a.salePrice"> (+{{ formatN(a.salePrice) }}P)</template><template v-if="a.soldOut"> [품절]</template>
+              </label>
+            </div>
+          </div>
+
+          <!-- 수량 선택 (AS-IS 답례품 상세 +/- · 최대 주문 수량) -->
+          <div class="info_row">
+            <div class="s-txt" style="width: 100%">
+              <p style="font-weight: bold; margin-bottom: 4px">수량</p>
+              <div style="display: flex; align-items: center; gap: 4px">
+                <button type="button" class="btn_minus" @click="decQuantity" aria-label="수량 감소">−</button>
+                <input type="text" class="number" style="width: 64px; text-align: center" v-model="quantity" @input="onQuantityInput" aria-label="수량" />
+                <button type="button" class="btn_plus" @click="incQuantity" aria-label="수량 증가">+</button>
+              </div>
+              <span class="s-txt" v-if="detail.gift.orderMaxQuantity">최대 주문 수량 : {{ detail.gift.orderMaxQuantity }}</span>
             </div>
           </div>
 

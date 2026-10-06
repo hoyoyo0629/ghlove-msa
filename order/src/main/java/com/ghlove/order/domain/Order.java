@@ -36,6 +36,13 @@ public class Order {
     @Column(name = "ITEM_NAME")
     private String itemName;
 
+    /** 주문 시 선택한 옵션(AS-IS 주문상세의 "옵션 [ ... ]"). 옵션명 스냅샷 + 추가금액(단가에 가산). */
+    @Column(name = "OPTION_NAME")
+    private String optionName;
+
+    @Column(name = "OPTION_PRICE")
+    private Integer optionPrice = 0;
+
     /** 이 답례품의 지자체 - point 서비스가 "이 주문에 쓸 수 있는 지자체별 포인트"를
      * 판정하는 데 쓴다 (기부 포인트는 기부한 지자체 답례품에만 쓸 수 있음). */
     @Column(name = "LOCGOV_CODE")

@@ -3,7 +3,7 @@ import { modalAlert, modalConfirm } from '../../composables/useModal'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
-import { formatN } from '../../utils/format'
+import { formatN, formatTextOption } from '../../utils/format'
 
 // AS-IS cart/index.html 재현 (Thymeleaf 버전 order/cart.html과 동일 출처). AS-IS는 체크박스
 // change 이벤트마다 순수 JS로 합계를 재계산하지만, 여기서는 selected Set을 reactive로 두고
@@ -197,6 +197,8 @@ function goCheckout() {
                             </div>
                             <div class="g_info__txt">
                               <div class="info_title"><span>{{ line.itemName }}</span></div>
+                              <div class="info_opt" v-if="line.optionName">옵션 : {{ line.optionName }}<template v-if="line.optionPrice"> (+{{ formatN(line.optionPrice) }}P)</template></div>
+                              <div class="info_opt" v-if="line.textOption"><span v-html="formatTextOption(line.textOption)"></span></div>
                             </div>
                           </div>
                         </div>

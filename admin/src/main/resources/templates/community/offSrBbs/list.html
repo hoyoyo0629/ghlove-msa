@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>오프라인 담당자 SR 게시판 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/community/offSrBbs/list.jsp 이식(메뉴 11406 오프라인 담당자 SR 게시판).
+     SR 게시판(11404) 목록과 거의 같고, 지자체 대신 <b>은행·지점</b>으로 돌아간다.
+
+     ★ AS-IS는 @RequestMapping 하나로 GET·POST를 다 받아 진입에서도 조회한다.
+
+     AS-IS verbatim(11404와 다른 점):
+     - 소속 select가 전체 / 시스템 관리자 / 행정안전부 / <b>오프라인 담당자(ROLE_ADMIN_7 = 7·8)</b>이고,
+       '오프라인 담당자'를 고르면 <b>은행 select</b>가 나타난다(공통코드 OFF_BANK_LIST).
+     - 검색구분이 전체 / 제목 / <b>소속지점(PSITN)</b>이다(작성자 옵션은 AS-IS에서 주석처리).
+     - 소속 칸 표기가 1·2 "시스템 관리자", 3·4 "행정안전부", 그 외는 <b>[은행명] 지점명</b>이다.
+     - 소속 컬럼 폭이 250px다(11404는 150px).
+     - 상단 안내문구는 11404와 같은 문장을 쓴다
+       ("개선하고 싶은 기능에 대한 건의 및 시스템 오류 사항에 대해 작성 부탁드립니다.").
+     - 제목 옆 아이콘(공지·댓글수·첨부·비밀글)과 등록 버튼("등록" 하드코딩)은 11404와 같다.
+
+     ★ 제목(h3)은 MENU_11406이 op_common_message에 <b>없어서</b>(실측) op_menu.menu_name을 쓴다
+       - AS-IS op_menu의 '오프라인 담당자 SR 게시판'이 그대로 나온다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<div>
+	<h3>
+		<span th:text="${activeMenu != null ? activeMenu.menuName : '오프라인 담당자 SR 게시판'}">오프라인 담당자 SR 게시판</span>
+	</h3>
+	<!-- <p style="margin-top:10px; margin-bottom:50px; text-align:center; font-size: 20px; font-weight: 400;">행안부와 지자체를 위한 자유로운 소통방입니다.</p> -->
+	<p style="margin-top:10px; margin-bottom:50px; text-align:center; font-size: 20px; font-weight: 400; color:red;">개선하고 싶은 기능에 대한 건의 및 시스템 오류 사항에 대해 작성 부탁드립니다.</p>
+</div>
+
+<form id="searchParam" method="post" th:action="@{/community/off-sr-bbs/list}">
+	<input type="hidden" id="sort" name="sort" th:value="${searchParam.sort}"/>
+	<input type="hidden" id="orderBy" name="orderBy" th:value="${searchParam.orderBy}"/>
+	<input type="hidden" id="itemsPerPage" name="itemsPerPage" th:value="${searchParam.itemsPerPage}"/>
+	<input type="hidden" id="page" name="page" th:value="${searchParam.page}"/>
+
+	<div class="board_write">
+		<table class="board_write_table" summary="SR게시판">
+			<colgroup>
+				<col style="width: 220px;">
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="label">소속</td>
+					<td colspan="3">
+						<div class="flex_box gap-08">
+							<select id="searchRole" name="searchRole" title="소속" class="wd-150" onchange="adminChange(this.value)">
+								<option value="" th:selected="${searchParam.searchRole == null or searchParam.searchRole == ''}">전체</option>
+								<option value="ROLE_ADMIN_1" th:selected="${searchParam.searchRole == 'ROLE_ADMIN_1'}">시스템 관리자</option>
+								<option value="ROLE_ADMIN_3" th:selected="${searchParam.searchRole == 'ROLE_ADMIN_3'}">행정안전부</option>
+								<option value="ROLE_ADMIN_7" th:selected="${searchParam.searchRole == 'ROLE_ADMIN_7'}">오프라인 담당자</option>
+							</select>
+							<!-- 지자체가 선택되면 2, 3차 카테고리(시도/군구) 선택 -->
+							<select id="shBank" name="shBank" class="wd-150" style="display:none">
+								<option value="">-은행 선택-</option>
+								<option th:each="offBank : ${offBanks}" th:value="${offBank.id}" th:text="${offBank.label}"
+										th:selected="${searchParam.shBank == offBank.id}"></option>
+							</select>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">검색구분</td>
+					<td colspan="3">
+						<div class="flex_box gap-08">
+							<select id="where" name="where" title="검색구분" class="wd-150">
+								<option value="ALL" th:selected="${searchParam.where == 'ALL'}">전체</option>
+								<option value="SUBJECT" th:selected="${searchParam.where == 'SUBJECT'}">제목</option>
+								<option value="PSITN" th:selected="${searchParam.where == 'PSITN'}">소속지점</option>
+								<!-- <option value="USERNAME">작성자</option> -->
+							</select>
+							<input type="text" id="query" name="query" class="input_txt required _filter half"
+								   th:title="${msg.get('M00021')}" th:value="${searchParam.query}"/>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">등록일자</td>
+					<td colspan="3">
+						<div class="search-date">
+							<span class="datepicker">
+								<input type="text" id="startDt" name="startDt" class="datepicker optional"
+									   th:title="${msg.get('M00507')}" th:value="${searchParam.startDt}"/>
+							</span>
+							<span class="wave">~</span>
+							<span class="datepicker">
+								<input type="text" id="endDt" name="endDt" class="datepicker optional"
+									   th:title="${msg.get('M00509')}" th:value="${searchParam.endDt}"/>
+							</span>
+							<span class="day_btns day_btn1">
+								<a href="javascript:void(0);" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+								<a href="javascript:void(0);" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a>
+								<a href="javascript:void(0);" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>
+								<a href="javascript:void(0);" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+								<a href="javascript:void(0);" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a>
+								<a href="javascript:void(0);" class="btn_date clear" th:text="${msg.get('M00039')}">전체</a>
+								<!-- 전체 -->
+							</span>
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<div class="btn_all btn_left">
+			<ul class="list-bullet point">
+				<li>
+					검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.
+				</li>
+			</ul>
+		</div>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-default btn-mini"
+						onclick="location.href='/community/off-sr-bbs/list'" th:text="${msg.get('M00047')}">초기화</button>
+				<!-- 초기화 -->
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="search();"
+						th:text="${msg.get('M00048')}">검색</button>
+				<!-- 검색 -->
+			</div>
+		</div>
+	</div>
+</form>
+
+<div class="count_title mt-40">
+	<h5>
+		총 <span th:text="${#numbers.formatInteger(pagination.totalItems, 1, 'COMMA')}" th:remove="tag">0</span> 건
+	</h5>
+	<span>
+		<select name="displayCount" id="displayCount" th:title="${msg.get('M00239')}">
+			<option value="10" th:text="${msg.get('M00240')}">10개 출력</option>
+			<option value="20" th:text="${msg.get('M00241')}">20개 출력</option>
+			<option value="50" th:text="${msg.get('M00242')}">50개 출력</option>
+			<option value="100" th:text="${msg.get('M00243')}">100개 출력</option>
+		</select>
+	</span>
+</div>
+
+<div class="board_list">
+	<table class="board_list_table" summary="">
+		<caption></caption>
+		<colgroup>
+			<col style="width: 80px;">
+			<col style="width: 250px;">
+			<!-- <col style="width: 150px;"> -->
+			<col style="width: *;">
+			<col style="width: 100px;">
+			<col style="width: 150px;">
+			<col style="width: 150px;">
+		</colgroup>
+		<thead>
+			<tr>
+				<th scope="col">No.</th>
+				<th scope="col">소속</th>
+				<!-- <th scope="col">작성자</th> -->
+				<th scope="col">제목</th>
+				<th scope="col">조회수</th>
+				<th scope="col">등록일시</th>
+				<th scope="col">수정일시</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr th:each="community, i : ${list}">
+				<td th:text="${pagination.itemNumber - i.count}">0</td>
+				<td th:if="${community.authority == 'ROLE_ADMIN_1' or community.authority == 'ROLE_ADMIN_2'}">시스템 관리자</td>
+				<td th:if="${community.authority == 'ROLE_ADMIN_3' or community.authority == 'ROLE_ADMIN_4'}">행정안전부</td>
+				<td th:unless="${community.authority == 'ROLE_ADMIN_1' or community.authority == 'ROLE_ADMIN_2'
+								 or community.authority == 'ROLE_ADMIN_3' or community.authority == 'ROLE_ADMIN_4'}"
+					th:text="'[' + ${community.bankNm} + '] ' + ${community.psitnNm}"></td>
+				<td>
+					<div style="align-items: center; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+						<span class="label_notice" th:if="${community.noticeYn == 'Y'}">공지</span>
+						<a class="communityId" th:href="|javascript:communityDetail('${community.bbsId}')|"
+						   style="max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block;"
+						   th:text="${community.bbsTtl}"></a>
+
+						<span class="comment-count" th:if="${community.cmntCnt > 0}"
+							  th:attr="data-community-id=${community.bbsId}"
+							  style="color: red; margin-left: 10px" th:text="'[' + ${community.cmntCnt} + ']'"></span>
+						<img class="databoard-icon" th:if="${community.attachedFileCnt > 0}"
+							 th:src="@{/content/images/icon/cli-icon_file-list.png}" alt="첨부자료 있음" />
+						<img class="databoard-icon" th:if="${community.isSecret == 'Y'}"
+							 th:src="@{/content/images/icon/icon_lock.png}" alt="비밀글" />
+					</div>
+				</td>
+				<td th:text="${community.inqCnt}">0</td>
+				<td th:text="${community.frstCrtDt != null} ? ${#temporals.format(community.frstCrtDt, 'yyyy-MM-dd HH:mm:ss')} : ''"></td>
+				<td th:text="${community.lastMdfcnDt != null} ? ${#temporals.format(community.lastMdfcnDt, 'yyyy-MM-dd HH:mm:ss')} : ''"></td>
+			</tr>
+		</tbody>
+	</table>
+
+	<div class="no_content" th:if="${#lists.isEmpty(list)}" th:text="${msg.get('M00170')}">등록된 내용이 없습니다.</div>
+	<div class="btn_all btn_right">
+		<div class="flex_box gap-08">
+			<a th:href="@{/community/off-sr-bbs/form}" class="btn btn-dark-gray btn-mini">등록</a>
+		</div>
+	</div>
+	<div class="pagination-wrap">
+		<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+	</div>
+</div>
+
+    </div>
+    </div>
+</div>
+</div>
+
+<link rel="stylesheet" type="text/css" th:href="@{/content/css/community.css}">
+<script type="text/javascript" th:inline="javascript">
+	// AS-IS ViewUtils.redirect(url, message) - 안내문구를 alert으로 띄운다
+	var redirectMessage = /*[[${redirectMessage}]]*/ null;
+
+	$(function() {
+		if (redirectMessage) {
+			alert(redirectMessage);
+		}
+
+		searchEnterKey()
+		displayChange();
+		datepickerChange()
+		displaySelected();
+
+		adminChange($("#searchRole").val());
+
+		Common.DateButtonEvent.set('.day_btn1 > a[class^=btn_date]', '',
+				'input[name="startDt"]', 'input[name="endDt"]');
+		EventHandler.calendarStartDateAndEndDateVaild();
+
+	})
+
+	/**
+	 *	함 수 명 : adminChange
+	 *	기	능  : 소속 변경 이벤트, 오프라인 담당자 선택 시 은행 선택을 보여줌
+	 */
+	function adminChange(value) {
+		if ($("#searchRole").val() == "ROLE_ADMIN_7") {
+			$("#shBank").css('display', 'block');
+		} else {
+			$("#shBank").css('display', 'none');
+			$("#shBank").val('');
+		}
+	}
+
+	function displayChange() {
+		$("#displayCount").on('change', function() {
+			$("#itemsPerPage").val($(this).val());
+			$("#page").val(1);
+			$('#searchParam').submit();
+		});
+	}
+	function displaySelected() {
+		$("#displayCount").val($("#itemsPerPage").val());
+	}
+
+	/**
+	 *	함 수 명 : datepickerChange
+	 *	기	능  : 날짜 변경 이벤트
+	 */
+	function datepickerChange() {
+		if ($("input.datepicker").length) {
+			$("input.datepicker").keyup(function(e) {
+				if (e && e.target && e.target.value) {
+					var value = e.target.value.replace(/[^0-9]/g, "");
+					if (value.length > 8) {
+						value = value.slice(0, 8);
+					}
+					e.target.value = value;
+				}
+			});
+		}
+	}
+
+	/**
+	 *	함 수 명 : search
+	 *	기	능  : 검색
+	 */
+	function search() {
+		var strStartDate = $("#startDt").val();
+		var strEndDate = $("#endDt").val();
+
+		if (strStartDate && strStartDate.length == 8 && strEndDate
+				&& strEndDate.length == 8) {
+			var startDate = new Date(strStartDate.substr(0, 4), strStartDate
+					.substr(4, 2), strStartDate.substr(6, 2));
+			var endDate = new Date(strEndDate.substr(0, 4), strEndDate.substr(
+					4, 2), strEndDate.substr(6, 2));
+			if (startDate > endDate) {
+				alert("종료일이 시작일보다 빠릅니다.");
+				$("#endDt").focus();
+				return false;
+			}
+			var searchChk = Common.searchDateMonth(startDate, endDate);
+			if (!searchChk)
+				return false;
+		}
+
+		$("#page").val(1);
+		$("#searchParam").submit();
+	}
+
+	function communityDetail(id) {
+
+		location.href = '/community/off-sr-bbs/detail/' + id;
+	}
+
+	/**
+	 *	함 수 명 : searchEnterKey
+	 *	기	능  : 검색 엔터키 이벤트
+	 */
+	function searchEnterKey() {
+		$("#query").on('keydown', function(e) {
+			if (e.keyCode == '13') {
+				$("#page").val(1);
+				$("#searchParam").submit();
+			}
+		});
+	}
+</script>
+</body>
+</html>

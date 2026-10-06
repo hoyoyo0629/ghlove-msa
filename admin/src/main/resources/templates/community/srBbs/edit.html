@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>SR 게시판 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/community/srBbs/edit.jsp 이식(메뉴 11404 SR 게시판 수정).
+     등록화면과 같은 칸 구성에 기존 값과 <b>기존 첨부 목록(삭제 X 포함)</b>이 더 붙는다.
+
+     AS-IS verbatim(등록화면과 다른 점):
+     - hidden bbsId 가 있고 버튼 문구가 M00087("수정")이다.
+     - 기존 첨부가 파일명 + (크기) + X 아이콘으로 보이고, X는 ajax로 바로 지운다.
+     - 파일 중복 안내문구가 등록화면과 달리 오타가 없다("이미 등록된 파일이 있습니다.").
+     - 첨부 삭제 URL이 등록화면의 복사 흔적(databoard)과 달리 제대로 srBbs를 가리킨다.
+     - 제목 maxlength 는 1000이다(등록화면은 255 - AS-IS가 서로 다르게 두었다. 컬럼은 varchar(300)).
+
+     ★ 체크박스 초기상태는 서버에서 'Y'일 때만 체크해 내려준다(AS-IS는 항상 체크로 그린 뒤
+       인라인 스크립트로 푸는 방식 - 결과는 같다). 소통방 edit.html과 같은 처리. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span th:text="${msg.get('MENU_11404')}">SR 게시판</span></h3>
+
+<form id="cmntySrBbsDto" method="post"
+	  th:action="@{'/community/sr-bbs/edit/' + ${detail.bbsId}}" enctype="multipart/form-data">
+	<input type="hidden" id="bbsId" name="bbsId" th:value="${detail.bbsId}"/>
+	<div class="board_write">
+		<table class="board_write_table" th:attr="summary=${msg.get('M00269')}">
+			<colgroup>
+				<col style="width: 220px;">
+			</colgroup>
+			<tbody>
+				<tr th:if="${role == 'ROLE_ADMIN_1' or role == 'ROLE_ADMIN_2' or role == 'ROLE_ADMIN_3' or role == 'ROLE_ADMIN_4'}">
+					<td class="label">상단공지</td>
+					<td>
+						<div class="flex_box gap-08">
+							<div class="checkbox">
+								<input type="checkbox" id="noticeYn1" name="noticeYn" value="Y"
+									   th:checked="${detail.noticeYn == 'Y'}"/>
+								<label for="noticeYn1" th:text="${msg.get('M00083')}">사용</label>
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">비밀글</td>
+					<td>
+						<div class="flex_box gap-08 item-center">
+							<div class="checkbox">
+								<input type="checkbox" id="isSecret1" name="isSecret" value="Y"
+									   th:checked="${detail.isSecret == 'Y'}"/>
+								<label for="isSecret1" th:text="${msg.get('M00083')}">사용</label>
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label"><span class="required_mark">*</span>
+						<span th:text="${msg.get('M00275')}">제목</span></td>
+					<td>
+						<div>
+							<input type="text" id="bbsTtl" name="bbsTtl" th:title="${msg.get('M00275')}"
+								   class="input_txt required _filter half" maxlength="1000"
+								   th:value="${detail.bbsTtl}"/>
+						</div>
+					</td>
+				</tr>
+
+				<tr>
+					<td class="label"><span class="required_mark">*</span>
+						<span th:text="${msg.get('M00006')}">내용</span></td>
+					<td>
+						<!-- smart_editor2 area -->
+						<div class="smart_editor2-wrap">
+							<textarea id="bbsCn" name="bbsCn" cols="30" rows="20" maxlength="300"
+									  class="w90 editor-content" th:title="${msg.get('M00006')}"
+									  th:text="${detail.bbsCn}"></textarea>
+						</div> <!-- smart_editor2 area -->
+					</td>
+				</tr>
+				<tr>
+					<td class="label" th:text="${msg.get('M01699')}">첨부파일</td>
+					<!-- 첨부파일 -->
+					<td>
+						<div class="flex_box item-center">
+							<span class="input_file_txt">파일 등록 : </span>
+							<button type="button" class="pr5 pl5" onclick="fileUploadPopupOpen('detailImageFiles')"> 파일 선택</button>
+
+							<div class="file-list-title ml10">
+								<span id="fileInfoName"></span>
+								<a id="fileInfoDelete" style="display:none;">
+									<img th:src="@{/content/images/btn/file_close.gif}" alt="close">
+								</a>
+							</div>
+
+							<input style="display:none;" id="detailImageFiles" type="file" name="detailImageFiles" onchange="addFile(this);"/>
+						</div>
+						<div class="file-list-title">
+							<div class="file_camera" th:each="file : ${fileList}" th:id="'fileId_' + ${file.fileId}">
+								<a th:href="|javascript:downloadItemImage(${file.fileId});|" th:text="${file.orgnlAtchFileNm}"></a>
+								<span style="padding:3px" th:text="'(' + ${file.fileSize} + ')'"></span>
+								<a th:href="|javascript:deleteItemImage(${file.fileId});|">
+									<img th:src="@{/content/images/btn/file_close.gif}" alt="close">
+								</a>
+							</div>
+						</div>
+						<div>
+							<p style="color:red;">※ 첨부파일은 1개(50MB 이하) / jp(e)g, png, ppt(x), xlsx, hwp(x), doc(x), pdf,  bmp, gif, zip, 7z만 가능합니다.</p>
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
+			<div class="btn_all btn_center">
+				<div class="flex_box gap-08">
+					<button type="submit" class="btn btn-dark-gray btn-small">
+						<span th:text="${msg.get('M00087')}">수정</span>
+					</button>
+					<button type="button" class="btn btn-defualt btn-small" onclick="goToDetail()"
+							th:text="${msg.get('M00037')}">취소</button>
+				</div>
+			</div>
+	</div>
+
+</form>
+
+    </div>
+    </div>
+</div>
+</div>
+
+<div th:replace="~{fragments/file-upload-agree :: modal}"></div>
+
+<div th:replace="~{fragments/smarteditor :: init}"></div>
+<div th:replace="~{fragments/smarteditor :: editor('bbsCn')}"></div>
+
+<script type="text/javascript" th:inline="javascript">
+$(function() {
+	try{
+		$('#cmntySrBbsDto').validator(function() {
+			Common.getEditorContent("bbsCn");
+
+			if ($('#bbsCn').val().toLowerCase() == '<p>&nbsp;</p>' || $('#bbsCn').val() == '') {
+				alert($.validator.messages['text'].format(/*[[${msg.get('M00006')}]]*/ '내용'));
+				return false;
+			}
+
+			$('#bbsCn')[0].value = encodeURIComponent($('#bbsCn')[0].value);
+		});
+	} catch(e) {
+		alert(e.message);
+	}
+});
+
+$(function(){
+	$("#cmntySrBbsDto").on("submit", function(e){
+		if(!confirm("게시글을 등록하시겠습니까?")){
+			e.preventDefault();
+		}
+	});
+
+	$("#fileInfoDelete").on("click", function(e){
+		$("#fileInfoName").text('');
+		$("#fileInfoDelete").hide();
+		$("input:file[name='detailImageFiles']").val('');
+	});
+
+});
+
+
+/*
+ * 함 수 명 : addFile
+ * 기 능 : 첨부파일 유효성 검사
+ */
+
+function addFile(obj){
+	let size = 50 * 1024 * 1024; // 30MB? 50MB? 용량에 따라 수정할것
+	let fileTypes = ['jpg', 'jpeg', 'gif', 'bmp', 'png', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'pdf', 'tif', 'tiff', 'hwp', 'hwpx','zip', '7z'] // 파일 확장자 , 이후에도 확장자 추가 가능
+
+	if ($('.file_camera').length > 0) {
+		alert("이미 등록된 파일이 있습니다.");
+		$("input:file[name='detailImageFiles']").val('');
+		return false;
+	}
+
+	//파일개수 체크 ( 현재 단일 파일등록으로 체크안함)
+	if(obj.files.length > 5){
+		alert("첨부파일은 최대 5개 까지 첨부 가능합니다.");
+	   $("input:file[name='detailImageFiles']").val('');
+	   return false;
+	}
+
+	for (const file of obj.files) {
+		let type = file.name.split('.').pop().toLowerCase(); // 파일 확장자 가져오기
+
+		if(file.size > size) {
+			alert("첨부파일 용량은 최대 50MB 까지 가능합니다.");
+			$("input:file[name='detailImageFiles']").val('');
+			return false;
+		}else if($.inArray(type, fileTypes) == -1) {
+			alert("등록할 수 없는 첨부파일 입니다.")
+			$("input:file[name='detailImageFiles']").val('');
+			return false;
+		}
+
+		$("#fileInfoName").text(file.name);
+		$("#fileInfoDelete").show();
+
+	}
+
+
+}
+
+function downloadItemImage(fileId) {
+	location.href = '/community/sr-bbs/file-download/'+fileId
+}
+
+function deleteItemImage(fileId) {
+	var message = '파일이 실제로 삭제됩니다.\n삭제하시겠습니까?';
+	if (!confirm(message)) {
+		return;
+	}
+
+	var param = {'fileId': fileId};
+	$.post('/community/sr-bbs/delete-item-image', param, function(response){
+		Common.responseHandler(response);
+		$("#fileId_"+fileId).remove();
+		alert("파일이 삭제되었습니다.");
+	});
+}
+
+function goToDetail(){
+	let message = '게시글 작성을 취소하시겠습니까?';
+	if (confirm(message)) {
+		location.href = "/community/sr-bbs/list";
+	}
+}
+</script>
+</body>
+</html>

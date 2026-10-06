@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>주문관리 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -10,13 +11,18 @@
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
 <!-- AS-IS opmanager/order(OrderManagerController) 재현 - 3700줄/70여 엔드포인트 중 핵심인
      검색/상태변경/엑셀다운로드만 재구현했다. 검색구분 중 "주문자명"/"판매자명"은 order
      서비스가 이름을 갖고 있지 않아(각각 member/gift 서비스 소유) 주문자ID/판매자ID 정확매칭
      으로 대체했다 - OrderAdminService 주석 참고. -->
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <h3><span>주문관리</span></h3>
 
     <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
@@ -139,15 +145,23 @@
                th:href="@{/admin/orders(locgovCode=${locgovCode},orderStatus=${orderStatus},searchType=${searchType},keyword=${keyword},startDate=${startDate},endDate=${endDate},page=${currentPage + 1},size=${size})}">다음</a>
         </div>
     </div>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 
-<script th:inline="none">
+<!-- 개인정보 엑셀 다운로드 사유 모달 - AS-IS는 개인정보 포함 다운로드마다 이 모달로 사유를 받아
+     개인정보 접근로그(OP_PRIVACY_ACCESS_LOG)에 남긴 뒤 다운로드한다(엑셀다운로드 사유 관리 1411이
+     그 로그를 읽는다). 예전 TO-BE는 prompt()로 사유를 받아 order 서비스의 별도 표에 기록해서
+     1411 화면에 전혀 나타나지 않았다 - 사용자 확인 후 AS-IS 방식으로 옮겼다(2026-10-03). -->
+<div th:replace="~{fragments/privacy-access :: modal}"></div>
+
+<script th:inline="javascript">
 function toggleAll(source) {
     document.querySelectorAll('input[name="orderIds"]').forEach(function (cb) { cb.checked = source.checked; });
 }
 function downloadExcel() {
-    var reason = prompt('다운로드 사유를 입력해 주세요 (개인정보가 포함된 파일입니다).');
-    if (!reason) { return; }
+    // th:inline="none"이던 탓에 아래 검색조건이 항상 빈 값으로 나가 현재 검색조건이 무시됐다 - 함께 고쳤다
     var params = new URLSearchParams();
     var searchType = /*[[${searchType}]]*/ '';
     var keyword = /*[[${keyword}]]*/ '';
@@ -159,8 +173,8 @@ function downloadExcel() {
     if (orderStatus) { params.set('orderStatus', orderStatus); }
     if (startDate) { params.set('startDate', startDate); }
     if (endDate) { params.set('endDate', endDate); }
-    params.set('reason', reason);
-    location.href = '/admin/orders/export?' + params.toString();
+    // 사유는 모달이 먼저 접근로그로 남기고, 성공하면 모달이 이 URL로 이동시킨다
+    openPrivacyModal('/admin/orders/export?' + params.toString());
 }
 </script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>

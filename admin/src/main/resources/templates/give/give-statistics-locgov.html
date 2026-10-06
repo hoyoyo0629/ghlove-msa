@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <meta charset="UTF-8">
+    <title>지자체별 통계 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <style> td { background: #fff; } </style>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/give/statistics/locgov/list.jsp 이식(차트 없는 서버렌더 표).
+     연도+지자체별 기부인원(중복제외)/금액/건수. 필터(지자체/년도)·정렬·페이징. 데이터 ajax 없음
+     (form GET), 시군구 캐스케이딩만 로컬. 집계=donation G_CNTR(연=CNTR_DE, 확정=COMPLETED).
+     지자체명 드릴다운(월별 detail)과 엑셀은 후속 작업으로 보류. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+    <h3><span>지자체별 통계</span></h3>
+
+    <form id="searchParam" method="get" th:action="@{/give-statistics/locgov}">
+        <div class="board_write">
+            <table class="board_write_table" summary="지자체별 통계 검색">
+                <colgroup><col style="width:150px"><col><col style="width:150px"><col></colgroup>
+                <tbody>
+                    <tr>
+                        <th:block th:unless="${scoped}">
+                            <td class="label">지자체</td>
+                            <td>
+                                <div class="flex_box gap-08">
+                                    <select id="shWdr" name="shWdr" class="wd-150" onChange="wdrChange(this.value)">
+                                        <option value="">-전체-</option>
+                                        <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}" th:selected="${p.key == shWdr}"></option>
+                                    </select>
+                                    <select id="shLocgovCode" name="shLocgovCode" class="wd-150">
+                                        <option value="">-시,군,구-</option>
+                                    </select>
+                                </div>
+                            </td>
+                        </th:block>
+                        <th:block th:if="${scoped}">
+                            <td style="display:none;"><input type="hidden" id="shWdr" name="shWdr" value=""><input type="hidden" id="shLocgovCode" name="shLocgovCode" value=""></td>
+                        </th:block>
+                        <td class="label">년도</td>
+                        <td>
+                            <div>
+                                <select id="shCntrYear" name="shCntrYear" class="wd-150" title="년도">
+                                    <option value="">전체</option>
+                                    <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${y == shCntrYear}"></option>
+                                </select>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="btn_all btn_left">
+                <ul class="list-bullet point"><li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li></ul>
+            </div>
+            <div class="btn_all btn_right">
+                <div class="flex_box gap-08">
+                    <button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/give-statistics/locgov';">초기화</button>
+                    <button type="button" class="btn btn-dark-gray btn-mini" onclick="document.getElementById('page').value=1;document.getElementById('searchParam').submit();">검색</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="count_title mt-40 flex_box juc-sbt item-center">
+            <h5>총 <span th:text="${#numbers.formatInteger(total, 0, 'COMMA')}" th:remove="tag">0</span>건</h5>
+            <div class="flex_box gap-08">
+                <span>
+                    <select id="itemsOrder" name="itemsOrder" class="wd-120" title="정렬" onchange="document.getElementById('searchParam').submit();">
+                        <option value=""       th:selected="${itemsOrder == ''}">정렬</option>
+                        <option value="person" th:selected="${itemsOrder == 'person'}">기부인원</option>
+                        <option value="amt"    th:selected="${itemsOrder == 'amt'}">기부금액</option>
+                        <option value="cnt"    th:selected="${itemsOrder == 'cnt'}">기부건수</option>
+                    </select>
+                </span>
+                <span>
+                    <select id="itemsPerPage" name="itemsPerPage" title="화면출력" onchange="document.getElementById('searchParam').submit();">
+                        <option value="10"  th:selected="${itemsPerPage == 10}">10개 출력</option>
+                        <option value="20"  th:selected="${itemsPerPage == 20}">20개 출력</option>
+                        <option value="50"  th:selected="${itemsPerPage == 50}">50개 출력</option>
+                        <option value="100" th:selected="${itemsPerPage == 100}">100개 출력</option>
+                    </select>
+                </span>
+            </div>
+        </div>
+        <input type="hidden" name="page" id="page" th:value="${page}">
+    </form>
+
+    <div class="board_list">
+        <table class="board_list_table" summary="지자체별 통계 목록">
+            <caption>지자체별 통계 목록</caption>
+            <colgroup>
+                <col style="width:50px;"><col style="width:100px;"><col style="width:300px;">
+                <col style="width:200px;"><col style="width:200px;"><col style="width:200px;">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th scope="col">No.</th>
+                    <th scope="col">년도</th>
+                    <th scope="col">지자체</th>
+                    <th scope="col">기부인원</th>
+                    <th scope="col">기부금액</th>
+                    <th scope="col">기부건수</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="row, it : ${rows}" style="background:#fff;">
+                    <td th:text="${startNo - it.index}">0</td>
+                    <td th:text="${row.cntrYear}">0</td>
+                    <td th:text="${row.upperLocgovNm} + ' ' + ${row.locgovNm}"></td>
+                    <td th:text="${#numbers.formatInteger(row.givePersons, 0, 'COMMA')}">0</td>
+                    <td th:text="${#numbers.formatInteger(row.cntrAmt, 0, 'COMMA')}">0</td>
+                    <td th:text="${#numbers.formatInteger(row.giveCnt, 0, 'COMMA')}">0</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="no_content" th:if="${#lists.isEmpty(rows)}">조회정보가 존재하지 않습니다.</div>
+
+        <div class="pagination-wrap" th:if="${totalPages > 1}" style="text-align:center; margin-top:16px;">
+            <a th:each="pn : ${#numbers.sequence(1, totalPages)}" href="javascript:;"
+               th:text="${pn}" th:onclick="|goPage(${pn})|"
+               th:style="${pn == page} ? 'font-weight:bold; margin:0 6px; text-decoration:underline;' : 'margin:0 6px;'"></a>
+        </div>
+    </div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script th:inline="javascript">
+/*<![CDATA[*/
+    var ALL_LOCGOVS = /*[[${allLocgovs}]]*/ [];
+    var SEL_LOCGOV  = /*[[${shLocgovCode}]]*/ '';
+
+    $(function(){ wdrChange($("#shWdr").val()); });
+
+    function wdrChange(value) {
+        $("#shLocgovCode option").remove();
+        if (value && value != "") {
+            $('#shLocgovCode').append('<option value="">-전체-</option>');
+            for (var i = 0; i < ALL_LOCGOVS.length; i++) {
+                if (ALL_LOCGOVS[i].upperLocgovCode == value) {
+                    $('#shLocgovCode').append('<option value="' + ALL_LOCGOVS[i].locgovCode + '">' + ALL_LOCGOVS[i].locgovNm + '</option>');
+                }
+            }
+            if (SEL_LOCGOV) { $("#shLocgovCode").val(SEL_LOCGOV); }
+        } else {
+            $('#shLocgovCode').append('<option value="">-시,군,구-</option>');
+        }
+    }
+
+    function goPage(pn) {
+        document.getElementById('page').value = pn;
+        document.getElementById('searchParam').submit();
+    }
+/*]]>*/
+</script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>기부금 운영현황 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/give/statistics/operate/detail.jsp 이식(지자체별 연도×용도 지출 상세 + 라인차트 2종).
+     헤더(용도 컬럼)는 BSNS_PURPS_CODE 코드그룹에서 서버 렌더, tbody/tfoot·차트는 AS-IS JS verbatim으로
+     ajax(/give-statistics/operate/{locgov}/detail)가 채운다. 집계=donation G_CTBNY_OPRATN. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+        <h3><span>기부금 운영현황</span></h3>
+
+        <div class="mainArea loc_details mb30">
+            <div class="graph_wrap">
+                <div class="bd_gray mb15">
+                    <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;">금액별</p>
+                    <div class="graph"><canvas id="giveCountLineChart"></canvas></div>
+                </div>
+                <div class="bd_gray mb15">
+                    <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;">건수별</p>
+                    <div class="graph"><canvas id="giveCountBarChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="board_list mt40">
+            <table class="board_list_table" id="operateTable">
+                <colgroup>
+                    <col style="width:100px;">
+                    <th:block th:each="code : ${codeList}">
+                        <col style="width:150px;"><col style="width:100px;">
+                    </th:block>
+                    <col style="width:150px;"><col style="width:100px;">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th scope="col" rowspan="2">년도</th>
+                        <th scope="col" colspan="2" class="border_left" th:each="code : ${codeList}" th:text="${code.label}">용도</th>
+                        <th scope="col" colspan="2" class="border_left">합계</th>
+                    </tr>
+                    <tr>
+                        <th:block th:each="code : ${codeList}">
+                            <th scope="col" class="border_left">사용금액</th>
+                            <th scope="col" class="border_left">건수</th>
+                        </th:block>
+                        <th scope="col" class="border_left">사용금액</th>
+                        <th scope="col" class="border_left">건수</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+                <tfoot></tfoot>
+            </table>
+            <div class="btn_all" th:unless="${scoped}">
+                <div class="flex_box juc-sbt">
+                    <button type="button" class="btn btn-default btn-mini" onclick="location.href='/give-statistics/operate';">목록</button>
+                </div>
+            </div>
+        </div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script type="text/javascript" th:src="@{/content/modules/chart.min.js}"></script>
+<script type="text/javascript" th:src="@{/content/modules/op.chart.js}"></script>
+<script th:inline="javascript">
+/*<![CDATA[*/
+    var LOCGOV_CODE = /*[[${shLocgovCode}]]*/ '';
+
+    $(function() {
+        $(".contents_inner").find("div.location a").removeClass("on");
+        $(".contents_inner").find("div.location").append('> <a href="javascript:;" class="on">상세</a>');
+        detail();
+    });
+
+    function detail() {
+        $.post('/give-statistics/operate/' + LOCGOV_CODE + '/detail', {}, function(resp) {
+            if (resp.isSuccess) {
+                var colorArr = ['#004CCE','#00215A','#09C2C7','#6e90cd','#92278F','#f08c00'];
+                var codeList = resp.data.codeList;
+                var list = resp.data.list;
+                var html = {body : '', footer : ''};
+                var yearArr = [];
+                var amtArr = [];
+                var cntArr = [];
+                for (var i in codeList) {
+                    var c = codeList[i];
+                    amtArr.push({ label : c.label, id : c.id, data : [], backgroundColor : colorArr[i % colorArr.length], borderColor : colorArr[i % colorArr.length] });
+                    cntArr.push({ label : c.label, id : c.id, data : [], backgroundColor : colorArr[i % colorArr.length], borderColor : colorArr[i % colorArr.length] });
+                }
+
+                if (list.length <= 0) {
+                    html.body = '<tr><td colspan="' + ((codeList.length * 2) + 3) + '"><div>데이터가 없습니다.</div></td></tr>';
+                }
+
+                for (var i = 0; i < list.length; i++) {
+                    var d = list[i];
+                    var chart = list[list.length - 1 - i];
+                    if (chart.cntrYear != '0') {
+                        yearArr.push(chart.cntrYear);
+                        for (var j in amtArr) {
+                            amtArr[j].data.push(chart['amt' + amtArr[j].id]);
+                            cntArr[j].data.push(chart['cnt' + cntArr[j].id]);
+                        }
+                    }
+                    html = drawTable(html, codeList, d);
+                }
+
+                $("#operateTable tbody").append(html.body);
+                $("#operateTable tfoot").append(html.footer);
+
+                ChartCommon.drawChart('giveCountLineChart', 'line', null, yearArr, amtArr, {x : '년', y : '천원'});
+                ChartCommon.drawChart('giveCountBarChart', 'line', null, yearArr, cntArr, {x : '년', y : '건'});
+            } else {
+                alert(resp.errorMessage);
+                return false;
+            }
+        });
+    }
+
+    function drawTable(html, codeList, data) {
+        var txt = 'body';
+        var className = '';
+        if (data.cntrYear == '0') {
+            txt = 'footer';
+            className = 'class="border_left"';
+            data.cntrYear = '합계';
+        }
+        html[txt] += '<tr style="background:#fff;">';
+        html[txt] += '<td><div>' + data.cntrYear + '</div></td>';
+        for (var j in codeList) {
+            var c = codeList[j];
+            html[txt] += '<td ' + className + '><div>' + Common.numberFormat(data['amt' + c.id]) + '</div></td>';
+            html[txt] += '<td ' + className + '><div>' + Common.numberFormat(data['cnt' + c.id]) + '</div></td>';
+        }
+        html[txt] += '<td ' + className + '><div>' + Common.numberFormat(data.expndtrSum) + '</div></td>';
+        html[txt] += '<td ' + className + '><div>' + Common.numberFormat(data.expndtrCnt) + '</div></td>';
+        html[txt] += '</tr>';
+        return html;
+    }
+/*]]>*/
+</script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

@@ -10,16 +10,37 @@
      자체발명 style.css 대신 실제 opmanager.css(+bootstrap+jquery-ui, ghlove-web/static/content/opmanager/를
      그대로 복사해 경로까지 무수정)를 직접 링크한다.
 
-     `.lnb`는 실제 AS-IS처럼 `float:left`라서(opmanager.css 확인) position:fixed로 바꿀 필요가
-     없었다 - `.contents{margin-left:190px}`는 형제 요소 순서만 맞으면 되고 공통 부모(`#container`)
-     안에 실제로 중첩될 필요가 없다. 그래서 각 화면 템플릿은 최상위 `<div class="wrap">`를
-     `<div class="contents contents_inner">`로 이름만 바꿨을 뿐 구조는 그대로다(98개 파일 일괄
-     치환) - `.admin_wrap`/`#container` 래퍼 자체는 overflow/position 관련 속성뿐이라 생략해도
-     시각적으로 동일하다.
+     [정정 2026-10-02] 예전 주석은 "`.admin_wrap`/`#container` 래퍼는 overflow/position뿐이라
+     생략해도 시각적으로 동일"이라고 단정했는데 이는 틀렸다. 실제로 ① `.admin_wrap .mainArea{
+     width:1440px}`(responsive 차트가 폭을 못 잡아 붕괴) ② `#container{position:relative}`가
+     `.location`(position:absolute; top:90px; right:40px) 브레드크럼의 기준 박스 - 래퍼를 빼면
+     브레드크럼이 뷰포트 기준으로 엉뚱한 곳에 뜨고 차트가 안 그려진다. 그래서 AS-IS inc_header.jsp
+     구조(`#header` 바깥 + `.admin_wrap > #container > (.lnb) + .contents > .contents_inner`)를
+     복원한다. Thymeleaf fragment는 본문을 감쌀 수 없으므로 nav를 `header()`/`lnb()`로 쪼개고,
+     각 화면이 래퍼 div를 직접 두른 뒤 그 둘을 끼운다(신규 의존성 없이 AS-IS 중첩 재현).
+     `admin-nav()`는 아직 전환 안 된 화면들 호환용으로 header()+lnb() 합성본을 유지한다.
 
      메뉴 트리(navTree)/현재위치(activeMenu, activeTopMenuId)는 ManagerAuthAdvice가 매 요청마다
      자동으로 채워준다. */-->
+
+<!--/* AS-IS 전환 완료 화면용 권장 골격(각 페이지가 직접 작성):
+     <div th:replace="~{fragments/admin-nav :: header()}"></div>
+     <div class="admin_wrap"><div id="container">
+       <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+       <div class="contents"><div class="contents_inner">
+         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+         ...본문...
+       </div></div>
+     </div></div>
+     <div th:replace="~{fragments/footer :: admin-footer}"></div>  */-->
+
+<!-- 하위호환: 아직 전환 안 된 화면들이 쓰는 header+lnb 합성 fragment -->
 <div th:fragment="admin-nav()">
+    <div th:replace="~{fragments/admin-nav :: header()}"></div>
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+</div>
+
+<div th:fragment="header()">
     <div id="header">
         <div class="topMenu">
             <ul class="tnb clear_fix">
@@ -40,36 +61,49 @@
             <ul class="gnb clear_fix">
                 <li th:each="top : ${navTree.topMenus()}"
                     th:classappend="${activeTopMenuId != null and activeTopMenuId == top.menuId} ? 'on'">
-                    <a th:href="@{${navTree.childrenByParent().get(top.menuId)[0].menuUrl}}" th:text="${top.menuName}"></a>
+                    <a th:href="@{${navTree.topFirstUrl().get(top.menuId)}}" th:text="${top.menuName}"></a>
                 </li>
             </ul>
         </div>
     </div>
+</div>
 
+<div th:fragment="lnb()">
     <!-- SpEL selection(.?[...]) 안에서는 바깥 모델 변수를 맨이름으로 못 읽는다 - selection이
          평가되는 동안 "루트 객체"가 컬렉션의 각 원소(Menu)로 바뀌어서 activeTopMenuId를
          Menu의 프로퍼티로 찾으려다 EL1008E로 500 에러가 났다(실제로 발견한 버그 - 로그인
          없이 302만 확인해온 이전 검증들이 전부 이 화면을 실제로 그려본 적이 없어서 몰랐다).
          바깥 변수는 반드시 #activeTopMenuId처럼 # 접두사(SpEL 변수 참조, 루트객체 변경과
          무관하게 항상 컨텍스트 변수맵에서 찾음)로 참조해야 한다. -->
-    <div class="lnb" th:if="${activeTopMenuId != null}"
-         th:with="activeTop=${navTree.topMenus().?[menuId == #activeTopMenuId]}">
+    <!-- AS-IS 3단 LNB: 활성 상단 아래의 섹션(2차)마다 그룹헤더 + 그 하위 링크(3차). inc_header.jsp의
+         secondMenu(.menu > a.on) → childMenu(.depth2 > .sub_menu) 구조 그대로. -->
+    <div class="lnb" th:if="${activeTopMenuId != null}">
         <h2 id="first-menu-name"></h2>
         <ul class="lnbs">
-            <li class="menu">
-                <a class="on" th:text="${!#lists.isEmpty(activeTop) ? activeTop[0].menuName : ''}"></a>
+            <li class="menu" th:each="section : ${navTree.sectionsByTop().get(activeTopMenuId)}">
+                <a class="on" th:text="${section.menuName}"></a>
                 <ul class="depth2">
-                    <li th:each="child : ${navTree.childrenByParent().get(activeTopMenuId)}"
-                        class="sub_menu" th:classappend="${activeMenu != null and activeMenu.menuId == child.menuId} ? 'on'">
-                        <a th:href="@{${child.menuUrl}}"
-                           th:classappend="${activeMenu != null and activeMenu.menuId == child.menuId} ? 'on'"
-                           th:text="'- ' + ${child.menuName}"></a>
+                    <li th:each="leaf : ${navTree.leavesBySection().get(section.menuId)}"
+                        class="sub_menu" th:classappend="${activeMenu != null and activeMenu.menuId == leaf.menuId} ? 'on'">
+                        <a th:href="@{${leaf.menuUrl}}"
+                           th:classappend="${activeMenu != null and activeMenu.menuId == leaf.menuId} ? 'on'"
+                           th:text="'- ' + ${leaf.menuName}"></a>
                     </li>
                 </ul>
             </li>
         </ul>
     </div>
     <a href="#" class="lnb_handle close" th:if="${activeTopMenuId != null}">메뉴 닫기</a>
+</div>
+
+<!--/* AS-IS 각 화면 본문 최상단의 경로(breadcrumb) 엘리먼트. 내용(상단GNB>섹션>리프)은
+     op.manager.js의 Manager.setLnbHeader()가 DOM ready에 nav(.gnb li.on / .lnbs li.on)에서
+     읽어 클라이언트에서 채운다(AS-IS detail.jsp가 빈 <a href="#">를 두고 JS로 채우던 것과 동일).
+     각 화면은 .contents_inner 바로 안 최상단에 이 조각을 th:replace로 넣는다. */-->
+<!--/* 활성 메뉴(op_menu 등록)가 있을 때만 렌더 - 메뉴 미등록 화면에선 op.manager.js가
+     채울 내용이 없어 빈 경로("- > >")가 떠서 지저분하므로 아예 안 그린다. */-->
+<div class="location" th:fragment="breadcrumb()" th:if="${activeMenu != null}">
+    <a href="#"></a> &gt; <a href="#"></a> &gt; <a href="#" class="on"></a>
 </div>
 </body>
 </html>

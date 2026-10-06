@@ -1,0 +1,94 @@
+<!-- AS-IS opmanager/i18n/user/customer/point-list.jsp 이식(메뉴 4101 상세의 포인트 내역 조각).
+     AS-IS는 layout="blank"로 표만 내려주고 상세화면이 ajax로 #pointList에 끼워넣는다.
+
+     AS-IS verbatim:
+     - colgroup col 2개(컬럼 8개), caption/summary "포인트 내역".
+     - 적립(OCC) 행은 기부금액·발생포인트·잔액을 찍고 사용포인트는 '-'.
+       사용(그 외) 행은 기부금액·발생포인트가 '-'이고 사용포인트·잔액을 찍는다.
+     - 답례품 주문번호는 값이 있고 '0'이 아닐 때만 링크로 보여준다.
+     - 주문 상세로 이동하는 goPresentOrderPage는 AS-IS가 /opmanager/order/all/order-detail/0/{주문번호}로
+       보낸다. TO-BE 전체주문관리 상세(/admin/orders/{orderCode})로 바꿨다.
+     - AS-IS JS에 남아 있던 외부 SalesOn 상점(bbiz.kr) 팝업 코드는 주석 상태 그대로 둔다.
+     - 빈 목록 행에는 background 스타일이 없다.
+
+     잔액은 "같은 지자체에서 그 행의 등록시각까지 적립합 - 사용합"이다(AS-IS 공식). 적립은
+     donation(g_cntr), 사용은 point(g_cntr_use_point)에 있어 admin이 합쳐 계산한다. -->
+<table class="board_list_table" summary="포인트 내역" xmlns:th="http://www.thymeleaf.org">
+	<caption>포인트 내역</caption>
+	<colgroup>
+		<col style="width:3%;">
+		<col style="width:10%;">
+	</colgroup>
+	<thead>
+		<tr>
+			<th scope="col">No.</th>
+			<th scope="col">발생일</th>
+			<th scope="col">지자체</th>
+			<th scope="col">기부금액</th>
+			<th scope="col">발생포인트</th>
+			<th scope="col">사용포인트</th>
+			<th scope="col">포인트잔액</th>
+			<th scope="col">답례품 주문번호</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr th:each="item, i : ${list}" style="background:#fff;">
+			<td th:text="${pagination.itemNumber - i.count}">0</td>
+			<td th:text="${item.cntrDe}"></td>
+			<td th:text="${item.cntrLocgovText}"></td>
+			<th:block th:if="${item.occ}">
+				<td th:text="${#numbers.formatDecimal(item.cntrAmt, 1, 'COMMA', 2, 'POINT')}">0</td>
+				<td th:text="${#numbers.formatDecimal(item.cntrPoint, 1, 'COMMA', 2, 'POINT')}">0</td>
+				<td>-</td>
+				<td th:text="${#numbers.formatDecimal(item.cntrBlcePoint, 1, 'COMMA', 2, 'POINT')}">0</td>
+			</th:block>
+			<th:block th:unless="${item.occ}">
+				<td>-</td>
+				<td>-</td>
+				<td th:text="${#numbers.formatDecimal(item.cntrUsePoint, 1, 'COMMA', 2, 'POINT')}">0</td>
+				<td th:text="${#numbers.formatDecimal(item.cntrBlcePoint, 1, 'COMMA', 2, 'POINT')}">0</td>
+			</th:block>
+			<td>
+				<a th:if="${not #strings.isEmpty(item.orderCode) and item.orderCode != '0'}"
+				   th:href="|javascript:goPresentOrderPage('${item.orderCode}')|"
+				   th:text="${item.orderCode}"></a>
+			</td>
+		</tr>
+		<tr th:if="${#lists.isEmpty(list)}">
+			<td colspan="8">포인트 내역이 존재하지 않습니다.</td>
+		</tr>
+	</tbody>
+</table>
+<div class="pagination-wrap" th:if="${not #lists.isEmpty(list)}" xmlns:th="http://www.thymeleaf.org">
+	<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+</div>
+
+<script type="text/javascript">
+	/**
+	 *	함 수 명 : goPresentOrderPage
+	 *	기	능  : 답례품 주문 정보 페이지로 이동
+	 *	파라미터  : orderCode - 주문번호
+	 */
+	function goPresentOrderPage(orderCode) {
+		if(orderCode) {
+			location.href = '/admin/orders/' + orderCode;
+
+			/* AS-IS에 주석으로 남아 있던 외부 상점(SalesOn) 팝업 경로 - 주석 상태 그대로 둔다
+			$.get('/opmanager/present/login', function(response) {
+				if (response.isSuccess) {
+					var param = (response.data == null) ? '' : response.data;
+
+					var url = "";
+					if (window.location.hostname.indexOf("ilovegohyang.go.kr") > -1) {
+						url = "https://shop.ilovegohyang.go.kr/kwa-ABS_sell_v-"+orderCode+"?OTSKIN=layout_bl_admin.php";
+					} else {
+						url = "https://gohyang01.bbiz.kr/kwa-ABS_sell_v-"+orderCode+"?OTSKIN=layout_bl_admin.php";
+					}
+					window.open(url + '&_tss_=' + param, 'presentPopup');
+				} else {
+					alert("오류가 발생했습니다.");
+				}
+			});*/
+		}
+	}
+</script>

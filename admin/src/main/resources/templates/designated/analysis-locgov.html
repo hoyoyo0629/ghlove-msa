@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <meta charset="UTF-8">
+    <!-- op.common.js 전역 ajax beforeSend가 CSRF 헤더를 붙이므로(없으면 setRequestHeader('','') 예외로
+         모든 ajax 중단) meta를 넣는다. admin은 CSRF 미사용이라 헤더명만 유효하게·토큰은 빈 값. -->
+    <meta name="_csrf_header" content="X-CSRF-TOKEN">
+    <meta name="_csrf" content="">
+    <title>지자체별 통계 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <style>
+        .tbl-summary { border-right: 1px solid #dedede; border-bottom: 1px solid #dedede; }
+        .tbl-summary th, .tbl-summary td { border-left: 1px solid #dedede; border-top: 1px solid #dedede; text-align: center; }
+        .tbl-summary th { background: #f4f4f4; padding: 10px; color: #000; }
+        .tbl-summary td { padding: 22px; font-size: 20px; font-family: verdana; }
+        td { background: #fff; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/designated-donation/analysis/locgov.jsp를 그대로 이식(차트 없는 서버렌더 표+요약).
+     필터(지자체/사업구분/기간/상태)·요약4종·지자체별 집계표·페이징·행클릭 딥링크 모두 AS-IS와 동일.
+     시도→시군구 캐스케이딩만 서버 재왕복 대신 로컬 필터로 치환(ajax·차트 로직 없음). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+    <p><a th:href="@{/designated-projects}">&larr; 지정기부 관리</a></p>
+
+    <div class="item_list">
+        <h3><span>지자체별 통계</span></h3>
+
+        <form id="locgovSearchParam" method="get" th:action="@{/designated-projects/analysis/locgov}">
+            <div class="board_write">
+                <table class="board_write_table" summary="지자체별 통계 목록">
+                    <caption>지자체별 통계 목록</caption>
+                    <colgroup>
+                        <col style="width: 150px" /><col style="width: auto;" /><col style="width: 150px" /><col style="width: auto;" />
+                    </colgroup>
+                    <tbody>
+                        <tr>
+                            <th:block th:unless="${scoped}">
+                                <td class="label">지자체</td>
+                                <td>
+                                    <div class="flex_box gap-08">
+                                        <select id="shWdr" name="shWdr" class="wd-150" onChange="wdrChange(this.value)">
+                                            <option value="">-전체-</option>
+                                            <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}" th:selected="${p.key == shWdr}"></option>
+                                        </select>
+                                        <select id="shLocgovCode" name="shLocgovCode" class="wd-150">
+                                            <option value="">-시,군,구-</option>
+                                        </select>
+                                    </div>
+                                </td>
+                                <td class="label">사업구분</td>
+                                <td>
+                                    <div class="flex_box gap-08">
+                                        <select id="bsnsType" name="bsnsType" class="wd-300" title="사업구분 선택">
+                                            <option value="">전체</option>
+                                            <option th:each="bt : ${bsnsTypes}" th:value="${bt.key}" th:text="${bt.value}" th:selected="${bt.key == bsnsType}"></option>
+                                        </select>
+                                    </div>
+                                </td>
+                            </th:block>
+                            <th:block th:if="${scoped}">
+                                <td class="label">사업구분</td>
+                                <td colspan="3">
+                                    <input type="hidden" id="shWdr" name="shWdr" value="">
+                                    <input type="hidden" id="shLocgovCode" name="shLocgovCode" value="">
+                                    <div class="flex_box gap-08">
+                                        <select id="bsnsType" name="bsnsType" class="wd-300" title="사업구분 선택">
+                                            <option value="">전체</option>
+                                            <option th:each="bt : ${bsnsTypes}" th:value="${bt.key}" th:text="${bt.value}" th:selected="${bt.key == bsnsType}"></option>
+                                        </select>
+                                    </div>
+                                </td>
+                            </th:block>
+                        </tr>
+                        <tr>
+                            <td class="label">기간</td>
+                            <td>
+                                <div>
+                                    <span class="datepicker"><input type="text" id="frDt" name="frDt" maxlength="8" class="datepicker" title="조회 시작일" th:value="${frDt}"></span>
+                                    <span class="wave">~</span>
+                                    <span class="datepicker"><input type="text" id="toDt" name="toDt" maxlength="8" class="datepicker" title="조회 종료일" th:value="${toDt}"></span>
+                                    <span class="day_btns" style="margin-left:0px;">
+                                        <a href="javascript:;" class="btn_date today">오늘</a>
+                                        <a href="javascript:;" class="btn_date week-1">1주일</a>
+                                        <a href="javascript:;" class="btn_date day-15">15일</a>
+                                        <a href="javascript:;" class="btn_date month-1">한달</a>
+                                        <a href="javascript:;" class="btn_date month-3">3개월</a>
+                                        <a href="javascript:;" class="btn_date year-1">1년</a>
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="label">상태</td>
+                            <td>
+                                <div class="flex_box gap-12">
+                                    <div class="input-form"><label><input type="radio" name="prjStatus" value="0" th:checked="${prjStatus == '0'}"> 전체</label></div>
+                                    <div class="input-form"><label><input type="radio" name="prjStatus" value="2" th:checked="${prjStatus == '2'}"> 진행</label></div>
+                                    <div class="input-form"><label><input type="radio" name="prjStatus" value="9" th:checked="${prjStatus == '9'}"> 종료</label></div>
+                                    <div class="input-form"><label><input type="radio" name="prjStatus" value="1" th:checked="${prjStatus == '1'}"> 대기</label></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="btn_all btn_left">
+                    <ul class="list-bullet point"><li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li></ul>
+                </div>
+                <div class="btn_all btn_right">
+                    <div class="flex_box gap-08">
+                        <button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/designated-projects/analysis/locgov';">초기화</button>
+                        <button type="submit" class="btn btn-dark-gray btn-mini" onclick="return search(event);">검색</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-40">
+                <table class="tbl-summary">
+                    <colgroup><col style="width: 200px" /><col style="width: 200px;" /><col style="width: 200px" /><col style="width: 200px;" /></colgroup>
+                    <thead>
+                        <tr><th>총 목표금액</th><th>총 모금액</th><th>총 모금 달성율</th><th>총 기부건수</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span th:text="${#numbers.formatInteger(summary.totTargetAmt, 0, 'COMMA')}">0</span>원</td>
+                            <td><span th:text="${#numbers.formatInteger(summary.totCntrAmt, 0, 'COMMA')}">0</span>원</td>
+                            <td><span th:text="${summary.totAchvRt}">0</span>%</td>
+                            <td><span th:text="${#numbers.formatInteger(summary.totCntrCnt, 0, 'COMMA')}">0</span>명</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="count_title mt-40">
+                <h5>검색결과 <span th:text="${#numbers.formatInteger(total, 0, 'COMMA')}" th:remove="tag">0</span> 건</h5>
+                <span>
+                    <select id="itemsPerPage" name="itemsPerPage" title="화면 출력수" onchange="document.getElementById('locgovSearchParam').submit();">
+                        <option value="10"  th:selected="${itemsPerPage == 10}">10개 출력</option>
+                        <option value="20"  th:selected="${itemsPerPage == 20}">20개 출력</option>
+                        <option value="50"  th:selected="${itemsPerPage == 50}">50개 출력</option>
+                        <option value="100" th:selected="${itemsPerPage == 100}">100개 출력</option>
+                    </select>
+                </span>
+            </div>
+            <input type="hidden" name="page" id="page" th:value="${page}">
+        </form>
+
+        <div class="board_list">
+            <table class="board_list_table" summary="지자체별 통계 목록">
+                <caption>지자체별 통계 목록</caption>
+                <colgroup>
+                    <col style="width:50px;"><col style="width:150px;"><col style="width:100px;"><col style="width:100px;">
+                    <col style="width:100px;"><col style="width:150px;"><col style="width:100px;"><col style="width:100px;">
+                    <col style="width:100px;"><col style="width:100px;"><col style="width:150px;"><col style="width:150px;"><col style="width:100px;">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th scope="col">No</th>
+                        <th scope="col">지자체 명</th>
+                        <th scope="col">사업<br>(총건수)</th>
+                        <th scope="col">진행중<br>(건수)</th>
+                        <th scope="col">종료<br>(건수)</th>
+                        <th scope="col">기부건수</th>
+                        <th scope="col">취약계층<br>(건수)</th>
+                        <th scope="col">문화/예술<br>(건수)</th>
+                        <th scope="col">자원봉사<br>(건수)</th>
+                        <th scope="col">복리증진<br>(건수)</th>
+                        <th scope="col">목표금액</th>
+                        <th scope="col">모금액</th>
+                        <th scope="col">달성율</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="row, it : ${rows}" style="background:#fff;">
+                        <td th:text="${startNo - it.index}">0</td>
+                        <td>
+                            <div>
+                                <a href="javascript:;" style="cursor:pointer;"
+                                   th:onclick="|movePage('${row.locgovCode}','${bsnsType}','${prjStatus}','${frDt}','${toDt}')|"
+                                   th:text="${row.locgovNm}"></a>
+                            </div>
+                        </td>
+                        <td th:text="${#numbers.formatInteger(row.prjCnt, 0, 'COMMA')}">0</td>
+                        <td th:text="${#numbers.formatInteger(row.statu2Cnt, 0, 'COMMA')}">0</td>
+                        <td th:text="${#numbers.formatInteger(row.statu9Cnt, 0, 'COMMA')}">0</td>
+                        <td th:text="${#numbers.formatInteger(row.totCntrCnt, 0, 'COMMA')}">0</td>
+                        <td th:text="${#numbers.formatInteger(row.bsnsType100Cnt, 0, 'COMMA')}">0</td>
+                        <td th:text="${#numbers.formatInteger(row.bsnsType200Cnt, 0, 'COMMA')}">0</td>
+                        <td th:text="${#numbers.formatInteger(row.bsnsType300Cnt, 0, 'COMMA')}">0</td>
+                        <td th:text="${#numbers.formatInteger(row.bsnsType400Cnt, 0, 'COMMA')}">0</td>
+                        <td><span th:text="${#numbers.formatInteger(row.targetAmt, 0, 'COMMA')}">0</span>원</td>
+                        <td><span th:text="${#numbers.formatInteger(row.cntrAmt, 0, 'COMMA')}">0</span>원</td>
+                        <td><span th:text="${row.achvRt}">0</span>%</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="no_content" th:if="${#lists.isEmpty(rows)}">데이터가 없습니다.</div>
+
+            <div class="pagination-wrap" th:if="${totalPages > 1}" style="text-align:center; margin-top:16px;">
+                <a th:each="pn : ${#numbers.sequence(1, totalPages)}" href="javascript:;"
+                   th:text="${pn}" th:onclick="|goPage(${pn})|"
+                   th:style="${pn == page} ? 'font-weight:bold; margin:0 6px; text-decoration:underline;' : 'margin:0 6px;'"></a>
+            </div>
+        </div>
+    </div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script th:inline="javascript">
+/*<![CDATA[*/
+    var ALL_LOCGOVS = /*[[${allLocgovs}]]*/ [];
+    var SEL_LOCGOV  = /*[[${shLocgovCode}]]*/ '';
+
+    let changeYn = "N";
+    $("select[name='shWdr']").change(function() { changeYn = "Y"; });
+
+    $(function(){
+        wdrChange($("#shWdr").val());
+        if (Common && Common.DateButtonEvent) {
+            Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="frDt"]', 'input[name="toDt"]');
+        }
+        if (EventHandler && EventHandler.calendarStartDateAndEndDateVaild) {
+            EventHandler.calendarStartDateAndEndDateVaild();
+        }
+    });
+
+    // 시도 → 시군구 로컬 필터(AS-IS는 ajax였으나 동일 동작).
+    function wdrChange(value) {
+        $("#shLocgovCode option").remove();
+        if (value && value != "") {
+            $('#shLocgovCode').append('<option value="">-전체-</option>');
+            for (var i = 0; i < ALL_LOCGOVS.length; i++) {
+                if (ALL_LOCGOVS[i].upperLocgovCode == value) {
+                    $('#shLocgovCode').append('<option value="' + ALL_LOCGOVS[i].locgovCode + '">' + ALL_LOCGOVS[i].locgovNm + '</option>');
+                }
+            }
+            if (changeYn == 'N' && SEL_LOCGOV) { $("#shLocgovCode").val(SEL_LOCGOV); }
+        } else {
+            $('#shLocgovCode').append('<option value="">-시,군,구-</option>');
+        }
+    }
+
+    function search(event) {
+        var s = $("#frDt").val();
+        var e = $("#toDt").val();
+        if (s && s.length == 8 && e && e.length == 8) {
+            if (s > e) {
+                alert("종료일이 시작일보다 빠릅니다.");
+                $("#toDt").focus();
+                if (event) event.preventDefault();
+                return false;
+            }
+        }
+        $("#page").val(1);           // 검색 시 1페이지로
+        $("#locgovSearchParam").submit();
+        return false;
+    }
+
+    function goPage(pn) {
+        $("#page").val(pn);
+        document.getElementById('locgovSearchParam').submit();
+    }
+
+    // 지자체 명 클릭 → 지정기부 목록으로 필터 딥링크(AS-IS movePage).
+    function movePage(locgovCode, bsnsType, prjStatus, frDt, toDt) {
+        if (bsnsType == '0') bsnsType = "";
+        if (prjStatus == '0') prjStatus = "";
+        location.href = '/designated-projects?locgovCode=' + locgovCode
+            + '&bsnsType=' + bsnsType + '&prjStDt=' + (frDt||'') + '&prjEdDt=' + (toDt||'') + '&prjStatus=' + prjStatus;
+    }
+/*]]>*/
+</script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

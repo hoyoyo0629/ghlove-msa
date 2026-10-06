@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<!-- AS-IS opmanager/i18n/log/action-log-list.jsp 이식. 로그인 로그 상세가 ajax로 받아
+     #actionLogList 안에 끼워 넣는 HTML 조각이다(관리셸 없음). -->
+<body>
+<!-- List Header -->
+<div class="count_title mt-40">
+    <h5>총 <span th:text="${#numbers.formatInteger(count, 0, 'COMMA')}" th:remove="tag">0</span>건</h5>
+    <span>
+        <select name="displayCount" id="displayCount" th:title="${msg.get('M00239')}">
+            <option value="10" th:text="${msg.get('M00240')}">10개 출력</option>
+            <option value="20" th:text="${msg.get('M00241')}">20개 출력</option>
+            <option value="50" th:text="${msg.get('M00242')}">50개 출력</option>
+            <option value="100" th:text="${msg.get('M00243')}">100개 출력</option>
+        </select>
+    </span>
+</div>
+<!--// List Header -->
+
+<!-- List -->
+<table class="board_list_table" summary="관리자 로그관리">
+    <caption>관리자 로그관리</caption>
+    <colgroup>
+        <col style="width:50px;">
+        <col style="width:200px;">
+        <col style="width:500px;">
+    </colgroup>
+    <thead>
+        <tr>
+            <th scope="col">No.</th>
+            <th scope="col">접속일</th>
+            <th scope="col">URL</th>
+        </tr>
+    </thead>
+    <tbody>
+        <th:block th:if="${not #lists.isEmpty(list)}">
+            <tr th:each="item, i : ${list}" style="background:#fff;">
+                <td>
+                    <div th:text="${pagination.itemNumber - i.count}">0</div>
+                </td>
+                <td>
+                    <div th:text="${item.createdDate}"></div>
+                </td>
+                <td>
+                    <div th:text="${item.requestUri}"></div>
+                </td>
+            </tr>
+        </th:block>
+        <tr th:if="${#lists.isEmpty(list)}" style="background:#fff;">
+            <td colspan="3">관리자 로그관리 상세 내용이 없습니다.</td>
+        </tr>
+    </tbody>
+</table>
+<div class="btn_all btn_right">
+    <div class="flex_box gap-08">
+        <button type="button" class="btn btn-default btn-mini" onclick="moveListPage();">목록</button>
+    </div>
+</div>
+<div class="pagination-wrap">
+    <div class="pagination-wrap" th:if="${not #lists.isEmpty(list)}">
+        <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+    </div>
+</div>
+<!--// List -->
+
+<script type="text/javascript">
+    $(function() {
+        // 조각이 교체될 때마다 출력 갯수 이벤트를 다시 건다(AS-IS와 동일)
+        $("#actionLogList #displayCount").off('change').on('change', function(){
+            getActionLogList(1, $(this).val());
+        });
+    });
+</script>
+</body>
+</html>

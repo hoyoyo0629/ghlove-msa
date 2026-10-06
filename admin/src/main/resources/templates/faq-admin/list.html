@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>FAQ - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/faq/list.jsp 이식(메뉴 5104 FAQ).
+     여기서 등록한 FAQ가 공개 고객센터 FAQ 페이지에 그대로 나간다(같은 OP_FAQ를 읽는다).
+
+     ★ AS-IS는 진입(GET)에서 조회하지 않고 빈 목록을 내려준다 - 검색해야 조회된다.
+     ★ 정렬은 화면에서 바꿀 수 없다(컨트롤러가 id/DESC로 고정).
+
+     AS-IS verbatim:
+     - h3가 메뉴명이 아니라 그냥 "FAQ"다.
+     - 검색은 제목만 찾는다(where=title hidden 고정). 검색구분 select는 <b>주석처리</b>돼 있다.
+     - 검색표 아래 안내문구가 .list-bullet로 하나 붙는다(AS-IS는 <ul>을 닫지 않는다 - 여기서는 닫았다).
+     - 컬럼은 체크박스/순번/질문유형/제목/작성일/조회수 6개다. '관리' 컬럼은 주석처리돼 있다.
+     - 제목을 누르면 수정화면으로 간다(Link.view가 ?url=<현재주소>를 붙여 되돌아올 주소를 넘긴다).
+     - 작성일은 createdDateTime(초까지)이다.
+     - 빈 목록 문구는 M00473("데이터가 없습니다.")이고 표 밖 .no_content 다.
+     - 목록 아래 버튼은 [등록][삭제] 둘이다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span>FAQ</span></h3>
+
+<form id="faqDto" method="post" th:action="@{/faq-admin}">
+    <input type="hidden" id="page" name="page" th:value="${searchParam.page}"/>
+
+    <div class="board_write">
+        <table class="board_write_table">
+            <caption th:text="${msg.get('M00675')}"></caption>
+            <colgroup>
+                <col style="width:150px;"/>
+                <col/>
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td class="label" th:text="${msg.get('M00275')}">제목</td>
+                    <td>
+                        <div class="flex_box gap-08">
+                            <!-- AS-IS: 검색대상을 제목으로 고정해 보낸다 -->
+                            <input type="hidden" name="where" th:value="${searchParam.where}"/>
+                            <input type="text" id="query" name="query" th:value="${searchParam.query}"
+                                   class="input_txt required _filter half" th:title="${msg.get('M00021')}"/>
+                        </div>
+                    </td>
+                </tr>
+                <!-- AS-IS 주석처리: 검색 구분(제목/내용) select -->
+                <tr>
+                    <td class="label">질문 유형</td>
+                    <td>
+                        <div class="row">
+                            <div class="col-xs-2 pr-0">
+                                <select id="faqType" name="faqType" class="form-block" title="질문 유형">
+                                    <option value="">전체 </option>
+                                    <option th:each="t : ${faqTypes}" th:value="${t.key}" th:text="${t.value}"
+                                            th:selected="${searchParam.faqType == t.key}"></option>
+                                </select>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div> <!-- // board_write -->
+
+    <div class="btn_all btn_left">
+        <ul class="list-bullet point">
+            <li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li>
+        </ul>
+    </div>
+    <!-- 버튼시작 -->
+    <div class="btn_all btn_right">
+        <div class="flex_box gap-08">
+            <button type="button" class="btn btn-dark-gray btn-sm" onclick="location.href='/faq-admin';">
+                <span class="glyphicon glyphicon-repeat"></span> <span th:text="${msg.get('M00047')}">초기화</span></button>
+            <button type="submit" class="btn btn-dark-gray btn-sm">
+                <span class="glyphicon glyphicon-search"></span> <span th:text="${msg.get('M00048')}">검색</span></button>
+        </div>
+    </div>
+    <!-- 버튼 끝-->
+
+    <div class="count_title mt20">
+        <h5>전체 : <span th:text="${#numbers.formatInteger(faqCount, 0, 'COMMA')}" th:remove="tag">0</span>건</h5>
+        <span>
+            <span th:text="${msg.get('M00052')}">출력수</span> :
+            <select id="size" name="size" th:title="${msg.get('M00239')}">
+                <option value="10" th:text="${msg.get('M00240')}" th:selected="${searchParam.size == 10}">10개 출력</option>
+                <option value="20" th:text="${msg.get('M00241')}" th:selected="${searchParam.size == 20}">20개 출력</option>
+                <option value="50" th:text="${msg.get('M00242')}" th:selected="${searchParam.size == 50}">50개 출력</option>
+            </select>
+        </span>
+    </div>
+</form>
+
+<form id="listForm">
+    <div class="board_write">
+        <table class="board_list_table" th:attr="summary=${msg.get('M00273')}">
+            <caption th:text="${msg.get('M00273')}"></caption>
+            <colgroup>
+                <col style="width:30px;"/>
+                <col style="width:60px;"/>
+                <col style="width:130px;"/>
+                <col/>
+                <col style="width:160px;"/>
+                <col style="width:60px;"/>
+            </colgroup>
+            <thead>
+                <tr>
+                    <th scope="col"><input type="checkbox" id="check_all" th:title="${msg.get('M00169')}"/></th>
+                    <th scope="col">순번</th>
+                    <th scope="col">질문유형</th>
+                    <th scope="col">제목</th>
+                    <th scope="col">작성일</th>
+                    <th scope="col">조회수</th>
+                    <!-- <th scope="col">관리</th> -->
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="row, i : ${faqList}">
+                    <td><input type="checkbox" name="id" id="check" th:value="${row.id}" th:title="${msg.get('M00169')}"/></td>
+                    <td th:text="${firstNumber - i.index}"></td>
+                    <td th:text="${row.faqTypeLabel}"></td>
+                    <td class="text-left">
+                        <a th:href="|javascript:Link.view('/faq-admin/edit/${row.id}')|" th:text="${row.title}"></a>
+                    </td>
+                    <!-- AS-IS op:createdDateTime = LocalDateUtils.getDateTime → 'yyyy-MM-dd HH:mm:ss' -->
+                    <td th:text="${row.created != null} ? ${#temporals.format(row.created, 'yyyy-MM-dd HH:mm:ss')} : ''"></td>
+                    <td th:text="${row.hit}"></td>
+                    <!-- AS-IS 주석처리: 행별 [수정][삭제] 버튼 -->
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="no_content" th:if="${#lists.isEmpty(faqList)}" th:text="${msg.get('M00473')}">데이터가 없습니다.</div>
+
+    <div class="btn_all btn_right">
+        <div class="flex_box gap-08">
+            <a th:href="@{/faq-admin/create}" class="btn btn-dark-gray btn-mini" th:text="${msg.get('M00088')}">등록</a>
+            <a id="op-delete-list-data" href="#" class="btn btn-dark-gray btn-mini"><span th:text="${msg.get('M00074')}">삭제</span></a>
+        </div>
+    </div>
+    <div class="pagination-wrap">
+        <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+    </div>
+</form>
+
+    </div>
+    </div>
+</div>
+</div>
+
+<script type="text/javascript" th:inline="javascript">
+var redirectMessage = /*[[${redirectMessage}]]*/ null;
+var deleteConfirmMessage = /*[[${msg.get('M00306')}]]*/ '선택된 데이터를 삭제하시겠습니까?';
+
+$(function() {
+	if (redirectMessage) {
+		alert(redirectMessage);
+	}
+
+	// 데이터 출력 수 설정.
+	$('#size').on("change", function(){
+	    $('#page').val("1");
+		$('#faqDto').submit();
+	});
+
+	// 목록데이터 - 삭제처리
+	$('#op-delete-list-data').on('click', function() {
+		Common.updateListData("/faq-admin/delete", deleteConfirmMessage);
+	});
+
+	/* AS-IS: 행별 삭제 버튼은 주석처리 상태지만 이 핸들러는 살아 있다 - 그대로 둔다. */
+	$('.op-delete-data').on('click', function(e) {
+		e.preventDefault();
+		$('#check_all').prop('checked', false);
+		$(this).closest('table').find('input[name=id]').prop('checked', false);
+		$(this).closest('tr').find('input[name=id]').prop('checked', true);
+		$('#op-delete-list-data').click();
+	});
+});
+</script>
+</body>
+</html>

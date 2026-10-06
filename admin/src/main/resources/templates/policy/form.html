@@ -1,48 +1,150 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>약관 등록/수정 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <title>약관관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <div class="location"><a th:href="@{/policy}">약관관리</a></div>
-    <h3><span th:text="${policy.policyId} != null ? '약관 수정' : '약관 등록'"></span></h3>
+<!-- AS-IS opmanager/i18n/config/policy/form.jsp 이식. 등록과 수정이 같은 화면이고, 제목이 있으면
+     (=기존 건) 상단에 수정/삭제/목록 버튼이, 없으면 하단에 등록/취소 버튼이 나온다.
+     내용은 스마트에디터. AS-IS의 Link.list()는 op.link.js가 어디에서도 로드되지 않아 동작하지
+     않으므로(AS-IS 결함) Link.list의 폴백과 같은 location.href 이동으로 대체했다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <div class="board_write">
-        <table class="board_write_table" summary="약관 등록/수정">
-            <colgroup><col style="width:220px;"><col></colgroup>
-            <tbody>
-            <tr>
-                <td class="label">유형</td>
-                <td>
-                    <select id="policyType" name="policyType" form="policyForm">
-                        <option th:each="e : ${typeLabels}" th:value="${e.key}" th:text="${e.value}"
-                                th:selected="${e.key == policy.policyType}"></option>
-                    </select>
-                </td>
-            </tr>
-            <tr><td class="label"><span class="required_mark">*</span>제목</td><td><input type="text" id="title" name="title" th:value="${policy.title}" required form="policyForm"></td></tr>
-            <tr><td class="label">내용</td><td><textarea id="content" name="content" rows="14" th:text="${policy.content}" form="policyForm"></textarea></td></tr>
-            <tr><td class="label">전시함</td><td><input type="checkbox" name="exhibitionStatus" value="Y" th:checked="${policy.exhibitionStatus == 'Y'}" form="policyForm"></td></tr>
-            <tr><td class="label">전시 시작</td><td><input type="text" id="exhibitionStartDate" name="exhibitionStartDate" th:value="${policy.exhibitionStartDate}" placeholder="yyyyMMddHHmmss" form="policyForm"></td></tr>
-            <tr><td class="label">전시 종료</td><td><input type="text" id="exhibitionEndDate" name="exhibitionEndDate" th:value="${policy.exhibitionEndDate}" placeholder="yyyyMMddHHmmss" form="policyForm"></td></tr>
-            </tbody>
-        </table>
-    </div>
-    <form id="policyForm" th:action="${policy.policyId} != null ? @{'/policy/' + ${policy.policyId}} : @{/policy}" method="post"></form>
-    <div class="btn_all btn_center">
-        <button type="submit" form="policyForm" class="btn btn-dark-gray btn-small">저장</button>
+<h3><span>약관관리</span></h3>
+
+<form id="policy" method="post" enctype="multipart/form-data"
+      th:action="${policy.policyId != null} ? @{'/policy/detail/' + ${policy.policyId}} : @{/policy/create}">
+
+<div class="btn_all btn_right mb15" th:if="${not #strings.isEmpty(policy.title)}">
+    <div class="flex_box gap-08">
+        <button type="submit" class="btn btn-dark-gray btn-mini">수정</button>
+        <button type="button" class="btn btn-dark-gray btn-mini" th:onclick="|deleteCheck('${policy.policyId}')|">삭제</button>
+        <button type="button" class="btn btn-dark-default btn-mini" onclick="location.href='/policy'">목록</button>
     </div>
 </div>
+
+
+<div class="board_write mt20">
+
+        <table class="board_write_table" cellpadding="0" cellspacing="0" th:summary="${msg.get('M00206')}">
+            <caption th:text="${msg.get('M00206')}"></caption>
+            <colgroup>
+                <col style="width:220px;">
+            </colgroup>
+            <tbody>
+            <tr>
+                <td class="label">정책 타입</td>
+                <td>
+                    <div class="flex_box gap-12">
+                        <div class="input-form">
+                            <input type="radio" id="fType0" name="policyType" value="0" th:checked="${policy.policyType == null or policy.policyType == '0'}" /><label for="fType0">약관</label>
+                        </div>
+                        <div class="input-form">
+                            <input type="radio" id="fType1" name="policyType" value="1" th:checked="${policy.policyType == '1'}" /><label for="fType1">개인정보처리방침</label>
+                        </div>
+                        <div class="input-form">
+                            <input type="radio" id="fType4" name="policyType" value="4" th:checked="${policy.policyType == '4'}" /><label for="fType4">개인정보수집 제3자 이용 동의</label>
+                        </div>
+                        <div class="input-form">
+                            <input type="radio" id="fType5" name="policyType" value="5" th:checked="${policy.policyType == '5'}" /><label for="fType5">저작권정책</label>
+                        </div>
+                        <div class="input-form">
+                            <input type="radio" id="fType6" name="policyType" value="6" th:checked="${policy.policyType == '6'}" /><label for="fType6">개인정보 수집·이용 동의</label>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>제목</td>
+                <td>
+                    <div class="flex_box gap-12">
+                        <input type="text" id="title" name="title" th:value="${policy.title}" title="제목" class="input_txt required _filter half" maxlength="70"/>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>전시 여부</td>
+                <td>
+                    <div class="flex_box gap-12">
+                        <div class="input-form">
+                            <input type="radio" id="fExh1" name="exhibitionStatus" value="Y" th:checked="${policy.exhibitionStatus == null or policy.exhibitionStatus == 'Y'}" /><label for="fExh1">공개</label>
+                        </div>
+                        <div class="input-form">
+                            <input type="radio" id="fExh2" name="exhibitionStatus" value="N" th:checked="${policy.exhibitionStatus == 'N'}" /><label for="fExh2">비공개</label>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+
+            </tbody>
+        </table>
+        <table class="board_write_table mt30" summary="">
+            <colgroup>
+                <col style="width:220px;">
+            </colgroup>
+            <tbody>
+
+                <tr>
+                    <td class="label"><span class="required_mark">*</span>내용</td>
+                    <td>
+                        <!-- smart_editor2 area -->
+                        <div>
+                            <textarea id="content" name="content" cols="100" rows="20" class="editor-content" th:title="${msg.get('M00006')}" th:text="${policy.content}"></textarea>
+                        </div>
+                        <!-- smart_editor2 area -->
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="btn_all btn_center" th:if="${#strings.isEmpty(policy.title)}">
+            <div class="flex_box gap-08">
+                <button type="submit" class="btn btn-dark-gray btn-small">등록</button>
+                <a href="javascript:location.href='/policy';"><button type="button" class="btn btn-dark-default btn-small">취소</button></a>
+            </div>
+        </div>
+
+</div><!--//board_write E-->
+
+</form>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<div th:replace="~{fragments/smarteditor :: init}"></div>
+<div th:replace="~{fragments/smarteditor :: editor('content')}"></div>
+
+<script type="text/javascript">
+    $(function() {
+
+        // validator
+        $('#policy').validator(
+            function() {
+
+                return Common.getEditorContent("content", true);
+
+            });
+
+    });
+
+    function deleteCheck(policyId) {
+        if (confirm("해당 약관을 " + Message.get("M00196"))) {        // 해당 약관을 삭제하시겠습니까?
+            location.replace("/policy/delete/" + policyId);
+        } else {
+            return;
+        }
+    }
+
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

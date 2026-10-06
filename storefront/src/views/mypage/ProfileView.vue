@@ -137,6 +137,38 @@ async function removeInterestLocgov(locgovCode) {
     modalAlert('삭제에 실패했습니다.')
   }
 }
+
+// AS-IS modify.html onepassCancel() 재현. MSA는 원패스 인증세션 쿠키(userKey/intfToken)가 없어
+// 그 가드 대신 가입경로(loginPathCode 300=원패스)로 판단한다 - 원패스 가입이면 연동해지=탈퇴
+// 화면으로 이동한다(부가연동 해제만 하는 경로는 MSA 모델상 발생하지 않음, audit §4).
+async function onepassCancel() {
+  if (!(await modalConfirm('디지털원패스 회원 연동해지를 하시겠습니까?'))) {
+    return
+  }
+  router.push('/mypage/onepass-secede')
+}
+
+// AS-IS modify.html kakaoLinkClear() 재현 - 서버가 SUCCESS(연동만 해제)/CHECK_SECEDE(탈퇴 동반)를
+// 판정한다. CHECK_SECEDE면 탈퇴 동반 확인 후 카카오 탈퇴화면으로 이동한다.
+async function kakaoLinkClear() {
+  try {
+    const res = await api.post('member', '/api/kakao-link/kakao-link-clear')
+    if (res.errMsg) {
+      modalAlert(res.errMsg)
+    } else if (res.result === 'SUCCESS') {
+      await modalAlert('카카오 계정 연동해제가 완료되었습니다.')
+      await load()
+    } else if (res.result === 'CHECK_SECEDE') {
+      if (await modalConfirm('카카오 계정 연동해제시 탈퇴가 같이 진행됩니다. 진행하시겠습니까?')) {
+        router.push('/mypage/secede-kakao')
+      }
+    } else {
+      modalAlert('잠시 후 다시 시도해주세요.')
+    }
+  } catch (e) {
+    modalAlert(e.message || '잠시 후 다시 시도해주세요.')
+  }
+}
 </script>
 
 <template>
@@ -164,7 +196,13 @@ async function removeInterestLocgov(locgovCode) {
             <div class="info-field-group">
               <div class="info-field-items memberGroup">
                 <label for="memberLevel" class="flied-title">회원구분<span class="essential"> *</span></label>
-                <div class="form-field"><div class="m-field"><input type="text" id="memberLevel" :value="profile.userTypeLabel" readonly /></div></div>
+                <div class="form-field">
+                  <div class="m-field">
+                    <input type="text" id="memberLevel" :value="profile.userTypeLabel" readonly />
+                    <button v-if="profile.userKeyYN === 'Y'" class="formBtn" type="button" style="width: 90px" @click="onepassCancel">디지털원패스<br />연동 해지</button>
+                    <button v-if="profile.kakaoUserKeyYN === 'Y'" class="formBtn" type="button" id="kakaoUnlink" @click="kakaoLinkClear">카카오<br />연동 해지</button>
+                  </div>
+                </div>
               </div>
               <div class="info-field-items member">
                 <label for="userName" class="flied-title">이름<span class="essential"> *</span></label>
@@ -334,7 +372,7 @@ async function removeInterestLocgov(locgovCode) {
     </div>
 
     <div class="btn-box many">
-      <button type="button" class="blueBtn cancellation" @click="router.push('/mypage/withdraw')">회원탈퇴<span><img src="/images/icon/cli-icon_btn-hover-arrow.png" alt="" /></span></button>
+      <button v-if="profile.userKeyYN === 'N'" type="button" class="blueBtn cancellation" @click="router.push('/mypage/withdraw')">회원탈퇴<span><img src="/images/icon/cli-icon_btn-hover-arrow.png" alt="" /></span></button>
       <button type="submit" class="blueBtn u-confirm" form="profileForm">확인<span><img src="/images/icon/cli-icon_btn-hover-arrow.png" alt="" /></span></button>
     </div>
   </section>

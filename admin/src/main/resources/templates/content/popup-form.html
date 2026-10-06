@@ -1,88 +1,245 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
     <title>팝업 등록/수정 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <div class="location"><a th:href="@{/popups}">팝업 관리</a></div>
-    <h3><span th:text="${popup} != null ? '팝업 수정' : '팝업 등록'"></span></h3>
+<!-- AS-IS opmanager/i18n/popup/form.jsp 이식. 팝업제목·사용기간(날짜+시 셀렉트)·팝업상태(3라디오)·
+     팝업타입(2라디오)·팝업창 위치·크기·팝업형태(2라디오)·팝업내용(스마트에디터)·이미지·이미지링크까지
+     행 구성과 class를 그대로 옮겼다. 형태=이미지등록(3)이면 .image 행만, 아니면 .content 행만 보인다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+        <!--팝업 등록/수정 시작-->
+        <h3><span th:text="${msg.get('M00746')}">팝업 등록/수정</span></h3> <!-- 팝업 등록/수정 -->
 
-    <div class="board_write">
-        <table class="board_write_table" summary="팝업 등록/수정">
-            <colgroup><col style="width:220px;"><col></colgroup>
-            <tbody>
-            <tr>
-                <td class="label">유형</td>
-                <td>
-                    <select id="popupType" name="popupType" form="popupForm">
-                        <option th:each="t : ${types}" th:value="${t.key}" th:text="${t.value}"
-                                th:selected="${popup} != null and ${popup.popupType} == ${t.key}"></option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <td class="label">스타일</td>
-                <td>
-                    <select id="popupStyle" name="popupStyle" form="popupForm">
-                        <option value="1" th:selected="${popup} == null or ${popup.popupStyle} == '1'">텍스트</option>
-                        <option value="2" th:selected="${popup} != null and ${popup.popupStyle} == '2'">텍스트(테두리없음)</option>
-                        <option value="3" th:selected="${popup} != null and ${popup.popupStyle} == '3'">이미지</option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>제목</td>
-                <td><input type="text" id="subject" name="subject" th:value="${popup} != null ? ${popup.subject} : ''" required form="popupForm"></td>
-            </tr>
-            <tr>
-                <td class="label">내용</td>
-                <td><textarea id="content" name="content" rows="3" th:text="${popup} != null ? ${popup.content} : ''" form="popupForm"></textarea></td>
-            </tr>
-            <tr>
-                <td class="label">시작일</td>
-                <td><input type="text" id="startDate" name="startDate" placeholder="20260101" th:value="${popup} != null ? ${popup.startDate} : ''" form="popupForm"></td>
-            </tr>
-            <tr>
-                <td class="label">종료일</td>
-                <td><input type="text" id="endDate" name="endDate" placeholder="20261231" th:value="${popup} != null ? ${popup.endDate} : ''" form="popupForm"></td>
-            </tr>
-            <tr>
-                <td class="label">닫기버튼(오늘 하루 보지않기) 노출</td>
-                <td><input type="checkbox" name="popupClose" th:checked="${popup} == null or ${popup.popupClose} == 'Y'" form="popupForm"></td>
-            </tr>
-            <tr>
-                <td class="label">이미지(스타일=이미지일 때)</td>
-                <td>
-                    <input type="file" name="image" form="popupForm">
-                    <div th:if="${popup} != null and ${popup.popupImage} != null">
-                        <img th:src="${popup.popupImage}" style="max-width:200px; margin-top:8px;" alt="현재 팝업 이미지">
-                    </div>
-                </td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
-    <form id="popupForm" enctype="multipart/form-data"
-          th:action="${popup} != null ? @{'/popups/' + ${popup.popupId}} : @{/popups}" method="post"></form>
-    <div class="btn_all btn_center">
-        <div class="flex_box gap-08">
-            <button type="submit" form="popupForm" class="btn btn-dark-gray btn-small">저장</button>
-            <a th:href="@{/popups}" class="btn btn-dark-default btn-small">목록으로</a>
-        </div>
-    </div>
-</div>
+        <div class="board_guide" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <!-- AS-IS와 같이 폼 URL = 저장 URL이다(write / edit/{id}). 목록(/popups)으로 POST하면
+             목록 검색 핸들러와 충돌한다. -->
+        <form id="popup" th:action="${popup.popupId} != null ? @{'/popups/' + ${popup.popupId} + '/edit'} : @{/popups/new}"
+              method="post" enctype="multipart/form-data">
+            <div class="board_write">
+                <table class="board_write_table">
+                    <caption th:text="${msg.get('M00746')}">팝업 등록/수정</caption>
+                    <colgroup>
+                        <col style="width:150px;" />
+                        <col style="width:auto;" />
+                    </colgroup>
+                    <tbody>
+                        <tr>
+                            <td class="label" th:text="${msg.get('M00739')}">팝업제목</td> <!-- 팝업제목 -->
+                            <td>
+                                <div>
+                                    <input type="text" id="subject" name="subject" th:value="${popup.subject}" th:title="${msg.get('M00739')}" class="form-block required" />
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label" th:text="${msg.get('M00496')}">사용기간</td> <!-- 사용기간 -->
+                            <td>
+                                <div class="flex_box gap-08 item-center">
+                                    <span class="datepicker"><input type="text" id="startDate" name="startDate" maxlength="8" class="datepicker required" th:value="${popup.startDate}" th:title="${msg.get('M00507')}" /></span> <!-- 팝업시작일자 -->
+
+                                    <select id="startTime" name="startTime" th:title="${msg.get('M00508')}"> <!-- 시간 선택 -->
+                                        <option th:each="code : ${hours}" th:value="${code}" th:text="${code}" th:selected="${code == popup.startTime}"></option>
+                                    </select>시
+                                    <span class="wave">~</span>
+                                    <span class="datepicker"><input type="text" id="endDate" name="endDate" maxlength="8" class="datepicker required" th:value="${popup.endDate}" th:title="${msg.get('M00509')}" /></span> <!-- 팝업종료일자 -->
+                                    <select id="endTime" name="endTime" th:title="${msg.get('M00508')}">
+                                        <option th:each="code : ${hours}" th:value="${code}" th:text="${code}" th:selected="${code == popup.endTime}"></option>
+                                    </select>시 59분
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label" th:text="${msg.get('M00730')}">팝업상태</td> <!-- 팝업상태 -->
+                            <td>
+                                <div class="flex_box gap-12">
+                                    <div class="input-form">
+                                        <input type="radio" name="popupClose" value="1" id="rdo1-1" th:checked="${popup.popupClose == null or popup.popupClose == '1'}" /> <!-- 사용 -->
+                                        <label for="rdo1-1" th:text="${msg.get('M00083')}">사용</label>
+                                    </div>
+                                    <div class="input-form">
+                                        <input type="radio" name="popupClose" value="2" id="rdo1-2" th:checked="${popup.popupClose == '2'}" /> <!-- 일시정지 -->
+                                        <label for="rdo1-2" th:text="${msg.get('M00732')}">일시정지</label>
+                                    </div>
+                                    <div class="input-form">
+                                        <input type="radio" name="popupClose" value="3" id="rdo1-3" th:checked="${popup.popupClose == '3'}" /> <!-- 종료 -->
+                                        <label for="rdo1-3" th:text="${msg.get('M00733')}">종료</label>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label" th:text="${msg.get('M00744')}">팝업타입</td> <!-- 팝업타입 -->
+                            <td>
+                                <div class="flex_box gap-12">
+                                    <div class="input-form">
+                                        <input type="radio" name="popupType" value="1" id="rdo2-1" th:checked="${popup.popupType == null or popup.popupType == '1'}" /> <!-- 윈도우 -->
+                                        <label for="rdo2-1" th:text="${msg.get('M00747')}">윈도우</label>
+                                    </div>
+                                    <div class="input-form">
+                                        <input type="radio" name="popupType" value="2" id="rdo2-2" th:checked="${popup.popupType == '2'}" /> <!-- 레이어 -->
+                                        <label for="rdo2-2" th:text="${msg.get('M00748')}">레이어</label>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label" th:text="${msg.get('M00749')}">팝업창 위치</td> <!-- 팝업창 위치 -->
+                            <td>
+                                <div>
+                                    <span>Top <input type="text" id="topPosition" name="topPosition" th:value="${popup.topPosition}" title="Top" class="one" /> px ,
+                                    Left <input type="text" id="leftPosition" name="leftPosition" th:value="${popup.leftPosition}" title="Left" class="one" /> px
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label" th:text="${msg.get('M00750')}">팝업창 크기</td> <!-- 팝업창 크기 -->
+                            <td>
+                                <div>
+                                    Width <input type="text" id="width" name="width" th:value="${popup.width}" title="Width" class="one" /> px ,
+                                    Height <input type="text" id="height" name="height" th:value="${popup.height}" title="Height" class="one" /> px
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label" th:text="${msg.get('M00734')}">팝업형태</td> <!-- 팝업형태 -->
+                            <td>
+                                <div class="flex_box gap-12">
+                                    <div class="input-form">
+                                        <input type="radio" name="popupStyle" onclick="javascript:showDiv(1)" value="1" id="rdo3-1" th:checked="${popup.popupStyle == null or popup.popupStyle == '1'}" /> <!-- 텍스트입력 -->
+                                        <label for="rdo3-1" th:text="${msg.get('M00736')}">텍스트입력</label>
+                                    </div>
+                                    <div class="input-form">
+                                        <input type="radio" name="popupStyle" onclick="javascript:showDiv(3)" value="3" id="rdo3-2" th:checked="${popup.popupStyle == '3'}" /> <!-- 이미지등록 -->
+                                        <label for="rdo3-2" th:text="${msg.get('M00738')}">이미지등록</label>
+                                    </div>
+                                </div>
+                                <!-- AS-IS도 주석 처리됨: 테두리없음(value=2) 라디오 -->
+                            </td>
+                        </tr>
+                        <tr class="content">
+                            <td class="label" th:text="${msg.get('M00751')}">팝업내용</td> <!-- 팝업내용 -->
+                            <td>
+                                <div>
+                                    <textarea id="content" name="content" cols="" rows="10" class="editor-content" style="width: 700px;" th:title="${msg.get('M00661')}" th:text="${popup.content}"></textarea>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="image">
+                            <td class="label" th:text="${msg.get('M00752')}">이미지</td> <!-- 이미지 -->
+                            <td>
+                                <div>
+                                    <input type="file" name="imageFile" style="width:300px;" th:title="${msg.get('M00417')}" accept="image/png, image/jpeg, image/gif" /> <!-- 이미지파일 -->
+                                    <p class="item_image_main">
+                                        <th:block th:if="${popup.popupImage != null and popup.popupImage != ''}">
+                                            <img th:src="${popup.popupImage}" class="item_image size-100" th:alt="${msg.get('M00753')}" /> <!-- 팝업이미지 -->
+                                            <a th:href="|javascript:deleteItemImage('${popup.popupId}');|" class="delete_item_image"><img th:src="@{/content/opmanager/images/icon/icon_x.gif}" alt="" /></a>
+                                        </th:block>
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="image">
+                            <td class="label" th:text="${msg.get('M00754')}">이미지링크</td> <!-- 이미지링크 -->
+                            <td>
+                                <div>
+                                    <input type="text" id="imageLink" name="imageLink" class="full" maxlength="100" th:value="${popup.imageLink}" />
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div> <!-- // board_write -->
+
+            <div class="btn_all btn_center">
+                <div class="flex_box gap-08">
+                    <button type="submit" class="btn btn-active btn-small"><span th:text="${msg.get('M00101')}">저장</span></button> <!-- 저장 -->
+                    <a th:href="@{/popups}" class="btn btn-default btn-small"><span th:text="${msg.get('M00037')}">취소</span></a> <!-- 취소 -->
+                </div>
+            </div>
+        </form>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<div th:replace="~{fragments/smarteditor :: init}"></div>
+<div th:replace="~{fragments/smarteditor :: editor('content')}"></div>
+
+<script type="text/javascript">
+
+$(function() {
+
+    if ($('input[name=popupStyle]:checked').val() == 3) {
+        $('.image').show();
+        $('.content').hide();
+    } else {
+        $('.image').hide();
+        $('.content').show();
+    }
+
+    // validator
+    try{
+        $('#popup').validator(function() {
+
+            if ( checkedDate( $('#startDate').val(), $('#startTime').val(), $('#endDate').val(), $('#endTime').val() ) ) {
+                alert('사용기간의 종료기간이 시작기간보다 빠를 수 없습니다.');
+                return false;
+            }
+
+            Common.getEditorContent("content");
+        });
+    } catch(e) {
+        alert(e.message);
+    }
+});
+
+function showDiv(num){
+    if(num == "3") {
+        $('.image').show();
+        $('.content').hide();
+    } else {
+        $('.image').hide();
+        $('.content').show();
+
+        // 네이버 스마트에디터 초기 설정 display:none일 경우 height 0px로 설정되는 버그때문에 추가
+        if ($('#editor_frame').height() === 0) {
+            $('#editor_frame').height(254);
+        }
+    }
+    setHeight();
+}
+
+//상품이미지 삭제
+function deleteItemImage(id) {
+    if (!confirm(Message.get("M00755"))) {  // 이미지가 실제로 삭제됩니다.(복구불가)\n삭제하시겠습니까?
+        return;
+    }
+
+    var param = {'popupId': id};
+    $.post('/popups/delete-item-image', param, function(response){
+        Common.responseHandler(response);
+        $('.item_image_main').remove();
+    });
+}
+
+function  checkedDate(startDate,startTime, endDate, endTime){
+
+    return (startDate+startTime+'00') > (endDate+endTime+'59' );
+
+}
+
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

@@ -29,14 +29,20 @@ ghlove:
     admin-secret: "ghlove-msa-local-dev-internal-admin-secret-do-not-expose!!"
   order-service:
     base-url: http://localhost:8085
+  # 판매자 셀프포털의 "판매자 공지사항"(AS-IS /seller/sys-notice) 조회가 admin 서비스의
+  # 내부 API(/api/seller-notices)를 호출할 때 쓴다 - admin이 op_sys_notice_seller를 소유한다.
+  admin-service:
+    base-url: http://localhost:8086
 
 spring:
   application:
     name: gift
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 30MB
+      # AS-IS application-production.yml 그대로(50MB). 기존 10MB/30MB는 근거 없이 넣은 값이라
+      # AS-IS 값으로 맞췄다 - 컨테이너 상한을 올려도 화면·서비스별 용량 검사는 그대로 적용된다.
+      max-file-size: 50MB
+      max-request-size: 50MB
   datasource:
     url: jdbc:postgresql://localhost:15432/gift
     username: gift

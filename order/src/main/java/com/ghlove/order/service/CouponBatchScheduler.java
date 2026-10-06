@@ -26,14 +26,23 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class CouponBatchScheduler {
 
-    private final CouponService couponService;
+    /** 7209(배치 실행로그 조회) 화면이 작업명을 찾는 키 - op_batch_job.job_method와 같아야 한다. */
+    private static final String BATCH_TYPE = "CouponBatchScheduler.runDailyCouponBatch";
 
+    private final CouponService couponService;
+    private final BatchExecutionReporter batchExecutionReporter;
+
+    /** 실행결과는 admin의 배치 실행로그(메뉴 7209)에 보고한다 - 이 빈 자체가 쿠폰 기능 OFF면
+     *  등록되지 않으므로, 꺼져 있는 동안은 로그도 남지 않는다(= 돌지 않았다는 뜻 그대로). */
     @Scheduled(cron = "0 0 1 * * *")
     public void runDailyCouponBatch() {
-        log.info("쿠폰 자동발급 배치 시작");
-        couponService.issueSignupCoupons();
-        couponService.issueBirthdayCoupons();
-        couponService.reissueRegularCoupons();
-        log.info("쿠폰 자동발급 배치 종료");
+        batchExecutionReporter.runAndReport(BATCH_TYPE, () -> {
+            log.info("쿠폰 자동발급 배치 시작");
+            couponService.issueSignupCoupons();
+            couponService.issueBirthdayCoupons();
+            couponService.reissueRegularCoupons();
+            log.info("쿠폰 자동발급 배치 종료");
+            return "가입·생일·정기발행 쿠폰 자동발급 완료";
+        });
     }
 }

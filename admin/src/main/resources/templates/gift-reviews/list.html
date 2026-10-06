@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>답례품 리뷰 관리 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -14,9 +15,14 @@
     </style>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <h3>답례품 리뷰 관리</h3>
     <div class="error-box" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
@@ -34,9 +40,13 @@
             <option value="N" th:selected="${displayFlag == 'N'}">블라인드</option>
         </select>
         <button type="submit" class="small-btn">검색</button>
-        <a class="small-btn" style="float:right;"
-           th:href="@{/admin/gift-reviews/export(itemId=${itemId},keyword=${keyword},recommendFlag=${recommendFlag},displayFlag=${displayFlag})}">CSV 다운로드</a>
+        <!-- AS-IS PrivacyAccess.ITEM_REVIEW_EXCEL_DOWNLOAD("답례품 후기 리스트 엑셀 다운로드") -
+             개인정보 포함 다운로드라 사유 모달을 먼저 띄워 접근로그를 남긴다 -->
+        <a class="small-btn" style="float:right;" href="javascript:;"
+           th:attr="data-download-url=@{/admin/gift-reviews/export(itemId=${itemId},keyword=${keyword},recommendFlag=${recommendFlag},displayFlag=${displayFlag})}"
+           onclick="openPrivacyModal(this.getAttribute('data-download-url'));">CSV 다운로드</a>
     </form>
+    <div th:replace="~{fragments/privacy-access :: modal}"></div>
 
     <table class="board_list_table">
         <thead>
@@ -69,7 +79,10 @@
         </tbody>
     </table>
     <p class="empty" th:if="${#lists.isEmpty(reviews)}">검색된 리뷰가 없습니다.</p>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

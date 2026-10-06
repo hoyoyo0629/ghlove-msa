@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
 import { formatN } from '../../utils/format'
 import { koreanAmount, koreanAmountShort } from '../../utils/koreanNumber'
-import { modalAlert } from '../../composables/useModal'
+import { modalAlert, modalConfirm } from '../../composables/useModal'
 
 // 개인 최대 기부 한도(연) 기본값 - 서버가 값을 안 주면 AS-IS와 동일하게 연 2천만원으로 안내한다.
 const DEFAULT_ANNUAL_LIMIT = 20000000
@@ -27,7 +27,6 @@ const form = ref(null)
 const upperLocgovCode = ref('')
 const locgovCode = ref('')
 const projectJump = ref('0')
-const cheerMsg = ref('')
 const amountDisplay = ref('')
 const amount = ref(0)
 const presentType = ref('100')
@@ -37,6 +36,8 @@ const checkA = ref(false)
 const checkB = ref(false)
 
 const residenceVerified = ref(false)
+// 주소확인으로 밝혀진 본인 거주지 지자체(지자체 변경에도 유지) - AS-IS userRegionCd 대응.
+const knownResidenceLocgov = ref('')
 const selectedRegionTxt = ref('')
 const userRegionTxt = ref('')
 const pointRatePercent = ref(null)
@@ -95,9 +96,39 @@ async function onLocgovChanged() {
   residenceVerified.value = false
   psitnLocgovCode.value = ''
   projectJump.value = '0'
-  cheerMsg.value = ''
   pointRatePercent.value = null
   if (!locgovCode.value) return
+
+  // AS-IS getLocgovInfo:875 - 이미 확인된 거주지 지자체를 (재)선택하면 즉시 경고+리셋.
+  if (knownResidenceLocgov.value && locgovCode.value === knownResidenceLocgov.value) {
+    await modalAlert('자신의 주민등록주소지의 지자체에는 기부를 하실 수 없습니다.\n다른 지자체를 선택해 주세요.')
+    locgovCode.value = ''
+    return
+  }
+
+  // AS-IS locGovInfo - 기부불가기간(차단) + 하루 중복기부(확인).
+  try {
+    const chk = await api.get('donation', `/api/donate/today-duplicate?locgovCode=${encodeURIComponent(locgovCode.value)}`)
+    // 기부불가기간이면 차단 후 선택 되돌리기(AS-IS lmtt 안내 + 리셋).
+    if (chk.restricted) {
+      await modalAlert(chk.restrictionMessage)
+      locgovCode.value = ''
+      return
+    }
+    if (chk.duplicate) {
+      const go = await modalConfirm(
+        '선택하신 지자체에 오늘 기부를 시도하신 내역이 확인됩니다.\n' +
+        '중복 기부를 방지하기 위해 사전에 계좌 또는 카드로\n' +
+        '납입이 된 내역이 있는지 먼저 확인하십시오.\n\n' +
+        '납부확인은 최대 3일이 소요됩니다.',
+      )
+      if (!go) {
+        locgovCode.value = '' // 취소 = 선택 되돌리기(AS-IS window.history.back에 대응)
+        return
+      }
+    }
+  } catch { /* 로그인 전 등은 무시하고 진행 */ }
+
   try {
     const res = await api.get('donation', `/api/donate/point-rate?locgovCode=${encodeURIComponent(locgovCode.value)}`)
     pointRatePercent.value = res.rate != null ? Number(res.rate) : null
@@ -120,6 +151,7 @@ async function verifyResidence() {
     const res = await api.post('donation', '/api/donate/verify-residence', { locgovCode: locgovCode.value })
     residenceVerified.value = true
     psitnLocgovCode.value = res.psitnLocgovCode
+    knownResidenceLocgov.value = res.psitnLocgovCode // 거주지 기억(이후 지자체 변경 즉시경고용)
     selectedRegionTxt.value = selectedLocgovName.value
     userRegionTxt.value = res.userRegion
     modalAlert(`귀하는 ${selectedLocgovName.value}에\n납부가 가능합니다.`)
@@ -179,7 +211,6 @@ async function submit() {
       await api.post('donation', '/api/donate/designated', {
         dsgnDntnBizId: Number(projectJump.value),
         amount: amount.value,
-        cheerMsg: cheerMsg.value || null,
       })
     } else {
       await api.post('donation', '/api/donate', {
@@ -234,7 +265,7 @@ async function submit() {
                       <select aria-label="시·군·구 선택" id="locgovCode" v-model="locgovCode" required @change="onLocgovChanged">
                         <option value="">시·군·구 선택</option>
                         <option v-for="l in filteredLocgovs" :key="l.locgovCode" :value="l.locgovCode">
-                          {{ l.upperLocgovNm ? l.upperLocgovNm + ' ' : '' }}{{ l.locgovNm }}
+                          {{ l.locgovNm }}
                         </option>
                       </select>
                     </div>
@@ -250,19 +281,6 @@ async function submit() {
                       </select>
                     </div>
                     <button class="formBtn" type="button" v-if="projectJump !== '0'" @click="goProjectDetail">보러가기</button>
-                  </span>
-                </div>
-                <div class="info-field-items" v-if="projectJump !== '0'">
-                  <label for="cheerMsg" class="flied-title">응원메시지</label>
-                  <span class="form-field">
-                    <textarea
-                      id="cheerMsg"
-                      v-model="cheerMsg"
-                      maxlength="100"
-                      rows="2"
-                      placeholder="특정사업 상세페이지 응원메시지(기부내역) 탭에 표시됩니다. (선택, 최대 100자)"
-                      style="width: 100%; resize: vertical"
-                    ></textarea>
                   </span>
                 </div>
               </div>

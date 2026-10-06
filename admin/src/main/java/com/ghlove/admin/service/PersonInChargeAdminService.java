@@ -85,15 +85,49 @@ public class PersonInChargeAdminService {
     @Transactional
     public void update(String scope, Long userId, String userName, String email, String authority,
                         String statusCode) {
+        update(scope, userId, userName, email, authority, statusCode, null, null);
+    }
+
+    /**
+     * AS-IS 담당자 수정 폼은 소속부서(PSITN_DEPT_NM)·직위(OFCPS_NM)도 함께 보낸다 - 다만
+     * 입력칸은 시스템주관리자/행안부주담당자(ROLE_ADMIN_1·3)에게만 보이고 나머지 권한에는
+     * 읽기전용 텍스트다. 값이 null이면 기존 값을 유지한다(그 권한에서는 보내지 않으므로).
+     */
+    @Transactional
+    public void update(String scope, Long userId, String userName, String email, String authority,
+                        String statusCode, String psitnDeptNm, String ofcpsNm) {
+        update(scope, userId, userName, email, authority, statusCode, psitnDeptNm, ofcpsNm, null);
+    }
+
+    /**
+     * 지자체담당자관리(메뉴 4402)는 소속 지자체도 바꿀 수 있다 - 시스템/행안부 권한일 때만
+     * 화면에 시도·시군구 select가 뜨고, 지자체 담당자 본인에게는 읽기전용 텍스트다.
+     * {@code locgovCode}가 null이면 기존 값을 유지한다.
+     *
+     * <p>주담당자 정원 검사는 <b>바뀐 지자체 기준</b>으로 한다 - 다른 지자체로 옮기면서 주담당자가
+     * 되는 경우 옮겨갈 지자체의 정원을 봐야 한다.
+     */
+    @Transactional
+    public void update(String scope, Long userId, String userName, String email, String authority,
+                        String statusCode, String psitnDeptNm, String ofcpsNm, String locgovCode) {
         Manager manager = get(userId);
         if (authority == null || authority.isBlank()) {
             throw new ManagerException("권한을 선택해 주세요.");
         }
 
         if (SCOPE_LOCGOV.equals(scope)) {
-            if (LOCGOV_MAIN.equals(authority) && !LOCGOV_MAIN.equals(manager.getAuthority())) {
-                enforceMainLimit(manager.getLocgovCode(), userId, LOCGOV_MAIN, LOCGOV_MAIN_LIMIT,
+            // 지자체를 함께 바꾸는 경우 정원 검사는 옮겨갈 지자체 기준이어야 한다
+            String targetLocgovCode = (locgovCode == null || locgovCode.isBlank())
+                    ? manager.getLocgovCode() : locgovCode;
+            boolean becomingMain = LOCGOV_MAIN.equals(authority)
+                    && (!LOCGOV_MAIN.equals(manager.getAuthority())
+                        || !java.util.Objects.equals(targetLocgovCode, manager.getLocgovCode()));
+            if (becomingMain) {
+                enforceMainLimit(targetLocgovCode, userId, LOCGOV_MAIN, LOCGOV_MAIN_LIMIT,
                         "이 지자체의 주담당자는 최대 " + LOCGOV_MAIN_LIMIT + "명까지 지정할 수 있습니다.");
+            }
+            if (locgovCode != null && !locgovCode.isBlank()) {
+                manager.setLocgovCode(locgovCode);
             }
         } else {
             if (OPERATOR_MAIN.equals(authority) && !OPERATOR_MAIN.equals(manager.getAuthority())) {
@@ -107,6 +141,12 @@ public class PersonInChargeAdminService {
         manager.setAuthority(authority);
         if (statusCode != null && !statusCode.isBlank()) {
             manager.setStatusCode(statusCode);
+        }
+        if (psitnDeptNm != null) {
+            manager.setPsitnDeptNm(psitnDeptNm);
+        }
+        if (ofcpsNm != null) {
+            manager.setOfcpsNm(ofcpsNm);
         }
 
         // "주담당자 + 중지상태"면 자동으로 부담당자로 강등 (AS-IS 업무규칙).
@@ -143,6 +183,18 @@ public class PersonInChargeAdminService {
             throw new ManagerException("계정을 찾을 수 없습니다.");
         }
         managerRepository.deleteById(userId);
+    }
+
+    /**
+     * AS-IS 담당자 화면의 사용여부 값('9' 사용 / '2' 중지)을 이 프로젝트의
+     * {@code OP_MANAGER.STATUS_CODE} 값({@code ACTIVE}/{@code LOCKED})으로 바꾼다.
+     * 화면 마크업은 AS-IS 그대로 두고 변환은 경계에서만 한다({@link Manager#getAsIsStatusCode()} 역방향).
+     */
+    public static String toStatusCode(String asIsStatus) {
+        if (asIsStatus == null || asIsStatus.isBlank()) {
+            return null;
+        }
+        return "2".equals(asIsStatus) ? ManagerAdminService.STATUS_LOCKED : ManagerAdminService.STATUS_ACTIVE;
     }
 
     private static String rangeStart(String dateStr) {

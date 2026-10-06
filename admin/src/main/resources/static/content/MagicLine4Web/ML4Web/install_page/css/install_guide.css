@@ -1,0 +1,71 @@
+/*
+CSS Reset
+http://meyerweb.com/eric/tools/css/reset/
+*/
+
+*{margin:0; padding:0;}
+html,body{width:100%;height:100%}
+h1, h2, h3, h4, h5, h6, div, p, ul, ol, li, dl, dt, dd, form, table{margin:0; padding:0;}
+ul, ol, li{list-style:none;}
+a{text-decoration:none;}
+
+fieldset, img{border:none;}
+legend{width:0; height:0; margin:0; padding:0; display:none;}
+input, select{vertical-align:middle;}
+table{border-collapse:collapse;}
+caption{display:none;}
+body{margin:0; padding:0; }
+body,p,h1,h2,h3,h4,h5,h6,ul,ol,li,dl,dt,dd,table,th,td,form,fieldset,legend,input,textarea,button{margin:0;padding:0;-webkit-text-size-adjust:none}
+body,input,textarea,select,table,button{font-size:12px;line-height:1.40em;font-family:Malgun Gothic, "돋움",Dotum,"굴림",Gulim,Verdana,Helvetica,AppleGothic,Sans-serif}
+body{position:relative; color:#373737; word-wrap:break-word;word-break:break-all}
+img,fieldset{border:0}
+a{color:#000;text-decoration:none;cursor:pointer}
+em,address{font-style:normal}
+
+
+#wrap{width:660px; border:1px solid #d2d7db; margin:0 auto;}
+#header{width:660px; height:52px;}
+#content_wrap{width:580px; padding:15px 40px;}
+.section1{width:361px; height:85px; padding:33px 0 0 219px; background:url(../images/setup_content_bg.png) no-repeat;}
+.section2{width:580px; height:33px; padding:20px 0;}
+.section2 p{width:372px; margin-right:10px; display:inline-block; zoom:1; *display:inline;}
+.section3{width:580px;}
+  
+.loadbar{width:152px; height:21px; margin-left:66px; display:block;}
+.loadbar_txt{width:370px; display:block; color:#193b65; font-weight:bold;}
+
+.btn_install{width:191px; height:32px; display:inline-block; zoom:1; *display:inline;}
+
+.step1_left{width:275px; height:200px; margin-right:20px; margin-bottom:20px; display:inline-block; *float:left; }
+.step1_left_575{width:275px; height:160px; margin-right:20px; margin-bottom:20px; display:inline-block; *float:left; }
+.step1{width:275px; height:200px; margin-bottom:20px; display:inline-block; *float:left;}
+.step_txt{width:275px; height:44px; display:block; }
+.step_txt2{width:275px; height:28px; padding-top:12px; display:block; }
+.step_txt_575{width:575px; height:28px; padding-top:12px; display:block; }
+.step_info{width:275px; height:167px; border:1px solid #d2d7db; }
+.step_info_575{width:575px; height:124px; border:1px solid #d2d7db; }
+
+.section_h_text{font-size:14px; font-weight:bold; color:#1f84c7; margin-bottom:15px; display:block;}
+.section_h_text2{font-size:14px; font-weight:bold; color:#1f84c7; margin-bottom:20px; display:block; text-align:center;}
+.txt_blue{font-weight:bold; color:#1f84c7;}
+
+.menu_tab2{width:100%;overflow:hidden; height:37px; margin-bottom:25px; border-bottom:1px solid #d2d7db;}
+.menu_tab2 ul{padding:23px 0; }
+.menu_tab2 li{list-style:none;position:relative;top:-20px;float:left;}
+.menu_tab2 li a{display:block;}
+
+.centered_linux { display: table; margin-left: auto; margin-right: auto;}
+
+.button_linux {
+	background-color: #008CBA;
+	border: none;
+	color: white;
+	font-size: 12px;
+	padding: 12px 28px;
+	text-align: center;
+	display: inline-block;
+	margin: 3px 8px;
+	cursor: pointer;
+	width: 113px;
+	position: relative;
+}

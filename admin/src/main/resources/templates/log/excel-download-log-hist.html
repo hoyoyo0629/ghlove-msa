@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>사유 수정이력 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<!-- AS-IS 사유 수정이력 팝업(layout=base) - OP_PRIVACY_ACCESS_LOG_HIST 최신순.
+     목록에서 변경이력이 2건 이상일 때만 "이력보기" 링크가 뜬다. -->
+<body>
+<div class="popup_wrap">
+    <h1 class="popup_title">사유 수정이력</h1>
+    <div class="popup_contents">
+        <div class="board_write">
+            <table class="board_list_table">
+                <thead>
+                    <tr>
+                        <th scope="col">수정일</th>
+                        <th scope="col">관리자ID</th>
+                        <th scope="col">사유타입</th>
+                        <th scope="col">사유</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="item : ${list}" style="background:#fff;">
+                        <td><div th:text="${item.createdAtText}"></div></td>
+                        <td><div th:text="${item.loginId}"></div></td>
+                        <td><div th:text="${item.reasonTypeName}"></div></td>
+                        <td><div th:text="${item.reason}"></div></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(list)}" style="background:#fff;">
+                        <td colspan="4">수정이력이 없습니다.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <a href="javascript:self.close();" class="popup_close" th:text="${msg.get('M00353')}">창 닫기</a>
+</div>
+</body>
+</html>

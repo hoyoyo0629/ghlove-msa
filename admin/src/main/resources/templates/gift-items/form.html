@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>답례품 등록/수정(관리자) - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -10,9 +11,14 @@
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <div class="location"><a th:href="@{/admin/gift-items}">답례품 상품관리(관리자)</a></div>
     <h3><span th:text="${item.itemId()} != null ? '답례품 수정' : '답례품 직접 등록'"></span></h3>
     <p style="color:#c00;" th:if="${errorMessage}" th:text="${errorMessage}"></p>
@@ -116,8 +122,12 @@
         <button type="submit" form="itemForm" class="btn btn-dark-gray btn-small">저장</button>
     </div>
 
-    <!-- 배송비/택배사 설정 (SFR-005 재검토 라운드 - 원래 코드가 전혀 없던 gap) - order가
-         이 값을 읽어 주문 시점 배송비를 계산한다. -->
+    <!-- 배송비/택배사 설정 - order가 이 값을 읽어 주문 시점 배송비를 계산한다.
+         AS-IS 답례품 등록폼(opmanager/item/form.jsp)은 "배송비 설정"(배송비 구분·기본배송비·
+         조건부무료·제주/도서산간) 행을 <tr class="hidden">으로 숨겨 판매자/운영자가 화면에서
+         배송비를 설정하지 못한다. 그 비활성 상태를 그대로 재현한다([[as-is-parity-includes-disabled-state]]):
+         택배사·반품가능여부만 노출하고, 배송비 설정 5행은 display:none으로 숨기되 input은 남겨
+         저장 시 기존 값이 보존되게 한다. -->
     <div th:if="${item.itemId()} != null" style="margin-top:32px;">
         <h4>배송비/택배사 설정</h4>
         <form th:action="@{'/admin/gift-items/' + ${item.itemId()} + '/shipping'}" method="post">
@@ -128,7 +138,7 @@
                     <td class="label">택배사</td>
                     <td><input type="text" name="deliveryCompanyName" th:value="${item.deliveryCompanyName()}" placeholder="예: CJ대한통운" style="width:200px;"></td>
                 </tr>
-                <tr>
+                <tr style="display:none">
                     <td class="label">배송비 구분</td>
                     <td>
                         <select name="shippingType">
@@ -141,19 +151,19 @@
                         </select>
                     </td>
                 </tr>
-                <tr>
+                <tr style="display:none">
                     <td class="label">기본 배송비</td>
                     <td><input type="number" name="shipping" th:value="${item.shipping()}" min="0" style="width:150px;"> 원</td>
                 </tr>
-                <tr>
+                <tr style="display:none">
                     <td class="label">조건부 무료배송 기준금액</td>
                     <td><input type="number" name="shippingFreeAmount" th:value="${item.shippingFreeAmount()}" min="0" style="width:150px;"> 원 이상 구매 시 무료(구분이 2~4일 때만 적용)</td>
                 </tr>
-                <tr>
+                <tr style="display:none">
                     <td class="label">제주 추가배송비</td>
                     <td><input type="number" name="shippingExtraCharge1" th:value="${item.shippingExtraCharge1()}" min="0" style="width:150px;"> 원</td>
                 </tr>
-                <tr>
+                <tr style="display:none">
                     <td class="label">도서산간 추가배송비</td>
                     <td><input type="number" name="shippingExtraCharge2" th:value="${item.shippingExtraCharge2()}" min="0" style="width:150px;"> 원</td>
                 </tr>
@@ -251,7 +261,10 @@
             </div>
         </form>
     </div>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

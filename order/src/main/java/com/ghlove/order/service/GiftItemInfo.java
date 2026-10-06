@@ -9,7 +9,9 @@ public record GiftItemInfo(Long itemId, String itemName, Long sellerId, Integer 
                             String locgovCode, String thumbnailPath, String deliveryCompanyName,
                             String shippingType, Integer shipping, Integer shippingFreeAmount,
                             Integer shippingExtraCharge1, Integer shippingExtraCharge2,
-                            String itemReturnFlag, String mobileItemYn) {
+                            String itemReturnFlag, String mobileItemYn, Integer orderMaxQuantity,
+                            Integer shippingItemCount, String shippingGroupCode, String shipmentGroupCode,
+                            Integer shippingReturn, String deliveryType) {
 
     /**
      * 교환·반품이 가능한 답례품인가 - AS-IS `mypage/orderList.html:318,321`의 버튼 노출 조건

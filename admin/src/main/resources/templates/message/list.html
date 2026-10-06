@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>메세지 관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/message/list.jsp 이식(메뉴 1402).
+     OP_COMMON_MESSAGE를 ID 하나당 한국어/일본어 한 행으로 피벗해 보여준다 - 검색구분(아이디/메세지)
+     + 검색어 · 출력수(10/20/50/100) · 5컬럼(체크박스/순번/아이디/한국어/일본어) · 선택삭제 · 등록 · 페이징.
+
+     TO-BE에는 이 화면이 없었고 op_menu 1402의 menu_url도 비어 있었다(migration-admin-menu-1402-message.sql).
+     저장·삭제 후에는 AS-IS처럼 문구 캐시를 reload한다(CommonMessageService.reload). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<form id="messageParam" method="post" th:action="@{/message/list}">
+	<h3><span th:text="${msg.get('MENU_1402')}">메세지 관리</span></h3>
+	<div class="board_write">
+		<table class="board_list_table" th:summary="${msg.get('MENU_1402')}">
+			<caption th:text="${msg.get('MENU_1402')}">메세지 관리</caption>
+			<colgroup>
+				<col style="width:220px;" />
+				<col style="width:*;" />
+			</colgroup>
+			<tbody>
+				 <tr>
+				 	<td class="label" th:text="${msg.get('M00011')}">검색구분</td>
+				 	<td>
+				 		<div>
+							<select id="where" name="where" th:title="${msg.get('M00468')}" class="wd-150">
+								<option value="ID" th:selected="${messageParam.where == 'ID'}" th:text="${msg.get('M00081')}">아이디</option>
+								<option value="MESSAGE" th:selected="${messageParam.where == 'MESSAGE'}" th:text="${msg.get('M01672')}">메세지</option>
+							</select>
+							<input type="text" id="query" name="query" class="three" th:title="${msg.get('M00021')}" th:value="${messageParam.query}" />
+						</div>
+				 	</td>
+				 </tr>
+			</tbody>
+		</table>
+	</div> <!-- // board_write -->
+
+	<!-- 버튼시작 -->
+	<div class="btn_all btn_right">
+		<div class="flex_box gap-08">
+			<button type="button" class="btn btn-dark-gray btn-sm" onclick="location.href='/message/list';"><span class="glyphicon glyphicon-repeat"></span> <span th:text="${msg.get('M00047')}">초기화</span></button>
+			<button type="submit" class="btn btn-dark-gray btn-sm"><span class="glyphicon glyphicon-search"></span> <span th:text="${msg.get('M00048')}">검색</span></button>
+		</div>
+	</div>
+	<!-- 버튼 끝-->
+
+	<div class="count_title mt20">
+		<h5>
+			<span th:text="${msg.get('M00039')}" th:remove="tag">전체</span> : <span th:text="${messageCount}" th:remove="tag">0</span> <span th:text="${msg.get('M00743')}" th:remove="tag">건 조회</span>
+		</h5>
+		<span>
+			<span th:text="${msg.get('M00052')}">출력수</span> :
+			<select id="itemsPerPage" name="itemsPerPage" th:title="${msg.get('M00239')}">
+				<option value="10" th:selected="${messageParam.itemsPerPage == 10}" th:text="${msg.get('M00240')}">10개 출력</option>
+				<option value="20" th:selected="${messageParam.itemsPerPage == 20}" th:text="${msg.get('M00241')}">20개 출력</option>
+				<option value="50" th:selected="${messageParam.itemsPerPage == 50}" th:text="${msg.get('M00242')}">50개 출력</option>
+				<option value="100" th:selected="${messageParam.itemsPerPage == 100}" th:text="${msg.get('M00243')}">100개 출력</option>
+			</select>
+		</span>
+	</div>
+</form>
+
+<form id="listForm">
+	<div class="board_write">
+		<table class="board_list_table" th:summary="${msg.get('M00273')}">
+			<caption th:text="${msg.get('M00273')}">주문내역 리스트</caption>
+			<colgroup>
+				<col style="width:5%;" />
+				<col style="width:10%;" />
+				<col style="width:15%;" />
+				<col style="width:35%;" />
+				<col style="width:35%;" />
+			</colgroup>
+			<thead>
+				<tr>
+					<th scope="col"><input type="checkbox" name="tempId2" id="check_all" th:title="${msg.get('M00169')}" /></th>
+					<th scope="col" th:text="${msg.get('M00200')}">순번</th>
+					<th scope="col" th:text="${msg.get('M00081')}">아이디</th>
+					<th scope="col" th:text="${msg.get('M01670')}">한국어</th>
+					<th scope="col" th:text="${msg.get('M01671')}">일본어</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr th:each="list, i : ${messageList}">
+					<td><input type="checkbox" name="id" id="check" th:value="${list.id}" th:title="${msg.get('M00169')}" /></td>
+					<td th:text="${pagination.itemNumber - i.count}">0</td>
+					<td th:text="${list.id}"></td>
+					<td>
+						<div class="tex_l">
+							<a th:href="@{'/message/edit/' + ${list.id}}" th:text="${list.kMessage}"></a>
+						</div></td>
+					<td>
+						<div class="tex_l">
+							<a th:href="@{'/message/edit/' + ${list.id}}" th:text="${list.jMessage}"></a>
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div><!--// board_write E-->
+
+	<div class="no_content" th:if="${#lists.isEmpty(messageList)}" th:text="${msg.get('M00473')}">
+		데이터가 없습니다.
+	</div>
+
+	<div class="btn_all btn_right">
+		<div class="flex_box gap-08">
+			<a id="delete_list_data" href="#" class="btn btn-default btn-sm"><span th:text="${msg.get('M00576')}">선택 삭제</span></a>
+			<a th:href="@{/message/create}" class="btn btn-active btn-sm"><span class="glyphicon glyphicon-plus"></span> <span th:text="${msg.get('M00088')}">등록</span></a>
+		</div>
+	</div>
+
+	<div class="pagination-wrap">
+		<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+	</div>
+
+</form>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript" th:inline="javascript">
+// AS-IS ViewUtils.redirect(url, message)는 등록/수정 후 메시지를 alert하고 목록으로 돌아온다
+var resultMessage = [[${resultMessage}]];
+$(function() {
+	if (resultMessage) {
+		alert(resultMessage);
+	}
+
+	//데이터 출력량 적용
+	$('#itemsPerPage').on("change", function(){
+		$('#messageParam').submit();
+	});
+
+	//목록데이터 - 삭제처리
+	$('#delete_list_data').on('click', function() {
+		Common.updateListData("/message/delete", Message.get("M00306"));	// 선택된 데이터를 삭제하시겠습니까?
+	});
+
+});
+</script>
+</body>
+</html>

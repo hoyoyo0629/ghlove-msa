@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>메뉴얼 등록 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <style>
+     html { overflow-y:hidden; }
+    </style>
+</head>
+
+<!-- AS-IS opmanager/i18n/manual/manager/form.jsp 이식(메뉴 5201 관리자매뉴얼 등록 팝업).
+     목록에서 메뉴명을 누르면 500x300 팝업으로 열린다 - AS-IS도 공통 레이아웃 없이 띄운다
+     (@RequestProperty(layout="base")).
+
+     AS-IS verbatim:
+     - 제목이 "메뉴얼 등록"이고 우측 상단에 닫기 버튼(이미지)이 있다.
+     - 표는 메뉴명 / 첨부파일 두 줄이다. "최종 수정일" 줄은 주석처리되어 있다.
+     - 저장하면 부모창을 새로고침하고 팝업을 닫는다.
+     - [취소]도 부모창을 새로고침하고 닫는다. -->
+<body>
+<form id="manual" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="menuId" th:value="${menuId}"/>
+    <input type="hidden" name="menuNm" th:value="${menuName}"/>
+
+    <!-- 개발 영역 -->
+    <div class="popup_wrap">
+        <div id="pop_header">
+            <h1 class="popup_title">메뉴얼 등록</h1>
+            <a href="javascript:self.close();" class="btn_close"><img src="/content/opmanager/images/btn/btn_close.png" alt="닫기"></a>
+        </div>
+
+        <div class="popup_contents">
+            <table class="board_write_table" summary="메뉴얼 등록">
+                <caption>메뉴얼 등록</caption>
+                <colgroup>
+                    <col style="width: 150px" />
+                    <col />
+                </colgroup>
+                <tbody>
+                    <tr>
+                        <td class="label">메뉴명</td>
+                        <td>
+                            <div th:text="${menuName}"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="label">첨부파일</td>
+                        <td>
+                            <div class="flex_box item-center">
+                                <input type="file" name="detailImageFiles[]" class="full input_file"/>
+                            </div>
+                            <div class="file_camera" th:id="|file_camera_${manual.menuId}|"
+                                 th:if="${manual.orginlFileNm != null}">
+                                <a th:href="|javascript:downloadItemImage(${manual.menuId});|" th:text="${manual.orginlFileNm}"></a>
+                                <a th:href="|javascript:deleteItemImage(${manual.menuId});|"><img src="/content/images/btn/file_close.gif" alt="close"></a>
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- AS-IS 주석처리: 최종 수정일 줄 -->
+                </tbody>
+            </table>
+            <p class="popup_btns">
+                <button type="submit" class="btn btn-active">저장</button>
+                <button type="button" class="btn btn-default" onclick="opener.location.reload();self.close()">취소</button>
+            </p>
+        </div>
+    </div>
+  <!-- // 개발 영역 -->
+</form>
+
+<script type="text/javascript" th:inline="javascript">
+var redirectMessage = /*[[${redirectMessage}]]*/ null;
+var closePopup = /*[[${param.closePopup != null} ? ${param.closePopup[0]} : null]]*/ null;
+
+$(function() {
+	if (redirectMessage) {
+		alert(redirectMessage);
+	}
+	/* AS-IS: 저장 후 부모창을 새로고침하고 팝업을 닫는다(redirect에 실려 오는 자바스크립트). */
+	if (closePopup === 'Y') {
+		opener.location.reload();
+		self.close();
+	}
+});
+
+function downloadItemImage(id) {
+	location.href = '/admin/manuals/manager/file-download/'+id;
+}
+
+/* AS-IS: 파라미터명이 menuId다(사용자매뉴얼 쪽은 itemId). */
+function deleteItemImage(id, index) {
+	var message = '파일이 실제로 삭제됩니다.\n삭제하시겠습니까?';
+	if (!confirm(message)) {
+		return;
+	}
+
+	var param = {'menuId': id};
+	$.post('/admin/manuals/manager/delete-item-image', param, function(response){
+		Common.responseHandler(response);
+		$("#file_camera_"+id).remove();
+	});
+}
+</script>
+</body>
+</html>

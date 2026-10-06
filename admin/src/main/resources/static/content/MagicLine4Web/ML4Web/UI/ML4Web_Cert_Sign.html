@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>  
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="format-detection" content="telephone=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no" />
+
+<title>전자서명</title>
+
+<script type="text/javascript" src="UI/js/ML4Web_Main.js"></script>
+<script type="text/javascript" src="UI/js/ML4Web_Popup.js"></script>
+
+<script type="text/javascript">
+var certDetail = null;
+var dsOption = {};
+$(document).ready(function() {
+
+	//sub dialog 깜빡임 방지.
+	$("#popup_alert").hide();
+   
+	funProcInit();
+
+	initEventHandler();
+
+	//key event 
+	$(this).keydown(function(e){
+		if(e.keyCode == "9"){
+			var targetElement = $(document.activeElement).attr("id");
+			var parentElement = $(document.activeElement).parent().attr("id");
+			
+			console.log("targetElement.id === " + targetElement);
+			console.log("parentElement.id === " + parentElement);
+
+			if(targetElement == "stg_smartcert" ){
+				var selection = $("#dataTable").MLjquiDataTable('getSelection');
+				if(selection && selection.length>0){
+					console.log("ifififififififififififif");
+					//$("#dataTable").focus();
+					//$("#dataTable").css("border","solid 1px red");
+				}else{
+					console.log("elseelseelseelseelseelse");
+					//$("#btn_viewCert").focus();
+					//$("#btn_viewCert").css("border","solid 1px red");
+				}
+			}else if(targetElement==null || targetElement=='undefined'){
+				
+			}
+		} else if (e.keyCode == "27"){
+			console.log("Esc keydown Esc keydown Esc keydown Esc keydown");
+			e.preventDefault();
+		}
+	});
+});
+
+function funProcInit(){
+	_createWindow();
+	
+	dsOption = ML4WebUI.getDSOption();
+	
+	$('#orgtext').html(dsOption.message);
+
+	//console.log(">>>>>>>>>>>>>>>>>>>>>   getCertInfo.obj === "+JSON.stringify(dsOption));
+	//캐시된 인증서 상세 정보 조회
+	/*
+	if(dsOption.certIdx.storagename=='smartcert'){
+		var certTxt = "";
+		certTxt += '<span class="certi_name">'+dsOption.certIdx.storagename+'</span>';
+		
+		$('#div_selected_cert').html(certTxt);
+	}else{
+		*/
+		ML4WebApi.getCertInfo(dsOption.certIdx, null, function(code, obj){
+			//ML4WebLog.log("ML4WebApi.getCertInfo() callback code === "+ code + "/ obj === " + JSON.stringify(obj));
+			if(code == 0){
+				//{"result":{"version":2,"serialnum":"2ce5","signaturealgorithm":"sha256WithRSAEncryption","issuername":"CN=CrossCertTestCA2,OU=AccreditedCA,O=CrossCert,C=KR","startdate":"2010-7-27","enddate":"2011-4-14","subjectname":"CN=2048(유효),OU=테스트,OU=등록기관,OU=AccreditedCA,O=CrossCert,C=KR","pubkey":"30820122300d06092a864886f70d01010105000382010f003082010a0282010100aa07387dcccd8f3cfd0f97cd78f5ddff38bb8fb97256b1d5c8dfb92a02b4a59de643c1f0a19fd4c2a95fec882812dd165b34f4e5f1b9854476a00237a4f6ad46f7b9106816f170a515b2016f25bd65cbcc4a4a6b8e5a72059b915eee1a6f2ec4ea43fdb69632825bf179116c0c6ebfaff8f6d7badc34b5e0fc43127880b70ae0e99cf9bf7452bbc6f9db35f9304ee5acd1bed9da0805367db48f8580bdcb8730500c37796cca1457081c444ddd3ab986ac635a3bce02741cd6a2767a05eb6036f905550c81d6d0186dbc2d0098c02686c42aad5fac83b575e60f611d067e94c7d9ecb61a4555d0ae1815091ec7ae7b596d587e68ab4e6700f2576510f359c5330203010001","pubkeyalgorithm":"rsa (2048 bits)","keyusage":"digitalSignature,nonRepudiation","certpolicy":"policyID = 1.2.410.200004.5.4.1.1,\ncpsUri  = http://gca.crosscert.com/cps.html,\nUserNotice  = 이 인증서는 테스트 인증서입니다.,\n","policyid":"1.2.410.200004.5.4.1.1","policynotice":"이 인증서는 테스트 인증서입니다.","subjectaltname":"-identifyData\n- realName= 2048(유효)- vid (sha256)= 47af46f8b3ef5d49c37e5013c22a566801913e56a2e6356c3c786e6a8c63ea78","subkeyid":"eaf7408244e887e4e7b844231da0174abb7c20b5","crldp":"ldap://testca2.crosscert.com:389/cn=s1dp5p1,ou=crldp,ou=AccreditedCA,o=CrossCert,c=KR?certificateRevocationList ","aia":"http://testca2.crosscert.com:14203/OCSPServer","realname":"2048(유효)"}}
+				//obj.result.policyid
+				var policy = $.i18n.prop("OID_"+ obj.result.policyid.split(".").join("_"));
+
+				var tempArr = obj.result.issuername.split(",");
+				var tempIssuer = "";
+				$.each(tempArr, function() {
+					var tempArr2 = this.split("=");
+					if( tempArr2[0].toLowerCase() == "cn" ){
+						tempIssuer = tempArr2[1]
+					}
+				});
+				var issuer = tempIssuer;
+
+				var isExpired = ML4WebUtil.isDateExpired(obj.result.enddatetime);
+//console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>   isExpired === "+isExpired);
+				if(isExpired){
+					$('#div_cert_img').removeClass("ML_cert_nor");
+					$('#div_cert_img').addClass("ML_cert_exp");
+				}else{
+					$('#div_cert_img').removeClass("ML_cert_exp");
+					$('#div_cert_img').addClass("ML_cert_nor");
+				}
+
+				var certTxt = "";
+					certTxt += '<span class="certi_name">'+obj.result.realname+'</span>';
+					certTxt += '<span class="certi_issuOrg">'+policy+' | '+issuer+'</span>';
+					certTxt += '<span class="certi_expDate">만료일 '+obj.result.enddate+'</span>';
+
+				$('#div_selected_cert').html(certTxt);
+				
+				certDetail = obj;
+				
+				if(ML4WebApi.getProperty('selectedStorage').key=='smartcert' && ML4WebApi.getProperty('smartcert_type')!='C'){
+					// 패스워드 입력창 Disable
+					$('#input_cert_pwd').prop('disabled', true);
+				}
+			}else{
+				//error
+			}
+		});		
+	//}
+}
+
+function _createWindow() {
+	//-00. Main
+	$('#ML_cert_sign_window').MLjquiWindow({
+		title:'전자서명',
+		resizable: false,
+		position: 'center',
+		showCloseButton:false,
+//		closeButtonSize: 35,
+//		closeButtonAction:'close',
+		isModal: true,
+		modalOpacity: 0.3,
+		modalZIndex: 99999,
+		modalBackgroundZIndex: 99999,
+		showCollapseButton: false,
+		keyboardCloseKey: 0,
+		maxHeight: 600, maxWidth:420,
+		minHeight: 200, minWidth: 200,
+		height: 598, width: 418,
+		initContent: function () {
+			$('#ML_cert_sign_window').MLjquiWindow('focus');
+		}
+	});
+
+	//-01. Alert
+	//$("#popup_alert").show();
+	$('#popup_alert').MLjquiWindow({
+		title:'알림',
+		resizable: false,
+		position: 'center',
+		closeButtonSize: 35,
+		closeButtonAction:'close',
+//		isModal: false,
+//		modalOpacity: 0.3,
+//		modalZIndex: 99999,
+//		modalBackgroundZIndex: 99999,
+		showCollapseButton: false,
+		keyboardCloseKey: 0,
+		maxHeight: 600, maxWidth:420,
+		minHeight: 200, minWidth: 200,
+		height: 148, width: 368,
+		zIndex:9999999,
+		initContent: function () {
+			$('#popup_alert').MLjquiWindow('close');
+		}
+	});
+};
+
+function resignEnterKeyEvent(e){
+	if(e.keyCode == 13){ 
+		$('#btn_sign_confirm').click();
+	}else{ 
+		e.keyCode == 0; 
+		return; 
+	} 
+}
+
+function initEventHandler(){
+	//- 확인
+	$('#btn_sign_confirm').click(function () {
+		//console.info('>>>>>>>>>>>>>>>>>>>>>>>>>>'+dsOption.certIdx.storagename+' '+ML4WebApi.getProperty("smartcert_type"));
+		
+		if(ML4WebApi.getProperty('selectedStorage').key=='smartcert' && ML4WebApi.getProperty('smartcert_type')!='C'){
+		//if(dsOption.certIdx.storagename=='smartcert' && ML4WebApi.getProperty("smartcert_type")!='C'){
+			// WEB SmartCert 구동
+			var filter ={};
+			if(certDetail!=null){
+				filter.subjectDN = encodeURIComponent(certDetail.result.subjectname);
+			}
+			DS_SmartcertRequest(dsOption.message,JSON.stringify(filter));
+		}else{
+			var cert_pw = $('#input_cert_pwd').val();
+			if(cert_pw == null || cert_pw == ""){
+				//openAlertDialog("비밀번호를 입력하세요.");
+				DSAlert.openAlert("main", $.i18n.prop("ES006"), $('#input_cert_pwd'));
+				return false;
+			}
+
+			ML4WebApi.makeSignData(dsOption.certIdx, cert_pw, dsOption.option, encodeURIComponent(dsOption.message), function(code, obj){
+				if(code==0){
+					dsOption.callback(code, obj);
+				}else{
+					//ML4WebLog.log("[ERROR!!! - "+code+" ] errCode === " + obj.errCode + ", errMsg === " +  obj.errMsg);
+					if(obj.errCode==40701 || obj.errCode=='40701'){
+						$("#input_cert_pwd").empty();
+						DSAlert.openAlert("main", $.i18n.prop("ES002"), $("#input_cert_pwd"));
+					}else{
+						DSAlert.openAlert("main", obj.errMsg, null);
+					}
+				}
+
+			});
+		}
+		
+	});
+
+	//- 취소
+	$('#btn_sign_cancel').click(function () {
+		closeCertDialog('cs');
+	});
+}
+</script>
+</head> 
+
+<!--<body style="height:95%;" oncontextmenu="return false" ondragstart="return false" onselectstart="return false">-->
+<body style="height:95%;" >
+
+<div id="ML_cert_sign_window">
+	<div class="ML_container">
+		<!-- Content AREA : S -->
+		<div class="ML_content">
+			<div class="ML_content-area" id="MagicLine">
+			<!-- Content : S -->
+
+				<!-- Certificate list : S -->
+				<div class="ML_sub_tit">선택한 인증서</div>
+				<div class="ML_cert_list_sign_area" id="ML_certlist_area">
+					<div class="ML_cert_list">
+						<div id="div_cert_img" class="ML_cert_nor"></div>
+						<div id="div_selected_cert" class="ML_cert_txt">
+							<!--
+							<span class="certi_name">홍길동 (Hong Gil Dong)</span>
+							<span class="certi_issuOrg">은행 개인| yessign</span>
+							<span class="certi_expDate">만료일 2015-02-05</span>
+							-->
+						</div>
+					</div>
+				</div>
+				<!-- Certificate list : E -->
+				<!-- Certificate org text : S -->
+				<div class="ML_sub_tit">원문</div>
+				<div class="ML_cert_orgtext_area" id="ML_cert_orgtext_area">
+					<div id="orgtext">
+						<!--
+						<span class="orgtxt">
+							(1)거래일자: 2016.06.02<br>
+							(2)거래시간: 16:55:34<br>
+							(3)출금계좌번호: 110-293-771168 <br>
+							(4)입금은행: 우리은행<br>
+							(5)입금계좌번호: 05930212002001<br>
+							(6)수취인성명: 조성아<br>
+							(7)이체금액: 500(원)<br>
+							(8)수수료: 0(원)<br>
+							(9)CMS코드: <br>
+							(10)받는통장에 표시내용: <br>
+							(11)출금통장메모: <br>
+							(12)중복이체여부: 해당없음<br>
+						</span>
+						-->
+					</div>
+				</div>
+				<!-- Certificate org text : E -->
+				<div class="ML_sub_tit">인증서 비밀번호 입력</div>
+				<div id="ML_status_area" class="ML_status_area">
+					<div class="ML_pw_area">
+						<div class="ML_cert_pw_area">
+							<span class="ML_cert_pw_field">
+								<input type="password" id="input_cert_pwd" class="passwd_input" style="ime-mode:active;" placeholder="" autocomplete="off" onKeypress="resignEnterKeyEvent(event)">
+							</span>                     
+						</div>
+						<!-- BTN -->
+						<span class="btn_row">
+							<p class="b_blue_btn"><button type="button" id="btn_sign_confirm" ><span>확인</span></button></p>
+							<span class="w_space40"></span>
+							<p class="b_grey_btn"><button type="button" id="btn_sign_cancel" ><span>취소</span></button></p>
+						</span> 
+						<!-- BTN -->
+					</div>
+				</div>
+			<!-- Content : E -->
+			</div>
+		</div>
+		<!-- Content AREA : E -->
+	</div>
+</div>
+
+<!-- 01. Alert dialog -->
+<div id="popup_alert" class="ML_container_dialog">
+	<!-- Content AREA : S -->
+	<div class="ML_content">
+		<div class="ML_content-area" style="padding-top:5px;">
+			<!-- Content : S -->
+			<div class="ML_pw_dialog_status_area">
+				<div class="ML_pw_dialog_area">
+					<div id="alert_msg" class="ML_pw_dialog_txt">비밀번호를 다시 입력하세요.</div>
+					<!-- BTN -->
+					<span class="btn_row">
+						<p class="b_blue_btn"><button type="button" id="btn_alert_confirm" onClick="DSAlert.closeAlert();"><span>확인</span></button></p>
+<!--						<span class="w_space40"></span>
+						<p class="b_grey_btn"><button type="button" onClick="selfClose();"><span>취소</span></button></p>-->
+					</span>
+					<!-- BTN -->
+				</div>
+			</div>
+			<!-- Content : E -->
+		</div>
+	</div>
+	<!-- Content AREA : E -->
+</div>
+
+<script>
+
+</script>
+</body>
+</html>

@@ -60,12 +60,21 @@ class CartServiceTest {
 
     private static GiftItemInfo gift(Long itemId, int salePrice, int stock, String locgovCode) {
         return new GiftItemInfo(itemId, "답례품" + itemId, 100L, salePrice, stock, "0", "APPROVED",
-                locgovCode, "/uploads/" + itemId + ".jpg", "CJ", "1", 0, null, null, null);
+                locgovCode, "/uploads/" + itemId + ".jpg", "CJ", "1", 0, null, null, null, "Y", "N", null,
+                null, null, null, null, null);
+    }
+
+    /** 고정배송비(shippingType=6) 답례품 - 배송비 계산기가 shipping 값을 그대로 배송비로 잡는다. */
+    private static GiftItemInfo giftFixed(Long itemId, int salePrice, int stock, String locgovCode, int fixedShipping) {
+        return new GiftItemInfo(itemId, "답례품" + itemId, 100L, salePrice, stock, "0", "APPROVED",
+                locgovCode, "/uploads/" + itemId + ".jpg", "CJ", "6", fixedShipping, null, null, null, "Y", "N", null,
+                null, null, null, null, null);
     }
 
     private static GiftItemInfo soldOut(Long itemId) {
         return new GiftItemInfo(itemId, "품절품" + itemId, 100L, 1000, 0, "1", "APPROVED",
-                LOCGOV_A, null, "CJ", "1", 0, null, null, null);
+                LOCGOV_A, null, "CJ", "1", 0, null, null, null, "Y", "N", null,
+                null, null, null, null, null);
     }
 
     private static CartItem cartItem(Long cartItemId, Long itemId, int quantity) {
@@ -89,7 +98,8 @@ class CartServiceTest {
     @DisplayName("담기: 재고보다 많이 담으려 하면 결제까지 가기 전에 막는다")
     void addRejectsOverStock() {
         when(giftClient.fetch(1L)).thenReturn(gift(1L, 1000, 3, LOCGOV_A));
-        when(cartItemRepository.findByUserIdAndItemId(USER_ID, 1L)).thenReturn(Optional.empty());
+        when(cartItemRepository.findByUserIdAndItemIdAndItemOptionIdAndTextOption(USER_ID, 1L, 0L, ""))
+                .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> cartService.add(USER_ID, 1L, 5))
                 .isInstanceOf(OrderException.class)
@@ -101,7 +111,8 @@ class CartServiceTest {
     @DisplayName("담기: 이미 담긴 수량과 합산해 재고를 초과하면 막는다")
     void addAccumulatesAndChecksStock() {
         when(giftClient.fetch(1L)).thenReturn(gift(1L, 1000, 5, LOCGOV_A));
-        when(cartItemRepository.findByUserIdAndItemId(USER_ID, 1L)).thenReturn(Optional.of(cartItem(10L, 1L, 4)));
+        when(cartItemRepository.findByUserIdAndItemIdAndItemOptionIdAndTextOption(USER_ID, 1L, 0L, ""))
+                .thenReturn(Optional.of(cartItem(10L, 1L, 4)));
 
         assertThatThrownBy(() -> cartService.add(USER_ID, 1L, 2))
                 .isInstanceOf(OrderException.class)
@@ -112,7 +123,8 @@ class CartServiceTest {
     @DisplayName("담기: 수량 상한(999)을 넘기면 막는다")
     void addRejectsAboveMaxQuantity() {
         when(giftClient.fetch(1L)).thenReturn(gift(1L, 1000, 100000, LOCGOV_A));
-        when(cartItemRepository.findByUserIdAndItemId(USER_ID, 1L)).thenReturn(Optional.empty());
+        when(cartItemRepository.findByUserIdAndItemIdAndItemOptionIdAndTextOption(USER_ID, 1L, 0L, ""))
+                .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> cartService.add(USER_ID, 1L, CartService.MAX_QUANTITY + 1))
                 .isInstanceOf(OrderException.class)
@@ -123,7 +135,7 @@ class CartServiceTest {
     @DisplayName("담기: UNIQUE(USER_ID,ITEM_ID) 경합으로 저장이 실패하면 상대가 만든 행에 합산한다 (예전엔 500)")
     void addRetriesOnUniqueViolation() {
         when(giftClient.fetch(1L)).thenReturn(gift(1L, 1000, 50, LOCGOV_A));
-        when(cartItemRepository.findByUserIdAndItemId(USER_ID, 1L))
+        when(cartItemRepository.findByUserIdAndItemIdAndItemOptionIdAndTextOption(USER_ID, 1L, 0L, ""))
                 .thenReturn(Optional.empty())                          // 1차: 아직 아무도 안 담음
                 .thenReturn(Optional.of(cartItem(10L, 1L, 1)));        // 2차: 동시 요청이 만들어 둔 행
         when(cartItemRepository.save(any(CartItem.class)))
@@ -156,9 +168,8 @@ class CartServiceTest {
     void viewCarriesDeliveryFeeAndDropsSoldOut() {
         when(cartItemRepository.findByUserIdOrderByCreatedDateDesc(USER_ID))
                 .thenReturn(List.of(cartItem(10L, 1L, 2), cartItem(11L, 2L, 1)));
-        when(giftClient.fetch(1L)).thenReturn(gift(1L, 1000, 10, LOCGOV_A));
+        when(giftClient.fetch(1L)).thenReturn(giftFixed(1L, 1000, 10, LOCGOV_A, 3000));
         when(giftClient.fetch(2L)).thenReturn(soldOut(2L));
-        when(orderService.deliveryFeeOf(any(), eq(2), eq(2000L), isNull())).thenReturn(3000L);
         when(locgovClient.nameOf(LOCGOV_A)).thenReturn("서울 종로구");
         when(pointClient.balanceByLocgov(USER_ID, LOCGOV_A)).thenReturn(10000L);
 
@@ -192,7 +203,7 @@ class CartServiceTest {
     // ==================== 체크아웃 ====================
 
     private OrderService.DeliveryInfo delivery() {
-        return new OrderService.DeliveryInfo("홍길동", "010-0000-0000", "서울시 종로구 1", "101호", null);
+        return new OrderService.DeliveryInfo("홍길동", "010-0000-0000", "서울시 종로구 1", "101호", null, null);
     }
 
     @Test
@@ -246,8 +257,7 @@ class CartServiceTest {
     void checkoutCountsDeliveryFeeAgainstPointBalance() {
         when(cartItemRepository.findByCartItemIdInAndUserIdOrderByCreatedDateDesc(List.of(10L), USER_ID))
                 .thenReturn(List.of(cartItem(10L, 1L, 1)));
-        when(giftClient.fetch(1L)).thenReturn(gift(1L, 1000, 10, LOCGOV_A));
-        when(orderService.deliveryFeeOf(any(), eq(1), eq(1000L), anyString())).thenReturn(3000L);
+        when(giftClient.fetch(1L)).thenReturn(giftFixed(1L, 1000, 10, LOCGOV_A, 3000));
         when(pointClient.balanceByLocgov(USER_ID, LOCGOV_A)).thenReturn(2000L); // 1000P 상품엔 충분, 배송비 포함 4000P엔 부족
         when(locgovClient.nameOf(LOCGOV_A)).thenReturn("서울 종로구");
 
@@ -267,14 +277,14 @@ class CartServiceTest {
         when(giftClient.fetch(2L)).thenReturn(gift(2L, 500, 10, LOCGOV_B));
         when(pointClient.balanceByLocgov(USER_ID, LOCGOV_A)).thenReturn(100000L);
         when(pointClient.balanceByLocgov(USER_ID, LOCGOV_B)).thenReturn(100000L);
-        when(orderService.createOrder(eq(USER_ID), any(GiftItemInfo.class), anyInt(), any(), isNull()))
+        when(orderService.createOrder(eq(USER_ID), any(GiftItemInfo.class), anyInt(), any(), isNull(), any(), anyInt()))
                 .thenReturn(order("O1"), order("O2"));
 
         List<String> orderIds = cartService.checkout(USER_ID, List.of(10L, 11L), delivery(), Map.of());
 
         assertThat(orderIds).containsExactly("O1", "O2");
-        // 답례품을 이미 조회해 뒀으므로 createOrder가 gift를 다시 조회하지 않는 오버로드로 호출된다.
-        verify(orderService, times(2)).createOrder(eq(USER_ID), any(GiftItemInfo.class), anyInt(), any(), isNull());
+        // 답례품을 이미 조회해 뒀으므로 createOrder가 gift를 다시 조회하지 않는 오버로드로 호출된다(옵션명/가격 포함 7-arg).
+        verify(orderService, times(2)).createOrder(eq(USER_ID), any(GiftItemInfo.class), anyInt(), any(), isNull(), any(), anyInt());
         verify(giftClient, times(1)).fetch(1L);
         verify(cartItemRepository).deleteByCartItemIdInAndUserId(List.of(10L, 11L), USER_ID);
     }
@@ -286,13 +296,15 @@ class CartServiceTest {
     void quoteMatchesCheckoutMath() {
         when(cartItemRepository.findByCartItemIdInAndUserIdOrderByCreatedDateDesc(List.of(10L), USER_ID))
                 .thenReturn(List.of(cartItem(10L, 1L, 2)));
-        when(giftClient.fetch(1L)).thenReturn(gift(1L, 1000, 10, LOCGOV_A));
+        // 무료배송(type1) + 제주 추가배송비 3000 → 배송비 3000 (AS-IS Shipping.java: 무료도 제주/도서 추가는 붙음)
+        when(giftClient.fetch(1L)).thenReturn(new GiftItemInfo(1L, "답례품1", 100L, 1000, 10, "0", "APPROVED",
+                LOCGOV_A, null, "CJ", "1", 0, null, 3000, null, "Y", "N", null, null, null, null, null, null));
         when(couponService.previewDiscount(USER_ID, 500, 1L, 2000L, 2)).thenReturn(500L);
-        when(orderService.deliveryFeeOf(any(), eq(2), eq(2000L), eq("제주시 1"))).thenReturn(3000L);
+        when(orderService.islandTypeOf("63000")).thenReturn("JEJU");
         when(locgovClient.nameOf(LOCGOV_A)).thenReturn("서울 종로구");
         when(pointClient.balanceByLocgov(USER_ID, LOCGOV_A)).thenReturn(100000L);
 
-        var quote = cartService.quote(USER_ID, List.of(10L), Map.of(10L, 500), "제주시 1");
+        var quote = cartService.quote(USER_ID, List.of(10L), Map.of(10L, 500), "63000");
 
         assertThat(quote.totalPoint()).isEqualTo(2000L);
         assertThat(quote.totalDiscount()).isEqualTo(500L);

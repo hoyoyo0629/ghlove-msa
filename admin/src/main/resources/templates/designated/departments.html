@@ -1,85 +1,232 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>지정기부 담당부서 관리 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <title>사업부서 관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<!-- AS-IS opmanager/designated-donation/part/list.jsp 재현 - 지자체 소속 부서 등록,
-     사업 등록 시 담당부서로 지정할 수 있다(G_DSGN_DNTN_BIZ_DEPT_MNG). -->
-<div class="contents contents_inner">
-    <div class="location"><a th:href="@{/designated-projects}">지정기부 관리</a></div>
-    <h3><span>지정기부 담당부서 관리</span></h3>
+<!-- AS-IS opmanager/i18n/designated-donation/part/list.jsp 이식 - 사업부서 관리.
+     사업 등록 시 담당부서로 지정할 수 있는 부서 목록이다(G_DSGN_DNTN_BIZ_DEPT_MNG).
 
-    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+     AS-IS verbatim:
+     - h3가 "사업부서 관리"다(메뉴 라벨이 아니라 이 제목이다).
+     - 검색 4종: 지자체(광역+시군구, <b>ROLE_ADMIN_1~4에게만 보인다</b>) / 부서명 /
+       사용유무 라디오(전체·사용·미사용) / 등록일 범위 + 날짜버튼 5종.
+     - 컬럼 5개: ID / [지자체 명] / 부서명(수정 링크) / 사용유무 / 등록일시.
+     - 하단 버튼은 [신규등록] 하나다(form/0으로 간다).
+     - 빈 목록 문구는 M00473("데이터가 없습니다.")이고 표 밖 .no_content 다.
 
-    <table class="board_list_table" style="margin-bottom:28px;">
-        <thead><tr><th scope="col">부서명</th><th scope="col">지자체</th><th scope="col">사용여부</th><th scope="col">관리</th></tr></thead>
-        <tbody>
-        <tr th:each="d : ${departments}">
-            <td th:text="${d.deptNm}"></td>
-            <td th:text="${d.locgovCode}"></td>
-            <td th:text="${d.useYn == 'Y'} ? '사용' : '미사용'"></td>
-            <td>
-                <form th:action="@{/designated-projects/departments/{id}/toggle(id=${d.deptId})}" method="post" style="display:inline;">
-                    <button type="submit" class="small-btn" th:text="${d.useYn == 'Y'} ? '미사용으로 전환' : '사용으로 전환'"></button>
-                </form>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(departments)}">등록된 부서가 없습니다.</p>
+     ★ AS-IS 비활성 그대로: 체크박스 컬럼과 일괄 사용유무 변경은 JSP에서 <b>전부 주석처리</b>되어
+       있다(updateListDataLabel 함수만 남아 있고 누르는 버튼이 없다) - 켜지 않는다.
+       그래서 사용유무는 수정화면에서 바꾼다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <h4>부서 등록</h4>
+<h3><span>사업부서 관리</span></h3>
+
+<form id="partSearchParam" method="post" th:action="@{/designated-projects/departments/search}">
     <div class="board_write">
-        <table class="board_write_table" summary="부서 등록">
-            <colgroup><col style="width:220px;"><col></colgroup>
+        <table class="board_write_table" summary="사업부서 관리">
+            <colgroup>
+                <col style="width: 150px"/>
+                <col style="width: auto;"/>
+                <col style="width: 150px"/>
+                <col style="width: auto;"/>
+            </colgroup>
             <tbody>
-            <tr><td class="label">부서명</td><td><input type="text" id="deptNm" name="deptNm" required maxlength="255" form="deptForm"></td></tr>
-            <tr>
-                <td class="label">지자체</td>
-                <td>
-                    <div class="flex_box gap-08">
-                        <select id="upperLocgovCode" onchange="filterLocgov()">
-                            <option value="">시·도 선택</option>
-                            <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"></option>
-                        </select>
-                        <select id="locgovCode" name="locgovCode" required form="deptForm">
-                            <option value="">시·군·구 선택</option>
-                            <option th:each="l : ${allLocgovs}" th:value="${l.locgovCode}" th:text="${l.locgovNm}"
-                                    th:attr="data-upper=${l.upperLocgovCode}"></option>
-                        </select>
-                    </div>
-                </td>
-            </tr>
+                <!-- AS-IS: 지자체 선택은 시스템·행안부 담당자에게만 보인다 -->
+                <tr th:unless="${locgovScoped}">
+                    <td class="label">지자체</td>
+                    <td colspan="3">
+                        <div class="flex_box gap-08">
+                            <select id="upperLocgovCode" name="upperLocgovCode" class="wd-150" onchange="wdrChange(this.value);">
+                                <option value="" th:text="'-' + ${msg.get('M00039')} + '-'">-전체-</option>
+                                <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"
+                                        th:selected="${searchParam.upperLocgovCode == p.key}"></option>
+                            </select>
+                            <select id="locgovCode" name="locgovCode" class="wd-150">
+                                <option value="">-시,군,구-</option>
+                            </select>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">부서명</td>
+                    <td>
+                        <div>
+                            <input type="text" id="deptNm" name="deptNm" class="input_txt" title="부서명"
+                                   style="width: 100%;" th:value="${searchParam.deptNm}"/>
+                        </div>
+                    </td>
+                    <td class="label">사용유무</td>
+                    <td>
+                        <div class="flex_box gap-12">
+                            <div class="input-form"><span class="radio">
+                                <input type="radio" id="use_all" name="useYn" value=""
+                                       th:checked="${searchParam.useYn == null or searchParam.useYn == ''}"/>
+                                <label for="use_all" th:text="${msg.get('M00039')}">전체</label></span></div>
+                            <div class="input-form"><span class="radio">
+                                <input type="radio" id="use_y" name="useYn" value="Y"
+                                       th:checked="${searchParam.useYn == 'Y'}"/>
+                                <label for="use_y">사용</label></span></div>
+                            <div class="input-form"><span class="radio">
+                                <input type="radio" id="use_n" name="useYn" value="N"
+                                       th:checked="${searchParam.useYn == 'N'}"/>
+                                <label for="use_n">미사용</label></span></div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">등록일</td>
+                    <td colspan="3">
+                        <div>
+                            <span class="datepicker"><input type="text" id="searchStDt" name="searchStDt" maxlength="8"
+                                   class="datepicker" title="조회 시작일" th:value="${searchParam.searchStDt}"/></span>
+                            <span class="wave">~</span>
+                            <span class="datepicker mr10"><input type="text" id="searchEdDt" name="searchEdDt" maxlength="8"
+                                   class="datepicker" title="조회 종료일" th:value="${searchParam.searchEdDt}"/></span>
+                            <span class="day_btns mt3" style="margin-left:0px;">
+                                <a href="javascript:;" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+                                <a href="javascript:;" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a>
+                                <a href="javascript:;" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>
+                                <a href="javascript:;" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+                                <a href="javascript:;" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a>
+                            </span>
+                        </div>
+                    </td>
+                </tr>
             </tbody>
         </table>
+
+        <div class="btn_all btn_right">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-dark-gray btn-mini"
+                        onclick="location.href='/designated-projects/departments'"
+                        th:text="${msg.get('M00047')}">초기화</button>
+                <button type="button" class="btn btn-dark-gray btn-mini" onclick="checkDate();"
+                        th:text="${msg.get('M00048')}">검색</button>
+            </div>
+        </div>
     </div>
-    <form id="deptForm" th:action="@{/designated-projects/departments}" method="post"></form>
-    <div class="btn_all btn_center">
-        <button type="submit" form="deptForm" class="btn btn-dark-gray btn-small">등록</button>
+</form>
+
+<div class="board_list">
+    <table class="board_list_table" summary="사업부서 관리">
+        <caption>사업부서 관리</caption>
+        <colgroup>
+            <col style="width:50px;">
+            <col style="width:150px;" th:unless="${locgovScoped}">
+            <col style="width:400px;">
+            <col style="width:50px;">
+            <col style="width:150px;">
+        </colgroup>
+        <thead>
+            <tr>
+                <!-- AS-IS 주석처리: 전체선택 체크박스 칸 -->
+                <th scope="col">ID</th>
+                <th scope="col" th:unless="${locgovScoped}">지자체 명</th>
+                <th scope="col">부서명</th>
+                <th scope="col">사용유무</th>
+                <th scope="col">등록일시</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr style="background:#fff;" th:each="d : ${departments}">
+                <!-- AS-IS 주석처리: 행별 체크박스 칸 -->
+                <td th:text="${d.deptId}"></td>
+                <td th:unless="${locgovScoped}">
+                    <div th:text="${locgovNames.get(d.locgovCode)} ?: ${d.locgovCode}"></div>
+                </td>
+                <td>
+                    <div>
+                        <a th:href="@{/designated-projects/departments/form/{id}(id=${d.deptId})}"
+                           th:text="${d.deptNm}"></a>
+                    </div>
+                </td>
+                <td th:text="${d.useYn == 'Y'} ? '사용' : '미사용'"></td>
+                <td th:text="${d.createdDate} ?: '-'"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="no_content" th:if="${#lists.isEmpty(departments)}" th:text="${msg.get('M00473')}">데이터가 없습니다.</div>
+
+    <div class="flex_box juc-sbt">
+        <div class="btn_all"></div>
+        <div class="btn_all">
+            <button type="button" class="btn btn-default btn-mini"
+                    onclick="location.href='/designated-projects/departments/form/0'">신규등록</button>
+        </div>
     </div>
 </div>
 
-<script th:inline="none">
-function filterLocgov() {
-    var upper = document.getElementById('upperLocgovCode').value;
-    var select = document.getElementById('locgovCode');
-    Array.prototype.forEach.call(select.options, function (opt) {
-        if (!opt.value) { return; }
-        opt.hidden = upper !== '' && opt.dataset.upper !== upper;
-    });
-}
-filterLocgov();
-</script>
+<div style="display: none;">
+    <span id="today" th:text="${today}"></span>
+    <span id="week" th:text="${week}"></span>
+    <span id="month1" th:text="${month1}"></span>
+    <span id="month3" th:text="${month3}"></span>
+    <span id="year1" th:text="${year1}"></span>
+</div>
+
+    </div>
+    </div>
+</div>
+</div>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript" th:inline="javascript">
+var redirectMessage = /*[[${redirectMessage}]]*/ null;
+var allLocgovs = /*[[${allLocgovs}]]*/ [];
+var selectedLocgovCode = /*[[${searchParam.locgovCode}]]*/ null;
+var selectedUpperLocgovCode = /*[[${searchParam.upperLocgovCode}]]*/ null;
+
+$(function() {
+	if (redirectMessage) {
+		alert(redirectMessage);
+	}
+	Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="searchStDt"]' , 'input[name="searchEdDt"]');
+	EventHandler.calendarStartDateAndEndDateVaild();
+
+	if (selectedUpperLocgovCode) {
+		wdrChange(selectedUpperLocgovCode);
+	}
+});
+
+/* AS-IS wdrChange - 광역을 고르면 그 하위 시군구만 남긴다. */
+function wdrChange(upperLocgovCode) {
+	var $locgov = $('#locgovCode');
+	$locgov.find('option').not(':first-child').remove();
+	if (!upperLocgovCode) {
+		return;
+	}
+	for (var i = 0; i < allLocgovs.length; i++) {
+		var l = allLocgovs[i];
+		if (l.upperLocgovCode === upperLocgovCode) {
+			$locgov.append($('<option></option>').attr('value', l.locgovCode).text(l.locgovNm));
+		}
+	}
+	if (selectedLocgovCode) {
+		$locgov.val(selectedLocgovCode);
+	}
+}
+
+function checkDate() {
+	var strStartDate = $('#searchStDt').val();
+	var strEndDate = $('#searchEdDt').val();
+	if (strStartDate && strStartDate.length == 8 && strEndDate && strEndDate.length == 8) {
+		if (strStartDate > strEndDate) {
+			alert("종료일이 시작일보다 빠릅니다.");
+			return false;
+		}
+	}
+	$('#partSearchParam').submit();
+}
+</script>
 </body>
 </html>

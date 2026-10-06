@@ -7,11 +7,16 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-/** admin 콘솔 자체(회원/통계 등)에서 실행하는 엑셀 다운로드 이력 - order 서비스는 자기
- * 소유 데이터(주문목록)에 대한 다운로드 이력을 OD_EXCEL_DOWNLOAD_LOG에 이미 별도로 쌓고
- * 있다(order.ExcelDownloadLog). 이 테이블은 그 외 admin 서비스가 직접 소유한 데이터를
- * 관리자가 내려받을 때를 대비한 그릇으로, ExcelDownloadLogAdminController가 두 출처를
- * 하나의 화면(/admin/excel-download-logs)으로 합쳐 보여준다. */
+/**
+ * <b>쓰이지 않는다 - AS-IS에 없는 표다.</b>
+ *
+ * 예전 TO-BE가 엑셀 다운로드 이력을 담으려고 만든 표인데, AS-IS는 그 이력을 개인정보
+ * 접근로그({@code OP_PRIVACY_ACCESS_LOG})에 남기고 "엑셀다운로드 사유 관리"(메뉴 1411) 화면도
+ * 그 표를 읽는다. 사용자 확인 후 기록 지점을 AS-IS와 같게 옮겼고(2026-10-03,
+ * {@link com.ghlove.admin.service.PrivacyAccessLogService}), 이 엔티티/표는 과거 행을 잃지 않도록
+ * 남겨만 둔다(표 삭제는 파괴적이라 사용자 판단 필요). 새 코드는 이걸 쓰지 말 것.
+ */
+@Deprecated
 @Entity
 @Table(name = "OP_EXCEL_DOWNLOAD_LOG")
 @Getter

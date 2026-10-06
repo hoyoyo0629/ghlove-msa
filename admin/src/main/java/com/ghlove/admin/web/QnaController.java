@@ -28,6 +28,7 @@ import java.util.List;
 public class QnaController {
 
     private final QnaService qnaService;
+    private final com.ghlove.admin.web.support.FlashRedirect flashRedirect;
     private final CommonCodeService commonCodeService;
     private final CaptchaService captchaService;
     private final JwtVerifier jwtVerifier;
@@ -69,14 +70,15 @@ public class QnaController {
         String answer = (String) session.getAttribute(CaptchaService.SESSION_KEY);
         session.removeAttribute(CaptchaService.SESSION_KEY);
         if (answer == null || !answer.equals(captcha)) {
-            return "redirect:/qna?errorMessage=" + encode("자동입력 방지문자가 일치하지 않습니다.");
+            return flashRedirect.to("/qna", "자동입력 방지문자가 일치하지 않습니다.");
         }
         try {
             qnaService.ask(userId, userName, email, qnaGroup, subject, question, secretFlag, files);
-            // AS-IS qna/qna-form.html:255
-            return Done.redirect("/qna", "등록되었습니다.");
+            // AS-IS qna/qna-form.html:255 - 등록 후 알림 모달(fragments/alert :: gh-alert)로 알린다.
+            // 문구는 flash로 넘어가므로 URL에 ?done=이 붙지 않는다(AS-IS도 URL에 싣지 않는다).
+            return flashRedirect.to("/qna", "등록되었습니다.");
         } catch (QnaException e) {
-            return "redirect:/qna?errorMessage=" + encode(e.getMessage());
+            return flashRedirect.to("/qna", e.getMessage());
         }
     }
 

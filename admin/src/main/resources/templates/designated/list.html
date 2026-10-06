@@ -1,66 +1,392 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>지정기부 관리 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <title>특정사업에 기부하기 목록 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <style>
+    .tbl-summary { border-right: 1px solid #dedede; border-bottom: 1px solid #dedede; }
+    .tbl-summary th, .tbl-summary td { border-left: 1px solid #dedede; border-top: 1px solid #dedede; text-align: center; }
+    .tbl-summary th { background: #f4f4f4; padding: 10px; color: #000; }
+    .tbl-summary td { padding: 22px; font-size: 20px; font-family: verdana; }
+    </style>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<!-- AS-IS opmanager/designated-donation/list.jsp 재현 - 지정기부사업 CRUD. 갤러리
-     이미지/미리보기/엑셀은 스코프 밖(designated-detail.html 주석, 공개 상세화면 자체가
-     대표이미지 1장 구조). 승인 워크플로우는 AS-IS의 "담당자는 자기승인 불가" 규칙만
-     ROLE_ADMIN/ROLE_OPERATOR 2단계로 재현(DesignatedProjectAdminController 참고). -->
-<div class="contents contents_inner">
-    <h3><span>지정기부 관리</span></h3>
-    <div class="btn_all btn_right" style="margin-bottom:16px;">
-        <div class="flex_box gap-08">
-            <a th:href="@{/designated-projects/departments}" class="btn btn-dark-default btn-small">담당부서 관리</a>
-            <a th:href="@{/designated-projects/banners}" class="btn btn-dark-default btn-small">대표배너 관리</a>
-            <a th:href="@{/designated-projects/analysis}" class="btn btn-dark-default btn-small">모금분석</a>
-            <a th:href="@{/designated-projects/new}" class="btn btn-dark-gray btn-small">사업 등록</a>
+<!-- AS-IS opmanager/i18n/designated-donation/list.jsp 이식(메뉴 17101 특정사업 기부 목록).
+
+     AS-IS verbatim:
+     - h3가 "특정사업에 기부하기 목록"이다.
+     - 검색조건 6종: 지자체(광역+시군구, <b>ROLE_ADMIN_1~4에게만 보인다</b>) / 사업구분 /
+       기간(날짜버튼 오늘·1주일·한달·3개월·1년) / 사업명 / 상태(전체·진행·종료·대기) / 공개여부.
+     - 검색표 아래에 요약표(tbl-summary) 4칸: 총 목표금액 / 총 모금액 / 총 모금 달성율 / 총 기부건수.
+     - 출력수 select가 <b>10/50/100/200/500</b>이다(다른 화면과 다르다).
+     - 컬럼 16개: 체크박스/ID/[지자체명]/모금상태/사업구분/사업명(이미지+링크)/기부건수/시작일/
+       종료일/목표금액/모금액/달성율/공개여부/사업부서/공지사항/승인이력/미리보기.
+     - 하단 왼쪽 일괄처리 4종: 진행(승인처리)[ROLE_ADMIN_1~5만]/종료/공개/비공개.
+       오른쪽: 엑셀 / 신규등록.
+     - 빈 목록 문구는 M00473("데이터가 없습니다.")이고 표 밖 .no_content 다.
+
+     ★ 모금상태는 저장값이 아니라 <b>다시 계산된</b> 값이다 - 진행이어도 목표금액을 넘었거나
+       종료일이 지났으면 종료로 보여준다(donation DesignatedAdminService.search 주석).
+     ★ AS-IS 결함 보정: 사업명 입력칸이 query로 전송되는데 목록 SQL은 searchKeyword를 봐서
+       AS-IS에서는 사업명 검색이 전혀 걸리지 않는다 - TO-BE는 걸리게 했다.
+     ★ 아직 없는 것(원장의 다음 단계): 엑셀 다운로드, 미리보기, 승인이력 팝업. 버튼은 AS-IS
+       자리에 두되 미구현 안내를 띄운다(없는 화면으로 보내 404를 만드는 것보다 낫다). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<div class="item_list">
+<h3><span>특정사업에 기부하기 목록</span></h3>
+
+<form id="designatedSearchParam" method="post" th:action="@{/designated-projects/search}">
+    <input type="hidden" id="page" name="page" th:value="${searchParam.page}"/>
+
+    <div class="board_write">
+        <table class="board_write_table" summary="특정사업에 기부하기 목록">
+            <caption>특정사업에 기부하기 목록</caption>
+            <colgroup>
+                <col style="width: 150px"/>
+                <col style="width: auto;"/>
+                <col style="width: 150px"/>
+                <col style="width: auto;"/>
+            </colgroup>
+            <tbody>
+                <!-- AS-IS: 지자체 선택은 시스템·행안부 담당자에게만 보인다 -->
+                <tr th:unless="${locgovScoped}">
+                    <td class="label">지자체</td>
+                    <td colspan="3">
+                        <div class="flex_box gap-08">
+                            <select id="upperLocgovCode" name="upperLocgovCode" class="wd-150" onchange="wdrChange(this.value);">
+                                <option value="" th:text="'-' + ${msg.get('M00039')} + '-'">-전체-</option>
+                                <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"
+                                        th:selected="${searchParam.upperLocgovCode == p.key}"></option>
+                            </select>
+                            <select id="locgovCode" name="locgovCode" class="wd-150">
+                                <option value="">-시,군,구-</option>
+                            </select>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">사업구분</td>
+                    <td>
+                        <div class="flex_box gap-08">
+                            <select id="bsnsType" name="bsnsType" title="사업구분 선택" style="max-width: 100%;">
+                                <option value="">전체</option>
+                                <option th:each="t : ${bsnsTypes}" th:value="${t.key}" th:text="${t.value}"
+                                        th:selected="${searchParam.bsnsType == t.key}"></option>
+                            </select>
+                        </div>
+                    </td>
+                    <td class="label">기간</td>
+                    <td>
+                        <div>
+                            <span class="datepicker"><input type="text" id="prjStDt" name="prjStDt" maxlength="8"
+                                   class="datepicker" title="모금 시작일" th:value="${searchParam.prjStDt}"/></span>
+                            <span class="wave">~</span>
+                            <span class="datepicker mr10"><input type="text" id="prjEdDt" name="prjEdDt" maxlength="8"
+                                   class="datepicker" title="모금 종료일" th:value="${searchParam.prjEdDt}"/></span>
+                            <span class="day_btns mt3" style="margin-left:0px;">
+                                <a href="javascript:;" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+                                <a href="javascript:;" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a>
+                                <a href="javascript:;" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>
+                                <a href="javascript:;" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+                                <a href="javascript:;" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a>
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">사업명</td>
+                    <td colspan="3">
+                        <div>
+                            <input type="text" id="query" name="query" class="input_txt" title="사업명"
+                                   style="width: 100%;" th:value="${searchParam.query}"/>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">상태</td>
+                    <td>
+                        <div class="flex_box gap-12">
+                            <div class="input-form"><span class="radio">
+                                <input type="radio" id="st_all" name="prjStatus" value=""
+                                       th:checked="${searchParam.prjStatus == null or searchParam.prjStatus == ''}"/>
+                                <label for="st_all">전체</label></span></div>
+                            <div class="input-form"><span class="radio">
+                                <input type="radio" id="st_open" name="prjStatus" value="2"
+                                       th:checked="${searchParam.prjStatus == '2'}"/>
+                                <label for="st_open">진행</label></span></div>
+                            <div class="input-form"><span class="radio">
+                                <input type="radio" id="st_closed" name="prjStatus" value="9"
+                                       th:checked="${searchParam.prjStatus == '9'}"/>
+                                <label for="st_closed">종료</label></span></div>
+                            <div class="input-form"><span class="radio">
+                                <input type="radio" id="st_pending" name="prjStatus" value="1"
+                                       th:checked="${searchParam.prjStatus == '1'}"/>
+                                <label for="st_pending">대기</label></span></div>
+                        </div>
+                    </td>
+                    <td class="label">공개여부</td>
+                    <td>
+                        <div class="flex_box gap-12">
+                            <div class="input-form"><span class="radio">
+                                <input type="radio" id="dp_all" name="displayFlag" value=""
+                                       th:checked="${searchParam.displayFlag == null or searchParam.displayFlag == ''}"/>
+                                <label for="dp_all">전체</label></span></div>
+                            <div class="input-form"><span class="radio">
+                                <input type="radio" id="dp_y" name="displayFlag" value="Y"
+                                       th:checked="${searchParam.displayFlag == 'Y'}"/>
+                                <label for="dp_y">공개</label></span></div>
+                            <div class="input-form"><span class="radio">
+                                <input type="radio" id="dp_n" name="displayFlag" value="N"
+                                       th:checked="${searchParam.displayFlag == 'N'}"/>
+                                <label for="dp_n">비공개</label></span></div>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="btn_all btn_left">
+            <ul class="list-bullet point">
+                <li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li>
+            </ul>
+        </div>
+        <div class="btn_all btn_right">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/designated-projects'"
+                        th:text="${msg.get('M00047')}">초기화</button>
+                <button type="button" class="btn btn-dark-gray btn-mini" onclick="checkDate();"
+                        th:text="${msg.get('M00048')}">검색</button>
+            </div>
         </div>
     </div>
 
-    <div class="count_title mt-40">
-        <h5>총 <span th:text="${#lists.size(projects)}" th:remove="tag"></span>건</h5>
+    <!-- AS-IS 요약표 -->
+    <div class="mt-40">
+        <table class="tbl-summary">
+            <colgroup><col style="width: 200px"/><col style="width: 200px;"/><col style="width: 200px"/><col style="width: 200px;"/></colgroup>
+            <thead>
+                <tr><th>총 목표금액</th><th>총 모금액</th><th>총 모금 달성율</th><th>총 기부건수</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td th:text="${#numbers.formatInteger(summary.totTargetAmt, 1, 'COMMA')} + '원'">0원</td>
+                    <td th:text="${#numbers.formatInteger(summary.totCntrAmt, 1, 'COMMA')} + '원'">0원</td>
+                    <td th:text="${summary.totAchvRt} + '%'">0%</td>
+                    <td th:text="${#numbers.formatInteger(summary.totCntrCnt, 1, 'COMMA')} + '명'">0명</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 
-    <table class="board_list_table" summary="지정기부관리">
-        <caption>지정기부관리현황</caption>
-        <thead>
-        <tr>
-            <th scope="col">No.</th>
-            <th scope="col">사업명</th>
-            <th scope="col">지자체</th>
-            <th scope="col">사업구분</th>
-            <th scope="col">모금기간</th>
-            <th scope="col">목표금액</th>
-            <th scope="col">상태</th>
-            <th scope="col">공개여부</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="p, i : ${projects}">
-            <td th:text="${#lists.size(projects) - i.index}"></td>
-            <td class="tleft"><a th:href="@{/designated-projects/{id}(id=${p.dsgnDntnBizId})}" th:text="${p.dsgnDntnBizTtl}"></a></td>
-            <td th:text="${p.lclgvCd}"></td>
-            <td th:text="${bsnsTypes.get(p.dsgnDntnBizSeCd)} ?: ${p.dsgnDntnBizSeCd}"></td>
-            <td th:text="${p.dsgnDntnBizBgngYmd} + ' ~ ' + ${p.dsgnDntnBizEndYmd}"></td>
-            <td th:text="${#numbers.formatInteger(p.goalAmt, 0, 'COMMA')} + '원'"></td>
-            <td th:text="${statusLabels.get(p.dsgnDntnBizSttsCd)} ?: ${p.dsgnDntnBizSttsCd}"></td>
-            <td th:text="${p.rlsYn == 'Y'} ? '공개' : '비공개'"></td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(projects)}">등록된 지정기부사업이 없습니다.</p>
+    <div class="count_title mt-40">
+        <h5>총 <span th:text="${#numbers.formatInteger(projectCount, 1, 'COMMA')}" th:remove="tag">0</span>건</h5>
+        <span>
+            <select id="itemsPerPage" name="itemsPerPage" th:title="${msg.get('M00052')}">
+                <option value="10" th:selected="${searchParam.itemsPerPage == 10}">10개 출력</option>
+                <option value="50" th:selected="${searchParam.itemsPerPage == 50}">50개 출력</option>
+                <option value="100" th:selected="${searchParam.itemsPerPage == 100}">100개 출력</option>
+                <option value="200" th:selected="${searchParam.itemsPerPage == 200}">200개 출력</option>
+                <option value="500" th:selected="${searchParam.itemsPerPage == 500}">500개 출력</option>
+            </select>
+        </span>
+    </div>
+</form>
+
+<div class="board_list">
+    <form id="listForm" method="post">
+        <table class="board_list_table" summary="특정사업에 기부하기 목록">
+            <caption>특정사업에 기부하기 목록</caption>
+            <thead>
+                <tr>
+                    <th scope="col"><input type="checkbox" id="check_all"/></th>
+                    <th scope="col">ID</th>
+                    <th scope="col" th:unless="${locgovScoped}">지자체 명</th>
+                    <th scope="col">모금상태</th>
+                    <th scope="col">사업구분</th>
+                    <th scope="col">사업명</th>
+                    <th scope="col">기부건수</th>
+                    <th scope="col">시작일</th>
+                    <th scope="col">종료일</th>
+                    <th scope="col">목표금액</th>
+                    <th scope="col">모금액</th>
+                    <th scope="col">달성율</th>
+                    <th scope="col">공개여부</th>
+                    <th scope="col">사업부서</th>
+                    <th scope="col">공지사항</th>
+                    <th scope="col">승인이력</th>
+                    <th scope="col">미리보기</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="background:#fff;" th:each="r : ${rows}">
+                    <td><input type="checkbox" name="id" th:value="${r.dsgnDntnBizId}"/></td>
+                    <td th:text="${r.dsgnDntnBizId}"></td>
+                    <td th:unless="${locgovScoped}"><div th:text="${r.locgovNm}"></div></td>
+                    <td th:text="${statusLabels.get(r.prjStatus)} ?: ${r.prjStatus}"></td>
+                    <td th:text="${r.bsnsTypeDesc}"></td>
+                    <td style="text-align: left;">
+                        <a th:href="@{/designated-projects/{id}(id=${r.dsgnDntnBizId})}">
+                            <img th:if="${r.prjImage != null and !r.prjImage.isEmpty()}" th:src="@{${r.prjImage}}"
+                                 alt="" style="width:30px;height:30px;"/>
+                            <span th:text="${r.prjSubject}"></span>
+                        </a>
+                    </td>
+                    <td th:text="${#numbers.formatInteger(r.cntrCnt, 1, 'COMMA')} + '건'">0건</td>
+                    <td th:text="${r.prjStDt}"></td>
+                    <td th:text="${r.prjEdDt}"></td>
+                    <td th:text="${#numbers.formatInteger(r.goalAmt, 1, 'COMMA')} + '원'">0원</td>
+                    <td th:text="${#numbers.formatInteger(r.sumAmt, 1, 'COMMA')} + '원'">0원</td>
+                    <td th:text="${r.rateAmt} + '%'">0%</td>
+                    <td th:text="${r.displayFlag == 'Y'} ? '공개' : '비공개'"></td>
+                    <td th:text="${r.deptNm}"></td>
+                    <td>
+                        <div class="flex_box juc-center gap-08">
+                            <a th:href="@{/designated-projects/{id}(id=${r.dsgnDntnBizId})} + '#notices'"
+                               class="btn btn-gradient btn-xs">공지사항</a>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="flex_box juc-center gap-08">
+                            <a th:href="@{/designated-projects/{id}(id=${r.dsgnDntnBizId})} + '#approvalLog'"
+                               class="btn btn-gradient btn-xs">승인이력</a>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="flex_box juc-center gap-08">
+                            <button type="button" class="btn btn-gradient btn-xs" onclick="notReady('미리보기');">미리보기</button>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </form>
+
+    <div class="no_content" th:if="${#lists.isEmpty(rows)}" th:text="${msg.get('M00473')}">데이터가 없습니다.</div>
+
+    <div class="flex_box juc-sbt">
+        <div class="btn_all">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-default btn-mini" th:if="${canApprove}"
+                        onclick="updateListDataLabel('2')">진행(승인처리)</button>
+                <button type="button" class="btn btn-default btn-mini" onclick="updateListDataLabel('9')">종료</button>
+                <button type="button" class="btn btn-default btn-mini" onclick="updateListDataLabel('Y')">공개</button>
+                <button type="button" class="btn btn-default btn-mini" onclick="updateListDataLabel('N')">비공개</button>
+            </div>
+        </div>
+        <div class="btn_all">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-default btn-mini" onclick="notReady('엑셀 다운로드');">엑셀</button>
+                <button type="button" class="btn btn-default btn-mini"
+                        onclick="location.href='/designated-projects/new'">신규등록</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="pagination-wrap">
+        <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+    </div>
+</div>
+</div><!-- /.item_list -->
+
+<div style="display: none;">
+    <span id="today" th:text="${today}"></span>
+    <span id="week" th:text="${week}"></span>
+    <span id="month1" th:text="${month1}"></span>
+    <span id="month3" th:text="${month3}"></span>
+    <span id="year1" th:text="${year1}"></span>
+</div>
+
+    </div>
+    </div>
+</div>
 </div>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript" th:inline="javascript">
+var allLocgovs = /*[[${allLocgovs}]]*/ [];
+var selectedLocgovCode = /*[[${searchParam.locgovCode}]]*/ null;
+var selectedUpperLocgovCode = /*[[${searchParam.upperLocgovCode}]]*/ null;
+
+$(function() {
+	Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="prjStDt"]' , 'input[name="prjEdDt"]');
+	EventHandler.calendarStartDateAndEndDateVaild();
+
+	if (selectedUpperLocgovCode) {
+		wdrChange(selectedUpperLocgovCode);
+	}
+
+	$('#itemsPerPage').on('change', function() {
+		$('#page').val('1');
+		$('#designatedSearchParam').submit();
+	});
+
+	$('#check_all').on('click', function() {
+		$("#listForm input[name='id']").prop('checked', $(this).is(':checked'));
+	});
+});
+
+/* AS-IS wdrChange - 광역을 고르면 그 하위 시군구만 남긴다. */
+function wdrChange(upperLocgovCode) {
+	var $locgov = $('#locgovCode');
+	$locgov.find('option').not(':first-child').remove();
+	if (!upperLocgovCode) {
+		return;
+	}
+	for (var i = 0; i < allLocgovs.length; i++) {
+		var l = allLocgovs[i];
+		if (l.upperLocgovCode === upperLocgovCode) {
+			$locgov.append($('<option></option>').attr('value', l.locgovCode).text(l.locgovNm));
+		}
+	}
+	if (selectedLocgovCode) {
+		$locgov.val(selectedLocgovCode);
+	}
+}
+
+/* AS-IS checkDate - 시작일이 종료일보다 늦으면 막는다. */
+function checkDate() {
+	var strStartDate = $('#prjStDt').val();
+	var strEndDate = $('#prjEdDt').val();
+	if (strStartDate && strStartDate.length == 8 && strEndDate && strEndDate.length == 8) {
+		if (strStartDate > strEndDate) {
+			alert("종료일이 시작일보다 빠릅니다.");
+			return false;
+		}
+	}
+	$('#page').val('1');
+	$('#designatedSearchParam').submit();
+}
+
+/* AS-IS updateListDataLabel - 체크한 사업의 모금상태('2'/'9') 또는 공개여부('Y'/'N')를 한꺼번에 바꾼다. */
+function updateListDataLabel(value) {
+	var ids = $("#listForm input[name='id']:checked");
+	if (ids.length == 0) {
+		alert("처리할 항목을 선택해 주세요.");
+		return false;
+	}
+	if (!confirm("선택한 " + ids.length + "건을 처리하시겠습니까?")) {
+		return false;
+	}
+	$.post('/designated-projects/bulk-update', $('#listForm').serialize() + '&value=' + value, function(response) {
+		Common.responseHandler(response, function() {
+			alert("처리되었습니다.");
+			location.reload();
+		});
+	});
+}
+
+/* 아직 이식하지 않은 기능 - 없는 화면으로 보내지 않고 안내만 한다(원장의 다음 단계). */
+function notReady(name) {
+	alert(name + " 기능은 아직 준비되지 않았습니다.");
+}
+</script>
 </body>
 </html>

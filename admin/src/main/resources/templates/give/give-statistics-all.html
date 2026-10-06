@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>기부금 모금현황 - 고향사랑e음 (admin service)</title>
+    <!-- 공통 head(AS-IS inc_head verbatim: CSS 6 + JS 12) - csrf meta/폰트/op.* 전부 여기서 로드 -->
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <style>
+        .hourGraph canvas { position: absolute; width: 100%; top: 0; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/give/statistics/all/detail.jsp 그대로 이식(요약 3카드 + Chart.js 차트 5종).
+     집계는 donation G_CNTR(연=확정일 CNTR_DE 연도, 확정=COMPLETED). ajax URL만 admin 경로로,
+     나머지(차트/JS/op.chart.js)는 AS-IS verbatim. 외국인(foreignerFlag) 경로는 데이터 없어 제외.
+     레이아웃은 AS-IS inc_header.jsp 중첩(.admin_wrap > #container > .contents > .contents_inner)을
+     그대로 재현 - .location(position:absolute)의 기준 박스가 #container(position:relative)이고,
+     responsive 차트 폭이 .admin_wrap .mainArea{width:1440px}에 걸려 있어 이 래퍼가 필수다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+    <h3><span>기부금 모금현황</span></h3>
+
+    <form id="searchParam" method="get" th:action="@{/give-statistics/all}">
+        <div class="board_write mb30">
+            <table class="board_write_table">
+                <colgroup><col style="width:220px;"><col><col style="width:220px;"><col></colgroup>
+                <tbody>
+                    <tr>
+                        <td class="label">년도</td>
+                        <td>
+                            <div class="flex_box gap-08 item-center">
+                                <select id="shCntrYear" name="shCntrYear" title="년도" class="wd-150">
+                                    <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${y == shCntrYear}"></option>
+                                </select>
+                                <button type="submit" class="btn btn-dark-gray btn-mini">검색</button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </form>
+
+    <div class="mainArea loc_details mb30">
+        <div class="list_box">
+            <ul class="list">
+                <li class="bg01 col-md-4">
+                    <p class="tit">총 기부금액</p>
+                    <p class="txt"><span th:text="${#numbers.formatInteger(total.cntrAmt, 0, 'COMMA')}">0</span></p>
+                </li>
+                <li class="bd02 col-md-4">
+                    <p class="tit">총 기부인원 <span class="s-txt">(중복제외)</span></p>
+                    <p class="txt"><span th:text="${#numbers.formatInteger(total.cntrPerson, 0, 'COMMA')}">0</span></p>
+                </li>
+                <li class="bd02 col-md-4">
+                    <p class="tit">총 기부건수</p>
+                    <p class="txt"><span th:text="${#numbers.formatInteger(total.cntrCnt, 0, 'COMMA')}">0</span></p>
+                </li>
+            </ul>
+        </div>
+        <div class="graph_wrap all">
+            <div class="bd_gray mb15">
+                <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;">월별 기부건수</p>
+                <div class="graph"><canvas id="giveCountLineChart"></canvas></div>
+            </div>
+            <div class="bd_gray mb15">
+                <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;">월별 기부건수</p>
+                <div class="graph"><canvas id="giveCountBarChart"></canvas></div>
+            </div>
+            <div class="bd_gray mb15">
+                <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;">월별 기부인원</p>
+                <div class="graph"><canvas id="givePersonLineChart"></canvas></div>
+            </div>
+            <div class="bd_gray mb15">
+                <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;">월별 기부금액</p>
+                <div class="graph"><canvas id="giveAmountLineChart"></canvas></div>
+            </div>
+            <div class="bd_gray mb15">
+                <div style="display: flex;">
+                    <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;">시간대별 기부금액</p>
+                    <select id="giveDate" class="wd-150 ml40" onchange="statisticsAllByTime()"></select>
+                </div>
+                <div class="graph"><canvas id="giveCountLineByTimeChart" style="max-height: 300px;"></canvas></div>
+            </div>
+        </div>
+    </div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<!-- jquery/spin/op.common은 공통 head(opmanager-head)에서 이미 로드됨 - 중복 로드하면 jQuery가
+     재정의되며 head에서 붙인 플러그인/전역 ajax 설정이 날아가므로 여기선 차트 전용만 로드한다. -->
+<script type="text/javascript" th:src="@{/content/modules/chart.min.js}"></script>
+<script type="text/javascript" th:src="@{/content/modules/op.chart.js}"></script>
+<script type="text/javascript">
+    $(function () {
+        init();
+    });
+
+    function init() {
+        // 시간대별 기부금액 날짜 옵션(선택 연도 기준 최근 7일) - AS-IS diffDate
+        for (var i = 1; i <= 7; i++) {
+            var d = diffDate($("#shCntrYear").val(), i);
+            $('#giveDate').append($('<option></option>').attr('value', d.replaceAll('-', '')).text(d));
+        }
+        statisticsAllByMonth();
+        statisticsAllByTime();
+    }
+
+    function diffDate(year, value) {
+        var nowD = new Date();
+        var nowM = Common.addZero(nowD.getMonth() + 1, 2);
+        var nowDay = Common.addZero(nowD.getDate(), 2);
+        var date = new Date(year + '-' + nowM + '-' + nowDay);
+        date.setDate(date.getDate() - value);
+        return date.getFullYear() + '-' + Common.addZero((date.getMonth() + 1), 2) + '-' + Common.addZero(date.getDate(), 2);
+    }
+
+    function statisticsAllByMonth() {
+        var monthArr = [];
+        var cntArr = [{ label: '건수별', data: [], backgroundColor: '#004CCE', borderColor: '#004CCE' }];
+        var personArr = [{ label: '인원별', data: [], backgroundColor: '#00215A', borderColor: '#00215A' }];
+        var amtArr = [{ label: '금액별', data: [], backgroundColor: '#09C2C7', borderColor: '#09C2C7' }];
+        var onlineArr = [{ label: '온라인', data: [], backgroundColor: '#00215A', borderColor: '#00215A' }, { label: '오프라인', data: [], backgroundColor: '#09C2C7', borderColor: '#09C2C7' }];
+
+        var url = '/give-statistics/all/';
+        $.post(url + $("#shCntrYear").val() + '/month', {}, function (resp) {
+            if (resp.isSuccess) {
+                resp.data.forEach(function (d, i) {
+                    monthArr.push(d.cntrMonth ? d.cntrMonth : 0);
+                    cntArr[0].data.push(d.cntrCnt ? d.cntrCnt : 0);
+                    personArr[0].data.push(d.cntrPerson ? d.cntrPerson : 0);
+                    amtArr[0].data.push(d.cntrAmt && d.cntrAmt > 0 ? Math.floor(d.cntrAmt / 1000) : 0);
+                    onlineArr[0].data.push(d.cntrOnline ? d.cntrOnline : 0);
+                    onlineArr[1].data.push(d.cntrOffline ? d.cntrOffline : 0);
+                });
+
+                ChartCommon.drawChart('giveCountLineChart', 'line', null, monthArr, cntArr, { x: '월', y: '건' });
+                ChartCommon.drawChart('givePersonLineChart', 'line', null, monthArr, personArr, { x: '월', y: '명' });
+                ChartCommon.drawChart('giveAmountLineChart', 'line', null, monthArr, amtArr, { x: '월', y: '천원' });
+                ChartCommon.drawChart('giveCountBarChart', 'bar', { scales: { x: { stacked: true }, y: { stacked: true } } }, monthArr, onlineArr, { x: '월', y: '건' });
+            } else {
+                alert(resp.errorMessage);
+            }
+        });
+    }
+
+    function statisticsAllByTime() {
+        var timeArr = [];
+        var amtArr = [{ label: '시간별', data: [], backgroundColor: '#00215A', borderColor: '#00215A' }];
+
+        var url = '/give-statistics/all/';
+        $.post(url + $("#giveDate").val() + '/hour', {}, function (resp) {
+            if (resp.isSuccess) {
+                resp.data.forEach(function (d, i) {
+                    timeArr.push(d.cntrHour ? d.cntrHour : 0);
+                    amtArr[0].data.push(d.cntrAmt && d.cntrAmt > 0 ? Math.floor(d.cntrAmt / 1000) : 0);
+                });
+
+                var options = {
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                title: function (tootipItem) {
+                                    var time = tootipItem[0].label < 10 ? '0' + tootipItem[0].label : tootipItem[0].label;
+                                    return tootipItem[0].label + "시 - " + time + ':00:00 ~ ' + time + ':59:59';
+                                },
+                                label: function (tootipItem) {
+                                    return tootipItem.formattedValue + '(천원)';
+                                }
+                            }
+                        }
+                    }
+                };
+
+                var p = $('#giveCountLineByTimeChart').parent('div');
+                var ele = $('#giveCountLineByTimeChart').clone();
+                p.empty();
+                p.append(ele);
+
+                ChartCommon.drawChart('giveCountLineByTimeChart', 'line', options, timeArr, amtArr, { x: '시(h)', y: '천원' });
+            } else {
+                alert(resp.errorMessage);
+            }
+        });
+    }
+</script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

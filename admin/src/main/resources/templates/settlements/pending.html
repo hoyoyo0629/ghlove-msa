@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>정산/판매자 확인 큐 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -8,11 +9,16 @@
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
 <!-- AS-IS opmanager/settlement/seller-confirm(SellerconfirmManagerController) - 세금계산서
      발행 전(GENERATED) 상태로 판매자 확인을 기다리는 정산건만 걸러 보여준다. -->
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <h3><span>정산/판매자 확인 큐</span></h3>
     <p style="color:#888; margin-bottom:12px;">아직 세금계산서가 발행되지 않아(생성 상태) 판매자 확인이 필요한 정산건입니다. 상세에서 세금계산서를 발행하면 이 큐에서 빠집니다.</p>
     <p><a th:href="@{/settlements}">&larr; 전체 정산 목록으로</a></p>
@@ -44,7 +50,10 @@
         </tbody>
     </table>
     <p class="empty" th:if="${#lists.isEmpty(settlements)}">판매자 확인을 기다리는 정산건이 없습니다.</p>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

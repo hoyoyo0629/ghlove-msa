@@ -1,0 +1,71 @@
+﻿<!DOCTYPE HTML>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=Edge">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="format-detection" content="telephone=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no" />
+<script type="text/javascript" src="../js/ext/jquery-1.10.2.js"></script>
+<!-- <script type="text/javascript" src="../js/ext/jquery-1.8.3.min.js"></script> -->
+<script type="text/javascript" src="../js/ext/jquery-ui.min.js"></script>
+<script type="text/javascript">
+	function detectOS() {
+		try{
+			var OsVersion = navigator.userAgent;
+			OsVersion = OsVersion.toUpperCase();
+			if( OsVersion.indexOf("NT 5.1") != -1 ) return "windows XP";
+			else if( OsVersion.indexOf("NT 6.0") != -1 ) return "windows vista";
+			else if( OsVersion.indexOf("NT 6.1") != -1 ) return "windows 7";
+			else if( OsVersion.indexOf("NT 6.2") != -1 ) return "windows 8";
+			else if( OsVersion.indexOf("NT 6.3") != -1 ) return "windows 8.1";
+			else if( OsVersion.indexOf("NT 10.0") != -1 ) return "windows 10";
+			else if( OsVersion.indexOf("MAC") != -1 ) return "MAC";
+			else if( OsVersion.indexOf("UBUNTU") != -1 ){
+				if( OsVersion.indexOf("86_64") != -1 ){
+					return "UBUNTU64";
+				}else{
+					return "UBUNTU32";
+				}
+			}else if( OsVersion.indexOf("FEDORA") != -1 ){
+				if( OsVersion.indexOf("86_64") != -1 ){
+					return "FEDORA64";
+				}else{
+					return "FEDORA32";
+				}
+			}
+			else if( OsVersion.indexOf("LINUX") != -1 ){
+				if( OsVersion.indexOf("86_64") != -1 ){
+					return "LINUX64";
+				}else{
+					return "LINUX32";
+				}
+			}
+			else return "Unknown";
+		}catch( ex ) {
+			return "Unknown";
+		}
+	}
+
+	function fnStartCs(obj){
+		var os = detectOS();
+		
+		if(os !== "windows XP"){
+			var urlScheme = "NTSMagicLineNP://";
+			
+			if(navigator.msLaunchUri){ // 앱센터 존재 여부 확인(WIN 8+ on IE 10+)
+				navigator.msLaunchUri(urlScheme, function(){}, function(){});
+			}else{
+				obj.src = urlScheme;
+			}
+		}else{
+			location.href = "NTSMagicLineNP://";
+		}
+	}
+</script>
+</head>
+<body>
+<img src="./images/call.gif" alt="제품 설치 확인중입니다." />
+<iframe id="startCs" name="startCs" onload="fnStartCs(this)" style="display:none"></iframe>
+</body>
+</html>

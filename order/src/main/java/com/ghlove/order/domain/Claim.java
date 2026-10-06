@@ -23,6 +23,14 @@ public class Claim {
     @Column(name = "ORDER_ID")
     private String orderId;
 
+    /** 클레임 대상 품목 (멀티아이템 재설계 - 품목 단위 부분취소/반품). 레거시 클레임은 null. */
+    @Column(name = "ORDER_ITEM_ID")
+    private Long orderItemId;
+
+    /** 대상 품목이 속한 출고. */
+    @Column(name = "SHIPMENT_ID")
+    private Long shipmentId;
+
     @Column(name = "CLAIM_TYPE")
     private String claimType;
 

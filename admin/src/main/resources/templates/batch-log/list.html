@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>배치 로그 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/batch-log/list.jsp 이식(메뉴 7209).
+     작업 검색(작업명) + 실행날짜 범위(오늘/1주일/15일/한달/3개월) + 출력수(10/50/100/200/500) +
+     7컬럼(작업명/배치구분/실행날짜/시작시간/종료시간/결과/오류내용) + 페이징.
+
+     AS-IS 그대로 보존한 것:
+     - h3는 메뉴명("배치 실행로그 조회")이 아니라 리터럴 "배치 로그"다.
+     - 작업 검색 select의 "메서드명" option, 트리거 종류 칸, 선택삭제·신규등록 버튼 영역은
+       모두 JSP에서 주석처리돼 있어 화면에 없다 - 우리도 두지 않는다.
+     - 실행날짜 select에는 "실행날짜" 하나만 있다.
+     - 날짜 입력칸 title이 "주문일자 시작일"/"주문일자 종료일"(M00024/M00025)로 엉뚱하다
+       (주문 화면에서 복사된 흔적). title은 화면에 안 보이므로 verbatim 유지.
+     - JSP의 출력수 change 핸들러가 존재하지 않는 폼(#messageParam)을 submit한다 - 다만 select에
+       onchange="$('form#batchLogParam').submit()"가 직접 붙어 있어 동작은 한다(그쪽을 따랐다).
+
+     ★ 읽는 표 admin.op_batch_execution에 아직 쌓이는 게 없다(기록 지점 미이식 - 컨트롤러 주석 참고). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<form id="batchLogParam" method="post" th:action="@{/batch-log/list}">
+    <h3>배치 로그</h3>
+    <div class="board_write">
+        <table class="board_write_table" summary="Batch Log">
+            <colgroup>
+                <col style="width:150px;" />
+                <col style="width:400px;" />
+                <col style="width:150px;" />
+                <col style="width:*;" />
+                <col style="width:150px;" />
+                <col style="width:*;" />
+            </colgroup>
+            <tbody>
+            <tr>
+                <td class="label">작업 검색</td>
+                <td colspan="5">
+                    <div>
+                        <select id="searchType" name="searchType" title="작업명">
+                            <!-- AS-IS도 "메서드명" option은 주석처리된 상태다 -->
+                            <option value="JOBNAME" th:selected="${batchLogParam.searchType == 'JOBNAME'}">작업명</option>
+                        </select>
+                        <input type="text" id="query" name="query" class="three" title="검색어 입력"
+                               style="width:250px;" placeholder="Search.." th:value="${batchLogParam.query}"/>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">실행날짜</td><!-- op:message에 등록필요 (AS-IS 주석) -->
+                <td colspan="5">
+                    <div>
+                       <select id="searchDateType" name="searchDateType">
+                            <option value="EXECUTION_DATE" th:selected="${batchLogParam.searchDateType == 'EXECUTION_DATE'}">실행날짜</option>
+                       </select>
+                       <span class="datepicker"><input type="text" id="searchStartDate" name="searchStartDate" class="datepicker" maxlength="8" th:title="${msg.get('M00024')}" th:value="${batchLogParam.searchStartDate}" /></span>
+
+                       <span class="wave">~</span>
+                       <span class="datepicker"><input type="text" id="searchEndDate" name="searchEndDate" class="datepicker" maxlength="8" th:title="${msg.get('M00025')}" th:value="${batchLogParam.searchEndDate}" /></span>
+
+                       <span class="day_btns">
+                           <a href="javascript:;" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+                           <a href="javascript:;" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a>
+                           <a href="javascript:;" class="btn_date day-15" th:text="${msg.get('M00028')}">15일</a>
+                           <a href="javascript:;" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>
+                           <a href="javascript:;" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+                        </span>
+                   </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 버튼시작 -->
+	<div class="btn_all btn_right">
+		<div class="flex_box gap-08">
+            <button type="button" class="btn btn-dark-gray btn-sm" onclick="location.href='/batch-log/list';"><span class="glyphicon glyphicon-repeat"></span> <span th:text="${msg.get('M00047')}">초기화</span></button>
+            <button type="submit" class="btn btn-dark-gray btn-sm"><span class="glyphicon glyphicon-search"></span> 검색</button>
+        </div>
+    </div>
+    <!-- 버튼 끝-->
+
+    <div class="count_title mt-40">
+		<h5>
+			<span th:text="${msg.get('M00045')}" th:remove="tag">총</span> <span th:text="${#numbers.formatInteger(totalCount, 0, 'COMMA')}" th:remove="tag">0</span> <span th:text="${msg.get('M00272')}" th:remove="tag">건</span>
+		</h5>
+		<span>
+			<select id="itemsPerPage" name="itemsPerPage" th:title="${msg.get('M00054')} + ${msg.get('M00052')}"
+				onchange="$('form#batchLogParam').submit();">
+				<option value="10" th:selected="${batchLogParam.itemsPerPage == 10}" th:text="'10' + ${msg.get('M00053')}">10개 출력</option>
+				<option value="50" th:selected="${batchLogParam.itemsPerPage == 50}" th:text="'50' + ${msg.get('M00053')}">50개 출력</option>
+				<option value="100" th:selected="${batchLogParam.itemsPerPage == 100}" th:text="'100' + ${msg.get('M00053')}">100개 출력</option>
+				<option value="200" th:selected="${batchLogParam.itemsPerPage == 200}" th:text="'200' + ${msg.get('M00053')}">200개 출력</option>
+				<option value="500" th:selected="${batchLogParam.itemsPerPage == 500}" th:text="'500' + ${msg.get('M00053')}">500개 출력</option>
+			</select>
+		</span>
+	</div>
+</form>
+
+<form id="listForm">
+    <div class="board_write">
+        <table class="board_list_table" summary="배치 작업">
+            <caption>배치 작업</caption>
+            <colgroup>
+                <col style="width:20%;" />
+                <col style="width:20%;" />
+                <col style="width:15%;" />
+                <col style="width:15%;" />
+                <col style="width:15%;" />
+                <col style="width:5%;" />
+                <col style="width:15%;" />
+            </colgroup>
+            <thead>
+            <tr>
+                <th scope="col">작업명</th>
+                <th scope="col">배치구분</th>
+                <th scope="col">실행날짜</th>
+                <th scope="col">시작시간</th>
+                <th scope="col">종료시간</th>
+                <th scope="col">결과</th>
+                <th scope="col">오류내용</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="list : ${batchLogList}">
+                <td th:text="${list.jobName}"></td>
+                <td th:text="${list.batchType}"></td>
+                <td th:text="${list.executionDateText}"></td>
+                <td th:text="${list.startTime}"></td>
+                <td th:text="${list.endTime}"></td>
+                <td th:text="${list.rsltCodeDesc}"></td>
+                <td th:text="${list.message}"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div><!--// board_write E-->
+
+    <div class="no_content" th:if="${#lists.isEmpty(batchLogList)}" th:text="${msg.get('M00473')}">
+        데이터가 없습니다.
+    </div>
+
+    <!-- AS-IS도 선택삭제·신규등록 버튼 영역은 주석처리돼 있다 -->
+    <div class="pagination-wrap">
+		<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+	</div>
+</form>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript">
+    $(function() {
+        Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="searchStartDate"]' , 'input[name="searchEndDate"]');
+    });
+</script>
+</body>
+</html>

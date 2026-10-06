@@ -1,147 +1,323 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>오프라인기부 접수 관리 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <title>기부금 접수관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<!-- AS-IS opmanager/offgive/list.jsp 재현 - 은행창구/행정복지센터 등에서 현장 접수한
-     기부 목록(CNTR_PATH_CODE=OFFLINE). 실제 JSP 컬럼 중 "전자납부번호"/"특정사업에
-     기부하기 사업명"은 이 프로젝트 도메인에 대응 필드가 없어 생략(give-reqmng-list.html과
-     같은 판단 - donation 서비스 스키마 확장이 필요한 진짜 기능갭). 검색조건(지자체/기간/
-     이름)+페이지네이션은 donation의 DonationRepository.searchOffline()(지자체/기간, DB레벨)
-     + 이름은 회원명이 Donation 엔티티에 없어 admin에서 조회된 membersById로 인메모리
-     필터+페이지네이션(FaqController 등 이 프로젝트가 이미 쓰는 관례와 동일)으로 실제 구현했다. -->
-<div class="contents contents_inner">
-    <h3><span>오프라인기부 접수 관리</span></h3>
-    <div class="btn_all btn_right" style="margin-bottom:16px;">
-        <a th:href="@{/offgive/new}" class="btn btn-dark-gray btn-small">현장접수 등록</a>
-    </div>
+<!-- AS-IS opmanager/i18n/offgive/list.jsp 이식(메뉴 15101 기부금 접수관리).
+     검색: 검색구분(접수번호/기부지자체/전자납부번호/지점센터명) + 신청일 범위(기본 오늘)
+          + 금액 범위(+ 50만/100만/200만/전체 버튼) + 기부상태(전체/신고/수납/과오납)
+          + 소속지점(**SYSTEM 권한에만 보인다**) / 11컬럼 / 엑셀.
 
-    <form th:action="@{/offgive}" method="get" id="searchForm">
-        <div class="board_write">
-            <table class="board_write_table" summary="오프라인기부 검색조건">
-                <colgroup><col style="width:150px;"><col><col style="width:150px;"><col></colgroup>
-                <tbody>
-                <tr>
-                    <td class="label">기부 지자체</td>
-                    <td colspan="3">
-                        <div class="flex_box gap-08">
-                            <select id="upperLocgovCode" onchange="filterLocgov()" th:disabled="${locgovScoped}">
-                                <option value="">시·도 전체</option>
-                                <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"></option>
-                            </select>
-                            <select id="locgovCode" name="locgovCode" th:disabled="${locgovScoped}">
-                                <option value="">시·군·구 전체</option>
-                                <option th:each="l : ${allLocgovs}" th:value="${l.locgovCode}" th:text="${l.locgovNm}"
-                                        th:attr="data-upper=${l.upperLocgovCode}" th:selected="${l.locgovCode == locgovCode}"></option>
-                            </select>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="label">이름</td>
-                    <td><input type="text" name="walkInName" th:value="${walkInName}"></td>
-                    <td class="label">접수일자</td>
-                    <td>
-                        <div class="flex_box gap-08">
-                            <input type="text" name="startDate" th:value="${startDate}" placeholder="yyyyMMdd" style="width:120px;">
-                            <span class="wave">~</span>
-                            <input type="text" name="endDate" th:value="${endDate}" placeholder="yyyyMMdd" style="width:120px;">
-                        </div>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="btn_all btn_right" style="margin-bottom:16px;">
-            <div class="flex_box gap-08">
-                <button type="button" class="btn btn-dark-gray btn-small" onclick="searchClear()">초기화</button>
-                <button type="submit" class="btn btn-dark-gray btn-small">검색</button>
-            </div>
-        </div>
-    </form>
+     ★ AS-IS는 진입(GET) 시 조회하지 않는다 - 검색해야(POST) 조회된다.
+     ★ 권한별 스코프: 오프라인 주담당자(7)는 자기 **지점코드**로, 부담당자(8)는 **지점코드+지점명**
+        으로 고정된다(= 부담당자는 자기 지점만). SYSTEM(1~4)만 소속지점을 골라 검색할 수 있다.
 
-    <div class="count_title mt-40">
-        <h5>총 <span th:text="${totalCount}" th:remove="tag"></span>건</h5>
-    </div>
+     AS-IS verbatim:
+     - 안내문구 2줄: "기탁서 등록 후 정상 처리까지 최대 1시간 가량 소요될 수 있습니다." +
+       "검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다."
+     - 기부상태 행은 SYSTEM이 아니면 colspan=3이고, SYSTEM이면 옆에 소속지점 칸이 붙는다.
+       SYSTEM이 아닐 때는 지점코드·지점명·지점코드명을 hidden으로 들고 간다.
+     - 이름은 **마스킹**한다(첫 글자 + ' * ' + 세 번째 글자부터) - 두 글자 이름은 뒤가 빈다.
+     - 지점/센터명은 은행명 + 공백 + 지점명이다.
+     - 신고일은 신청시각의 앞 19자다.
+     - 금액 바로가기 '전체'는 빈 값으로 지운다.
+     - 빈 목록은 표 안이 아니라 표 밖의 no_content div(M00473 "데이터가 없습니다.")다.
+     - '출력' 버튼은 주석처리되어 있다. 체크박스 컬럼도 주석처리되어 있다.
+     - **기탁서 등록 버튼은 SYSTEM이 아닐 때만** 보인다(= 오프라인 담당자가 접수한다).
 
-    <table class="board_list_table" summary="오프라인기부접수관리">
-        <caption>오프라인기부접수관리현황</caption>
-        <thead>
-        <tr>
-            <th scope="col">No.</th>
-            <th scope="col">기부번호</th>
-            <th scope="col">기부상태</th>
-            <th scope="col">수납일</th>
-            <th scope="col">기부 지자체</th>
-            <th scope="col">이름</th>
-            <th scope="col">아이디</th>
-            <th scope="col">기부 금액</th>
-            <th scope="col">지점/센터명</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="d, i : ${list}">
-            <td th:text="${totalCount - ((currentPage - 1) * size + i.index)}"></td>
-            <td><a th:href="@{/offgive/{sn}(sn=${d.cntrSn})}" th:text="${d.cntrSn}"></a></td>
-            <td th:text="${d.cntrSttusCode}"></td>
-            <td th:text="${d.cntrDe}"></td>
-            <td th:text="${d.cntrLocgovCode}"></td>
-            <td th:text="${membersById.get(d.userId) != null ? membersById.get(d.userId).userName() : '-'}"></td>
-            <td th:text="${membersById.get(d.userId) != null ? membersById.get(d.userId).loginId() : '-'}"></td>
-            <td th:text="${#numbers.formatInteger(d.cntrAmt, 0, 'COMMA')} + '원'"></td>
-            <td th:text="${d.rceptBankNm}"></td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(list)}">접수된 오프라인기부가 없습니다.</p>
+     TO-BE 주의: 기부상태는 AS-IS 숫자코드(100 신고/200 수납/300 과오납)와 달리 낱말
+     (REQUESTED/COMPLETED/CANCELLED)로 저장된다 - 라디오 값은 AS-IS대로 두고 변환은 서버
+     경계에서 한다([[admin-member-area-port-progress]]의 사용여부 9/2와 같은 방식). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <div class="pagination-wrap" th:if="${totalPages > 1}">
-        <div class="pagination">
-            <a th:if="${currentPage > 1}" class="prev"
-               th:href="@{/offgive(locgovCode=${locgovCode},walkInName=${walkInName},startDate=${startDate},endDate=${endDate},page=${currentPage - 1})}">이전</a>
-            <span th:each="p : ${#numbers.sequence(1, totalPages)}">
-                <strong th:if="${p == currentPage}" th:text="${p}"></strong>
-                <a th:unless="${p == currentPage}"
-                   th:href="@{/offgive(locgovCode=${locgovCode},walkInName=${walkInName},startDate=${startDate},endDate=${endDate},page=${p})}"
-                   th:text="${p}"></a>
-            </span>
-            <a th:if="${currentPage < totalPages}" class="next"
-               th:href="@{/offgive(locgovCode=${locgovCode},walkInName=${walkInName},startDate=${startDate},endDate=${endDate},page=${currentPage + 1})}">다음</a>
-        </div>
-    </div>
+<h3><span>기부금 접수관리</span></h3>
+
+<p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b;"></p>
+
+<form id="searchForm" method="post" th:action="@{/offgive/list}">
+	<input type="hidden" id="query" name="query" th:value="${searchParam.query}"/>
+	<input type="hidden" id="page" name="page" th:value="${searchParam.page}"/>
+
+	<div class="board_write">
+		<table class="board_write_table" summary="">
+			<colgroup>
+				<col style="width:220px;">
+				<col>
+				<col style="width:220px;">
+				<col>
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="label">검색구분</td>
+					<td colspan="3">
+						<div class="flex_box gap-08">
+							<select id="shKeyword" name="shKeyword" title="검색구분" class="wd-150">
+								<option value="CNTR_SN" th:selected="${searchParam.shKeyword == 'CNTR_SN'}">접수번호</option>
+								<option value="LOCGOV_NM" th:selected="${searchParam.shKeyword == 'LOCGOV_NM'}">기부 지자체</option>
+								<option value="ELCTRN_PAY_NO" th:selected="${searchParam.shKeyword == 'ELCTRN_PAY_NO'}">전자납부번호</option>
+								<option value="RCEPT_BANK_NM" th:selected="${searchParam.shKeyword == 'RCEPT_BANK_NM'}">지점/센터명</option>
+							</select>
+							<input type="text" id="shText" name="shText" title="검색구분"
+							       class="input_txt required _filter half" th:value="${searchParam.shText}" />
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">신청일</td>
+					<td colspan="3">
+						<div>
+							<span class="datepicker"><input type="text" id="shFrstRegistPnttmStart" name="shFrstRegistPnttmStart" class="datepicker optional " th:title="${msg.get('M00507')}" maxlength="8" th:value="${searchParam.shFrstRegistPnttmStart}" /></span>
+							<span class="wave">~</span>
+							<span class="datepicker"><input type="text" id="shFrstRegistPnttmEnd" name="shFrstRegistPnttmEnd" class="datepicker optional " th:title="${msg.get('M00509')}" maxlength="8" th:value="${searchParam.shFrstRegistPnttmEnd}" /></span>
+							<span class="day_btns">
+								<a href="javascript:void(0);" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+								<a href="javascript:void(0);" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a>
+								<a href="javascript:void(0);" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>
+								<a href="javascript:void(0);" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+								<a href="javascript:void(0);" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a>
+							</span>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">금액</td>
+					<td colspan="3">
+						<div class="flex_box gap-08 item-center">
+							<input type="text" id="shCntrAmtStart" name="shCntrAmtStart" title="검색구분"
+							       class="input_txt required _filter wd-150" th:value="${searchParam.shCntrAmtStart}" />
+							<span class="wave">~</span>
+							<input type="text" id="shCntrAmtEnd" name="shCntrAmtEnd" title="검색구분"
+							       class="input_txt required _filter wd-150" th:value="${searchParam.shCntrAmtEnd}" />
+							<span class="wave">원</span>
+							<span>
+								<a href="javascript:;" class="btn_date" onclick="shCntrAmtClick(0, 500000)">50만원 이하</a>
+								<a href="javascript:;" class="btn_date" onclick="shCntrAmtClick(0, 1000000)">100만원</a>
+								<a href="javascript:;" class="btn_date" onclick="shCntrAmtClick(0, 2000000)">200만원</a>
+								<a href="javascript:;" class="btn_date" onclick="shCntrAmtClick('', '')">전체</a>
+							</span>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">기부상태</td>
+					<td th:attr="colspan=${role != 'SYSTEM'} ? '3' : null">
+						<div class="flex_box gap-12">
+							<div class="input-form">
+								<input type="radio" id="rdo1-1" name="shCntrSttusCode" value=""
+								       th:checked="${#strings.isEmpty(searchParam.shCntrSttusCode)}" />
+								<label for="rdo1-1">전체</label>
+							</div>
+							<div class="input-form">
+								<input type="radio" id="rdo1-2" name="shCntrSttusCode" value="100"
+								       th:checked="${searchParam.shCntrSttusCode == '100'}" />
+								<label for="rdo1-2">신고</label>
+							</div>
+							<div class="input-form">
+								<input type="radio" id="rdo1-3" name="shCntrSttusCode" value="200"
+								       th:checked="${searchParam.shCntrSttusCode == '200'}" />
+								<label for="rdo1-3">수납</label>
+							</div>
+							<div class="input-form">
+								<input type="radio" id="rdo1-4" name="shCntrSttusCode" value="300"
+								       th:checked="${searchParam.shCntrSttusCode == '300'}" />
+								<label for="rdo1-4">과오납</label>
+							</div>
+						</div>
+					</td>
+					<th:block th:if="${role == 'SYSTEM'}">
+						<td class="label">소속지점</td>
+						<td>
+							<div class="flex_box gap-12">
+								<div class="input-form">
+									<input type="radio" id="rdo1-0" name="shRceptBankCode" value=""
+									       th:checked="${#strings.isEmpty(searchParam.shRceptBankCode)}" />
+									<label for="rdo1-0">전체</label>
+								</div>
+								<div class="input-form" th:each="bank, i : ${shRceptBankCode}">
+									<input type="radio" th:id="'rdo2-' + ${i.count}" name="shRceptBankCode"
+									       th:value="${bank.key}"
+									       th:checked="${bank.key == searchParam.shRceptBankCode}" />
+									<label th:for="'rdo2-' + ${i.count}" th:text="${bank.value}"></label>
+								</div>
+							</div>
+						</td>
+					</th:block>
+					<th:block th:unless="${role == 'SYSTEM'}">
+						<input type="hidden" name="shRceptBankCode" th:value="${offBank}"/>
+						<input type="hidden" name="shRceptBankNm" th:value="${psitnNm}"/>
+						<input type="hidden" name="shRceptBankCodeNm" th:value="${offBankNm}"/>
+					</th:block>
+				</tr>
+			</tbody>
+		</table>
+		<div class="btn_all btn_left">
+			<ul class="list-bullet point">
+				<li>
+					기탁서 등록 후 정상 처리까지 최대 1시간 가량 소요될 수 있습니다.
+				</li>
+		        <li>
+		            검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.
+		        </li>
+	        </ul>
+	  	</div>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/offgive/list';">초기화</button>
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="search();">검색</button>
+			</div>
+		</div>
+	</div>
+
+	<div class="count_title mt-40">
+		<h5>총 <span th:text="${#numbers.formatInteger(count, 0, 'COMMA')}" th:remove="tag">0</span>건</h5>
+		<span>
+			<select id="itemsPerPage" name="itemsPerPage" th:title="${msg.get('M00239')}" onchange="search();">
+				<option value="10" th:text="${msg.get('M00240')}" th:selected="${searchParam.itemsPerPage == 10}">10개 출력</option>
+				<option value="20" th:text="${msg.get('M00241')}" th:selected="${searchParam.itemsPerPage == 20}">20개 출력</option>
+				<option value="50" th:text="${msg.get('M00242')}" th:selected="${searchParam.itemsPerPage == 50}">50개 출력</option>
+				<option value="100" th:text="${msg.get('M00243')}" th:selected="${searchParam.itemsPerPage == 100}">100개 출력</option>
+			</select>
+		</span>
+	</div>
+</form>
+
+<div class="board_list">
+	<table class="board_list_table" summary="오프라인 기부금 접수">
+		<caption>오프라인 기부금 접수</caption>
+		<colgroup>
+			<col style="width:6%;">
+			<col style="width:*;">
+			<col style="width:6%;">
+			<col style="width:14%;">
+			<col style="width:9%;">
+			<col style="width:12%;">
+			<col style="width:6%;">
+			<col style="width:9%;">
+			<col style="width:14%;">
+			<col style="width:14%;">
+			<col style="width:14%;">
+		</colgroup>
+		<thead>
+			<tr>
+				<th scope="col">No.</th>
+				<th scope="col">접수번호(지자체)</th>
+				<th scope="col">기부상태</th>
+				<th scope="col">전자납부번호</th>
+				<th scope="col">수납일</th>
+				<th scope="col">기부 지자체</th>
+				<th scope="col">이름</th>
+				<th scope="col">기부 금액</th>
+				<th scope="col">지점/센터명</th>
+				<th scope="col">신고일</th>
+				<th scope="col">특정사업에 기부하기 사업명</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr th:each="item : ${list}" style="background:#fff;">
+				<!-- AS-IS에서 주석처리된 체크박스 칸 - 주석 그대로 둔다
+				<td><input type="checkbox"></td>
+				-->
+				<td th:text="${item.no}">0</td>
+				<td>
+					<a th:href="@{'/offgive/' + ${item.cntrSn}}" th:text="${item.cntrSn}"></a>
+				</td>
+				<td th:text="${item.cntrSttusNm}"></td>
+				<td th:text="${item.elctrnPayNo}"></td>
+				<td th:text="${item.sttemntPayDe}"></td>
+				<td th:text="${item.locgovText}"></td>
+				<td th:text="${item.maskedUserName}"></td>
+				<td th:text="${item.cntrAmtText}"></td>
+				<td th:text="${item.bankText}"></td>
+				<td th:text="${item.frstRegistPnttm}"></td>
+				<td th:text="${item.prjSubject}"></td>
+			</tr>
+		</tbody>
+	</table>
+	<div class="no_content" th:if="${#lists.isEmpty(list)}" th:text="${msg.get('M00473')}">데이터가 없습니다.</div>
+
+	<div class="btn_all flex_box juc-sbt">
+		<div class="btn_left">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="downloadExcel()">엑셀</button>
+				<!-- <button type="button" class="btn btn-dark-gray btn-mini" onclick="listPrint()">출력</button> -->
+			</div>
+		</div>
+		<div class="btn_right">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-dark-default btn-mini" th:if="${role != 'SYSTEM'}"
+				        onclick="location.href='/offgive/new'">기탁서 등록</button>
+				<!-- <button type="button" class="btn btn-dark-gray btn-mini">삭제</button> -->
+			</div>
+		</div>
+	</div>
+
+	<div class="pagination-wrap" th:if="${not #lists.isEmpty(list)}">
+		<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+	</div>
 </div>
 
-<script th:inline="none">
-function filterLocgov() {
-    var upper = document.getElementById('upperLocgovCode').value;
-    var select = document.getElementById('locgovCode');
-    Array.prototype.forEach.call(select.options, function (opt) {
-        if (!opt.value) { return; }
-        opt.hidden = upper !== '' && opt.dataset.upper !== upper;
-    });
-}
-(function preselectProvince() {
-    var citySelect = document.getElementById('locgovCode');
-    var selected = citySelect.options[citySelect.selectedIndex];
-    if (selected && selected.dataset.upper) {
-        document.getElementById('upperLocgovCode').value = selected.dataset.upper;
-    }
-})();
-filterLocgov();
-function searchClear() {
-    location.href = /*[[@{/offgive}]]*/ '/offgive';
-}
-</script>
+<!-- 날짜 셋팅 영역 (AS-IS는 모델로 내려준 값을 쓴다 - 1년 키가 'year'다) -->
+<div style="display: none;">
+	<span id="today" th:text="${today}"></span>
+	<span id="week" th:text="${week}"></span>
+	<span id="month1" th:text="${month1}"></span>
+	<span id="month3" th:text="${month3}"></span>
+	<span id="year1" th:text="${year}"></span>
+</div>
+<!--// 날짜 셋팅 영역  -->
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript" th:inline="javascript">
+	$(function(){
+		Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="shFrstRegistPnttmStart"]' , 'input[name="shFrstRegistPnttmEnd"]');
+		EventHandler.calendarStartDateAndEndDateVaild();
+
+		// 검색 enter key
+		$("#shText, #shFrstRegistPnttmStart, #shFrstRegistPnttmEnd").on('keydown', function(e){
+			if (e.keyCode == '13') {
+				search();
+			}
+		});
+	});
+
+	/**
+	 *	함 수 명 : shCntrAmtClick
+	 *	기	능  : 금액 바로가기 ('전체'는 빈 값으로 지운다)
+	 */
+	function shCntrAmtClick(start, end) {
+		$("#shCntrAmtStart").val(start);
+		$("#shCntrAmtEnd").val(end);
+	}
+
+	/**
+	 *	함 수 명 : search
+	 *	기	능  : 검색
+	 */
+	function search() {
+		$("#page").val(1);
+		$("#searchForm").submit();
+	}
+
+	/**
+	 *	함 수 명 : downloadExcel
+	 *	기	능  : 오프라인기부금접수현황목록 엑셀 (AS-IS는 xlsx, TO-BE는 CSV)
+	 */
+	function downloadExcel() {
+		location.href = "/offgive/list/download-excel?" + $("#searchForm").serialize();
+	}
+</script>
 </body>
 </html>

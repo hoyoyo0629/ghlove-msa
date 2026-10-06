@@ -23,18 +23,26 @@ public class PopupImageStorageService {
 
     private static final long MAX_SIZE = 5 * 1024 * 1024;
 
+    /** AS-IS PopupServiceImpl.saveImage의 availableExtensions 그대로. */
+    private static final java.util.Set<String> ALLOWED_EXTENSIONS =
+            java.util.Set.of("jpg", "gif", "bmp", "png", "jpeg");
+
     /** @return 웹에서 접근 가능한 상대 URL (/uploads/admin/popup/{파일명}) */
     public String store(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             return null;
         }
-        if (file.getSize() > MAX_SIZE) {
-            throw new ContentException("이미지 크기는 5MB를 초과할 수 없습니다.");
-        }
         String original = file.getOriginalFilename();
         String ext = "";
         if (original != null && original.contains(".")) {
             ext = original.substring(original.lastIndexOf('.') + 1).toLowerCase();
+        }
+        // AS-IS는 확장자를 먼저 보고 그다음 용량을 본다 - 문구도 AS-IS verbatim.
+        if (!ALLOWED_EXTENSIONS.contains(ext)) {
+            throw new ContentException("유효하지 않은 파일입니다.");
+        }
+        if (file.getSize() > MAX_SIZE) {
+            throw new ContentException("업로드 가능한 최대 용량 : 5MB 입니다");
         }
         String storedName = UUID.randomUUID() + (ext.isEmpty() ? "" : "." + ext);
         try {
@@ -49,5 +57,27 @@ public class PopupImageStorageService {
             throw new ContentException("이미지 저장에 실패했습니다.");
         }
         return "/uploads/popup/" + storedName;
+    }
+
+    /**
+     * AS-IS PopupServiceImpl이 이미지 삭제·교체 때 부르는 {@code fileStorage.delete}에 해당한다.
+     * 인자는 store()가 돌려준 웹 경로(/uploads/popup/{파일명})다. 파일명만 떼어내 업로드
+     * 디렉터리에서 지우므로 경로 조작(../)으로 다른 파일을 지울 수 없다.
+     * 파일이 이미 없어도 조용히 넘어간다(컬럼만 남은 과거 데이터).
+     */
+    public void delete(String webPath) {
+        if (webPath == null || webPath.isBlank()) {
+            return;
+        }
+        String fileName = Paths.get(webPath).getFileName().toString();
+        if (fileName.isBlank() || ".".equals(fileName) || "..".equals(fileName)) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(Paths.get(uploadDir, "popup").resolve(fileName));
+        } catch (IOException e) {
+            // AS-IS도 삭제 실패로 트랜잭션을 되돌리지 않는다 - 기록만 남긴다.
+            log.warn("Failed to delete popup image: {}", fileName, e);
+        }
     }
 }

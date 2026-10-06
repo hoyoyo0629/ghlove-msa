@@ -32,9 +32,25 @@ public class PopupApiController {
     public List<PopupDto> list() {
         return operationContentService.displayPopups().stream()
                 .map(p -> new PopupDto(p.getPopupId(), p.getPopupType(), p.getPopupStyle(), p.getPopupClose(),
-                        p.getSubject(), p.getContent(), p.getPopupImage(), p.getImageLink(),
+                        p.getSubject(), forStorefront(p.getContent()), forStorefront(p.getPopupImage()),
+                        p.getImageLink(),
                         p.getWidth(), p.getHeight(), p.getTopPosition(), p.getLeftPosition(),
                         p.getBackgroundColor()))
                 .toList();
+    }
+
+    /**
+     * admin이 저장한 업로드 경로({@code /uploads/...})를 storefront가 쓸 수 있는 경로
+     * ({@code /admin/uploads/...})로 바꾼다. 스토어프론트는 서비스 접두사 규칙으로 호출하므로
+     * ({@code /gift/uploads/...}와 같은 규칙) 접두사가 없으면 5173이 자기 자신에서 찾다가
+     * 404가 난다 - 2026-10-06 팝업 본문 이미지가 안 보이던 원인이다.
+     * 이미지 경로 컬럼과 <b>본문 HTML 안의 src</b> 양쪽에 적용한다(옛 데이터 보정 겸용).
+     */
+    private static String forStorefront(String value) {
+        if (value == null || value.isBlank()) {
+            return value;
+        }
+        return value.replace("\"/uploads/", "\"/admin/uploads/")   // 본문 HTML의 src="/uploads/..."
+                .replaceAll("^/uploads/", "/admin/uploads/");      // 이미지 경로 컬럼
     }
 }

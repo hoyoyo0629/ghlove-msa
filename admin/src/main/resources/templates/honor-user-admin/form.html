@@ -1,84 +1,467 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>지자체 명예직원 선정기준 등록/수정 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <title>기부혜택증 기준 등록 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/swiper.min.css}"><!-- 추가 250804 -->
+    <script th:src="@{/content/modules/swiper.min.js}"></script><!-- 추가 250804 -->
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <div class="location"><a th:href="@{/admin/honor-users}">지자체 명예직원 관리</a></div>
-    <h3 th:text="${isNew} ? '선정기준 등록' : '선정기준 수정'"></h3>
+<!-- AS-IS opmanager/i18n/lclgvHnrUser/lclgvHnrUserMng/form.jsp 이식(메뉴 19102 기부혜택증 설정).
 
-    <div class="board_write">
-        <table class="board_write_table" summary="지자체 선정기준 등록/수정">
-            <colgroup><col style="width:220px;"><col></colgroup>
-            <tbody>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>지자체</td>
-                <td>
-                    <select th:if="${isNew}" name="lclgvCd" required form="hnrForm">
-                        <option value="">선택</option>
-                        <option th:each="l : ${locgovs}" th:value="${l.locgovCode}"
-                                th:text="${l.upperLocgovNm} + ' ' + ${l.locgovNm}"></option>
-                    </select>
-                    <span th:unless="${isNew}" th:text="${row.lclgvCd}"></span>
-                    <input th:unless="${isNew}" type="hidden" name="lclgvCd" th:value="${row.lclgvCd}" form="hnrForm">
-                </td>
-            </tr>
-            <tr>
-                <td class="label">설정 제목</td>
-                <td><input type="text" name="hnrUserStngTtl" th:value="${row.hnrUserStngTtl}" form="hnrForm"></td>
-            </tr>
-            <tr>
-                <td class="label">골드 등급 기준 기부금액</td>
-                <td><input type="number" name="gldGrdDntnAmt" th:value="${row.gldGrdDntnAmt}" form="hnrForm"></td>
-            </tr>
-            <tr>
-                <td class="label">실버 등급 기준 기부금액</td>
-                <td><input type="number" name="slvrGrdDntnAmt" th:value="${row.slvrGrdDntnAmt}" form="hnrForm"></td>
-            </tr>
-            <tr>
-                <td class="label">브론즈 등급 기준 기부금액</td>
-                <td><input type="number" name="brnzGrdDntnAmt" th:value="${row.brnzGrdDntnAmt}" form="hnrForm"></td>
-            </tr>
-            <tr>
-                <td class="label">선정 구분 코드</td>
-                <td>
-                    <select name="hnrUserSlctnSeCd" form="hnrForm">
-                        <option value="">선택</option>
-                        <option value="JEJU_REQ_CRTR" th:selected="${row.hnrUserSlctnSeCd == 'JEJU_REQ_CRTR'}">누적기준(제주형)</option>
-                        <option value="BF_YR_1YR" th:selected="${row.hnrUserSlctnSeCd == 'BF_YR_1YR'}">전년도 1년 기준</option>
-                        <option value="NOW_CRTR_1YR_WTHN" th:selected="${row.hnrUserSlctnSeCd == 'NOW_CRTR_1YR_WTHN'}">최근 1년 이내 기준</option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <td class="label">혜택 내용</td>
-                <td><textarea name="hnrUserRwrd" rows="6" th:text="${row.hnrUserRwrd}" form="hnrForm"></textarea></td>
-            </tr>
-            <tr th:unless="${isNew}">
-                <td class="label">사용여부</td>
-                <td><input type="checkbox" name="useYn" th:checked="${row.useYn == 'Y'}" form="hnrForm"></td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
-    <form id="hnrForm"
-          th:action="${isNew} ? @{/admin/honor-users} : @{'/admin/honor-users/' + ${row.lclgvCd}}" method="post"></form>
-    <div class="btn_all btn_center">
-        <button type="submit" form="hnrForm" class="btn btn-dark-gray btn-small">저장</button>
-        <form th:unless="${isNew}" th:action="@{'/admin/honor-users/' + ${row.lclgvCd} + '/delete'}"
-              method="post" class="inline-form" onsubmit="return confirm('삭제하시겠습니까?')" style="display:inline;">
-            <button type="submit" class="btn btn-small">삭제</button>
-        </form>
-    </div>
+     ★ 구조갭 해소: TO-BE는 19101(목록)·19102(설정 폼)가 같은 URL이었다 - AS-IS는 별개 화면이라
+        /admin/honor-users/form/{지자체코드}로 분리했다.
+     ★ 지자체 담당자(ROLE_ADMIN_5·6)는 목록 없이 바로 이 화면으로 오고, 남의 지자체를 열면
+        자기 것으로 되돌려진다. 목록 버튼도 시스템·행안부에만 보인다(AS-IS c:if).
+
+     AS-IS verbatim:
+     - h3가 "{지자체명} 기부혜택증 기준 등록"이다(수정 화면인데 '등록'이다).
+     - **골드·실버 등급 기부금액 입력칸은 주석처리**되어 있고 '발급기준금액' 하나만 쓴다.
+     - 발급기준(선정구분)은 라디오 + 공통코드의 detail 설명문을 그대로 옆에 찍고,
+       물음표 아이콘을 누르면 안내 이미지(honor_rule4.png) 팝업이 뜬다.
+     - 기부혜택증 명칭 뒤에 "(권장길이 : 8자)" 안내가 붙는다.
+     - 발급자 혜택은 스마트에디터이고, 그 위에 "동영상 사용은 권고하지 않습니다." 안내가 있다.
+     - 이미지 설명표: "시각장애인을 위한 이미지 설명을 입력해주세요. ※이미지 등록 수와 이미지
+       설명 항목 수가 반드시 일치해야 함" + 행 추가/삭제. 순번칸은 readonly다.
+     - 메인 이미지는 multiple 업로드(권장 720x500)이고 업로드된 이미지 옆에 '삭제하기',
+       오른쪽에 '기본 이미지'(default_honor_img.png)를 같이 보여준다.
+     - 버튼은 [미리보기][수정] + (시스템·행안부)[목록]이고, 미리보기는 기부혜택증 카드 모양
+       모달이다(swiper).
+
+     저장은 donation API로 간다(기부혜택증 설정·이미지설명이 donation 소유). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span th:text="${lclgvCdNm} + ' 기부혜택증 기준 등록'">기부혜택증 기준 등록</span></h3>
+
+<p class="error" th:if="${redirectMessage != null}" th:text="${redirectMessage}" style="color:#1a73e8;"></p>
+
+<form id="honorForm" method="post" enctype="multipart/form-data" th:action="@{/admin/honor-users/form/update}">
+	<input type="hidden" name="lclgvCd" th:value="${lclgvCd}" />
+
+	<div class="item_info_wrap">
+		<div class="item_list mt70">
+			<div class="board_write">
+				<table class="board_write_table" summary="컨텐츠 등록">
+					<colgroup>
+						<col style="width:220px;">
+						<col>
+						<col style="width:220px;">
+						<col>
+						<col style="width:220px;">
+						<col>
+					</colgroup>
+					<tbody>
+						<tr>
+							<td class="label"><span class="required_mark">*</span>지자체</td>
+							<td colspan="2">
+								<div th:text="${lclgvCdNm}"></div>
+							</td>
+							<td></td>
+							<td></td>
+							<td></td>
+						</tr>
+						<tr>
+							<td class="label"><span class="required_mark">*</span>사용여부</td>
+							<td colspan="2">
+								<div class="flex_box gap-12">
+									<div class="input-form">
+										<input type="radio" id="useYnY" name="useYn" value="Y"
+										       th:checked="${setting == null or setting.useYn != 'N'}">
+										<label for="useYnY">사용</label>
+									</div>
+									<div class="input-form">
+										<input type="radio" id="useYnN" name="useYn" value="N"
+										       th:checked="${setting != null and setting.useYn == 'N'}">
+										<label for="useYnN">미사용</label>
+									</div>
+								</div>
+							</td>
+							<td></td>
+							<td></td>
+							<td></td>
+						</tr>
+						<tr>
+							<!-- AS-IS에서 주석처리된 골드·실버 등급 기부금액 칸 - 주석 그대로 둔다
+							<td class="label"><span class="required_mark">*</span>골드 등급 기부 금액</td>
+							<td><div><input id="gldGrdDntnAmt" name="gldGrdDntnAmt" class="input_txt _number" type="text"> 원 이상</div></td>
+							<td class="label"><span class="required_mark">*</span>실버 등급 기부 금액</td>
+							<td><div><input id="slvrGrdDntnAmt" name="slvrGrdDntnAmt" class="input_txt _number" type="text"> 원 이상</div></td>
+							-->
+							<td class="label"><span class="required_mark">*</span>발급기준금액</td>
+							<td colspan="5">
+								<div>
+									<input id="brnzGrdDntnAmt" name="brnzGrdDntnAmt" title="브론즈 등급 기부 금액"
+									       class="input_txt _number" style="text-align: right; width:8%;" type="text"
+									       th:value="${setting != null} ? ${setting.brnzGrdDntnAmt} : ''"/>
+									원 이상
+								</div>
+							</td>
+						</tr>
+						<tr>
+							<td class="label">
+							<span class="required_mark">*</span>
+							기부혜택증 발급 기준
+							<img id="hnrUserSlctnSeGuideImg" width="20" height="20" th:src="@{/content/images/btn/btn_qna2.png}" onclick="javascript:popupHnrGuide();" /></td>
+							<td colspan="5">
+								<div class="input-form" th:each="code : ${slctnSeCodes}">
+									<input type="radio" th:id="'hnrUserSlctnSeCd_' + ${code.id}" name="hnrUserSlctnSeCd"
+									       th:value="${code.id}"
+									       th:checked="${setting != null and code.id == setting.hnrUserSlctnSeCd}">
+									<label th:for="'hnrUserSlctnSeCd_' + ${code.id}" th:text="'&nbsp;(' + ${code.label} + ')'"></label>
+									&nbsp;
+									<span th:text="${code.detail}"></span>
+								</div>
+								<div id="hnrUserSlctnSeImg_popup" style="display:none; position:fixed; top:15%; left:50%; transform:translateX(-50%); background:#fff; border:1px solid #ccc; padding:10px; z-index:999;">
+									<img id="hnrUserSlctnSeImg_popupImg" th:src="@{/content/images/honor/honor_rule4.png}" style="max-width:500px;">
+									<br>
+									<a href="javascript:closePopUp();" class="btn btn-default"><span th:text="${msg.get('M00569')}">닫기</span></a>
+								</div>
+							</td>
+						</tr>
+						<tr>
+							<td class="label"><span class=""></span>기부혜택증 명칭</td>
+							<td colspan="5">
+								<div>
+									<input id="hnrUserStngTtl" name="hnrUserStngTtl" title="기부혜택증 명칭"
+									       class="input_txt" style="width:27%;" type="text"
+									       th:value="${setting != null} ? ${setting.hnrUserStngTtl} : ''"/> (권장길이 : 8자)
+								</div>
+							</td>
+						</tr>
+						<tr>
+							<td class="label"><span class=""></span>기부혜택증 발급자 혜택</td>
+							<td colspan="5">
+								<br/>
+								<p class="text-info text-sm" style="text-align:right;">동영상 사용은 권고하지 않습니다.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</p>
+								<div class="item_list mt30 mb30">
+									<textarea id="hnrUserRwrd" name="hnrUserRwrd" cols="30" rows="20" class="editor-content"
+									          style="width:99%;" title="기부혜택증 발급자 혜택"
+									          th:text="${setting != null} ? ${setting.hnrUserRwrd} : ''"></textarea>
+								</div>
+							</td>
+						</tr>
+
+						<tr><td colspan="6">
+							<div class="item-option-table2">
+								<div>
+								<p class="text-info text-sm">시각장애인을 위한 이미지 설명을 입력해주세요.<br>
+								※이미지 등록 수와 이미지 설명 항목 수가 반드시 일치해야 함
+								</p>
+									<table class="inner-table tbl-option active" id="sActiveOption2">
+										<colgroup>
+											<col style="width: 100px;"/>
+											<col/>
+											<col style="width: 50px;"/>
+										</colgroup>
+										<thead>
+											<tr>
+												<th style="text-align:center;">순번</th>
+												<th style="text-align:center;">이미지 설명</th>
+												<th>삭제</th>
+											</tr>
+										</thead>
+										<tbody id="item-options2">
+											<tr th:each="explain, i : ${imageExplains}">
+												<td>
+													<input type="text" maxlength="200" title="이미지 설명 순서"
+													       th:value="${i.count}" readonly/>
+												</td>
+												<td>
+													<textarea name="imageExplains" th:text="${explain}"></textarea>
+												</td>
+												<td><a href="#" class="btn btn-dark-gray btn-sm delete-item-option2">삭제</a></td>
+											</tr>
+										</tbody>
+									</table>
+									<div class="item-options-info">
+										<div class="btn_all btn_right">
+											<div class="flex_box">
+												<button type="button" class="btn btn-gradient btn-sm add-item-option2"><span>+ 추가</span></button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+							</td></tr>
+						<tr>
+							<td class="label" rowspan="2">기부혜택증 메인 이미지</td>
+							<td colspan="1">
+								<div style="display: flex; align-items: center;">
+									<div style="min-width:20%; text-align: center;">
+										권장 사이즈 : 720 X 500<br>
+										<input id="prjImages" type="file" name="prjImageFiles" multiple="multiple"
+										       accept="image/png, image/jpeg, image/gif" class="full input_file"
+										       th:title="${msg.get('M01699')}"
+										       onchange="javascript:changePcImgFile(event);" style="margin:0 auto; width: 170px;">
+									</div>
+								</div>
+							</td>
+							<td colspan="2">
+								<div>
+									<div class="flex_box gap-08 item-center" style="margin-bottom: 10px;">
+										<div style="min-width: 100px;text-align: center;">
+											업로드할 이미지
+										</div>
+										<img id="uploadPcImg" th:src="@{/content/images/common/no-image-gray.gif}" style="width : auto; height: 110px;" />
+									</div>
+									<div class="flex_box gap-08 item-center" style="width:60%;">
+										<div style="min-width: 100px;text-align: center;">
+											업로드된 이미지<br>
+											<button type="button" id="delPcItemImg" onclick="javascript:deleteItemFile('PC');">삭제하기</button>
+										</div>
+										<img id="uploadedPcImg" th:src="@{'/admin/honor-users/form/' + ${lclgvCd} + '/main-image'}"
+										     style="width : auto; height: 110px;"
+										     onerror="this.src='/content/images/common/no-image-gray.gif';" />
+									</div>
+								</div>
+							</td>
+							<td colspan="2">
+								<div class="gap-08 item-center" style="margin-bottom: 10px;">
+									<div style="min-width: 100px; height: 50px; text-align: center; vertical-align: middle; ">
+										<p class="text-info text-sm">
+											기본 이미지<br>
+										</p>
+									</div>
+									<div style="text-align: center;">
+										<img id="basicImg" th:src="@{/content/images/honor/default_honor_img.png}" style="height: 110px;"
+										     onerror="this.src='/content/images/common/no-image-gray.gif';" />
+									</div>
+								</div>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<!-- 전송 -->
+		<div id="buttons" class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-dark-gray btn-mini modal-open-btn" data-target="modal-benefit" onclick="modalBenefit()">미리보기</button>
+				<button type="submit" class="btn btn-dark-gray btn-mini">수정</button>
+				<a th:if="${listVisible}" href="javascript:moveListPage();" class="btn btn-default"
+				   th:text="${msg.get('M00480')}">목록</a>
+			</div>
+		</div>
+	</div>
+</form>
+<div th:replace="~{fragments/smarteditor :: init}"></div>
+<div th:replace="~{fragments/smarteditor :: editor('hnrUserRwrd')}"></div>
+
+<!-- AS-IS 미리보기 모달(기부혜택증 카드) - swiper 한 장 구성만 옮겼다.
+     발급일·기간·회원명은 실제 발급 데이터가 아니라 미리보기용 예시값이다(AS-IS 동일). -->
+<div class="modalW" id="modal-benefit">
+	<div class="modalW__content">
+		<div class="honor">
+			<div class="honor_card_area">
+				<div class="swiper-button-prev"></div>
+				<div class="slideArea swiper">
+					<div class="swiper-wrapper" id="swiper-wrapper">
+						<div class="swiper-slide">
+							<div class="lineBox">
+								<div class="honor_header">
+									<div class="subTitle">
+										<span><img alt="" th:src="@{/content/opmanager/images/honors/cli-logo-icon.png}" />기부혜택증</span>
+									</div>
+									<div class="honor_time">
+										<div class="countdownLine"></div>
+										<div class="countdownBox">
+											<div class="countdownTimer">
+												<div style="text-align: right">현재시각</div>
+												<span class="countdownTime" id="countdownTime"></span>
+											</div>
+										</div>
+									</div>
+								</div>
+								<h5 class="lineBoxTit" id="preview_hnrUserStngTtl"></h5>
+								<div class="qrArea">
+									<img th:src="@{/content/opmanager/images/honors/default_honor_img.png}" id="preview_prjImages" alt="" />
+								</div>
+								<div class="userInfo">
+									<div class="name" id="preview_userName">홍길동</div>
+									<ul>
+										<li class="lclgvInfo" th:id="preview_lclgvCdNm" th:text="${lclgvCdNm}"></li>
+									</ul>
+									<div class="honor_date">
+										<div>
+											<div class="verticalLine"></div>
+											<ul>
+												<li>
+													<div style="text-align: center">
+														<span class="miniTit">발급일</span>
+														<span class="userTxt" id="issueDate"></span>
+													</div>
+												</li>
+												<li>
+													<div style="text-align: center">
+														<span class="miniTit">기&nbsp;&nbsp;&nbsp;&nbsp;간</span>
+														<span class="userTxt" id="validDate"></span>
+													</div>
+												</li>
+											</ul>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="swiper-button-next"></div>
+			</div>
+			<p class="popup_btns">
+				<button type="button" class="btn btn-default" onclick="closeBenefitModal();">닫기</button>
+			</p>
+		</div>
+	</div>
 </div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript" th:inline="javascript">
+	var lclgvCd = [[${lclgvCd}]];
+
+	$(function() {
+		// 이미지 설명 행 추가/삭제
+		$(document).on('click', '.add-item-option2', function() {
+			addImageExplainRow();
+		});
+		$(document).on('click', '.delete-item-option2', function(e) {
+			e.preventDefault();
+			$(this).closest('tr').remove();
+			renumberImageExplainRows();
+		});
+
+		// 미리보기 모달 닫기(배경 클릭)
+		$("#modal-benefit").on('click', function(e) {
+			if (e.target === this) { closeBenefitModal(); }
+		});
+	});
+
+	/**
+	 *	함 수 명 : addImageExplainRow
+	 *	기	능  : 이미지 설명 행 추가
+	 */
+	function addImageExplainRow() {
+		var seq = $("#item-options2 tr").length + 1;
+		var html = '<tr>'
+			+ '<td><input type="text" maxlength="200" title="이미지 설명 순서" value="' + seq + '" readonly/></td>'
+			+ '<td><textarea name="imageExplains"></textarea></td>'
+			+ '<td><a href="#" class="btn btn-dark-gray btn-sm delete-item-option2">삭제</a></td>'
+			+ '</tr>';
+		$("#item-options2").append(html);
+	}
+
+	/**
+	 *	함 수 명 : renumberImageExplainRows
+	 *	기	능  : 삭제 후 순번 다시 매기기(AS-IS 순번칸은 readonly라 화면이 직접 채운다)
+	 */
+	function renumberImageExplainRows() {
+		$("#item-options2 tr").each(function(index) {
+			$(this).find('input[type=text]').val(index + 1);
+		});
+	}
+
+	/**
+	 *	함 수 명 : popupHnrGuide / closePopUp
+	 *	기	능  : 발급기준 안내 이미지 팝업
+	 */
+	function popupHnrGuide() {
+		$("#hnrUserSlctnSeImg_popup").show();
+	}
+
+	function closePopUp() {
+		$("#hnrUserSlctnSeImg_popup").hide();
+	}
+
+	//메인 이미지 업로드 미리보기
+	function changePcImgFile(event) {
+		let inputElement = document.getElementById('prjImages');
+		let files = inputElement.files;
+		let displayAddFile = document.getElementById('uploadPcImg');
+
+		displayAddFile.setAttribute("src", '/content/images/common/no-image-gray.gif');
+
+		if (files && files.length > 0) {
+			let file = files[0];
+			if (file.type && file.type.indexOf('image/') > -1) {
+				let reader = new FileReader();
+				reader.onload = function(e) {
+					displayAddFile.setAttribute("src", e.target.result);
+				};
+				reader.readAsDataURL(file);
+			} else {
+				const dataTransfer = new DataTransfer();
+				inputElement.files = dataTransfer.files;
+				alert("이미지 파일만 업로드 가능합니다.");
+			}
+		}
+	}
+
+	/**
+	 *	함 수 명 : deleteItemFile
+	 *	기	능  : 대표이미지 삭제 (AS-IS deleteItemFile - 삭제 건수를 돌려준다)
+	 */
+	function deleteItemFile(type) {
+		if ($("#uploadedPcImg").attr('src') == '/content/images/common/no-image-gray.gif') {
+			alert("삭제할 파일이 없습니다.");
+			return;
+		}
+		if(confirm('파일이 실제로 삭제됩니다.\n정말 삭제하시겠습니까?')) {
+			$.post('/admin/honor-users/form/deleteItemFile', {lclgvCd : lclgvCd}, function (response) {
+				if (response > 0) {
+					$("#uploadedPcImg").attr("src","/content/images/common/no-image-gray.gif");
+				} else {
+					alert("실패했습니다.");
+				}
+			});
+		}
+	}
+
+	/**
+	 *	함 수 명 : moveListPage
+	 *	기	능  : 목록 이동 (시스템·행안부만)
+	 */
+	function moveListPage() {
+		location.href = "/admin/honor-users";
+	}
+
+	/**
+	 *	함 수 명 : modalBenefit
+	 *	기	능  : 기부혜택증 미리보기 - 입력한 명칭·이미지를 카드에 얹어 보여준다
+	 */
+	function modalBenefit() {
+		$("#preview_hnrUserStngTtl").text($("#hnrUserStngTtl").val());
+
+		var uploaded = $("#uploadPcImg").attr('src');
+		if (uploaded && uploaded.indexOf('no-image-gray') < 0) {
+			$("#preview_prjImages").attr('src', uploaded);
+		} else {
+			$("#preview_prjImages").attr('src', $("#uploadedPcImg").attr('src'));
+		}
+
+		var now = new Date();
+		var yyyy = now.getFullYear();
+		var mm = ('0' + (now.getMonth() + 1)).slice(-2);
+		var dd = ('0' + now.getDate()).slice(-2);
+		$("#issueDate").text(yyyy + '-' + mm + '-' + dd);
+		$("#validDate").text(yyyy + '-' + mm + '-' + dd + ' ~ ' + (yyyy + 1) + '-' + mm + '-' + dd);
+		$("#countdownTime").text(now.toLocaleTimeString());
+
+		$("#modal-benefit").show();
+	}
+
+	function closeBenefitModal() {
+		$("#modal-benefit").hide();
+	}
+</script>
 </body>
 </html>

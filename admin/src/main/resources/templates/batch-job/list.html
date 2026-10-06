@@ -1,54 +1,187 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>배치 작업 스케줄러 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <title>Batch Job - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <h3>배치 작업 스케줄러</h3>
-    <p style="color:#666; margin-bottom:16px;">
-        작업 등록/조회 화면입니다. 실제 정기 실행이 필요한 기능은 각 서비스에 이미 개별 스케줄러(@Scheduled)로 구현돼 있고, 이 화면은 AS-IS 구조 재현을 위한 등록 관리용입니다.
-    </p>
-    <p><a class="btn" th:href="@{/batch-job/new}">+ 작업 등록</a></p>
+<!-- AS-IS opmanager/i18n/batch-job/list.jsp 이식. 작업검색(메서드명/작업명) + 트리거 종류 +
+     배치 상태 + 농협배치테스트 버튼 + 11컬럼 목록(트리거종류·배치상태·적용여부는 라벨로 표시)
+     + 선택삭제/신규등록(1250x310 팝업). AS-IS도 페이저 없이 전체를 뿌린다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <table class="board_list_table">
-        <thead>
-        <tr><th>작업명</th><th>실행 메서드</th><th>트리거</th><th>상태</th><th>마지막 실행일</th><th>처리</th></tr>
-        </thead>
-        <tbody>
-        <tr th:each="j : ${jobs}">
-            <td th:text="${j.jobName}"></td>
-            <td th:text="${j.jobMethod}"></td>
-            <td th:text="${j.triggerType == '2' ? j.triggerCronExpression : (j.triggerRepeatSeconds + '초 반복')}"></td>
-            <td>
-                <span class="pill" th:classappend="${j.batchStatus == '1'} ? 'on' : 'off'"
-                      th:text="${j.batchStatus == '1'} ? '실행중' : '중지'"></span>
-            </td>
-            <td th:text="${j.batchExecuteDate}"></td>
-            <td>
-                <a class="small-btn" th:href="@{'/batch-job/' + ${j.batchJobId} + '/edit'}">수정</a>
-                <form th:action="@{'/batch-job/' + ${j.batchJobId} + '/toggle'}" method="post" class="inline-form">
-                    <button type="submit" class="small-btn ghost" th:text="${j.batchStatus == '1'} ? '중지' : '실행'"></button>
-                </form>
-                <form th:action="@{'/batch-job/' + ${j.batchJobId} + '/delete'}" method="post" class="inline-form"
-                      onsubmit="return confirm('삭제하시겠습니까?')">
-                    <button type="submit" class="small-btn danger">삭제</button>
-                </form>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(jobs)}">등록된 배치 작업이 없습니다.</p>
-</div>
+<form id="batchJobParam" method="post" th:action="@{/batch-job}">
+    <h3><span>Batch Job</span></h3>
+    <div class="board_write">
+        <table class="board_write_table" summary="Batch Job">
+            <colgroup>
+                <col style="width:150px;" />
+                <col style="width:400px;" />
+                <col style="width:150px;" />
+                <col style="width:*;" />
+                <col style="width:150px;" />
+                <col style="width:*;" />
+            </colgroup>
+            <tbody>
+            <tr>
+                <td class="label">작업 검색</td> <!-- 작업 검색 -->
+                <td>
+                    <div>
+                        <select id="searchType" name="searchType" title="작업 검색" style="width:80px;"> <!-- 작업 검색 -->
+                            <option value="ID" th:selected="${batchJobParam.searchType == 'ID'}">메서드명</option> <!-- 메서드명 -->
+                            <option value="LABEL" th:selected="${batchJobParam.searchType == 'LABEL'}">작업명</option> <!-- 작업명 -->
+                        </select>
+                        <input type="text" id="query" name="query" class="three" title="검색어 입력" style="width:250px;"
+                               th:value="${batchJobParam.query}" placeholder="Search.."/> <!-- 검색어 입력 -->
+                    </div>
+                </td>
+
+                <td class="label">트리거 종류</td> <!-- 트리거 종류 -->
+                <td>
+                    <div>
+                        <select id="triType" name="triType" title="트리거 종류" style="width:80px;"> <!-- 트리거 종류 -->
+                            <option value="" th:selected="${#strings.isEmpty(batchJobParam.triType)}">전체</option> <!-- 전체 -->
+                            <option value="1" th:selected="${batchJobParam.triType == '1'}">심플</option> <!-- 심플 -->
+                            <option value="2" th:selected="${batchJobParam.triType == '2'}">크론</option> <!-- 크론 -->
+                        </select>
+                    </div>
+                </td>
+                <td class="label">배치 상태</td> <!-- 배치 상태 -->
+                <td>
+                    <div>
+                        <select id="batchType" name="batchType" title="배치 상태" style="width:80px;"> <!-- 배치 상태 -->
+                            <option value="" th:selected="${#strings.isEmpty(batchJobParam.batchType)}">전체</option> <!-- 전체 -->
+                            <option value="1" th:selected="${batchJobParam.batchType == '1'}">실행중</option> <!-- 싫행중 -->
+                            <option value="2" th:selected="${batchJobParam.batchType == '2'}">정지</option> <!-- 정지 -->
+                        </select>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 버튼시작 -->
+    <div class="btn_all btn_right">
+        <div class="flex_box gap-08">
+            <button type="button" class="btn btn-dark-gray btn-sm" onclick="location.href='/batch-job';"><span class="glyphicon glyphicon-repeat"></span> <span th:text="${msg.get('M00047')}">초기화</span></button> <!-- 초기화 -->
+            <button type="submit" class="btn btn-dark-gray btn-sm"><span class="glyphicon glyphicon-search"></span> 검색</button> <!-- 검색 -->
+            <button type="button" class="btn btn-dark-gray btn-sm" onclick="testForNh()"> 농협배치테스트</button> <!-- 검색 -->
+
+        </div>
+    </div>
+    <!-- 버튼 끝-->
+
+    <div class="count_title mt20">
+        <h5>
+        <span th:text="${msg.get('M00039')}" th:remove="tag">전체</span>: <span th:text="${totalCount}" th:remove="tag">0</span> <span th:text="${msg.get('M00743')}" th:remove="tag">건 조회</span>
+        </h5>	 <!-- 전체 -->   <!-- 건 조회 -->
+    </div>
+</form>
+
+<form id="listForm">
+    <div class="board_write">
+        <table class="board_list_table" summary="배치 작업">
+            <caption>배치 작업</caption>
+            <colgroup>
+                <col style="width:5%;" />
+                <col style="width:1%;" />
+                <col style="width:15%;" />
+                <col style="width:auto;" />
+                <col style="width:5%;" />
+                <col style="width:15%;" />
+                <col style="width:20%;" />
+                <col style="width:5%;" />
+                <col style="width:15%;" />
+                <col style="width:10%;" />
+                <col style="width:5%;" />
+            </colgroup>
+            <thead>
+            <tr>
+                <th scope="col"><input type="checkbox" name="tempId2" id="check_all" th:title="${msg.get('M00169')}" /></th>  <!-- 체크박스 -->
+                <th scope="col"></th> 		 	     <!-- 작업ID -->
+                <th scope="col">작업명</th> 		 	 <!-- 작업명 -->
+                <th scope="col">작업실행 메서드명</th> <!-- 작업실행 메서드명 -->
+                <th scope="col">트리거 종류</th>     	 <!-- 트리거 종류 -->
+                <th scope="col">반복 시간</th> 	 <!-- 반복 시간 -->
+                <th scope="col">반복 표현식</th> 	 <!-- 반복 표현식 -->
+                <th scope="col">배치 상태</th> 		 <!-- 배치 상태 -->
+                <th scope="col">마지막 실행일</th> 	 <!-- 마지막 실행일 -->
+                <th scope="col">배치 적용여부</th> 	 <!-- 배치 적용여부 -->
+                <th scope="col">관리</th> 	 		 <!-- 관리 -->
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="list : ${batchJobList}">
+                <td><input type="checkbox" name="id" id="check" th:value="${list.batchJobId}" th:title="${msg.get('M00169')}" /></td>
+                <td><input type="hidden" name="batchJobId" id="batchJobId" th:value="${list.batchJobId}" /></td>
+                <td th:text="${list.jobName}"></td>
+                <td th:text="${list.jobMethod}"></td>
+                <td th:text="${list.triggerTypeLabel}"></td>
+                <td th:text="${list.triggerRepeatSeconds}"></td>
+                <td th:text="${list.triggerCronExpression}"></td>
+                <td th:text="${list.batchStatusLabel}"></td>
+                <td th:text="${list.batchExecuteDate}"></td>
+                <td th:text="${list.batchApplyFlagLabel}"></td>
+                <td>
+                    <button type="button" class="btn btn-gradient btn-xs" th:onclick="|fnBatchJobUpdate('${list.batchJobId}')|" th:text="${msg.get('M00087')}">수정</button> <!-- 수정 -->
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div><!--// board_write E-->
+
+    <div class="no_content" th:if="${#lists.isEmpty(batchJobList)}" th:text="${msg.get('M00473')}">
+            데이터가 없습니다.
+    </div>
+
+    <div class="btn_all btn_center">
+        <div class="flex_box gap-08">
+            <a id="delete_list_data" href="#" class="btn btn-default btn-sm"><span th:text="${msg.get('M00576')}">선택삭제</span></a> <!-- 선택삭제 -->
+            <a href="javascript:fnBatchJobCreate();" class="btn btn-active btn-sm"><span class="glyphicon glyphicon-plus"></span> <span th:text="${msg.get('M00088')}">신규등록</span></a> <!-- 신규등록 -->
+        </div>
+    </div>
+
+</form>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+
+<script type="text/javascript">
+    $(function() {
+
+        //목록데이터 - 삭제처리
+        $('#delete_list_data').on('click', function() {
+            Common.updateListData("/batch-job/delete", Message.get("M00306"));	// 선택된 데이터를 삭제하시겠습니까?
+        });
+
+    });
+
+    function fnBatchJobUpdate(batchJobId, jobName) {
+        Common.popup('/batch-job/detail?batchJobId=' + batchJobId, 'update', 1250, 310, 1);
+    }
+
+    function fnBatchJobCreate(batchJobId) {
+        Common.popup('/batch-job/create', 'create', 1250, 310, 1);
+    }
+
+    function testForNh() {
+    	$.post("/batch-job/batchForNh", {}, function(response) {
+            Common.responseHandler(response, function(res){
+                alert(JSON.stringify(res));
+            });
+        });
+    }
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

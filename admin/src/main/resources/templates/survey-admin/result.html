@@ -1,34 +1,90 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
     <title>설문 결과 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <div class="location"><a th:href="@{/admin/surveys}">설문조사 관리</a></div>
-    <h3 th:text="${survey.qustnrSj} + ' - 결과집계'"></h3>
+<!-- AS-IS opmanager/i18n/qustnr/result.jsp 이식. 설문 참여 인원(중복 제거) + 문항별 선택지와
+     응답수. 응답수는 G_QUSTNR_RSPNS_RESULT를 선택지 단위로 센 값이다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <p>기간: <span th:text="${survey.qustnrBgnDe} + ' ~ ' + ${survey.qustnrEndDe}"></span></p>
-    <p>총 응답수: <strong th:text="${total}"></strong></p>
+<h3><span>설문 결과</span></h3>
 
-    <table class="board_list_table">
-        <thead><tr><th>#</th><th>문항</th></tr></thead>
-        <tbody>
-        <tr th:each="q, stat : ${questions}">
-            <td th:text="${stat.count}"></td>
-            <td th:text="${q.qestnCn}"></td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(questions)}">등록된 문항이 없습니다.</p>
+<div class="btn_all btn_right mb15">
+	<div class="flex_box gap-08">
+		<button type="button" class="btn btn-dark-default btn-mini" onclick="location.href='/admin/surveys'">목록</button>
+	</div>
 </div>
+
+<div class="board_write">
+	<table class="board_write_table" summary="기부모금액">
+		<colgroup>
+			<col style="width:220px;">
+			<col>
+		</colgroup>
+		<tbody>
+			<tr>
+				<td class="label">설문 참여</td>
+				<td>
+					<div>총 <span th:text="${#numbers.formatInteger(total, 0, 'COMMA')}">0</span>건</div>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+
+<div class="board_write mt-40 question_board">
+	<table id="qusten" class="board_write_table" summary="질문 테이블">
+		<colgroup>
+			<col style="width:220px;">
+			<col>
+		</colgroup>
+		<tbody>
+			<th:block th:each="item, state : ${qesitmList}">
+				<tr>
+					<td class="label">질문</td>
+					<td>
+						<div class="flex_box gap-08">
+							<span th:text="${item.qestnCn}"></span>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">답변</td>
+					<td class="answer">
+						<div class="flex_box gap-08 answer-box" th:each="answer : ${item.qustnrIem}">
+							<span th:text="${answer.iemCn} + ' (' + ${#numbers.formatInteger(answer.userCnt, 0, 'COMMA')} + ')'"></span>
+						</div>
+					</td>
+				 </tr>
+				 <tr style="height : 20px" th:unless="${state.last}"></tr>
+			</th:block>
+		</tbody>
+	</table>
+</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script type="text/javascript">
+$(function() {
+	$(".contents_inner").find("div.location a").removeClass("on");
+	$(".contents_inner").find("div.location").append('> <a href="javascript:;" class="on">결과</a>');
+	$(".contents_inner").find('h3:first > span').html("설문 결과");
+
+});
+
+
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

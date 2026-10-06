@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>운영자관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/user/oper-charger/edit.jsp 이식(메뉴 4501 운영관리자 상세/수정).
+     회원구분(라디오 4종) · 아이디 · 이름 · 휴대폰 · 소속 부서 · 직위 · 사용여부(사용/중지).
+
+     AS-IS verbatim:
+     - h3가 MENU_1101="운영자관리"다(목록과 같다).
+     - 아이디·이름·휴대폰은 필수표시(*)가 붙어 있지만 **읽기 전용 텍스트**다(수정 불가).
+     - 소속 부서·직위는 ROLE_ADMIN_1·3에게만 입력칸이고 나머지 권한에는 텍스트로만 보인다.
+     - 수정/삭제 버튼도 ROLE_ADMIN_1·3에만 보이고, 목록 버튼 class는 `btn-defualt`(default 오타)다.
+     - 저장/삭제는 ajax이고 응답 data.code가 "SUCC"면 성공, "ERR_MAIN_CNT"면 주담당자 정원 초과다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span th:text="${msg.get('MENU_1101')}">운영자관리</span></h3>
+
+<div class="btn_all btn_right">
+	<div class="flex_box gap-08" th:if="${editable}">
+		<button type="button" class="btn btn-dark-gray btn-mini" onclick="chargerEdit();">수정</button>
+		<button type="button" class="btn btn-dark-gray btn-mini" onclick="chargerDelete();">삭제</button>
+	</div>
+	<button type="button" class="btn btn-defualt btn-mini" onclick="moveListPage();">목록</button>
+</div>
+
+<div class="board_write">
+	<table class="board_write_table" summary="">
+		<colgroup>
+			<col style="width:220px;">
+		</colgroup>
+		<tbody>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>회원구분</td>
+				<td>
+					<div class="flex_box gap-12">
+						<div class="input-form">
+							<input id="authoritySys_M" name="authority" type="radio" value="ROLE_ADMIN_1"
+							       th:checked="${details != null and details.authority == 'ROLE_ADMIN_1'}">
+							<label for="authoritySys_M">시스템 주관리자</label>
+						</div>
+						<div class="input-form">
+							<input id="authoritySys_S" name="authority" type="radio" value="ROLE_ADMIN_2"
+							       th:checked="${details != null and details.authority == 'ROLE_ADMIN_2'}">
+							<label for="authoritySys_S">시스템 부관리자</label>
+						</div>
+						<div class="input-form">
+							<input id="authorityGov_M" name="authority" type="radio" value="ROLE_ADMIN_3"
+							       th:checked="${details != null and details.authority == 'ROLE_ADMIN_3'}">
+							<label for="authorityGov_M">행안부 주담당자</label>
+						</div>
+						<div class="input-form">
+							<input id="authorityGov_S" name="authority" type="radio" value="ROLE_ADMIN_4"
+							       th:checked="${details != null and details.authority == 'ROLE_ADMIN_4'}">
+							<label for="authorityGov_S">행안부 부담당자</label>
+						</div>
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>아이디</td>
+				<td><div th:text="${details != null} ? ${details.loginId} : ''"></div></td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>이름</td>
+				<td><div th:text="${details != null} ? ${details.userName} : ''"></div></td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>휴대폰</td>
+				<td><div th:text="${details != null} ? ${details.phoneNumber} : ''"></div></td>
+			</tr>
+			<tr>
+				<td class="label">소속 부서</td>
+				<td>
+					<div>
+						<input th:if="${editable}" id="psitnDeptNm" title="담당부서"
+						       class="input_txt required _filter half" type="text"
+						       th:value="${details != null} ? ${details.psitnDeptNm} : ''">
+						<span th:unless="${editable}" th:text="${details != null} ? ${details.psitnDeptNm} : ''"></span>
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label">직위</td>
+				<td>
+					<div>
+						<input th:if="${editable}" id="ofcpsNm" title="직위"
+						       class="input_txt required _filter half" type="text"
+						       th:value="${details != null} ? ${details.ofcpsNm} : ''">
+						<span th:unless="${editable}" th:text="${details != null} ? ${details.ofcpsNm} : ''"></span>
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>사용여부</td>
+				<td>
+					<div class="flex_box gap-12">
+						<div class="input-form">
+							<input id="statusCode9" name="statusCode" type="radio" value="9"
+							       th:checked="${details != null and details.asIsStatusCode == '9'}">
+							<label for="statusCode9">사용</label>
+						</div>
+						<div class="input-form">
+							<input id="statusCode2" name="statusCode" type="radio" value="2"
+							       th:checked="${details != null and details.asIsStatusCode == '2'}">
+							<label for="statusCode2">중지</label>
+						</div>
+					</div>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+<!-- AS-IS는 GET /op_security_logout으로 로그아웃하지만 TO-BE의 /admin/logout은 POST라서
+     본인 계정 삭제 후 로그아웃은 이 폼을 submit한다. -->
+<form id="logoutForm" method="post" th:action="@{/admin/logout}"></form>
+
+<script type="text/javascript" th:inline="javascript">
+	var userId = [[${details != null ? details.userId : null}]];
+
+	/**
+	 *	함 수 명 : moveListPage
+	 *	기	능  : 목록으로 (AS-IS는 들어올 때의 검색조건 쿼리스트링을 그대로 유지한다)
+	 */
+	function moveListPage() {
+		location.href = "/admin/person-in-charge/oper" + location.search;
+	}
+
+	/**
+	 *	함 수 명 : chargerEdit
+	 *	기	능  : 운영관리자 수정
+	 */
+	function chargerEdit() {
+		var authority = $("input[name=authority]:checked").val();
+		var statusCode = $("input[name=statusCode]:checked").val();
+
+		if(!authority) {
+			alert("회원구분을 선택해 주세요.");
+			return false;
+		}
+		if(!statusCode) {
+			alert("사용여부를 선택해 주세요.");
+			return false;
+		}
+
+		if(!confirm("수정하시겠습니까?")) {
+			return false;
+		}
+
+		var param = {
+			"userId": userId,
+			"authority": authority,
+			"statusCode": statusCode
+		};
+		if($("#psitnDeptNm").length) { param.psitnDeptNm = $("#psitnDeptNm").val(); }
+		if($("#ofcpsNm").length) { param.ofcpsNm = $("#ofcpsNm").val(); }
+
+		$.post("/admin/person-in-charge/oper/edit", param, function(response) {
+			if(response.isSuccess && response.data) {
+				if(response.data.code == "SUCC") {
+					alert("수정되었습니다.");
+					location.reload();
+				} else if(response.data.code == "ERR_MAIN_CNT") {
+					alert("행안부 주담당자는 2명까지만 지정할 수 있습니다.");
+				} else {
+					alert("오류가 발생했습니다.");
+				}
+			}
+		});
+	}
+
+	/**
+	 *	함 수 명 : chargerDelete
+	 *	기	능  : 운영관리자 삭제
+	 */
+	function chargerDelete() {
+		if(!confirm("삭제하시겠습니까?")) {
+			return false;
+		}
+		$.post("/admin/person-in-charge/oper/delete", {"userIdList": [userId]}, function(response) {
+			if(response.isSuccess && response.data) {
+				if(response.data.code == "SUCC") {
+					alert("삭제되었습니다.");
+					if(response.data.isLogout == "Y") {
+						$("#logoutForm").submit();
+					} else {
+						location.href = "/admin/person-in-charge/oper";
+					}
+				} else {
+					alert("오류가 발생했습니다.");
+				}
+			}
+		});
+	}
+</script>
+</body>
+</html>

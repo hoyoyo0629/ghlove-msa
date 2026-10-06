@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>오프라인기부 현장접수 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -11,7 +12,7 @@
 
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
 <!-- AS-IS opmanager/offgive/form.jsp("기탁서 등록") 재현 - 은행창구/행정복지센터 접수
      담당자가 현장에서 기부를 등록한다. 기존회원 아이디를 입력하면 그 계정으로, 비워두면
@@ -20,7 +21,12 @@
      대면 접수라 의도적으로 단순화 - 온라인 실명인증 모듈은 이번 스코프 밖). 주민등록번호/
      답례품 선택+배송정보/약관동의는 이 프로젝트 도메인에 없어 생략(답례품은 기부와 분리된
      별도 order/gift 흐름). board_write_table(td.label) 레이아웃으로 재현. -->
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <div class="location"><a th:href="@{/offgive}">오프라인기부 접수 관리</a></div>
     <h3><span>기탁서 등록</span></h3>
 
@@ -93,7 +99,10 @@
             <a th:href="@{/offgive}" class="btn btn-dark-default btn-small">취소</a>
         </div>
     </div>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 
 <script th:inline="none">
 function filterLocgov() {

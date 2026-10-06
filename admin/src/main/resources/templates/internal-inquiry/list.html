@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <meta charset="UTF-8">
+    <title>내부문의 관리 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+    <h3>내부문의 관리</h3>
+    <p style="color:#666; margin-bottom:16px;">지자체 담당자가 본사(운영자)에 올린 문의입니다. 지자체 담당자는 자기 지자체 문의만, 본사는 전체를 조회하고 답변합니다.</p>
+
+    <p th:if="${message}" style="color:#1a7f37;" th:text="${message}"></p>
+    <p th:if="${errorMessage}" style="color:#c00;" th:text="${errorMessage}"></p>
+
+    <form method="get" th:action="@{/admin/internal-inquiry}" class="board_search" style="margin-bottom:12px;">
+        <select name="qnaGroup">
+            <option value="">문의유형 전체</option>
+            <option th:each="e : ${qnaGroups}" th:value="${e.key}" th:text="${e.value}" th:selected="${e.key == qnaGroup}"></option>
+        </select>
+        <input type="text" name="startDate" placeholder="시작(YYYYMMDD)" th:value="${startDate}" size="10">
+        <input type="text" name="endDate" placeholder="종료(YYYYMMDD)" th:value="${endDate}" size="10">
+        <button type="submit" class="small-btn">검색</button>
+    </form>
+
+    <!-- 문의 작성은 지자체 담당자(자기 지자체 명의) 전용. 본사는 답변만. -->
+    <p th:if="${scoped}">
+        <a class="btn" th:href="@{/admin/internal-inquiry/new}">+ 문의 작성</a>
+    </p>
+
+    <table class="board_list_table">
+        <thead>
+        <tr><th>유형</th><th>제목</th><th>지자체</th><th>등록자</th><th>답변</th><th>등록일</th><th>처리</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="q : ${inquiries}">
+            <td th:text="${qnaGroups.get(q.qnaGroup)} ?: ${q.qnaGroup}"></td>
+            <td><a th:href="@{'/admin/internal-inquiry/' + ${q.qnaAdminId}}" th:text="${q.subject}"></a></td>
+            <td th:text="${locgovNames.get(q.locgovCode)} ?: ${q.locgovCode}"></td>
+            <td th:text="${q.userName}"></td>
+            <td>
+                <span class="pill" th:classappend="${q.answerCount != null and q.answerCount > 0} ? 'on' : 'off'"
+                      th:text="${q.answerCount != null and q.answerCount > 0} ? '답변완료' : '미답변'"></span>
+            </td>
+            <td th:text="${q.createdDate != null ? #temporals.format(q.createdDate, 'yyyy-MM-dd HH:mm') : ''}"></td>
+            <td>
+                <a class="small-btn" th:href="@{'/admin/internal-inquiry/' + ${q.qnaAdminId}}">보기</a>
+                <form th:action="@{'/admin/internal-inquiry/' + ${q.qnaAdminId} + '/delete'}" method="post" class="inline-form"
+                      onsubmit="return confirm('삭제하시겠습니까?')">
+                    <button type="submit" class="small-btn danger">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="empty" th:if="${#lists.isEmpty(inquiries)}">등록된 문의가 없습니다.</p>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

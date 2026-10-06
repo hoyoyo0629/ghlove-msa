@@ -32,6 +32,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/admin/**",
                         "/api/locgov-admin/**",
                         "/api/designated-projects/admin/**",
+                        "/api/give-statistics/admin/**",
                         "/api/cntr-reqmng/**",
                         "/api/ctbny-opratn/**",
                         "/api/offgive/**",

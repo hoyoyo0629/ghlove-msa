@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <meta charset="UTF-8">
+    <title>만족도 조사 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+    <h3><span>만족도 조사</span></h3>
+
+    <div class="btn_all btn_right mb15">
+        <div class="flex_box gap-08">
+            <a class="btn btn-default btn-mini" th:href="@{/admin/content-satisfaction}">목록</a>
+        </div>
+    </div>
+
+    <!-- 년도 필터 (AS-IS: searchYear) -->
+    <form method="get" th:action="@{/admin/content-satisfaction/detail}" class="board_write mb30">
+        <input type="hidden" name="menuUrl" th:value="${summary.menuUrl}">
+        <table class="board_write_table">
+            <colgroup><col style="width:220px;"><col></colgroup>
+            <tbody>
+            <tr>
+                <td class="label">년도</td>
+                <td>
+                    <div class="flex_box gap-08 item-center">
+                        <select name="year" class="wd-150">
+                            <option value="" th:selected="${year == ''}">전체</option>
+                            <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${y == year}"></option>
+                        </select>
+                        <button type="submit" class="btn btn-dark-gray btn-mini">검색</button>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </form>
+
+    <!-- 요약 (AS-IS: 매우만족/만족/불만족/매우불만족/합계) -->
+    <table class="board_list_table mb30" summary="만족도 요약">
+        <colgroup>
+            <col style="width:40%;"><col style="width:12%;"><col style="width:12%;"><col style="width:12%;"><col style="width:12%;"><col style="width:12%;">
+        </colgroup>
+        <thead>
+        <tr><th>URL</th><th>매우 만족</th><th>만족</th><th>불만족</th><th>매우 불만족</th><th>합계</th></tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td><a th:href="${summary.menuUrl}" target="_blank" th:text="${summary.menuUrl} + ' (' + ${summary.menuNm} + ')'"></a></td>
+            <td th:text="${summary.veryGood}">0</td>
+            <td th:text="${summary.good}">0</td>
+            <td th:text="${summary.bad}">0</td>
+            <td th:text="${summary.veryBad}">0</td>
+            <td th:text="${summary.total}">0</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <!-- 월별 추이: AS-IS form.jsp와 동일한 Chart.js 스택막대(ChartCommon.drawChart). -->
+    <div class="mainArea loc_details mb30">
+        <div class="graph_wrap all">
+            <div class="bd_gray mb15">
+                <div class="graph">
+                    <canvas id="cntntsStsfdgChart" style="max-height: 350px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="no_content" th:if="${#lists.isEmpty(monthRows)}">데이터가 없습니다.</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script type="text/javascript" th:src="@{/content/modules/chart.min.js}"></script>
+<script type="text/javascript" th:src="@{/content/modules/op.chart.js}"></script>
+<script th:inline="javascript">
+/*<![CDATA[*/
+(function () {
+    var months = /*[[${monthRows.![ym]}]]*/ [];
+    if (!months || months.length === 0) { return; }
+    // AS-IS form.jsp 색상·순서 verbatim (매우만족→만족→불만족→매우불만족)
+    var stsfdgArr = [
+        { lineTension: 0, backgroundColor: "#004CCE", borderColor: "#004CCE", fill: false, label: '매우 만족',   data: /*[[${monthRows.![veryGood]}]]*/ [] },
+        { lineTension: 0, backgroundColor: "#09C2C7", borderColor: "#09C2C7", fill: false, label: '만족',       data: /*[[${monthRows.![good]}]]*/ [] },
+        { lineTension: 0, backgroundColor: "#00215A", borderColor: "#00215A", fill: false, label: '불만족',     data: /*[[${monthRows.![bad]}]]*/ [] },
+        { lineTension: 0, backgroundColor: "#6e90cd", borderColor: "#00215A", fill: false, label: '매우 불만족', data: /*[[${monthRows.![veryBad]}]]*/ [] }
+    ];
+    var options = { scales: { x: { stacked: true }, y: { stacked: true } } };
+    ChartCommon.drawChart('cntntsStsfdgChart', 'bar', options, months, stsfdgArr, { x: '월', y: '건' });
+})();
+/*]]>*/
+</script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

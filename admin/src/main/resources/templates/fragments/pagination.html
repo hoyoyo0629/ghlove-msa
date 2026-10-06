@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- AS-IS WEB-INF/tags/page/pagination-manager.tag 를 마크업 그대로 옮긴 것.
+     <p class="pagination op-pagination"> + a.first/a.prev/strong/a.next/a.last 구조와 10개 단위
+     번호창까지 동일하다(.pagination 은 opmanager.css:629-645 에 정의돼 있다).
+     번호창 범위 계산은 Pagination.getWindowStart()/getWindowEnd()가 태그의 choose 분기를 그대로 담았다.
+     쓰는 쪽: <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div> -->
+<p class="pagination op-pagination" th:fragment="manager(pagination)" th:if="${pagination != null}">
+    <th:block th:if="${pagination.previousPage > 0}">
+        <a th:href="${pagination.linkTo(1)}" class="first">&lt;&lt;</a>
+        <a th:href="${pagination.linkTo(pagination.previousPage)}" class="prev">&lt;</a>
+    </th:block>
+
+    <strong th:if="${pagination.totalPages == 0}">1</strong>
+    <th:block th:unless="${pagination.totalPages == 0}"
+              th:each="i : ${#numbers.sequence(pagination.windowStart, pagination.windowEnd)}">
+        <strong th:if="${i == pagination.currentPage}" th:text="${i}">1</strong>
+        <a th:unless="${i == pagination.currentPage}" th:href="${pagination.linkTo(i)}" th:text="${i}">1</a>
+    </th:block>
+
+    <th:block th:if="${pagination.nextPage > 0}">
+        <a th:href="${pagination.linkTo(pagination.nextPage)}" class="next">&gt;</a>
+        <a th:href="${pagination.linkTo(pagination.totalPages)}" class="last">&gt;&gt;</a>
+    </th:block>
+</p>
+
+</body>
+</html>

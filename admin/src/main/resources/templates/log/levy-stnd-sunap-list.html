@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>지방세외 수납연계 로그 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/log/gif-stnd-sunap-list.jsp 이식(메뉴 1416).
+     전자납부번호(완전일치) + 수납일자 범위 + 화면출력(10/20/50/100) + 37컬럼 + 페이징.
+     원천은 AS-IS와 같은 donation.g_next_sunap_response이고 날짜는 RCVMT_YMD(yyyyMMdd 문자열) 비교다.
+
+     AS-IS verbatim: 검색폼·목록 표의 summary/caption이 모두 "지방세외 부과 로그"다(수납 화면인데
+     '부과'라고 적혀 있다 - 복사 흔적이고 화면에는 안 보인다). 컬럼이 많아 overflow:auto로 감싸고
+     결과가 있을 때만 페이지네이션을 그린다(pagination-wrap 중첩 포함). 수납일자는 필수다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span>지방세외 수납연계 로그</span></h3>
+
+<form id="levyLogParam" class="opmanager-search-form clear" method="post" th:action="@{/log/levy/stnd-sunap}">
+	<input type="hidden" id="sort" name="sort" th:value="${levyLogParam.sort}"/>
+	<input type="hidden" id="orderBy" name="orderBy" th:value="${levyLogParam.orderBy}"/>
+	<input type="hidden" id="itemsPerPage" name="itemsPerPage" th:value="${levyLogParam.itemsPerPage}"/>
+	<input type="hidden" id="itemsPerPageTemp" name="itemsPerPageTemp" th:value="${levyLogParam.itemsPerPageTemp}"/>
+	<input type="hidden" id="query" name="query" th:value="${levyLogParam.query}"/>
+
+	<div class="board_write">
+		<table class="board_write_table" summary="지방세외 부과 로그">
+			<colgroup>
+				<col style="width:15%;">
+				<col style="width:35%;">
+				<col style="width:15%;">
+				<col style="width:35%;">
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="label">전자납부번호</td>
+					<td colspan="3">
+						<div class="flex_box gap-08">
+							<input type="text" id="epayNo" name="epayNo" title="전자납부번호"
+							       class="input_txt required _filter wd-500" th:value="${levyLogParam.epayNo}"/>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">수납일자</td>
+					<td colspan="3">
+						<div>
+							<span class="datepicker">
+								<input type="text" id="srchStartLogDate" name="srchStartLogDate" class="datepicker optional " th:title="${msg.get('M00507')}" th:value="${levyLogParam.srchStartLogDate}" />
+							</span>
+							<span class="wave">~</span>
+							<span class="datepicker">
+								<input type="text" id="srchEndLogDate" name="srchEndLogDate" class="datepicker optional " th:title="${msg.get('M00509')}" th:value="${levyLogParam.srchEndLogDate}" />
+							</span>
+							<span class="day_btns day_btn1">
+								<a href="javascript:void(0);" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+								<a href="javascript:void(0);" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a>
+								<a href="javascript:void(0);" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>
+								<a href="javascript:void(0);" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+								<a href="javascript:void(0);" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a>
+							</span>
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/log/levy/stnd-sunap'">초기화</button>
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="search();">검색</button>
+			</div>
+		</div>
+	</div>
+</form>
+<!-- List -->
+<div class="board_list mt-40">
+	<!-- List Header -->
+	<div class="count_title mt-40">
+		<h5>총 <span th:text="${#numbers.formatInteger(count, 0, 'COMMA')}" th:remove="tag">0</span> 건</h5>
+		<span>
+			<select name="displayCount" id="displayCount" th:title="${msg.get('M00239')}">
+				<option value="10" th:text="${msg.get('M00240')}">10개 출력</option>
+				<option value="20" th:text="${msg.get('M00241')}">20개 출력</option>
+				<option value="50" th:text="${msg.get('M00242')}">50개 출력</option>
+				<option value="100" th:text="${msg.get('M00243')}">100개 출력</option>
+			</select>
+		</span>
+	</div>
+	<!--// List Header -->
+
+	<div style="overflow:auto;">
+		<table class="board_list_table" summary="지방세외 부과 로그">
+			<caption>지방세외 부과 로그</caption>
+			<colgroup>
+				<col style="min-width:150px;"> <!-- 연계관리키 -->
+				<col style="min-width:120px;"> <!-- 자치단체코드 -->
+				<col style="min-width:150px;"> <!-- 자치단체명 -->
+				<col style="min-width:240px;"> <!-- 과세번호 -->
+				<col style="min-width:150px;"> <!-- 통합과세번호 -->
+				<col style="min-width:120px;"> <!-- 부서코드 -->
+				<col style="min-width:170px"> <!-- 부서명 -->
+				<col style="min-width:120px;"> <!-- 특별회계사업코드 -->
+				<col style="min-width:150px;"> <!-- 특별회계사업명 -->
+				<col style="min-width:100px;"> <!-- 회계연도 -->
+				<col style="min-width:100px;"> <!-- 회계구분코드 -->
+				<col style="min-width:180px;"> <!-- 회계구분명 -->
+				<col style="min-width:100px;"> <!--  대표세입과목코드 -->
+				<col style="min-width:180px;"> <!-- 세입과목명 -->
+				<col style="min-width:100px;"> <!-- 운영항목코드 -->
+				<col style="min-width:120px;"> <!-- 운영항목명 -->
+				<col style="min-width:100px;"> <!-- 부과번호 -->
+				<col style="min-width:100px;"> <!-- 분납번호 -->
+				<col style="min-width:150px;"> <!-- 전자납부번호 -->
+				<col style="min-width:80px;"> <!-- 수납번호 -->
+				<col style="min-width:80px;"> <!-- 수납구분코드 -->
+				<col style="min-width:80px;"> <!-- 수납구분명 -->
+				<col style="min-width:100px;"> <!-- 수납일자 -->
+				<col style="min-width:100px"> <!-- 회계일자 -->
+				<col style="min-width:100px;"> <!-- 이체일자 -->
+				<col style="min-width:100px;"> <!-- 수납본세금액 -->
+				<col style="min-width:100px;"> <!-- 수납가산금액 -->
+				<col style="min-width:100px;"> <!-- 수납이자금액 -->
+				<col style="min-width:100px"> <!-- 은행명 -->
+				<col style="min-width:100px;"> <!-- 수납유형코드 -->
+				<col style="min-width:120px;"> <!-- 수납유형 -->
+				<col style="min-width:120px;"> <!-- 예비항목1 -->
+				<col style="min-width:120px;"> <!-- 예비항목2 -->
+				<col style="min-width:120px;"> <!-- 예비항목3 -->
+				<col style="min-width:200px;"> <!-- 예비항목4 -->
+				<col style="min-width:120px;"> <!-- 예비항목5 -->
+				<col style="min-width:200px;"> <!-- 생성일시-->
+			</colgroup>
+			<thead>
+				<tr>
+					<th scope="col">연계관리키</th>
+					<th scope="col">자치단체코드</th>
+					<th scope="col">자치단체명</th>
+					<th scope="col">과세번호</th>
+					<th scope="col">통합과세번호</th>
+					<th scope="col">부서코드</th>
+					<th scope="col">부서명</th>
+					<th scope="col">특별회계사업코드</th>
+					<th scope="col">특별회계사업명</th>
+					<th scope="col">회계연도</th>
+					<th scope="col">회계구분코드</th>
+					<th scope="col">회계구분명</th>
+					<th scope="col">대표세입과목코드</th>
+					<th scope="col">세입과목명</th>
+					<th scope="col">운영항목코드</th>
+					<th scope="col">운영항목명</th>
+					<th scope="col">부과번호</th>
+					<th scope="col">분납번호</th>
+					<th scope="col">전자납부번호</th>
+					<th scope="col">수납번호</th>
+					<th scope="col">수납구분코드</th>
+					<th scope="col">수납구분명</th>
+					<th scope="col">수납일자</th>
+					<th scope="col">회계일자</th>
+					<th scope="col">이체일자</th>
+					<th scope="col">수납본세금액</th>
+					<th scope="col">수납가산금액</th>
+					<th scope="col">수납이자금액</th>
+					<th scope="col">은행명</th>
+					<th scope="col">수납유형코드</th>
+					<th scope="col">수납유형</th>
+					<th scope="col">예비항목1</th>
+					<th scope="col">예비항목2</th>
+					<th scope="col">예비항목3</th>
+					<th scope="col">예비항목4</th>
+					<th scope="col">예비항목5</th>
+					<th scope="col">생성일시</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr th:each="item : ${list}" style="background:#fff;">
+					<td><div th:text="${item.linkMngKey}"></div></td>
+					<td><div th:text="${item.sgbCd}"></div></td>
+					<td><div th:text="${item.sgbNm}"></div></td>
+					<td><div th:text="${item.taxnNo}"></div></td>
+					<td><div th:text="${item.untyTaxnNo}"></div></td>
+					<td><div th:text="${item.dptCd}"></div></td>
+					<td><div th:text="${item.dptNm}"></div></td>
+					<td><div th:text="${item.spclFisBizCd}"></div></td>
+					<td><div th:text="${item.spclFisBizNm}"></div></td>
+					<td><div th:text="${item.fyr}"></div></td>
+					<td><div th:text="${item.actSeCd}"></div></td>
+					<td><div th:text="${item.actSeNm}"></div></td>
+					<td><div th:text="${item.rprsTxmCd}"></div></td>
+					<td><div th:text="${item.rprsTxmNm}"></div></td>
+					<td><div th:text="${item.operItemCd}"></div></td>
+					<td><div th:text="${item.operItemNm}"></div></td>
+					<td><div th:text="${item.lvyNo}"></div></td>
+					<td><div th:text="${item.itmNo}"></div></td>
+					<td><div th:text="${item.epayNo}"></div></td>
+					<td><div th:text="${item.rcvmtNo}"></div></td>
+					<td><div th:text="${item.rcvmtSeCd}"></div></td>
+					<td><div th:text="${item.rcvmtSeNm}"></div></td>
+					<td><div th:text="${item.rcvmtYmd}"></div></td>
+					<td><div th:text="${item.actYmd}"></div></td>
+					<td><div th:text="${item.tsfYmd}"></div></td>
+					<td><div th:text="${item.rcvmtPctAmt}"></div></td>
+					<td><div th:text="${item.rcvmtAdtnAmt}"></div></td>
+					<td><div th:text="${item.rcvmtIntrAmt}"></div></td>
+					<td><div th:text="${item.bankNm}"></div></td>
+					<td><div th:text="${item.rcvmtTyCd}"></div></td>
+					<td><div th:text="${item.rcvmtTy}"></div></td>
+					<td><div th:text="${item.rsveItem1}"></div></td>
+					<td><div th:text="${item.rsveItem2}"></div></td>
+					<td><div th:text="${item.rsveItem3}"></div></td>
+					<td><div th:text="${item.rsveItem4}"></div></td>
+					<td><div th:text="${item.rsveItem5}"></div></td>
+					<td><div th:text="${item.frstRegistPnttm}"></div></td>
+				</tr>
+				<!-- AS-IS도 colspan이 12다(컬럼 37개) -->
+				<tr th:if="${#lists.isEmpty(list)}" style="background:#fff;">
+					<td colspan="12">데이터가 없습니다.</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+	<div class="pagination-wrap">
+		<div class="pagination-wrap" th:if="${not #lists.isEmpty(list)}">
+			<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+		</div>
+	</div>
+</div>
+<!-- List -->
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript">
+	$(function() {
+	  searchEnterKey();
+	  displayChange();
+	  displaySelected();
+	  Common.DateButtonEvent.set('.day_btn1 > a[class^=btn_date]', '', 'input[name="srchStartLogDate"]' , 'input[name="srchEndLogDate"]');
+	  EventHandler.calendarStartDateAndEndDateVaild();
+	});
+
+	function displayChange() {
+		$("#displayCount").on('change', function(){
+			$("#itemsPerPage").val($(this).val());
+			$("#itemsPerPageTemp").val($(this).val());
+			$('#levyLogParam').submit();
+		});
+	}
+	function displaySelected(){
+		$("#displayCount").val($("#itemsPerPage").val());
+	}
+
+	function search() {
+		var strStartDate = $("#srchStartLogDate").val();
+		var strEndDate = $("#srchEndLogDate").val();
+
+		if(strStartDate === '' || strEndDate === '') {
+			alert("수납일자는 필수입니다.");
+			return false;
+		}
+
+		if(strStartDate && strStartDate.length == 8 && strEndDate && strEndDate.length == 8) {
+			var startDate = new Date(strStartDate.substr(0, 4), strStartDate.substr(4, 2), strStartDate.substr(6, 2));
+			var endDate = new Date(strEndDate.substr(0, 4), strEndDate.substr(4, 2), strEndDate.substr(6, 2));
+
+			if(startDate > endDate) {
+				alert("종료일이 시작일보다 빠릅니다.");
+				var value = $("#shCntrDeEnd").val();
+				$("#srchEndLogDate").val("");
+				$("#srchEndLogDate").focus();
+				$("#srchEndLogDate").val(value);
+				return false;
+			}
+		}
+		$("#levyLogParam").submit();
+	}
+
+	function searchEnterKey() {
+		$("#epayNo").on('keydown', function(e){
+			if (e.keyCode == '13') {
+				$("#levyLogParam").submit();
+			}
+		});
+	}
+</script>
+</body>
+</html>

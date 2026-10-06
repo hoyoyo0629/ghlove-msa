@@ -32,54 +32,14 @@ public class OffgiveController {
     private final LocgovClient locgovClient;
     private final MemberClient memberClient;
 
-    private static final int PAGE_SIZE_DEFAULT = 10;
-
+    /**
+     * 기부금 접수관리 목록은 AS-IS 형태로 분리 이식했다
+     * ({@link OffgiveReceiptAdminController} - {@code /offgive/list}, 메뉴 15101).
+     * 예전 링크가 깨지지 않게 여기로 들어오면 그 화면으로 보낸다.
+     */
     @GetMapping("/offgive")
-    public String list(@RequestParam(required = false) String locgovCode,
-                        @RequestParam(required = false) String startDate,
-                        @RequestParam(required = false) String walkInName,
-                        @RequestParam(required = false) String endDate,
-                        @RequestParam(required = false, defaultValue = "1") int page,
-                        HttpSession session, Model model) {
-        Manager viewer = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
-        locgovCode = MenuService.effectiveLocgovCode(viewer, locgovCode);
-        var matched = offgiveClient.search(locgovCode, startDate, endDate);
-        Map<Long, MemberClient.MemberInfo> membersById = new LinkedHashMap<>();
-        for (var d : matched) {
-            membersById.computeIfAbsent(d.userId(), memberClient::fetchOrNull);
-        }
-        // 이름 검색은 Donation 엔티티에 사용자명이 없어(member 서비스 소유) 조회된 회원정보로
-        // 여기서 후처리 필터한다 - offgive는 저트래픽 화면이라 인메모리 필터+페이지네이션으로 충분.
-        List<OffgiveClient.Donation> filtered = matched;
-        if (walkInName != null && !walkInName.isBlank()) {
-            filtered = matched.stream()
-                    .filter(d -> {
-                        var m = membersById.get(d.userId());
-                        return m != null && m.userName() != null && m.userName().contains(walkInName);
-                    })
-                    .toList();
-        }
-
-        int totalCount = filtered.size();
-        int totalPages = (int) Math.ceil(totalCount / (double) PAGE_SIZE_DEFAULT);
-        int currentPage = Math.max(1, Math.min(page, Math.max(totalPages, 1)));
-        int from = Math.min((currentPage - 1) * PAGE_SIZE_DEFAULT, totalCount);
-        int to = Math.min(from + PAGE_SIZE_DEFAULT, totalCount);
-
-        model.addAttribute("list", filtered.subList(from, to));
-        model.addAttribute("membersById", membersById);
-        model.addAttribute("totalCount", totalCount);
-        model.addAttribute("currentPage", currentPage);
-        model.addAttribute("totalPages", totalPages);
-        model.addAttribute("size", PAGE_SIZE_DEFAULT);
-        model.addAttribute("locgovCode", locgovCode);
-        model.addAttribute("locgovScoped", MenuService.isLocgovScoped(viewer));
-        model.addAttribute("startDate", startDate);
-        model.addAttribute("endDate", endDate);
-        model.addAttribute("walkInName", walkInName);
-        model.addAttribute("provinces", provinces());
-        model.addAttribute("allLocgovs", locgovClient.allLocgovs());
-        return "offgive/list";
+    public String redirectToList() {
+        return "redirect:/offgive/list";
     }
 
     @GetMapping("/offgive/new")

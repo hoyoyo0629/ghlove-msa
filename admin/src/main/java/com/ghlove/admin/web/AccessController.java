@@ -12,8 +12,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 /** 접속IP허용목록 (AS-IS opmanager/access). */
 @Controller
@@ -21,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 public class AccessController {
 
     private final AccessService accessService;
+    private final com.ghlove.admin.web.support.FlashRedirect flashRedirect;
 
     @GetMapping("/access")
     public String list(Model model) {
@@ -40,7 +39,7 @@ public class AccessController {
             accessService.register(accessType, remoteAddr, manager.getLoginId());
             return "redirect:/access";
         } catch (AccessException e) {
-            return "redirect:/access/new?errorMessage=" + URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
+            return flashRedirect.to("/access/new", e.getMessage());
         }
     }
 

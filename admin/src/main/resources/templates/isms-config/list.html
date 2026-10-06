@@ -1,44 +1,98 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>ISMS 설정 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
+    <title>ISMS 시간설정 관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <style>
+        .label {
+            text-align: center;
+        }
 
+        td {
+            padding-left: 10px;
+        }
+
+        .td-head {
+            border-top: #0d0d0d solid 2px !important;
+        }
+    </style>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <h3>ISMS 설정</h3>
-    <p style="color:#666; margin-bottom:16px;">정보보호관리체계(ISMS-P) 관련 발송 시간대 등 설정입니다.</p>
+<!-- AS-IS opmanager/i18n/isms/isms-config.jsp 이식. 구분(공통/관리자/회원)별 rowspan 묶음 표
+     하나이고, 저장은 모든 입력칸을 JSON 배열로 모아 한 번에 POST한다(AS-IS와 동일).
+     rowspan 계산은 컨트롤러가 각 구분의 첫 행에만 typeName/typeCount를 채워 내려준다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <p class="success" th:if="${param.message}" th:text="${param.message}"></p>
+<h3><span>ISMS 시간설정 관리</span></h3>
 
-    <table class="board_list_table">
-        <thead>
-        <tr><th>키</th><th>설명</th><th>값</th><th>처리</th></tr>
-        </thead>
-        <tbody>
-        <tr th:each="c : ${configs}">
-            <td th:text="${c.key}"></td>
-            <td th:text="${c.description}"></td>
-            <td>
-                <form th:action="@{'/isms-config/' + ${c.key}}" method="post" class="inline-form">
-                    <input type="text" name="value" th:value="${c.value}" style="width:120px; display:inline-block;">
-                    <label><input type="checkbox" name="useYn" th:checked="${c.useYn == 'Y'}"> 사용</label>
-                    <button type="submit" class="small-btn">저장</button>
-                </form>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(configs)}">등록된 설정이 없습니다.</p>
-</div>
+	<div class="board_write">
+		<table class="board_write_table" th:summary="${msg.get('M00527')}">
+			<caption th:text="${msg.get('M00527')}"></caption>
+			<colgroup>
+				<col style="width:100px;">
+				<col style="width:250px;">
+				<col style="width:auto;">
+			</colgroup>
+			<tbody>
+				<tr th:each="rs : ${getIsmsList}">
+					<td class="label td-head" th:if="${rs.typeName != null and rs.typeCount > 0}"
+					    th:rowspan="${rs.typeCount}" th:text="${rs.typeName}"></td>
+
+					<td th:class="${rs.typeName != null and rs.typeCount > 0} ? 'td-head' : null" th:text="${rs.config.description}"></td>
+					<td th:class="${rs.typeName != null and rs.typeCount > 0} ? 'td-head' : null">
+						<div>
+							<input type="text" th:id="${rs.config.key}" class="form-sm text-center form-amount required" th:value="${rs.config.value}" />
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+
+    <div class="btn_all btn_center">
+        <div class="flex_box gap-08">
+            <button type="button" id="btnSubmit" class="btn btn-dark-gray btn-mid"><span th:text="${msg.get('M00101')}">저장</span></button>  <!-- 저장 -->
+        </div>
+	</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script type="text/javascript">
+	$("#btnSubmit").click(function(){
+
+     	var param = {data : JSON.stringify(createParamData())};
+
+		$.post("/isms-config", param, function(response){
+			alert("반영되었습니다.");
+        }, 'json').fail(function(e){
+            alert("저장에 실패하였습니다.");
+        });
+	});
+
+    function createParamData(){
+        var ary = new Array();
+        var body = "";
+        var key = "";
+        var value = "";
+        for(var i = 0; i < $("table tbody input").size(); i++){
+            key = $("table tbody input")[i].id;
+            value = $("#"+key).val();
+            body = {"key":key,"value":value}
+            ary.push(body);
+        }
+        return ary;
+    }
+
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

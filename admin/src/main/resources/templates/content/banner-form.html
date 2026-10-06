@@ -1,83 +1,349 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title th:text="${banner != null} ? '배너 수정 - 고향사랑e음 (admin service)' : '배너 등록 - 고향사랑e음 (admin service)'"></title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <title>메인 배너관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<!-- 배너목록(content/banner-list.html)에서 넘어올 때 사이드바가 사라지던 버그 수정 -
-     이 파일만 admin-nav 포함이 빠져있었다. 다른 *-form.html과 동일하게 board_write_table로. -->
-<div class="contents contents_inner">
-    <div class="location"><a th:href="@{/banners}">배너 관리</a></div>
-    <h3><span th:text="${banner != null} ? '배너 수정' : '배너 등록'"></span></h3>
+<!-- AS-IS opmanager/i18n/banner/main/form.jsp 이식. 배너명·내용(1500자 카운터)·PC/모바일 이미지
+     업로드(권장사이즈 안내 포함)·이미지 링크·사용여부. 저장은 FormData ajax이고, 수정 시에는
+     새로 고른 파일만 전송한다. 노출순서는 이 화면에 없고 목록의 순서 저장으로만 바꾼다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+<h3><span>메인 배너관리</span></h3>
 
-    <div class="board_write">
-        <table class="board_write_table" summary="배너 등록/수정">
-            <colgroup><col style="width:220px;"><col></colgroup>
-            <tbody>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>제목</td>
-                <td><input type="text" id="title" name="title" th:value="${banner != null} ? ${banner.title} : ''" required form="bannerForm"></td>
-            </tr>
-            <tr>
-                <td class="label">내용 (선택)</td>
-                <td><textarea id="contents" name="contents" rows="3" th:text="${banner != null} ? ${banner.contents} : ''" form="bannerForm"></textarea></td>
-            </tr>
-            <tr>
-                <td class="label">링크 URL (선택)</td>
-                <td><input type="text" id="linkUrl" name="linkUrl" th:value="${banner != null} ? ${banner.linkUrl} : ''" form="bannerForm"></td>
-            </tr>
-            <tr>
-                <td class="label">이미지 경로 (선택)</td>
-                <td>
-                    <input type="text" id="imageUrl" name="imageUrl" th:value="${banner != null} ? ${banner.imageUrl} : ''"
-                           placeholder="예: /images/new/banner_main_02_pc.png" form="bannerForm">
-                    <!-- 이미지 업로드는 이번 범위에 포함되지 않고, 이미 static 리소스로 배포된
-                         경로를 직접 입력받습니다. -->
-                    <img th:if="${banner != null and banner.imageUrl != null}" th:src="${banner.imageUrl}" alt="" style="height:60px; margin-top:8px; display:block;">
-                </td>
-            </tr>
-            <tr>
-                <td class="label">노출 순서 (선택)</td>
-                <td>
-                    <input type="number" id="displayOrder" name="displayOrder" step="1"
-                           th:value="${banner != null} ? ${banner.displayOrder} : 0" form="bannerForm">
-                    <p style="font-size:12px; color:#666; margin-top:4px;">노출위치별로 최대 6개까지만 노출됩니다.</p>
-                </td>
-            </tr>
-            <tr>
-                <td class="label">노출위치</td>
-                <td>
-                    <!-- AS-IS UserLoginBannerManagerController(loginWeb/loginMobile)가 별도 화면으로
-                         관리하던 로그인 전용 배너를 이 배너관리 화면에 노출위치 구분으로 흡수했다. -->
-                    <select id="bannerType" name="bannerType" form="bannerForm">
-                        <option value="MAIN" th:selected="${banner == null or banner.bannerType == null or banner.bannerType == 'MAIN'}">메인 (캐러셀)</option>
-                        <option value="LOGIN_WEB" th:selected="${banner != null and banner.bannerType == 'LOGIN_WEB'}">로그인 화면 (웹)</option>
-                        <option value="LOGIN_MOBILE" th:selected="${banner != null and banner.bannerType == 'LOGIN_MOBILE'}">로그인 화면 (모바일)</option>
-                    </select>
-                </td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
-    <form id="bannerForm" th:action="${banner != null} ? @{'/banners/' + ${banner.bannerId}} : @{/banners}" method="post"></form>
-    <div class="btn_all btn_center">
-        <div class="flex_box gap-08">
-            <button type="submit" form="bannerForm" class="btn btn-dark-gray btn-small" th:text="${banner != null} ? '수정' : '등록'"></button>
-            <a th:href="@{/banners}" class="btn btn-dark-default btn-small">목록으로</a>
-        </div>
-    </div>
+<!-- 수정버튼영역 -->
+<div class="btn_all btn_right mb15" th:if="${pageValidFlag == 'Y'}">
+	<div class="flex_box gap-08">
+		<button type="button" class="btn btn-dark-gray btn-mini" onclick="bannerEdit();">수정</button>
+		<button type="button" class="btn btn-default btn-mini" onclick="moveListPage();">목록</button>
+	</div>
 </div>
+<!--// 수정버튼영역 -->
+
+<!-- 상세정보 -->
+<div class="board_write">
+	<table class="board_write_table mt30" summary="">
+		<colgroup>
+			<col style="width:220px;">
+			<col style="width:180px;">
+		</colgroup>
+		<tbody>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>배너명</td>
+				<td colspan="3">
+					<div class="flex_box gap-08">
+						<input id="title" title="배너명" class="input_txt required _filter half" type="text" th:value="${details != null} ? ${details.title} : ''">
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label">내용<br><span id="contentsCount">(0/1500)</span></td>
+				<td colspan="3">
+					<div class="flex_box gap-08">
+						<input id="contents" title="내용" class="input_txt required _filter half" type="text" maxlength="1500" th:value="${details != null} ? ${details.contents} : ''">
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label" rowspan="2"><span class="required_mark">*</span>이미지</td>
+				<td class="line-right tcenter">
+					<div>
+						<p>PC</p>
+						<p class="mt10 point">권장사이즈는<br>1840px X 760px 입니다.</p>
+					</div>
+				</td>
+				<td colspan="2">
+					<div class="flex_box item-center">
+						<input type="file" id="pcFile" class="full input_file" title="이미지" accept="image/png, image/jpeg, image/gif, image/jpg"/>
+					</div>
+					<div class="file_camera" th:if="${details != null and details.pcFileName != null and details.pcFileName != ''}"
+					     th:id="'pcFile_' + ${details.bannerId}">
+						<div class="image-box">
+							<img th:src="@{'/banners/mainBanner/pc/' + ${details.bannerId}}" class="item_image size-100 none" alt="배너 이미지(Pc)">
+							<a th:href="|javascript:deleteFile('${details.bannerId}', 'PC')|"><img th:src="@{/content/images/btn/file_close.gif}" alt="close"></a>
+						</div>
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="line-right tcenter">
+					<div>
+						<p>mobile</p>
+						<p class="mt10 point">권장사이즈는<br>1074px X 780px 입니다.</p>
+					</div>
+				</td>
+				<td colspan="2">
+					<div class="flex_box item-center">
+						<input type="file" id="mFile" class="full input_file" title="이미지" accept="image/png, image/jpeg, image/gif, image/jpg"/>
+					</div>
+					<div class="file_camera" th:if="${details != null and details.MFileName != null and details.MFileName != ''}"
+					     th:id="'mFile_' + ${details.bannerId}">
+						<div class="image-box">
+							<img th:src="@{'/banners/mainBanner/m/' + ${details.bannerId}}" class="item_image size-100 none" alt="배너 이미지(Mobile)">
+							<a th:href="|javascript:deleteFile('${details.bannerId}', 'M')|"><img th:src="@{/content/images/btn/file_close.gif}" alt="close"></a>
+						</div>
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label">이미지 링크</td>
+				<td colspan="3">
+					<div class="flex_box gap-08">
+						<input id="linkUrl" title="이미지링크" class="input_txt required _filter half" type="text" th:value="${details != null} ? ${details.linkUrl} : ''">
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span>사용여부</td>
+				<td colspan="3">
+					<div class="flex_box gap-12">
+						<div class="input-form">
+							<input id="displayFlagY" name="displayFalg" type="radio" value="Y" th:checked="${details != null and details.displayFlag == 'Y'}">
+							<label for="displayFlagY">사용</label>
+						</div>
+						<div class="input-form">
+							<input id="displayFlagN" name="displayFalg" type="radio" value="N" th:checked="${details != null and details.displayFlag == 'N'}">
+							<label for="displayFlagN">중지</label>
+						</div>
+					</div>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+<!--// 상세정보 -->
+
+<!-- 등록버튼영역 -->
+<div class="btn_all btn_center mt30" th:if="${pageValidFlag != 'Y'}">
+	<div class="flex_box gap-08">
+		<button type="button" class="btn btn-dark-gray btn-small" onclick="bannerCreate();">등록</button>
+		<button type="button" class="btn btn-default btn-small" onclick="moveListPage();">취소</button>
+	</div>
+</div>
+<!--// 등록버튼영역 -->
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script th:inline="javascript">
+	var PAGE_VALID_FLAG = /*[[${pageValidFlag}]]*/ '';
+	var BANNER_ID = /*[[${details != null} ? ${details.bannerId} : '']]*/ '';
+
+	$(function() {
+		// 페이지 유효성 체크
+		if(PAGE_VALID_FLAG == "N") {
+			alert("잘못된 접근 입니다.");
+			moveListPage();
+		}
+
+		// 네비게이션 수정
+		var navText = (PAGE_VALID_FLAG == "Y") ? "수정" : "등록";
+		$(".contents .contents_inner").find("div.location a").removeClass("on");
+		$(".contents .contents_inner").find("div.location").append('> <a href="'+location.pathname+'" class="on">'+navText+'</a>');
+
+		// 파일 선택 이벤트
+		fileSelect();
+
+		// 글자 수 출력 이벤트
+		updateCount();
+	});
+
+	/**
+	 *	함 수 명 : updateCount
+	 *	기	능  : 글자 수 출력 이벤트
+	 */
+	 function updateCount() {
+		const $contents 		= $("#contents");
+		const $contentsCount 	= $("#contentsCount");
+		const max 				= Number($contents.attr('maxlength')) || 1500;
+
+		function render() {
+			const len			= $contents.val().length;
+			$contentsCount.text("(" + len + "/" + max + ")");
+		}
+
+		// render 초기화
+		render();
+
+		$contents.off("input.updateCount").on("input.updateCount", render);
+	 }
+
+	/**
+	 *	함 수 명 : fileSelect
+	 *	기	능  : 파일 선택 이벤트
+	 */
+	function fileSelect() {
+		$("#pcFile, #mFile").change(function(e) {
+			if(e.target.files[0]) {
+				var size = 20;
+				var extensions = ['jpg', 'jpeg','gif','png'];
+				var file = e.target.files[0];
+				var fileExt = file.name;
+
+				if (fileExt != "") {
+					if (file.size > (size * 1024 * 1024)) {
+						alert("파일크기는 " + size + "MB 이내로 등록 가능합니다.");
+						e.target.value = "";
+						return;
+					}
+				}
+
+				fileExt = fileExt.slice(fileExt.lastIndexOf(".") + 1).toLowerCase();
+				if (!extensions.includes(fileExt)) {
+					alert("이미지파일만 등록 가능합니다.");
+					e.target.value = "";
+					return;
+				}
+			}
+		});
+	}
+
+	/**
+	 *	함 수 명 : validator
+	 *	기	능  : 유효성검사
+	 */
+	function validator() {
+		if($.trim($("#title").val()) == "") {
+			alert("배너명을 입력해 주세요.");
+			$("#title").focus();
+			return false;
+		}
+
+		if(!($.trim($("#pcFile").val()) != "" || $("#pcFile")[0].files[0] || $("#pcFile_" + BANNER_ID).length)) {
+			alert("PC 이미지를 선택해 주세요.");
+			$("#pcFile").focus();
+			return false;
+		}
+
+		if(!($.trim($("#mFile").val()) != "" || $("#mFile")[0].files[0] || $("#mFile_" + BANNER_ID).length)) {
+			alert("mobile 이미지를 선택해 주세요.");
+			$("#mFile").focus();
+			return false;
+		}
+
+		if($("input[name='displayFalg']:checked").length == 0) {
+			alert("사용여부를 선택해 주세요.");
+			$("#displayFalgY").focus();
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 *	함 수 명 : moveListPage
+	 *	기	능  : 목록 이동
+	 */
+	function moveListPage() {
+		location.href = "/banners";
+	}
+
+
+	/* *******************************************************************************************************
+	 *
+	 *											등록 function
+	 *
+	 * *******************************************************************************************************/
+
+	/**
+	 *	함 수 명 : bannerCreate
+	 *	기	능  : 배너 등록
+	 */
+	function bannerCreate() {
+		if(!validator() || !confirm("정보를 등록 하시겠습니까?")) return false;
+
+		var formData = new FormData();
+		formData.append("title"			, $("#title").val());
+		formData.append("contents"		, $("#contents").val());
+		formData.append("pcFile"		, $("#pcFile")[0].files[0]);
+		formData.append("mFile"			, $("#mFile")[0].files[0]);
+		formData.append("linkUrl"		, $("#linkUrl").val());
+		formData.append("displayFlag"	, $("input[name='displayFalg']:checked").val());
+
+		$.ajax({
+			url : "/banners/create",
+			type : "POST",
+			async : false,
+			data : formData,
+			processData: false,
+			contentType: false,
+			cache: false,
+			success : function (response) {
+				alert("등록되었습니다.");
+				moveListPage();
+			},
+			error : function (response) {
+				alert("오류가 발생했습니다.");
+			}
+		});
+	}
+
+
+	/* *******************************************************************************************************
+	 *
+	 *											수정 function
+	 *
+	 * *******************************************************************************************************/
+
+	/**
+	 *	함 수 명 : deleteFile
+	 *	기	능  : 파일 삭제 (영역만 삭제)
+	 *	파라미터  : bannerId - 배너 ID, fileType - M/PC (모바일/PC)
+	 */
+	function deleteFile(bannerId, fileType) {
+		if(fileType == "PC")  $("div#pcFile_"+bannerId).remove();
+		else $("div#mFile_"+bannerId).remove();
+	}
+
+	/**
+	 *	함 수 명 : bannerEdit
+	 *	기	능  : 메인 배너 수정
+	 */
+	function bannerEdit() {
+		if(!validator() || !confirm("정보를 수정 하시겠습니까?")) return false;
+
+		var formData = new FormData();
+		formData.append("bannerId"		, BANNER_ID);
+		formData.append("title"			, $("#title").val());
+		formData.append("contents"		, $("#contents").val());
+		formData.append("linkUrl"		, $("#linkUrl").val());
+		formData.append("displayFlag"	, $("input[name='displayFalg']:checked").val());
+
+		if($("#pcFile")[0].files[0]) {
+			formData.append("pcFile", $("#pcFile")[0].files[0]);
+		}
+
+		if($("#mFile")[0].files[0]) {
+			formData.append("mFile", $("#mFile")[0].files[0]);
+		}
+
+		$.ajax({
+			url : "/banners/edit",
+			type : "POST",
+			async : false,
+			data : formData,
+			processData: false,
+			contentType: false,
+			cache: false,
+			success : function (response) {
+				alert("수정되었습니다.");
+				moveListPage();
+			},
+			error : function (response) {
+				alert("오류가 발생했습니다.");
+			}
+		});
+	}
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

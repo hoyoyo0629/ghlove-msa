@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>메세지 관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/message/form.jsp 이식(메뉴 1402).
+     아이디 / 한국어 / 일본어 3칸이고, 등록일 때만 "문구는 ID 자동입력됩니다..." 안내가 붙는다.
+     아이디를 비워 두면 M+5자리 자동채번, 적어 넣으면 그 ID로 등록된다(MENU_xxxx 직접 등록용).
+
+     AS-IS 수정 처리는 언어별 UPDATE라 일본어 행이 없는 ID(2,034개 중 1,936개)는 일본어 입력이
+     저장되지 않는다 - 결함이지만 INSERT로 보충하면 AS-IS에 없던 ja 행이 생기므로 그대로 뒀다.
+     AS-IS form.jsp에 있는 fnMakeMaxid()는 아무 데서도 호출되지 않는다(verbatim 유지).
+     수정화면의 아이디 칸은 AS-IS에서 입력 가능하지만 저장은 URL의 id로만 하므로 고쳐도 무효다 -
+     혼동을 피해 readonly로 뒀다(결과는 동일). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<form id="message" method="post" enctype="multipart/form-data"
+      th:action="${id != null} ? @{'/message/edit/' + ${id}} : @{/message/create}">
+	<h3><span th:text="${msg.get('MENU_1402')}">메세지 관리</span></h3>
+	<div class="board_write">
+		<table class="board_write_table">
+			<caption th:text="${msg.get('MENU_1402')}">메세지 관리</caption>
+			<colgroup>
+				<col style="width:150px;">
+				<col style="width:auto;">
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="label" th:text="${msg.get('M00081')}">아이디</td>
+					<td>
+						<div>
+							<input type="text" id="id" name="id" th:title="${msg.get('M00081')}" style="width=200px;"
+							       th:value="${message.id}" th:readonly="${id != null}" />
+							<th:block th:if="${id == null}">
+								- 문구는 ID 자동입력됩니다. 메뉴일경우만 입력해 주십시오. -   MENU_
+							</th:block>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label" th:text="${msg.get('M01670')}">한국어</td>
+					<td>
+						<div>
+							<input type="text" id="kMessage" name="kMessage" th:title="${msg.get('M00275')}" class="nine" th:value="${message.kMessage}" />
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label" th:text="${msg.get('M01671')}">일본어</td>
+					<td>
+						<div>
+							<input type="text" id="jMessage" name="jMessage" th:title="${msg.get('M00275')}" class="nine" th:value="${message.jMessage}" />
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div> <!-- // board_write -->
+
+	<!-- 버튼시작 -->
+	<div class="btn_all btn_center">
+		<div class="flex_box gap-08">
+		<button type="submit" class="btn btn-active"><span th:text="${msg.get('M00101')}">저장</span></button>
+		<a th:href="@{/message/list}" class="btn btn-default"><span th:text="${msg.get('M00037')}">취소</span></a>
+		</div>
+	</div>
+	<!-- 버튼 끝-->
+</form>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript">
+
+	// max id + 1 값 (AS-IS에도 호출부가 없다)
+	function fnMakeMaxid(maxid){
+		var newid;
+		newid = '00000' + maxid;
+		newid = 'M' + newid.substring(newid.length-5,newid.length)
+
+		$("#id").val(newid);
+	}
+
+$(function() {
+
+	// validator
+	try{
+		$('#message').validator(function() {
+
+			var kMsg = $("#kMessage").val();
+			var jMsg = $("#jMessage").val();
+
+			if (kMsg.length==0) {
+				alert("한국어는 필수 입력항목입니다.");
+				$("#kMessage").focus();
+				return false;
+			}
+			if (jMsg.length==0) {
+				$("#jMessage").val(kMsg);
+			}
+		});
+	} catch(e) {
+		alert(e.message);
+	}
+
+});
+
+</script>
+</body>
+</html>

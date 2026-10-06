@@ -1,44 +1,469 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>메일 작성 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
+    <title>이메일 발송 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <!-- AS-IS form.jsp 상단 <style> 그대로 (개별 발송 수신자 검색결과 레이어) -->
+    <style>
+	.searchResult {
+		width: 250px;
+		position: absolute;
+		background: #fff;
+		top: 80px;
+		border: 1px solid #ccc;
+		border-top: none;
+		border-radius: 0px 0px 5px 5px !important;
+		z-index: 99;
+		padding: 12px 0px;
+		font-size: 14px;
+	}
+	.searchResult .searchList {
+		max-height: 300px;
+		overflow-y: auto;
+		padding: 0px 16px;
+	}
 
+	.searchResult ul li {
+		display: flex;
+		padding: 1px 0;
+	}
+	.searchResult ul li span {
+		flex : 1;
+	}
+	.searchResult .closeDiv {
+		padding: 12px 16px 0px;
+		border-top: 1px solid #f5f5f5;
+		text-align: right;
+	}
+	.searchResult .closeDiv span {
+		color: #a5a5a5;
+		font-size: 12px;
+		font-weight: bold;
+		cursor: pointer;
+	}
+
+	.searchResult .closeDiv span img {
+		opacity: 0.4;
+    	vertical-align: baseline;
+	}
+    </style>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <div class="location"><a th:href="@{/email}">이메일 발송</a></div>
-    <h3><span>메일 작성</span></h3>
+<!-- AS-IS opmanager/i18n/mail/form.jsp 이식.
+     발송대상(권한별 A / 답례품 S / 개별 E) · 발송시점(즉시 D / 지정 R + 날짜·시·분) · 제목 ·
+     첨부파일(12종 10MB) · 스마트에디터 내용(기본 메일틀 미리 채움)이고, 발송은
+     "등록(POST /email/form) → 응답 emailId로 숨은 iframe에 POST /email/send" 2단계다(AS-IS 동일).
 
-    <div class="board_write">
-        <table class="board_write_table" summary="메일 작성">
-            <colgroup><col style="width:220px;"><col></colgroup>
-            <tbody>
-            <tr>
-                <td class="label">발송대상</td>
-                <td>
-                    <label><input type="radio" name="authTarget" value="A" checked form="emailForm"> 전체 관리자</label>
-                    <label><input type="radio" name="authTarget" value="D" form="emailForm"> ROLE_ADMIN만</label>
-                    <label><input type="radio" name="authTarget" value="O" form="emailForm"> ROLE_OPERATOR만</label>
-                </td>
-            </tr>
-            <tr><td class="label"><span class="required_mark">*</span>제목</td><td><input type="text" id="subject" name="subject" required form="emailForm"></td></tr>
-            <tr><td class="label"><span class="required_mark">*</span>내용</td><td><textarea id="content" name="content" rows="8" required form="emailForm"></textarea></td></tr>
-            </tbody>
-        </table>
-    </div>
-    <form id="emailForm" th:action="@{/email}" method="post" onsubmit="return confirm('선택한 대상에게 즉시 발송합니다. 계속하시겠습니까?')"></form>
-    <div class="btn_all btn_center">
-        <button type="submit" form="emailForm" class="btn btn-dark-gray btn-small">발송</button>
-    </div>
-</div>
+     발송대상 코드는 AS-IS 그대로 A/S/E다 - 예전 TO-BE는 A(전체관리자)/D(ROLE_ADMIN)/O(ROLE_OPERATOR)
+     라는 없는 코드를 쓰고 발송시점·첨부파일·에디터·개별수신자 검색이 전부 없었다.
+
+     AS-IS 결함 보존: 취소 버튼 class가 `btn btn-defualt`(default 오타)라 스타일이 안 먹고,
+     JS의 `$('#notice').validator(...)`는 이 화면에 없는 요소를 잡아 아무 일도 하지 않는다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span>이메일 발송</span></h3>
+
+<div class="board_write">
+	<table class="board_write_table" th:summary="${msg.get('M00269')}" style="position: relative;">
+		<caption>이메일 발송</caption>
+		<colgroup>
+			<col style="width:220px;">
+			<col>
+		</colgroup>
+		<tbody>
+			<tr>
+				<td class="label">발송대상</td>
+				<td>
+					<div class="flex_box gap-08 item-center">
+						<div class="flex_box gap-12">
+							<div class="input-form">
+								<input type="radio" id="auth" name="authTarget" value="A" />
+								<label for="auth">권한별</label>
+							</div>
+							<div class="input-form">
+								<input type="radio" id="seller" name="authTarget" value="S" />
+								<label for="seller">답례품</label>
+							</div>
+							<div class="input-form">
+								<input type="radio" id="each" name="authTarget" value="E" />
+								<label for="each">개별</label>
+							</div>
+						</div>
+					</div>
+					<div class="target target_A">
+						<th:block th:each="g, i : ${groupList}">
+							<input type="checkbox" th:id="'auth_' + ${i.index}" name="authority" th:value="${g.authority}" />
+							<label th:for="'auth_' + ${i.index}" th:text="${g.roleName}"></label>
+						</th:block>
+					</div>
+					<div class="target target_E">
+						<div class="flex_box gap-08">
+							<input type="text" name="userName" class="input_txt _filter" th:title="${msg.get('M00021')}" style="width: 250px;" onkeydown="searchKeyDown(event)"/>
+							<a href="javascript:;" class="btn_date" onclick="searchUser()">검색</a>
+							<div class="searchResult" style="display: none;">
+								<div class="searchList">
+									<ul></ul>
+								</div>
+								<div class="closeDiv">
+									<span onclick="hideSearchDiv()">닫기
+										<img th:src="@{/content/images/btn/option-close-btn.gif}" alt="닫기">
+									</span>
+								</div>
+							</div>
+						</div>
+						<div style="width : 250px; margin-top : 15px; font-size: 13px;">
+							<ul id="sendUserListTxt"></ul>
+						</div>
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label">발송 시점</td>
+				<td>
+					<div class="flex_box gap-12">
+						<div class="input-form">
+							<input type="radio" id="now" name="sendType" value="D" />
+							<label for="now">즉시</label>
+						</div>
+						<div class="input-form">
+							<input type="radio" id="reservation" name="sendType" value="R" />
+							<label for="reservation">지정</label>
+						</div>
+					</div>
+					<div class="flex_box gap-08 item-center send_date">
+						<div class="search-date">
+							<span class="datepicker">
+								<input type="text" id="sendDate" class="datepicker optional " th:title="${msg.get('M00507')}" />
+							</span>
+						</div>
+						<select id="sendHour">
+							<option th:each="h : ${#numbers.sequence(0, 23)}"
+							        th:value="${h >= 10} ? ${h} : '0' + ${h}" th:text="${h}"></option>
+						</select>
+						<span class="wave">시</span>
+						<select id="sendTime">
+							<option th:each="m : ${#numbers.sequence(0, 59)}"
+							        th:value="${m >= 10} ? ${m} : '0' + ${m}" th:text="${m}"></option>
+						</select>
+						<span class="wave">분</span>
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span><span th:text="${msg.get('M00275')}">제목</span></td>
+				<td>
+					<div>
+						<input type="text" id="subject" name="subject" th:title="${msg.get('M00275')}" class="input_txt required _filter half require" maxlength="255" />
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label" th:text="${msg.get('M01699')}">첨부파일</td>
+				<td>
+					<div>
+						<input type="file" name="files" onchange="validationFile(this)" />
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span><span th:text="${msg.get('M00006')}">내용</span></td>
+				<td>
+					<!-- smart_editor2 area -->
+					<div>
+						<textarea id="content" name="content" cols="30" rows="20" class="editor-content require"
+						          th:title="${msg.get('M00006')}" th:utext="${defaultContent}"></textarea>
+					</div>
+					<!-- smart_editor2 area -->
+				</td>
+			</tr>
+		</tbody>
+	</table>
+
+	<div class="btn_all btn_center">
+		<div class="flex_box gap-08">
+			<button type="button" class="btn btn-dark-gray btn-small" onclick="insertEmail()"><span>발송</span></button>
+			<button type="button" class="btn btn-defualt btn-small" onclick="location.href='/email/list'" th:text="${msg.get('M00037')}">취소</button>
+		</div>
+	</div>
+
+</div> <!-- // board_write -->
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<div th:replace="~{fragments/smarteditor :: init}"></div>
+<div th:replace="~{fragments/smarteditor :: editor('content')}"></div>
+
+<iframe id="submitFrm" style="display : none" name="submitFrm"></iframe>
+
+<script type="text/javascript" th:inline="javascript">
+
+var sendUserList = [];
+
+$(function() {
+
+	try{
+		// AS-IS 그대로 - 이 화면에 #notice가 없어 아무 일도 하지 않는다(공지 화면에서 복사된 흔적)
+		$('#notice').validator(function() {
+			Common.getEditorContent("content");
+
+			if ($('#content').val().toLowerCase() == '<p>&nbsp;</p>' || $('#content').val() == '') {
+				alert($.validator.messages['text'].format([[${msg.get('M00006')}]]));
+				return false;
+			}
+		});
+
+
+		$("input[name=authTarget]").on('change', function () {
+			$(".target").hide();
+			$(".target_" + $("input[name=authTarget]:checked").val()).show();
+		});
+
+		$("input[name=sendType]").on('change', function () {
+			var date = new Date();
+			var eDate = date.getFullYear() + Common.addZero((date.getMonth() + 1), 2) + Common.addZero(date.getDate(), 2);
+			$("#sendDate").val(eDate);
+
+			if ($(this).val() == 'D') {
+				$(".send_date").find('input, select, button').prop("disabled",true);
+			} else {
+				$(".send_date").find('input, select, button').prop("disabled",false);
+			}
+
+		});
+
+
+		$("#auth").click();
+		$("#now").click();
+
+		$('html').click(function(e){
+			if($(e.target).parents('.searchResult').length < 1 && $(".searchResult").is(":visible")){
+				hideSearchDiv();
+			}
+		});
+
+	} catch(e) {
+		alert(e.message);
+	}
+
+});
+
+function insertEmail() {
+	Common.getEditorContent("content");
+
+	if (!validation()) return false;
+
+	var formData = new FormData();
+	formData.append("subject", $("#subject").val());
+	formData.append("content", $('#content').val());
+	formData.append("sendType", $("input[name=sendType]:checked").val());
+	formData.append("sendDate", $("#sendDate").val() + $("#sendHour").val() + $("#sendTime").val() + '00');
+	formData.append("authTarget", $("input[name=authTarget]:checked").val());
+
+	$('input:checkbox[name=authority]:checked').each(function (idx) {
+		formData.append('authList[' + idx + '].authority', $(this).val());
+	});
+
+
+	var files = $("input[name=files]")[0].files;
+	for (var i = 0; i < files.length; i++) {
+		formData.append("files", files[i]);
+	}
+
+	$.ajax({
+		url : '/email/form',
+		type : 'post',
+		data: formData,
+		enctype: 'multipart/form-data',
+		processData: false,
+		contentType: false,
+		cache: false,
+		success : function(response) {
+			if (response.isSuccess && response.data) {
+
+				var form  = $('<form></form>');
+				form.attr('action','/email/send');
+				form.attr('target','submitFrm');
+				form.attr('method','post');
+
+				form.append($('<input />', {type: 'hidden', name : 'emailId', value: response.data} ));
+
+				// 개별 전송인 경우
+				if ($("input[name=authTarget]:checked").val() == 'E') {
+					for (var i in sendUserList) {
+						var d = sendUserList[i];
+						form.append($('<input />', {type: 'hidden', name : 'sendUserList[' + i + '].userName', value: d.userName} ));
+						form.append($('<input />', {type: 'hidden', name : 'sendUserList[' + i + '].email', value: d.email} ));
+					}
+				}
+
+				form.appendTo('body');
+
+				form.submit();
+				form.remove();
+				alert("발송을 요청하였습니다.");
+				location.href = '/email/list';
+			} else {
+				alert(response.errorMessage ? response.errorMessage : "발송 요청 중 오류가 발생하였습니다.");
+			}
+		}
+	});
+
+}
+
+function searchKeyDown(event) {
+	if (event.keyCode == '13') {
+		searchUser();
+	}
+}
+
+function searchUser() {
+	if ($("input[name=userName]").val() == '') {
+		alert("발송자명 입력해주세요.");
+		return false;
+	}
+
+	$.ajax({
+		url : '/email/search',
+		type : 'post',
+		data : {userName : $("input[name=userName]").val()},
+		success : function (response) {
+
+			if (response.isSuccess) {
+
+				$(".searchResult > .searchList > ul").empty();
+
+				if (response.data.length > 0) {
+					$(".searchResult").show();
+					var html =  "";
+					for (var i in response.data) {
+						var d = response.data[i];
+							html += "<li>";
+							html += "	<span class='searchEmil'>" + d.email + "</span>";
+							html += "	<a href='javascript:;' onclick=\"addSendUser('" + d.email + "', '" + d.userName + "')\">추가</a>";
+							html += "</li>";
+
+					}
+					$(".searchResult > .searchList > ul").append(html);
+				}
+
+			} else {
+				alert("검색 중 오류가 발생하였습니다.\n담당자에게 문의 부탁드립니다.");
+				return false;
+			}
+
+		},
+		error : function () {
+			alert("검색 중 오류가 발생하였습니다.\n담당자에게 문의 부탁드립니다.");
+			return false;
+		}
+	})
+}
+
+function addSendUser(email, userName) {
+
+	var idx = sendUserList.findIndex(function (u) {
+		return u.email === email
+	});
+
+	if (idx > -1) return false;
+
+	var html = "";
+	html += "<li style='display : flex'>";
+	html += "	<span class='searchEmil' style='flex : 1'>" + email + "</span>";
+	html += "	<a href='javascript:;' onclick=\"removeSendUser(this)\">삭제</a>";
+	html += "</li>";
+
+	sendUserList.push({
+		userName : userName,
+		email : email
+	});
+
+	$("#sendUserListTxt").append(html);
+}
+
+function removeSendUser(e) {
+
+	var email = $(e).parent().find('span').html();
+
+	sendUserList.forEach(function (item, index) {
+		item.email === email ? sendUserList.splice(index,1) : '' ;
+	});
+
+	$(e).parent().remove();
+}
+
+function validation () {
+
+	if (($("input[name=authTarget]:checked").val() == 'A' && $("input[name=authority]:checked").length <= 0) ||
+	    ($("input[name=authTarget]:checked").val() == 'E' && sendUserList.length <= 0)) {
+		alert("발송 대상이 없습니다.");
+		$("input[name=authTarget]").focus();
+		return false;
+	}
+
+
+	var isValid = true;
+	$(".require").each(function (idx, that) {
+		if ($(that).val() == '') {
+			alert($(that).attr('title') + "이 입력되지 않았습니다.");
+			$(that).focus();
+			isValid = false;
+			return false;
+		}
+
+	});
+
+	return isValid;
+}
+
+function validationFile(e) {
+	var imageReg = /(.*?)\.(jpg|jpeg|png|gif|bmp|hwp|doc|docx|pdf|zip|ppt|pptx)$/;
+	var maxSize = 10 * 1024 * 1024;	//10MB
+	var isSucc = true;
+
+	if (e.files) {
+
+		for (var i = 0; i < e.files.length; i++) {
+			if (isSucc && !e.files[i].name.match(imageReg)) {
+				alert("jpg|jpeg|png|gif|bmp|hwp|doc|docx|pdf|zip|ppt|pptx 파일만 등록 가능합니다.");
+				$(e).focus();
+				isSucc = false;
+				break;
+			}
+
+			if (isSucc && e.files[i].size > maxSize) {
+				alert("이미지 파일은 개당 10MB 이하로 등록 가능합니다.");
+				$(e).focus();
+				isSucc = false;
+				break;
+			}
+		}
+
+		if (!isSucc) {
+			if (Browser.getName() == 'ie') {
+				$(e).replaceWith($(e).clone(true));
+			} else {
+				$(e).val("");
+			}
+		}
+
+	}
+}
+
+function hideSearchDiv() {
+	$(".searchResult").hide();
+}
+
+</script>
 </body>
 </html>

@@ -1,41 +1,280 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>로그인 로그 관리 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <title>관리자 로그관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <h3>로그인 로그 관리</h3>
-    <p style="color:#666; margin-bottom:12px;">관리자 로그인 시도(성공/실패) 이력입니다. 최근 200건까지 표시합니다.</p>
+<!-- AS-IS opmanager/i18n/log/login-log-list.jsp 이식. 검색구분(로그인ID/접속IP) + 접속일 범위
+     (오늘·1주·1개월·3개월·1년 버튼) + 로그인 성공여부 + 권한그룹 + 화면출력 + 7컬럼 + 페이지네이션.
+     성공한 로그인만 "상세보기"가 열린다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <table class="board_list_table">
-        <thead>
-        <tr><th>ID</th><th>아이디</th><th>결과</th><th>IP</th><th>비고</th><th>일시</th><th></th></tr>
-        </thead>
-        <tbody>
-        <tr th:each="l : ${logs}">
-            <td th:text="${l.loginLogId}"></td>
-            <td th:text="${l.loginId}"></td>
-            <td th:text="${l.successFlag == 'Y' ? '성공' : '실패'}"
-                th:style="${l.successFlag == 'Y' ? 'color:#1a6b3c;' : 'color:#c0392b;'}"></td>
-            <td th:text="${l.remoteAddr}"></td>
-            <td th:text="${l.memo}"></td>
-            <td th:text="${l.loginDate}"></td>
-            <td><a th:href="@{/log/manager-action(loginId=${l.loginId})}">메뉴사용이력</a></td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(logs)}">로그인 로그가 존재하지 않습니다.</p>
+<h3><span>관리자 로그관리</span></h3>
+
+<!-- Search -->
+<form id="searchForm" class="opmanager-search-form clear" method="post" th:action="@{/log/login}">
+	<input type="hidden" id="itemsPerPage" name="itemsPerPage" th:value="${loginLogParam.itemsPerPage}"/>
+	<input type="hidden" id="itemsPerPageTemp" name="itemsPerPageTemp" th:value="${loginLogParam.itemsPerPageTemp}"/>
+
+	<div class="board_write">
+		<table class="board_write_table" summary="관리자 로그관리">
+			<colgroup>
+				<col style="width:220px;">
+				<col>
+				<col style="width:220px;">
+				<col>
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="label">검색구분</td>
+					<td colspan="3">
+						<div class="flex_box gap-08">
+							<select id="srchKey" name="srchKey" title="아이디" class="wd-150">
+								<option value="LOGIN_ID" th:selected="${loginLogParam.srchKey == 'LOGIN_ID'}">로그인ID</option>
+								<option value="REMOTE_ADDR" th:selected="${loginLogParam.srchKey == 'REMOTE_ADDR'}">접속IP</option>
+							</select>
+							<input type="text" id="srchValue" name="srchValue" title="검색구분" class="input_txt required _filter wd-500" th:value="${loginLogParam.srchValue}"/>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">접속일</td>
+					<td colspan="3">
+						<div>
+							<span class="datepicker"><input type="text" id="srchStartLoginDate" name="srchStartLoginDate" class="datepicker optional " th:title="${msg.get('M00507')}" th:value="${loginLogParam.srchStartLoginDate}" /></span>
+							<span class="wave">~</span>
+							<span class="datepicker"><input type="text" id="srchEndLoginDate" name="srchEndLoginDate" class="datepicker optional " th:title="${msg.get('M00509')}" th:value="${loginLogParam.srchEndLoginDate}" /></span>
+							<span class="day_btns">
+								<a href="javascript:void(0);" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+								<a href="javascript:void(0);" class="btn_date week-1" th:text="${msg.get('M00027')}">1주</a>
+								<a href="javascript:void(0);" class="btn_date month-1" th:text="${msg.get('M00029')}">1개월</a>
+								<a href="javascript:void(0);" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+								<a href="javascript:void(0);" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a>
+							</span>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">로그인 성공여부</td>
+					<td>
+						<div class="flex_box gap-12">
+							<div class="input-form">
+								<input type="radio" id="sf0" name="srchSuccessFlag" value="" th:checked="${#strings.isEmpty(loginLogParam.srchSuccessFlag)}" /><label for="sf0">전체</label>
+							</div>
+							<div class="input-form">
+								<input type="radio" id="sfY" name="srchSuccessFlag" value="Y" th:checked="${loginLogParam.srchSuccessFlag == 'Y'}" /><label for="sfY">성공</label>
+							</div>
+							<div class="input-form">
+								<input type="radio" id="sfN" name="srchSuccessFlag" value="N" th:checked="${loginLogParam.srchSuccessFlag == 'N'}" /><label for="sfN">실패</label>
+							</div>
+						</div>
+					</td>
+					<td class="label">권한그룹</td>
+					<td>
+						<div class="flex_box gap-12">
+							<select id="srcRole" name="srcRole" title="권한그룹">
+								<option value="" th:selected="${#strings.isEmpty(loginLogParam.srcRole)}">전체</option>
+								<option th:each="item : ${adminMenuRoles}" th:value="${item.authority}"
+								        th:selected="${loginLogParam.srcRole == item.authority}" th:text="${item.roleName}"></option>
+							</select>
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/log/login'">초기화</button>
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="search();">검색</button>
+			</div>
+		</div>
+	</div>
+</form>
+<!--// Search -->
+
+<!-- List -->
+<div class="board_list mt-40">
+	<!-- List Header -->
+	<div class="count_title mt-40">
+		<h5>총 <span th:text="${#numbers.formatInteger(count, 0, 'COMMA')}" th:remove="tag">0</span> 건</h5>
+		<span>
+			<select name="displayCount" id="displayCount" th:title="${msg.get('M00239')}">
+				<option value="10" th:text="${msg.get('M00240')}">10개 출력</option>
+				<option value="20" th:text="${msg.get('M00241')}">20개 출력</option>
+				<option value="50" th:text="${msg.get('M00242')}">50개 출력</option>
+				<option value="100" th:text="${msg.get('M00243')}">100개 출력</option>
+			</select>
+		</span>
+	</div>
+	<!--// List Header -->
+
+	<table class="board_list_table" summary="관리자 로그관리">
+		<caption>관리자 로그관리</caption>
+		<colgroup>
+			<col style="width:50px;">
+			<col style="width:200px;">
+			<col style="width:150px;">
+			<col style="width:150px;">
+			<col style="width:150px;">
+			<col style="width:200px;">
+			<col style="width:150px;">
+		</colgroup>
+		<thead>
+			<tr>
+				<th scope="col">No.</th>
+				<th scope="col">접속일</th>
+				<th scope="col">로그인 ID</th>
+				<th scope="col">권한그룹</th>
+				<th scope="col">로그인 성공유무</th>
+				<th scope="col">접속 IP</th>
+				<th scope="col">관리</th>
+			</tr>
+		</thead>
+		<tbody>
+			<th:block th:if="${not #lists.isEmpty(list)}">
+				<tr th:each="row, i : ${list}" style="background:#fff;">
+					<td><div th:text="${pagination.itemNumber - i.count}">0</div></td>
+					<td><div th:text="${row.log.loginDate}"></div></td>
+					<td><div th:text="${row.log.loginId}"></div></td>
+					<td>
+						<div th:text="${row.log.loginType == 'seller'} ? '답례품관리자' : ${row.roleName}"></div>
+					</td>
+					<td><div th:text="${row.log.successFlag == 'Y'} ? '성공' : '실패'"></div></td>
+					<td><div th:text="${row.log.remoteAddr}"></div></td>
+					<td>
+						<div>
+							<a th:if="${row.log.successFlag == 'Y'}" th:href="|javascript:details('${row.log.loginLogId}');|">상세보기</a>
+							<span th:unless="${row.log.successFlag == 'Y'}">-</span>
+						</div>
+					</td>
+				</tr>
+			</th:block>
+			<tr th:if="${#lists.isEmpty(list)}" style="background:#fff;">
+				<td colspan="7">관리자 로그관리 정보가 없습니다.</td>
+			</tr>
+		</tbody>
+	</table>
+	<div class="pagination-wrap">
+		<div class="pagination-wrap" th:if="${not #lists.isEmpty(list)}">
+			<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+		</div>
+	</div>
 </div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script type="text/javascript">
+	$(function(){
+
+		// 한 페이지 출력 갯수 변경 이벤트
+		displayChange();
+
+		// 선택된 페이지 출력 갯수 셋팅
+		displaySelected();
+
+		// 날짜 변경 이벤트
+		datepickerChange();
+
+		// 검색 enter key
+		searchEnterKey();
+
+		Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="srchStartLoginDate"]' , 'input[name="srchEndLoginDate"]');
+		EventHandler.calendarStartDateAndEndDateVaild();
+	});
+
+
+	/**
+	 *	함 수 명 : displayChange
+	 *	기	능  : 한 페이지 출력 갯수 변경 이벤트
+	 */
+	function displayChange() {
+		$("#displayCount").on('change', function(){
+			$("#itemsPerPage").val($(this).val());
+			$("#itemsPerPageTemp").val($(this).val());
+			search();
+		});
+	}
+
+	/**
+	 *	함 수 명 : displaySelected
+	 *	기	능  : 선택된 페이지 출력 갯수 셋팅
+	 */
+	function displaySelected(){
+		$("#displayCount").val($("#itemsPerPage").val());
+	}
+
+	/**
+	 *	함 수 명 : details
+	 *	기	능  : 상세보기
+	 *	파라미터  : loginLogId - 로그인 로그 ID
+	 */
+	function details(loginLogId) {
+		location.href = "/log/login/details/"+loginLogId+location.search;
+	}
+
+	/**
+	 *	함 수 명 : datepickerChange
+	 *	기	능  : 날짜 변경 이벤트
+	 */
+	function datepickerChange() {
+		if($("input.datepicker").length) {
+			$("input.datepicker").keyup(function(e) {
+				if(e && e.target && e.target.value) {
+					var value = e.target.value.replace(/[^0-9]/g, "");
+					if(value.length > 8) { value = value.slice(0, 8); }
+					e.target.value = value;
+				}
+			});
+		}
+	}
+
+	/**
+	 *	함 수 명 : search
+	 *	기	능  : 검색
+	 */
+	function search() {
+		var strStartDate = $("#srchStartLoginDate").val();
+		var strEndDate = $("#srchEndLoginDate").val();
+
+		if(strStartDate && strStartDate.length == 8 && strEndDate && strEndDate.length == 8) {
+			var startDate = new Date(strStartDate.substr(0, 4), strStartDate.substr(4, 2), strStartDate.substr(6, 2));
+			var endDate = new Date(strEndDate.substr(0, 4), strEndDate.substr(4, 2), strEndDate.substr(6, 2));
+
+			if(startDate > endDate) {
+				alert("종료일이 시작일보다 빠릅니다.");
+				var value = $("#srchEndLoginDate").val();
+				$("#srchEndLoginDate").val("");
+				$("#srchEndLoginDate").focus();
+				$("#srchEndLoginDate").val(value);
+				return false;
+			}
+		}
+
+		$("#searchForm").submit();
+	}
+
+	/**
+	 *	함 수 명 : searchEnterKey
+	 *	기	능  : 검색 엔터키 이벤트
+	 */
+	function searchEnterKey() {
+		$("#srchValue, #srchStartLoginDate, #srchEndLoginDate").on('keydown', function(e){
+			if (e.keyCode == '13') {
+				search();
+			}
+		});
+	}
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

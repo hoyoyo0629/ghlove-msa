@@ -1,34 +1,251 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>메일 상세 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <title>발송결과 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <!-- AS-IS detail.jsp 상단 <style> 그대로 (이 화면에서는 쓰이지 않지만 AS-IS에 있다) -->
+    <style>
+	.searchResult {
+		width: 250px;
+		position: absolute;
+		background: #fff;
+		top: 80px;
+		border: 1px solid #ccc;
+		border-top: none;
+		border-radius: 0px 0px 5px 5px !important;
+		z-index: 99;
+		padding: 12px 16px;
+		font-size: 14px;
+	}
+    </style>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <p><a th:href="@{/email}">&larr; 이메일 발송</a></p>
-    <h3 th:text="${email.subject}"></h3>
+<!-- AS-IS opmanager/i18n/mail/detail.jsp 이식. 발송상태·발송대상·발송 요청 일시·제목·첨부파일·
+     내용을 보여주고, EMS 리포트가 집계된 건(상태 C/P/T)에만 상단 발송결과(총/성공/실패)와
+     발송 인원 명단(ajax + 자체 페이지네이션)이 붙는다.
 
-    <table class="board_list_table">
-        <tbody>
-        <tr><th>대상</th><td th:text="${email.authTarget == 'A' ? '전체 관리자' : (email.authTarget == 'D' ? 'ROLE_ADMIN' : 'ROLE_OPERATOR')}"></td></tr>
-        <tr><th>상태</th><td th:text="${email.status == 'S' ? '발송완료' : (email.status == 'F' ? '일부실패' : '작성중')}"></td></tr>
-        <tr><th>발송일시</th><td th:text="${email.sendDate}"></td></tr>
-        </tbody>
-    </table>
+     ★ EMS 리포트는 TO-BE에 없다 - AS-IS는 발송결과와 발송인원을 외부 메일발송(EMS) 시스템의
+     별도 DB(EMS_REPORT / EMS_REPORT_DETAIL, AS-IS는 emsDS라는 두 번째 datasource로 붙는다)에서
+     읽는다. 그 datasource가 이 프로젝트에 없어 집계가 비어 있고, 그래서 상태도 발송요청(R/S/F)에
+     머물며 이 두 영역은 뜨지 않는다(= AS-IS에서 리포트가 아직 없을 때와 같은 모습).
+     꾸며서 성공 건수를 보여주지 않는다 - 조회 로직은 OpEmailService에 AS-IS 규칙 그대로 있다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <div class="notice-detail" style="margin-top:20px;">
-        <div class="notice-detail__content" th:text="${email.content}"></div>
-    </div>
+<h3><span>발송결과</span></h3>
+
+<div class="board_write" style="padding: 40px 0px;" th:if="${mail.emailSend and cnt != null}">
+	<table class="board_write_table" summary="발송 현황">
+	<tbody>
+		<tr>
+		<td class="label">총 발송 건수</td>
+		<td>
+			<div><span th:text="${#numbers.formatInteger(cnt.totCnt, 0, 'COMMA')}">0</span>건</div>
+		</td>
+		<td class="label">성공</td>
+		<td>
+			<div><span th:text="${#numbers.formatInteger(cnt.succCnt, 0, 'COMMA')}">0</span>건</div>
+		</td>
+		<td class="label">실패</td>
+		<td>
+			<div><span th:text="${#numbers.formatInteger(cnt.failCnt, 0, 'COMMA')}">0</span>건</div>
+		</td>
+		</tr>
+	</tbody>
+	</table>
 </div>
+
+<div class="board_write">
+	<table class="board_write_table" th:summary="${msg.get('M00269')}" style="position: relative;">
+		<caption>이메일 발송</caption>
+		<colgroup>
+			<col style="width:220px;">
+			<col>
+		</colgroup>
+		<tbody>
+			<tr>
+				<td class="label">발송상태</td>
+				<td><div th:text="${mail.statusName}"></div></td>
+			</tr>
+			<tr>
+				<td class="label">발송대상</td>
+				<td>
+					<th:block th:if="${not #lists.isEmpty(mail.authList)}">
+						<div th:each="auth : ${mail.authList}" th:text="${auth.roleName}"></div>
+					</th:block>
+					<div th:if="${#lists.isEmpty(mail.authList) and mail.authTarget == 'S'}">답례품</div>
+					<div th:if="${#lists.isEmpty(mail.authList) and mail.authTarget != 'S'}">개별</div>
+				</td>
+			</tr>
+			<tr th:if="${mail.emailSend}">
+				<td class="label">발송 인원</td>
+				<td>
+					<div class="board_list">
+						<table id="emsList" class="board_list_table">
+							<caption>발송 명단</caption>
+							<thead>
+								<tr>
+									<th>이름</th>
+									<th>이메일</th>
+									<th>실발송 시간</th>
+									<th>발송 여부</th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+						<div class="pagination-wrap">
+							<p class="pagination op-pagination" id="page">
+							</p>
+							<p></p>
+						</div>
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label">발송 요청 일시</td>
+				<td>
+					<div th:text="${mail.sendDateText}"></div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label" th:text="${msg.get('M00275')}">제목</td>
+				<td>
+					<div th:text="${mail.subject}"></div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label" th:text="${msg.get('M01699')}">첨부파일</td>
+				<td>
+					<div>
+						<th:block th:if="${not #lists.isEmpty(mail.fileList)}">
+							<a th:each="file : ${mail.fileList}" th:href="@{'/email/download/' + ${file.emailFileId}}"
+							   th:text="${file.orgFileName}"></a>
+						</th:block>
+						<div th:if="${#lists.isEmpty(mail.fileList)}">없음</div>
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label"><span class="required_mark">*</span><span th:text="${msg.get('M00006')}">내용</span></td>
+				<td>
+					<!-- smart_editor2 area -->
+					<div>
+						<textarea id="content" name="content" cols="30" rows="20" class="editor-content require"
+						          th:title="${msg.get('M00006')}" th:text="${mail.content}"></textarea>
+					</div>
+					<!-- smart_editor2 area -->
+				</td>
+			</tr>
+		</tbody>
+	</table>
+
+	<div class="btn_all btn_center">
+		<div class="flex_box gap-08">
+			<button type="button" class="btn btn-defualt btn-small" onclick="location.href='/email/list'">목록</button>
+		</div>
+	</div>
+
+</div> <!-- // board_write -->
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<div th:replace="~{fragments/smarteditor :: init}"></div>
+<div th:replace="~{fragments/smarteditor :: editor('content')}"></div>
+
+<script type="text/javascript" th:inline="javascript">
+
+var emailId = [[${mail.emailId}]];
+
+$(function() {
+	getEmsUserList(1);
+});
+
+function getEmsUserList(page) {
+	$.post('/email/' + emailId, {page : page}, function (response) {
+
+		if (response.isSuccess) {
+			var d = response.data;
+			var regExp = /(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/;
+			if (d.count > 0) {
+				var html = "";
+				for (var i in d.list) {
+					var u = d.list[i];
+					html += '<tr>';
+					html += '	<td>' + u.userName + '</td>';
+					html += '	<td>' + u.email + '</td>';
+					html += '	<td>' + u.processedDate.replace(regExp, '$1년$2월$3일 $4시$5분') + '</td>';
+					html += '	<td>' + u.resultNm + '</td>';
+					html += '</tr>';
+				}
+				$("#emsList").find('tbody').html(html);
+
+				drawPage(d.pagination);
+
+			} else {
+
+			}
+
+		} else {
+			alert("요청 중 오류가 발생하였습니다.");
+			return false;
+		}
+
+	})
+}
+
+function drawPage(page) {
+
+	var html = "";
+	var length = page.itemsPerPage;
+	var idx = 1;
+
+	if (page.itemsPerPage > page.totalPages) {
+		length = page.totalPages;
+	} else if (page.currentPage - 4 <= 1) {
+		length = page.itemsPerPage;
+	} else if (page.currentPage + 5 >= page.totalPages)  {
+		length = page.totalPages;
+		idx = page.totalPages - page.itemsPerPage + 1;
+	} else {
+		length = page.currentPage + 5;
+		idx = page.currentPage - 4;
+	}
+
+	for (var i = idx; i <= length; i++) {
+		if (page.currentPage == i) {
+			html += '<strong>' + i + '</strong>';
+		} else {
+			html += '<a href="javascript:;" onclick="getEmsUserList(' + i + ')">' + i + '</a>';
+		}
+	}
+
+	if (page.currentPage != 1) {
+		var prev = '<a href="javascrpt:;" onclick="getEmsUserList(1)" class="first"><img src="/content/images/btn/btn_first.gif" alt="First Page" /></a>';
+		prev += '<a href="javascrpt:;" onclick="getEmsUserList(' + (page.currentPage - 1) + ')" class="prev"><img src="/content/images/btn/btn_prev.gif" alt="Previous Page" /></a>';
+
+		html = prev + html;
+	}
+
+	if (page.currentPage != page.totalPages) {
+		var next = '<a href="javascript:;" onclick="getEmsUserList(' + (page.currentPage + 1) + ')" class="next"><img src="/content/images/btn/btn_next.gif" alt="Next Page" /></a>';
+		next += '<a href="javascript:;" onclick="getEmsUserList(' + page.totalPages + ')" class="last"><img src="/content/images/btn/btn_last.gif" alt="Last Page" /></a>';
+
+		html = html + next;
+	}
+
+	$("#page").html(html);
+
+}
+
+</script>
 </body>
 </html>

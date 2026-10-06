@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
     <title>PG 결제현황 조회 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
@@ -8,12 +9,17 @@
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
 <!-- AS-IS opmanager/order/payinfo(PayInfoManagerController) - 이 플랫폼은 실제 PG(카드결제
      등) 연동이 없어 결제수단은 항상 "포인트" 고정값이다. 취소실패건 = SAGA 보상실패로 인한
      시스템 자동취소(재고/포인트 부족) - 고객이 직접 취소한 건과 구분한다. -->
-<div class="contents contents_inner">
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <h3><span>PG 결제현황 조회</span></h3>
     <p style="color:#888; margin-bottom:12px;">이 플랫폼의 답례품 결제는 기부포인트 단일 결제수단이라 실제 PG 연동은 없습니다. 아래는 OD_ORDER의 결제(포인트차감) 이력을 결제현황 관점으로 보여줍니다.</p>
 
@@ -111,7 +117,10 @@
                th:href="@{/admin/pay-info(locgovCode=${locgovCode},failedOnly=${failedOnly},startDate=${startDate},endDate=${endDate},page=${currentPage + 1},size=${size})}">다음</a>
         </div>
     </div>
-</div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

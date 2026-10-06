@@ -280,6 +280,19 @@ public class LocgovAdminService {
         locgovImageRepository.save(image);
     }
 
+    /** AS-IS 직인 삭제(delete/offcs) - 파일 삭제 + 직인명/파일명 컬럼 NULL 처리. */
+    @Transactional
+    public boolean deleteSeal(String locgovCode, Long managerId) {
+        boolean deleted = locgovSealService.deleteSeal(locgovCode);
+        if (deleted && managerId != null) {
+            Locgov locgov = findOrThrow(locgovCode);
+            locgov.setLastUpdusrId(managerId);
+            locgov.setLastUpdtPnttm(LocalDateTime.now());
+            locgovRepository.save(locgov);
+        }
+        return deleted;
+    }
+
     /** AS-IS "답례품 배경 이미지 삭제"(delete/itemFile) - PC/MOBILE 개별 삭제. */
     @Transactional
     public void deleteImage(String locgovCode, boolean pc, Long managerId) {

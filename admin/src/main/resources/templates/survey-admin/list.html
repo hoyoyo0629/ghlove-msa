@@ -1,36 +1,171 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>설문조사 관리 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <title>설문 관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: admin-nav()}"></div>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<div class="contents contents_inner">
-    <h3>설문조사 관리</h3>
-    <p><a class="btn" th:href="@{/admin/surveys/new}">+ 설문 등록</a></p>
+<!-- AS-IS opmanager/i18n/qustnr/list.jsp 이식. 설문명 검색 + 화면출력 + 8컬럼 목록
+     (체크박스/No/등록일/대상/설문명/기간/미리보기/결과보기) + 등록·선택삭제 + 페이지네이션.
+     대상(srvyTrgt) U=대민 M=관리자 S=답례품제공자 라벨은 AS-IS JSP의 한글 리터럴 그대로다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <table class="board_list_table">
-        <thead>
-        <tr><th>제목</th><th>기간</th><th>노출여부</th><th>등록일</th><th>결과</th></tr>
-        </thead>
-        <tbody>
-        <tr th:each="s : ${surveys}">
-            <td><a th:href="@{'/admin/surveys/' + ${s.qustnrSn} + '/edit'}" th:text="${s.qustnrSj}"></a></td>
-            <td th:text="${s.qustnrBgnDe} + ' ~ ' + ${s.qustnrEndDe}"></td>
-            <td th:text="${s.isShow == 'Y' ? '노출' : '비노출'}"></td>
-            <td th:text="${s.frstCrtDt != null ? #temporals.format(s.frstCrtDt, 'yyyy-MM-dd HH:mm') : ''}"></td>
-            <td><a th:href="@{'/admin/surveys/' + ${s.qustnrSn} + '/result'}">결과보기</a></td>
+<h3><span>설문 관리</span></h3>
+
+<form id="searchParam" method="post" th:action="@{/admin/surveys}">
+  <div class="board_write">
+    <table class="board_write_table" summary="설문 조회">
+      <caption>설문 조회</caption>
+      <colgroup>
+        <col style="width:220px;" />
+        <col style="width:auto;" />
+      </colgroup>
+      <tbody>
+        <tr>
+          <td class="label">설문명</td> <!-- 검색구분 -->
+          <td>
+            <div class="flex_box gap-08">
+              <input type="text" id="searchTxt" name="searchTxt" class="full" th:value="${searchParam.searchTxt}" />
+            </div>
+          </td>
         </tr>
-        </tbody>
+      </tbody>
     </table>
-    <p class="empty" th:if="${#lists.isEmpty(surveys)}">등록된 설문이 없습니다.</p>
-</div>
+  </div> <!-- // board_write -->
+
+  <!-- 버튼시작 -->
+  <div class="btn_all btn_right">
+    <div class="flex_box gap-08">
+      <button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/admin/surveys';" th:text="${msg.get('M00047')}">초기화</button>
+      <button type="submit" class="btn btn-dark-gray btn-mini" th:text="${msg.get('M00048')}">검색</button> <!-- 검색 -->
+    </div>
+  </div>
+  <!-- 버튼 끝-->
+
+  <div class="count_title mt-40">
+    <h5>
+      <span th:text="${msg.get('M00045')}" th:remove="tag">전체</span>  <span th:text="${count}" th:remove="tag">0</span> <span th:text="${msg.get('M00272')}" th:remove="tag">건</span>
+    </h5>	 <!-- 전체 -->   <!-- 건 조회 -->
+    <span>
+      <select id="itemsPerPage" name="itemsPerPage" th:title="${msg.get('M00239')}" onchange="$('form#searchParam').submit();" > <!-- 화면출력 -->
+        <option value="10" th:text="${msg.get('M00240')}" th:selected="${searchParam.itemsPerPage == 10}">10개 출력</option>
+        <option value="20" th:text="${msg.get('M00241')}" th:selected="${searchParam.itemsPerPage == 20}">20개 출력</option>
+        <option value="50" th:text="${msg.get('M00242')}" th:selected="${searchParam.itemsPerPage == 50}">50개 출력</option>
+        <option value="100" th:text="${msg.get('M00243')}" th:selected="${searchParam.itemsPerPage == 100}">100개 출력</option>
+      </select>
+    </span>
+  </div>
+</form>
+
+<form id="listForm">
+  <div class="board_write">
+    <table class="board_list_table" th:summary="${msg.get('M00273')}">
+      <caption th:text="${msg.get('M00273')}"></caption>
+      <colgroup>
+                  <col style="width:50px;">
+                  <col style="width:50px;">
+                  <col style="width:100px;">
+                  <col style="width:120px;">
+                  <col style="width:400px;">
+                  <col style="width:300px;">
+                  <col style="width:100px;">
+                  <col style="width:100px;">
+      </colgroup>
+      <thead>
+        <tr>
+          <th scope="col"><input type="checkbox" name="tempId2" id="check_all" th:title="${msg.get('M00169')}" /></th> <!-- 체크박스 -->
+          <th scope="col">No</th>
+          <th scope="col">등록일</th>
+          <th scope="col">대상</th>
+          <th scope="col">설문명</th>
+          <th scope="col">기간</th>
+          <th scope="col">미리보기</th>
+          <th scope="col">결과보기</th>
+        </tr>
+
+      </thead>
+      <tbody>
+        <tr th:each="item, i : ${list}">
+          <td>
+            <div><input type="checkbox" name="id" id="check" th:value="${item.qustnrSn}" title="체크" /></div>
+          </td>
+          <td>
+            <div th:text="${pagination.itemNumber - i.count}">0</div>
+          </td>
+          <td>
+            <div th:text="${item.frstRegistPnttm}"></div>
+          </td>
+          <td>
+            <div th:text="${item.srvyTrgt == 'M'} ? '관리자' : (${item.srvyTrgt == 'U'} ? '대민' : (${item.srvyTrgt == 'S'} ? '답례품제공자' : ''))"></div>
+          </td>
+          <td>
+            <div><a th:href="|javascript:detail('${item.qustnrSn}')|" th:text="${item.qustnrSj}"></a></div>
+          </td>
+          <td>
+            <div><span th:text="${item.qustnrBgnDe}"></span> ~ <span th:text="${item.qustnrEndDe}"></span></div>
+          </td>
+          <td>
+            <div><a th:href="|javascript:preview('${item.qustnrSn}');|">보기</a></div>
+          </td>
+          <td>
+            <div><a th:href="@{'/admin/surveys/' + ${item.qustnrSn} + '/result'}">보기</a></div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="no_content" th:if="${#lists.isEmpty(list)}" th:text="${msg.get('M00473')}">
+        데이터가 없습니다.
+    </div>
+
+  </div><!--// board_write E-->
+
+  <div class="btn_all btn_right">
+    <div class="flex_box gap-08">
+      <a th:href="@{/admin/surveys/create}" class="btn btn-default btn-mini" th:text="${msg.get('M00088')}">등록</a> <!-- 등록 -->
+      <a id="delete_list_data" href="javascript:deleteQustnr();" class="btn btn-dark-gray btn-mini"><span th:text="${msg.get('M00074')}">삭제</span></a> <!-- 삭제 -->
+    </div>
+  </div>
+  </form>
+
+  <div class="pagination-wrap">
+    <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div><br/>
+  </div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<!-- // 시스템/운영자 화면 case -->
+
+<script type="text/javascript">
+  $(function() {
+  });
+
+  function detail (qustnrSn) {
+    location.href = '/admin/surveys/' + qustnrSn;
+  }
+
+  function deleteQustnr() {
+
+    Common.updateListData("/admin/surveys/delete", Message.get("M00306"));	// 선택된 데이터를 삭제하시겠습니까?
+
+  }
+
+  // AS-IS는 storefront 설문 상세 페이지(saleson.url.frontend + /qustnr/detail_srvy.html)를 새 창으로 띄운다.
+  // TO-BE storefront는 SPA라 경로가 다르므로 참여 API가 쓰는 설문 id로 같은 자리를 연다.
+  function preview(qustnrSn) {
+    window.open('/api/surveys/' + qustnrSn, '_blank');
+  }
+
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>
