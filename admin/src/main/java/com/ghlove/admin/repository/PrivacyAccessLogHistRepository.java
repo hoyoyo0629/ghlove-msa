@@ -7,7 +7,9 @@ import java.util.List;
 
 public interface PrivacyAccessLogHistRepository extends JpaRepository<PrivacyAccessLogHist, Long> {
 
-    List<PrivacyAccessLogHist> findByPrivacyAccessLogIdOrderByHistIdDesc(Long privacyAccessLogId);
+    /** AS-IS privacy-access-mapper.getPrivacyAccessLogHistListByParam - ORDER BY CREATED_AT DESC
+     *  (HIST_ID 아님). HIST_ID는 채번 순서일 뿐 등록일시와 반드시 같은 방향이 아니다. */
+    List<PrivacyAccessLogHist> findByPrivacyAccessLogIdOrderByCreatedAtDesc(Long privacyAccessLogId);
 
     long countByPrivacyAccessLogId(Long privacyAccessLogId);
 }

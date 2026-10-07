@@ -23,10 +23,23 @@ and (cast(:query as String) is null or p.subject like concat('%', cast(:query as
 admin `PopupRepository`·`PolicyRepository`·`OpEmailRepository`·`CommonCodeRepository`·
 `IpsSendingMasterRepository` 5개를 그때 고쳤다.
 
+**[2026-10-07 추가] ★Long/LocalDateTime은 cast로 안 고쳐진다**: `admin.PrivacyAccessLogRepository`의
+`(:managerId is null or ...)` / `(:from is null or ...)`에서도 같은 "could not determine data
+type of parameter"로 500이 났다(1411 엑셀다운로드사유관리). `cast(:x as Long)`로 양쪽
+occurrence를 감쌌더니 그 에러는 없어졌지만, **재기동 후 새 에러** `cannot cast type bytea to
+bigint`가 났다 - Hibernate가 null **Long** 값 자체를 bytea로 바인딩해버려서 cast(bytea→bigint)가
+거절당한 것이다(String의 cast(:x as String)은 운영에서 실제로 잘 작동하는데 Long은 안 되는
+비대칭 - 내부 이유는 못 밝혔으니 "String은 되고 Long/LocalDateTime은 안 된다"는 경험적 사실만
+믿을 것). **결론: String이 아닌 타입에 cast를 시도하지 말고 바로 "조건부 조립"으로 가라** -
+`PrivacyAccessLogService`가 `EntityManager`로 JPQL을 문자열 조립하는 방식(아래 "해당 없음"
+목록과 같은 패턴)으로 바꿔서 해결했다. [[admin-excel-download-log-500-fix]] 참고.
+
 **How to apply:**
-- `= :x` / `>= :x` 조건의 파라미터는 cast 불필요(과하게 붙이지 말 것 - 날짜·숫자 타입에 varchar를
-  씌우는 실수가 된다).
-- cast 대상은 `varchar`가 아니라 **`String`**(Hibernate 문서화 타입명). `varchar`는 네이티브 쿼리에만.
+- **String** 파라미터의 `= :x` / `>= :x`조건은 cast 불필요. **String이 아닌 타입**(Long/
+  LocalDateTime 등)이 "is null" 분기에만 쓰이면 cast로 때우려 하지 말고 바로 조건부 조립으로
+  전환할 것 - cast는 String에서만 검증된 해법이다.
+- cast 대상은 `varchar`가 아니라 Hibernate 문서화 타입명(`String`). `varchar`/`bigint` 같은
+  SQL 타입명은 네이티브 쿼리에만.
 - **nativeQuery=true는 해당 없다** - 네이티브는 자바 타입으로 바인딩되므로 문제가 없다
   (`CommonMessageRepository`, point `GCntrUsePointRepository`가 그 예).
 - SQL을 조건부로 조립하는 방식(`QestnarRepository`·`BatchLogRepository`·donation

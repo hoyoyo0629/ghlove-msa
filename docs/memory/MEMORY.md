@@ -6,6 +6,11 @@
 - [배송업체 관리 AS-IS 데이터 적재](admin-delivery-company-asis-data-loaded.md) — ord.op_delivery_company 0건→29건, 시퀀스 2000101로 보정, 코드변경 없어 재기동 불필요
 - [메뉴관리 답례품관리자 데이터+페이징 제거](admin-menu-admin-seller-data-and-pagination.md) — Character 캐스팅 500버그 수정, op_menu_seller 0건→52건 적재, AS-IS처럼 페이저 제거(전체표시). admin 재기동 필요
 - [설문관리 기간 포맷+미리보기](admin-survey-date-format-and-preview.md) — 목록 기간 yyyyMMdd→yyyy-MM-dd(@opDate.ymd), 미리보기가 JSON API 아닌 storefront /survey/{id} 실화면 열도록 수정. admin 재기동 필요
+- [엑셀다운로드사유관리 500 수정](admin-excel-download-log-500-fix.md) — ★cast로는 Long/LocalDateTime 안 고쳐짐(bytea→bigint 캐스트 에러로 재발), 조건부 조립으로 전환+실제 리포지토리 호출 회귀테스트로 검증. admin 재기동 필요
+- [로그 화면 6개 AS-IS 샘플 데이터](admin-log-screens-asis-sample-data.md) — 엑셀다운로드/서울·지방 부과·수납/문자전송이력 20~30건씩 적재, 배치실행로그는 기존데이터 있어 스킵. DB직접적재, 재기동 불필요
+- [엑셀다운로드사유 수정팝업 복원](admin-excel-download-log-reason-edit-popup.md) — succChk 분기 없어 항상 읽기전용이던 것을 AS-IS처럼 본인 작성글만 수정가능하게 복원, 이력팝업에 총건수+No.도 보강. admin 재기동 필요
+- [op_manager AS-IS 데이터 이관 보류](admin-op-manager-migration-deferred.md) — login_id/password/user_name까지 전부 암호화라 그대로 옮겨도 안 읽힘+13,495건 규모, 사용자가 패스 결정
+- [사유 수정이력 정렬순서 수정](admin-privacy-log-hist-sort-order.md) — HIST_ID DESC→AS-IS와 같은 CREATED_AT DESC, baseline 이력 보강 과정에서 순서역전 발견. admin 재기동 필요
 - [ISMS관리 AS-IS 동기화 완료](admin-isms-config-port-progress.md) — 발명 시드 3건 삭제+실데이터 12건 교체+정렬버그 수정(2026-10-07). 11개 키는 값만 있고 소비 로직 없음(별도 과제)
 - [공통코드 AS-IS 동기화·테이블 정정](admin-common-code-asis-sync-2026-10-07.md) — 코드(id) readonly 제거, ORDERING NULLS FIRST, 저장 에러 수정, ★ADMIN_COMMON_CODE(AS-IS에 없는 이름) DROP+DDL정리, 엔티티는 OP_COMMON_CODE(AS-IS 실명)로 전환완료. 동료와 병행조사 충돌→조율 후 이 방향 확정(git merge 처리 경위 포함)
 - [AS-IS 테이블 실데이터 export 폴더 확대](asis-table-dump-path.md) — 2026-10-07부터 Desktop 1.DB 폴더에 테이블별 대량 export 상시 추가됨, 확인 전 먼저 거기 찾아보기

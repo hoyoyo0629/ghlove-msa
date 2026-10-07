@@ -8,6 +8,7 @@ import com.ghlove.admin.repository.CommonCodeRepository;
 import com.ghlove.admin.repository.ManagerRepository;
 import com.ghlove.admin.repository.PrivacyAccessLogHistRepository;
 import com.ghlove.admin.repository.PrivacyAccessLogRepository;
+import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -55,6 +57,7 @@ public class PrivacyAccessLogService {
     private final PrivacyAccessLogHistRepository privacyAccessLogHistRepository;
     private final ManagerRepository managerRepository;
     private final CommonCodeRepository commonCodeRepository;
+    private final EntityManager entityManager;
 
     /**
      * AS-IS {@code CommonController.privacyAccessLog} - 사유를 받아 접근로그를 남기고, 바로
@@ -128,10 +131,17 @@ public class PrivacyAccessLogService {
     /**
      * 1411 목록 - AS-IS 쿼리대로 TASK='엑셀 다운로드'만, 권한에 따라 본인 것만,
      * 등록일 범위로 걸러 가져온 뒤 화면 표시용 로그인ID·사유구분 라벨을 채운다.
+     *
+     * [[hql-null-param-needs-cast]]: {@code (:x is null or ...)} 꼴의 Spring Data {@code @Query}는
+     * 값이 null일 때 PostgreSQL이 파라미터 타입을 못 정해 거절한다 - cast로 타입을 명시해도
+     * Hibernate가 null 값 자체를 bytea로 바인딩해버려 "cannot cast type bytea to bigint"로
+     * 또 거절당했다(2026-10-07, 1411 화면 재발). 그래서 다른 레포지토리(QestnarRepository 등)와
+     * 같은 "조건부 조립" 방식으로 바꿨다 - 값이 있을 때만 그 조건과 파라미터를 붙이므로 null
+     * 바인딩 자체가 없다.
      */
     @Transactional(readOnly = true)
     public List<PrivacyAccessLog> excelDownloadLogs(String startDay, String endDay, Long onlyManagerId) {
-        List<PrivacyAccessLog> rows = privacyAccessLogRepository.searchExcelDownloadLogs(
+        List<PrivacyAccessLog> rows = searchExcelDownloadLogs(
                 TASK_EXCEL_DOWNLOAD, onlyManagerId, startOfDay(startDay), endOfDay(endDay));
 
         Map<String, String> reasonTypeLabels = commonCodeRepository
@@ -147,6 +157,43 @@ public class PrivacyAccessLogService {
             row.setReasonTypeName(reasonTypeLabels.get(row.getReasonType()));
         }
         return rows;
+    }
+
+    /** AS-IS {@code exceldownload-log-mapper.getExceldownloadLogListByParam}의 안쪽 쿼리를
+     *  조건부로 조립한다 - 값이 있는 조건만 붙인다(위 주석 참고). */
+    private List<PrivacyAccessLog> searchExcelDownloadLogs(String task, Long managerId,
+                                                            LocalDateTime from, LocalDateTime to) {
+        StringBuilder jpql = new StringBuilder("select p from PrivacyAccessLog p where p.task = :task");
+        if (managerId != null) {
+            jpql.append(" and p.managerId = :managerId");
+        }
+        if (from != null) {
+            jpql.append(" and p.createdAt >= :from");
+        }
+        if (to != null) {
+            jpql.append(" and p.createdAt <= :to");
+        }
+        jpql.append(" order by p.createdAt desc, p.id desc");
+
+        var query = entityManager.createQuery(jpql.toString(), PrivacyAccessLog.class)
+                .setParameter("task", task);
+        if (managerId != null) {
+            query.setParameter("managerId", managerId);
+        }
+        if (from != null) {
+            query.setParameter("from", from);
+        }
+        if (to != null) {
+            query.setParameter("to", to);
+        }
+        return query.getResultList();
+    }
+
+    /** AS-IS 사유 수정 팝업의 사유타입 select 옵션 - EXCELDOWNLOAD_REASON_TYPE을 등록순서대로. */
+    @Transactional(readOnly = true)
+    public Map<String, String> reasonTypeOptions() {
+        return commonCodeRepository.findByCodeTypeOrderByOrdering(CODE_TYPE_REASON_TYPE).stream()
+                .collect(Collectors.toMap(CommonCode::getId, CommonCode::getLabel, (a, b) -> a, LinkedHashMap::new));
     }
 
     /** 사유 전문/이력 팝업용 - 라벨까지 채워 돌려준다. */
@@ -166,7 +213,7 @@ public class PrivacyAccessLogService {
     @Transactional(readOnly = true)
     public List<PrivacyAccessLogHist> histOf(Long privacyAccessLogId) {
         List<PrivacyAccessLogHist> rows =
-                privacyAccessLogHistRepository.findByPrivacyAccessLogIdOrderByHistIdDesc(privacyAccessLogId);
+                privacyAccessLogHistRepository.findByPrivacyAccessLogIdOrderByCreatedAtDesc(privacyAccessLogId);
         for (PrivacyAccessLogHist row : rows) {
             row.setReasonTypeName(reasonTypeLabelOf(row.getReasonType()));
             if (row.getManagerId() != null) {

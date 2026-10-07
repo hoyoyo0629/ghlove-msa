@@ -1,34 +1,83 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>다운로드 사유 - 고향사랑e음 (admin service)</title>
+    <title>엑셀다운로드 사유 - 고향사랑e음 (admin service)</title>
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
-<!-- AS-IS 엑셀다운로드 사유 전문 팝업(layout=base) - 목록의 사유가 50자로 잘려 보이므로 전문을 띄운다. -->
+<!-- AS-IS log/popup/exceldownload-log-detail.jsp 이식. succChk(본인이 등록한 사유인지)에 따라
+     사유타입 select+textarea로 수정 가능한 폼이거나, 읽기전용(확인만)이다 - 2026-10-07 수정:
+     예전엔 늘 읽기전용이라 수정/이력 흐름 자체가 동작하지 않았다. -->
 <body>
 <div class="popup_wrap">
-    <h1 class="popup_title">다운로드 사유</h1>
-    <div class="popup_contents">
-        <div class="board_write">
-            <table class="board_write_table">
-                <colgroup>
-                    <col style="width: 165px;" />
-                    <col />
-                </colgroup>
-                <tbody>
-                    <tr>
-                        <td class="label">사유타입</td>
-                        <td><div th:text="${details != null} ? ${details.reasonTypeName} : ''"></div></td>
-                    </tr>
-                    <tr>
-                        <td class="label">사유</td>
-                        <td><div th:text="${details != null} ? ${details.reason} : ''"></div></td>
-                    </tr>
-                </tbody>
-            </table>
+    <h1 class="popup_title">엑셀다운로드 사유</h1>
+    <form id="formPrivacy">
+        <input type="hidden" id="privacyAccessLogId" name="privacyAccessLogId" th:value="${details != null} ? ${details.id} : ''" />
+        <div class="popup_contents">
+            <div class="board_write">
+                <table class="board_write_table">
+                    <colgroup>
+                        <col style="width: 165px;" />
+                        <col />
+                    </colgroup>
+                    <tbody>
+                        <tr>
+                            <td class="label">다운로드 사유 타입</td>
+                            <td>
+                                <select th:if="${succChk}" id="reasonType" name="reasonType" title="엑셀다운로드타입" class="wd-400 required">
+                                    <option value="">-선택-</option>
+                                    <option th:each="entry : ${reasonTypeOptions}" th:value="${entry.key}"
+                                            th:selected="${details != null and entry.key == details.reasonType}"
+                                            th:text="${entry.value}"></option>
+                                </select>
+                                <div th:unless="${succChk}" th:text="${details != null} ? ${details.reasonTypeName} : ''"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label">사유</td>
+                            <td>
+                                <textarea th:if="${succChk}" name="reason" id="reason" title="개인정보 엑셀 다운로드 사유"
+                                          class="required" style="height:200px;" maxlength="900"
+                                          th:text="${details != null} ? ${details.reason} : ''"></textarea>
+                                <div th:unless="${succChk}" style="white-space:pre-wrap;"
+                                     th:text="${details != null} ? ${details.reason} : ''"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="popup_btns">
+                <button th:if="${succChk}" type="button" class="btn btn-active" onclick="updateReason();">수정</button>
+                <button th:unless="${succChk}" type="button" class="btn btn-active" onclick="self.close();">확인</button>
+            </p>
         </div>
-    </div>
-    <a href="javascript:self.close();" class="popup_close" th:text="${msg.get('M00353')}">창 닫기</a>
+    </form>
 </div>
+
+<script type="text/javascript">
+    function updateReason() {
+        var $form = $("#formPrivacy");
+        var reasonChk = $form.find("textarea[name='reason']").val();
+        var reasonType = $form.find("select[name='reasonType']").val();
+
+        if (reasonType == '') {
+            alert("엑셀 다운로드 사유 타입을 고르세요.");
+            return false;
+        }
+        if (reasonChk.length < 5) {
+            alert("엑셀 다운로드 사유를 5자 이상 입력해주세요.");
+            return false;
+        }
+
+        $.post("/common/opmanager/privacy-access-log-update", $form.serialize(), function(response) {
+            if (response.isSuccess) {
+                alert("수정 되었습니다.");
+                opener.location.reload();
+                self.close();
+            } else {
+                alert(response.errorMessage);
+            }
+        }, 'json');
+    }
+</script>
 </body>
 </html>

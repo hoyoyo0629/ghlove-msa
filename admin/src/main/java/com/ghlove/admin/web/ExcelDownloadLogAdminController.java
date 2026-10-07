@@ -85,17 +85,29 @@ public class ExcelDownloadLogAdminController {
         return "log/excel-download-log-list";
     }
 
-    /** AS-IS exceldownload-log/popup/{id} - 사유 전문 팝업. */
+    /**
+     * AS-IS exceldownload-log/popup/{id} - 사유 팝업. AS-IS succChk 그대로: 본인(MANAGER_ID)이
+     * 등록한 행이면 사유타입 select+textarea로 수정 가능하고, 아니면 읽기전용(확인만)이다.
+     */
     @GetMapping("/admin/excel-download-logs/popup/{id}")
-    public String reasonPopup(@PathVariable Long id, Model model) {
-        model.addAttribute("details", privacyAccessLogService.detail(id));
+    public String reasonPopup(@PathVariable Long id, HttpSession session, Model model) {
+        PrivacyAccessLog details = privacyAccessLogService.detail(id);
+        Manager viewer = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
+        boolean succChk = viewer != null && details != null && details.getManagerId() != null
+                && details.getManagerId().equals(viewer.getUserId());
+
+        model.addAttribute("details", details);
+        model.addAttribute("succChk", succChk);
+        model.addAttribute("reasonTypeOptions", privacyAccessLogService.reasonTypeOptions());
         return "log/excel-download-log-reason";
     }
 
     /** AS-IS 이력보기 팝업 - 사유 변경이력(최신순). */
     @GetMapping("/admin/excel-download-logs/hist/{id}")
     public String reasonHistPopup(@PathVariable Long id, Model model) {
-        model.addAttribute("list", privacyAccessLogService.histOf(id));
+        var list = privacyAccessLogService.histOf(id);
+        model.addAttribute("list", list);
+        model.addAttribute("count", list.size());
         return "log/excel-download-log-hist";
     }
 }
