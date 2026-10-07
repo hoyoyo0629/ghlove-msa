@@ -109,7 +109,7 @@
             <div><a th:href="|javascript:detail('${item.qustnrSn}')|" th:text="${item.qustnrSj}"></a></div>
           </td>
           <td>
-            <div><span th:text="${item.qustnrBgnDe}"></span> ~ <span th:text="${item.qustnrEndDe}"></span></div>
+            <div><span th:text="${@opDate.ymd(item.qustnrBgnDe)}"></span> ~ <span th:text="${@opDate.ymd(item.qustnrEndDe)}"></span></div>
           </td>
           <td>
             <div><a th:href="|javascript:preview('${item.qustnrSn}');|">보기</a></div>
@@ -160,9 +160,10 @@
   }
 
   // AS-IS는 storefront 설문 상세 페이지(saleson.url.frontend + /qustnr/detail_srvy.html)를 새 창으로 띄운다.
-  // TO-BE storefront는 SPA라 경로가 다르므로 참여 API가 쓰는 설문 id로 같은 자리를 연다.
+  // TO-BE storefront는 SPA라 경로는 /survey/{id}(SurveyView.vue, 실제 설문 참여 화면) - 그 URL을 연다.
+  // [2026-10-07 수정] 이전엔 화면이 아니라 /api/surveys/{id} JSON 응답을 그대로 열어 미리보기가 아니었다.
   function preview(qustnrSn) {
-    window.open('/api/surveys/' + qustnrSn, '_blank');
+    window.open('http://localhost:5173/survey/' + qustnrSn, '_blank');
   }
 
 </script>

@@ -5,6 +5,7 @@
 - [회원가입 약관 요약 박스 AS-IS 연동](member-signup-terms-box-asis-content.md) — 하드코딩 제거+비동의 토글(AS-IS selected/selectDisagree 재현, 백엔드 미전송). 개인정보 수집·이용 동의는 타입1 아니라 타입6임에 주의. admin+member 재기동 필요
 - [배송업체 관리 AS-IS 데이터 적재](admin-delivery-company-asis-data-loaded.md) — ord.op_delivery_company 0건→29건, 시퀀스 2000101로 보정, 코드변경 없어 재기동 불필요
 - [메뉴관리 답례품관리자 데이터+페이징 제거](admin-menu-admin-seller-data-and-pagination.md) — Character 캐스팅 500버그 수정, op_menu_seller 0건→52건 적재, AS-IS처럼 페이저 제거(전체표시). admin 재기동 필요
+- [설문관리 기간 포맷+미리보기](admin-survey-date-format-and-preview.md) — 목록 기간 yyyyMMdd→yyyy-MM-dd(@opDate.ymd), 미리보기가 JSON API 아닌 storefront /survey/{id} 실화면 열도록 수정. admin 재기동 필요
 - [ISMS관리 AS-IS 동기화 완료](admin-isms-config-port-progress.md) — 발명 시드 3건 삭제+실데이터 12건 교체+정렬버그 수정(2026-10-07). 11개 키는 값만 있고 소비 로직 없음(별도 과제)
 - [공통코드 AS-IS 동기화·테이블 정정](admin-common-code-asis-sync-2026-10-07.md) — 코드(id) readonly 제거, ORDERING NULLS FIRST, 저장 에러 수정, ★ADMIN_COMMON_CODE(AS-IS에 없는 이름) DROP+DDL정리, 엔티티는 OP_COMMON_CODE(AS-IS 실명)로 전환완료. 동료와 병행조사 충돌→조율 후 이 방향 확정(git merge 처리 경위 포함)
 - [AS-IS 테이블 실데이터 export 폴더 확대](asis-table-dump-path.md) — 2026-10-07부터 Desktop 1.DB 폴더에 테이블별 대량 export 상시 추가됨, 확인 전 먼저 거기 찾아보기
