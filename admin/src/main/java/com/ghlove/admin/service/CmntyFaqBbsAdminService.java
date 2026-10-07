@@ -30,6 +30,12 @@ import java.util.Map;
  * 질문유형 코드·라벨은 AS-IS Java enum {@code FaqType} 11종을 공통코드
  * {@code CMNTY_FAQ_TYPE}으로 옮겨 쓴다({@code migration-admin-cmnty-faq-type-codes.sql}).
  *
+ * <p><b>★ 적재 대상 표 주의(2026-10-07)</b>: 위 마이그레이션은 {@code admin.op_common_code}에 넣었는데,
+ * 아래 {@link #faqTypes()}가 쓰는 {@link CommonCodeService#labelsOf}는 <b>JPA 경로라
+ * {@code admin.ADMIN_COMMON_CODE}를 읽는다</b>. 그래서 탭이 '전체' 하나만 보이는 증상이 났고,
+ * {@code migration-admin-cmnty-faq-type-codes-admin-table.sql}로 같은 11건을 그 표에도 넣어 해결했다.
+ * 공통코드를 새로 추가할 때는 <b>읽는 쪽이 JPA인지 네이티브 SQL인지 먼저 확인할 것.</b>
+ *
  * <p><b>AS-IS 결함도 같은 5건을 같은 방식으로 고쳤다</b>(수정 권한 없음 / 삭제된 글이 URL로 열림 /
  * 첨부 2개 이상이면 상세 500 / 댓글 첨부 크기 빈 값 / 댓글 수정자 ID null) -
  * 내용은 {@link CmntySrBbsAdminService} 클래스 주석에 적어 두었다.
