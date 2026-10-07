@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +57,7 @@ public class AuditLogController {
     @RequestMapping(value = "/log/login", method = { RequestMethod.GET, RequestMethod.POST })
     public String loginLog(@ModelAttribute("loginLogParam") LoginLogParam loginLogParam,
                            HttpServletRequest request, Model model) {
+        applyDefaultDateRange(loginLogParam);
         applyItemsPerPage(loginLogParam);
 
         List<LoginLogRow> all = loginLogRepository
@@ -124,6 +127,7 @@ public class AuditLogController {
     @RequestMapping(value = "/log/user-login", method = { RequestMethod.GET, RequestMethod.POST })
     public String userLoginLog(@ModelAttribute("loginLogParam") LoginLogParam loginLogParam,
                                HttpServletRequest request, Model model) {
+        applyDefaultDateRange(loginLogParam);
         applyItemsPerPage(loginLogParam);
 
         List<MemberClient.LoginLog> all = memberClient.loginLogs().stream()
@@ -183,6 +187,23 @@ public class AuditLogController {
     private void applyItemsPerPage(LoginLogParam param) {
         if (param.getItemsPerPage() <= 0) {
             param.setItemsPerPage(10);
+        }
+    }
+
+    /**
+     * AS-IS loginLog/searchLoginLog/userLoginLog/searchUserLoginLog
+     * (LogManagerController) - 접속일 검색조건이 비어 있으면 시작·종료 둘 다 오늘(yyyyMMdd)로
+     * 채운다({@code StringUtils.defaultIfEmpty(..., DateUtils.getToday("yyyyMMdd"))}). 둘 중
+     * 하나만 비어 있으면 그것만 오늘로 채우고 나머지는 사용자가 넣은 값을 그대로 둔다(AS-IS와
+     * 동일하게 독립적으로 처리 - 범위로 묶어서 같이 비우지 않는다).
+     */
+    private void applyDefaultDateRange(LoginLogParam param) {
+        String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        if (param.getSrchStartLoginDate() == null || param.getSrchStartLoginDate().isBlank()) {
+            param.setSrchStartLoginDate(today);
+        }
+        if (param.getSrchEndLoginDate() == null || param.getSrchEndLoginDate().isBlank()) {
+            param.setSrchEndLoginDate(today);
         }
     }
 

@@ -7,8 +7,15 @@
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<!-- AS-IS opmanager/i18n/log/login-log-details.jsp 이식. 로그인ID·권한그룹·접속IP를 보여주고
-     그 로그인 시각~다음 로그인 시각 사이의 메뉴사용이력을 ajax 조각으로 끼워 넣는다. -->
+<!-- AS-IS opmanager/i18n/log/login-log-details.jsp 이식. 로그인ID·권한그룹·접속IP를 보여주는
+     표 하나만 보인다 - AS-IS 실행화면도 그 아래 메뉴사용이력 목록이 뜨지 않는다(사용자 확인,
+     2026-10-07). AS-IS 쪽 JSP 소스 자체는 #actionLogList를 ajax로 채우는 스크립트를 그대로
+     갖고 있지만(아래 getActionLogList 함수), 실제로는 목록이 보이지 않는 결함/제약이고 그 정확한
+     내부 원인(접근제어 등 onlinepowers 프레임워크 쪽일 가능성 - 소스 미보유라 확정 불가)은
+     확인하지 못했다. ISP/RFP에 이 메뉴사용이력 조회가 요구된 적이 없어 원인 규명보다 AS-IS
+     화면과 결과를 맞추는 쪽으로 결정(사용자 지시) - getActionLogList() 자동 호출을 제거해
+     #actionLogList가 항상 빈 채로 남는다(= 헤더 표 1개만 보임). 함수/엔드포인트 자체는
+     AS-IS처럼 남겨 둔다(호출만 안 할 뿐). -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
@@ -82,8 +89,8 @@
 		// 목록 검색 조건 저장
 		listSearchParamSave();
 
-		// 메뉴사용이력 조회
-		getActionLogList(1, 20);
+		// 메뉴사용이력 조회 - AS-IS 실행화면도 이 목록이 뜨지 않는다(위 주석 참고).
+		// getActionLogList(1, 20);
 	});
 
 	/**
