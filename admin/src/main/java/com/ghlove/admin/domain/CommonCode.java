@@ -7,13 +7,18 @@ import lombok.Setter;
 
 /**
  * 공통코드 (SFR-007 "공통 코드·환경설정 관리" - 하드코딩 금지 원칙의 실제 관리 지점).
- * Round 1 scope: admin manages its own ADMIN_COMMON_CODE only (DB-per-service
- * means it can't reach into member/donation/point/gift/order's own copies
- * directly) - see the DDL migration comment for how a cross-service version
- * would extend this later.
+ * AS-IS 테이블은 {@code OP_COMMON_CODE} 하나뿐이다(code-mapper.xml 등 41개 매퍼가 참조) -
+ * {@code ADMIN_COMMON_CODE}라는 이름은 AS-IS에 존재하지 않는다. 예전에 이 엔티티가
+ * ADMIN_COMMON_CODE(TO-BE가 지은 이름)를 가리키는 바람에 실데이터가 들어있는 OP_COMMON_CODE
+ * (2026-10-02 AS-IS export 적재)는 아무도 안 읽는 고아 테이블이 되어 있었고, 화면이 읽던
+ * ADMIN_COMMON_CODE는 DETAIL 등 일부 컬럼이 부실했다("코드상세가 AS-IS와 다르다" 원인,
+ * 2026-10-07 교정). ADMIN_COMMON_CODE에만 있던 TO-BE 전용 의미코드 7종(BSNS_PURPS_CODE 등)은
+ * migration-admin-common-code-retire-wrong-table.sql로 OP_COMMON_CODE에 옮겨 담았다.
+ * Round 1 scope: admin manages its own OP_COMMON_CODE only (DB-per-service means it
+ * can't reach into member/donation/point/gift/order's own copies directly).
  */
 @Entity
-@Table(name = "ADMIN_COMMON_CODE")
+@Table(name = "OP_COMMON_CODE")
 @IdClass(CommonCodeId.class)
 @Getter
 @Setter
@@ -25,7 +30,7 @@ public class CommonCode {
     private String codeType;
 
     @Id
-    @Column(name = "CODE_LANGUAGE")
+    @Column(name = "LANGUAGE")
     private String language;
 
     @Id

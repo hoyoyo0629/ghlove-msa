@@ -32,11 +32,12 @@ import java.time.LocalDateTime;
  * AS-IS가 꺼 둔 화면을 살아서 쓰이는 공개 FAQ 관리 화면 위에 덮는 것이 오히려 AS-IS와
  * 멀어지기 때문이다. [[as-is-parity-includes-disabled-state]] 원칙("빼지도 켜지도 말 것")에 맞는다.
  *
- * <p><b>남은 결함(이 화면이 아니라 고객센터 라운드 몫)</b>: 질문유형 라벨이 화면에 빈 값으로 나온다.
- * {@code database/ddl/service-admin.sql}이 {@code FAQ_TYPE} 코드 11건
- * ({@code JOIN}·{@code DONATE}…)을 <b>{@code ADMIN_COMMON_CODE}라는 없는 표 이름</b>으로 INSERT해서
- * 실제 {@code admin.op_common_code}에는 들어가지 않았고, 거기에는 쇼핑몰용 {@code FAQ_TYPE} 1~6만 있다.
- * 그 11건을 올바른 표에 넣으면 해결된다(담당자용 FAQ(11405)는 {@code CMNTY_FAQ_TYPE}을 쓰므로 무관).
+ * <p>[2026-10-07 해소 확인] 한때 {@code FAQ_TYPE} 코드 11건({@code JOIN}·{@code DONATE}…)이
+ * {@code database/ddl/service-admin.sql}에서 {@code ADMIN_COMMON_CODE}라는 AS-IS에 없는 표
+ * 이름으로 INSERT돼 실제 {@code admin.op_common_code}에는 안 들어간 적이 있었다(위 문단 쓸
+ * 당시의 결함). {@code admin.op_common_code}가 지금은 AS-IS 운영DB export로 다시 적재돼
+ * {@code FAQ_TYPE} 17건(JOIN/DONATE 포함) 전부 들어있다 - 이 결함은 해소됐다. 담당자용
+ * FAQ(11405)는 {@code CMNTY_FAQ_TYPE}을 쓰므로 이 화면과는 무관.
  */
 @Controller
 @RequestMapping("/community/locv-faq")

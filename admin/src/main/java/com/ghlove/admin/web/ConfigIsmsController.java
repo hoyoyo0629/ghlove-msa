@@ -45,7 +45,7 @@ public class ConfigIsmsController {
 
     @GetMapping("/isms-config")
     public String list(Model model) {
-        List<ConfigIsms> all = configIsmsRepository.findAllByOrderByOrdering();
+        List<ConfigIsms> all = configIsmsRepository.findAllByOrderByIsmsTypeAscOrderingAsc();
 
         Map<String, Integer> counts = new LinkedHashMap<>();
         all.forEach(c -> counts.merge(c.getIsmsType(), 1, Integer::sum));

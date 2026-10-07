@@ -38,7 +38,9 @@
                             <td class="label"><span th:text="${msg.get('M01374')}">코드</span> <font color=red>*</font></td> <!-- 코드 -->
                             <td>
                                 <div>
-                                    <input type="text" id="id" name="id" th:value="${code.id}" th:title="${msg.get('M01374')}" class="nine" maxlength="25" th:readonly="${!isNew}"/>
+                                    <!-- AS-IS form.jsp는 코드(id) 입력에 readonly를 두지 않는다(코드구분만
+                                         readonly) - 수정화면에서도 값을 바꿀 수 있다. -->
+                                    <input type="text" id="id" name="id" th:value="${code.id}" th:title="${msg.get('M01374')}" class="nine" maxlength="25"/>
                                 </div>
                             </td>
                         </tr>
