@@ -11,6 +11,14 @@
 
     <style>
         .hint { font-size: 12px; color: #777; margin: 6px 0; text-align: left; width: 100%; }
+        /* AS-IS user/login_main.jsp 의 페이지 전용 스타일 그대로.
+           아래 JS가 이메일 인증 단계로 넘어갈 때 앞 단계에 .disabled-div 를 붙여 잠그는데,
+           이 규칙이 없으면 클래스만 붙고 아무 일도 안 일어난다(계속 클릭·수정 가능).
+           공용 CSS에는 없는 규칙이라 여기 둔다. */
+        .disabled-div {
+            pointer-events: none;   /* 마우스 이벤트 비활성화 */
+            opacity: 0.6;           /* 시각적으로 비활성화된 것처럼 보이게 함 */
+        }
         .dev-code { font-size: 12px; color: #00215A; background: #eef1f7; border-radius: 5px; padding: 8px 10px; margin: 6px 0; width: 100%; text-align: left; }
     </style>
 </head>

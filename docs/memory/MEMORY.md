@@ -71,3 +71,8 @@
 - [공개 FAQ 정본은 op_faq + FaqType enum](public-faq-canonical-table.md) — 시드가 지자체FAQ 표에 자체코드로 넣어둔 걸 2026-10-05 교정, 11403은 중지라 그 표 유지
 - [국민비서 문자 발송부 위치](ips-sms-sender-lives-in-admin.md) — TIF_IPS_SNDNG_M 적재가 "발송", admin SmsIpsService 하나뿐·기부/주문 문자는 미이식
 - [수신동의 인코딩 두 갈래](receive-sms-encoding-split.md) — AS-IS 0/1인데 TO-BE가 Y/N과 0 혼용, 운영자화면 "비동의" 오표시·문자 누락
+- [내 PC 설정변경은 푸시 금지](local-env-changes-never-pushed.md) — 공유 저장소. 추적파일은 skip-worktree(.vscode/settings.json 적용중), 무시규칙은 .git/info/exclude. git rm --cached 금지
+- [VS Code JDK 경로가 업데이트마다 깨짐](vscode-java-jdk-path-breaks-on-update.md) — Temurin 패치 시 폴더명 변경(.8→.101), 에디터만 죽고 빌드는 멀쩡. LS Clean 재시작 필요
+- [admin 공통코드 표가 둘](admin-common-code-two-tables.md) — JPA(labelsOf)=ADMIN_COMMON_CODE / 네이티브SQL=op_common_code, 71유형 중복. 코드 추가 전 읽는 경로 확인. 이미 2번 사고
+- [★구조적 결함은 보고할 것](report-structural-landmines-to-user.md) — 또 터질 뿌리를 찾으면 조용히 우회 금지. 범위를 수치로 재고 좁은수정/근본수정 선택지+추천 제시
+- [AS-IS JSP 꼬리의 <style> 누락](asis-jsp-tail-style-block.md) — JSP 끝 페이지전용 스타일 116화면. 2026-10-07 전수점검 완료, 실결함 2건(FAQ 탭 밑줄·로그인 disabled-div) 수정. 오탐 3건도 기록
