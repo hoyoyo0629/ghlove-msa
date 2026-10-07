@@ -68,3 +68,36 @@ AS-IS 진짜 값이 ROLE_ADMIN_* 코드로 이미 들어있었고, TO-BE가 지�
 
 **상태**: 빌드·테스트·스페어포트 기동·DDL 전체재적용 전부 통과, admin bootJar 완료
 (2026-10-07 11:51, DROP은 그 이후 DB에 바로 적용). 재기동 대기.
+
+**★6)[같은 날, git pull 시 발견] 동료가 병행으로 정반대 결론을 이미 커밋해 둔 상태였다**:
+`git pull` 하자 `LocgFaqAdminController.java`에서 충돌. 동료쪽(다른 세션)은 같은 날 "두 표가
+둘 다 실재하고 각자 다르게 읽힌다"(JPA·`labelsOf()` 53곳/31파일 → ADMIN_COMMON_CODE, 네이티브
+SQL 10여곳 → op_common_code)는 걸 먼저 확인해 **"표 통합은 위험하니 보류, 두 표 유지"로 사용자
+결정**까지 기록해 뒀었다([[admin-common-code-two-tables]]). 담당자용 FAQ(11405) 탭이 빈 증상도
+그 둘 중 하나로 좁게 고쳐 둔 상태(`migration-admin-cmnty-faq-type-codes-admin-table.sql`로
+`CMNTY_FAQ_TYPE` 11건을 ADMIN_COMMON_CODE에도 복제).
+
+**사용자가 동료와 조율 후 확정**: 이쪽(단일 `op_common_code`, AS-IS 실명) 방향이 맞다고 결정.
+병합 처리:
+- `LocgFaqAdminController.java` 충돌 해소 - 두 경위를 다 적고 최종 결정과 근거(AS-IS 41개 매퍼
+  전체에 `ADMIN_COMMON_CODE` 0건)를 명시.
+- `CmntyFaqBbsAdminService.java`의 "두 갈래 주의" 주석을 "통합으로 해소됨"으로 갱신.
+- 동료가 추가한 `migration-admin-cmnty-faq-type-codes-admin-table.sql`과 기존
+  `migration-admin-common-code-asis-gap.sql`(둘 다 `admin.admin_common_code` 대상) 머릿말에
+  "DROP돼 재실행하면 relation does not exist" 폐기 공지 추가 - 원문은 그대로 보존.
+- `seed-admin-manager-request.sql`의 `UPDATE admin.admin_common_code ...`(REQST_SE_CODE
+  LOCALGOV/PROVIDER/OPERATOR 비활성화)는 대상 표가 없어져 주석 처리 - `op_common_code`는
+  애초에 그 3개를 가진 적이 없어 실질 영향 없음.
+- `docs/memory/admin-common-code-two-tables.md`에 해소 공지 추가(본문은 과거 상태 기록으로 보존).
+- 동료가 같이 고친 무관한 버그 3건(Cmnty*AdminRepository의 Timestamp→LocalDateTime 캐스팅
+  방어, `admin/login.html`·`community/faqBbs/list.html`의 AS-IS JSP 꼬리 `<style>` 복원
+  - [[asis-jsp-tail-style-block]])은 그대로 유지, 손대지 않음.
+
+**검증**: `CMNTY_FAQ_TYPE`(11405가 쓰는 코드)이 `op_common_code`에 이미 11건(use_yn=Y) 있어
+동료 쪽 좁은 패치가 없어져도 결과는 동일함을 확인. `REQST_SE_CODE`도 `op_common_code`가
+AS-IS 그대로(ROLE_ADMIN_2/4/6/8/10/11)라 LOCALGOV/PROVIDER/OPERATOR 비활성화가 원래부터
+불필요했음을 확인. 72개 겹치는 코드유형의 **행 단위 `use_yn` 전수 대조는 못 했다**
+(ADMIN_COMMON_CODE가 이미 DROP된 뒤라 직접 재대조 불가) - 다만 과거 세션이 71유형/1091행
+대조를 이미 끝내 갭 2건(ORDER_STATUS 98/99, 이미 양쪽 존재 확인됨)뿐이라고 기록해 둔 바 있어
+완전한 암맹은 아님. **다른 개발자 로컬 DB에도 이 DROP을 알려야 한다** - 그쪽 환경엔 아직
+ADMIN_COMMON_CODE가 남아있을 것.

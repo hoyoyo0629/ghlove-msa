@@ -30,6 +30,15 @@ import java.util.Map;
  * 질문유형 코드·라벨은 AS-IS Java enum {@code FaqType} 11종을 공통코드
  * {@code CMNTY_FAQ_TYPE}으로 옮겨 쓴다({@code migration-admin-cmnty-faq-type-codes.sql}).
  *
+ * <p><b>[2026-10-07] 한때 적재 대상 표가 갈렸던 적이 있다</b>: 위 마이그레이션은 {@code admin.op_common_code}에
+ * 넣었는데, 그 시점 {@link #faqTypes()}가 쓰는 {@link CommonCodeService#labelsOf}는 JPA 경로라
+ * {@code admin.ADMIN_COMMON_CODE}를 읽어 탭이 '전체' 하나만 보이는 증상이 났다(좁게는
+ * {@code migration-admin-cmnty-faq-type-codes-admin-table.sql}로 패치). 같은 날 후속 조율로
+ * **공통코드 표를 {@code op_common_code} 하나로 통합**하기로 확정돼({@code ADMIN_COMMON_CODE}는
+ * AS-IS에 없는 TO-BE 발명 이름이라 DROP) 지금은 그 갈림 자체가 없다 - {@code labelsOf}도
+ * {@code op_common_code}를 보므로 이 메서드는 추가 조치 없이 정상 동작한다. 경위는
+ * {@code LocgFaqAdminController} 클래스 주석과 [[admin-common-code-asis-sync-2026-10-07]] 참고.
+ *
  * <p><b>AS-IS 결함도 같은 5건을 같은 방식으로 고쳤다</b>(수정 권한 없음 / 삭제된 글이 URL로 열림 /
  * 첨부 2개 이상이면 상세 500 / 댓글 첨부 크기 빈 값 / 댓글 수정자 ID null) -
  * 내용은 {@link CmntySrBbsAdminService} 클래스 주석에 적어 두었다.

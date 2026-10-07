@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -106,7 +107,7 @@ public class CmntyBbsAdminRepository {
         List<Row> result = new ArrayList<>(rows.size());
         for (Object[] r : rows) {
             result.add(new Row(num(r[0]), str(r[1]), str(r[2]), str(r[3]), str(r[4]), num(r[5]),
-                    num(r[6]), (LocalDateTime) r[7], num(r[8]), (LocalDateTime) r[9],
+                    num(r[6]), dt(r[7]), num(r[8]), dt(r[9]),
                     str(r[10]), str(r[11]), str(r[12]), num(r[13])));
         }
         return result;
@@ -130,7 +131,7 @@ public class CmntyBbsAdminRepository {
         }
         Object[] r = rows.get(0);
         return new DetailRow(num(r[0]), str(r[1]), str(r[2]), str(r[3]), str(r[4]), str(r[5]),
-                num(r[6]), num(r[7]), (LocalDateTime) r[8], num(r[9]), (LocalDateTime) r[10],
+                num(r[6]), num(r[7]), dt(r[8]), num(r[9]), dt(r[10]),
                 str(r[11]), str(r[12]), str(r[13]));
     }
 
@@ -150,7 +151,7 @@ public class CmntyBbsAdminRepository {
         List<CmntRow> result = new ArrayList<>(rows.size());
         for (Object[] r : rows) {
             result.add(new CmntRow(num(r[0]), num(r[1]), str(r[2]), str(r[3]), str(r[4]), str(r[5]),
-                    str(r[6]), num(r[7]), (LocalDateTime) r[8], num(r[9]), (LocalDateTime) r[10]));
+                    str(r[6]), num(r[7]), dt(r[8]), num(r[9]), dt(r[10])));
         }
         return result;
     }
@@ -224,6 +225,20 @@ public class CmntyBbsAdminRepository {
     }
 
     /** PostgreSQL의 bpchar가 Character로 올 수 있어 문자열화는 toString으로 한다. */
+
+    /**
+     * 네이티브 쿼리의 timestamp 컬럼은 JDBC 드라이버가 {@link Timestamp}로 준다
+     * (엔티티 매핑과 달리 변환이 끼지 않는다). {@code (LocalDateTime)}로 바로 캐스팅하면
+     * <b>행이 있을 때만</b> ClassCastException이 나기 때문에, 표가 0건이던 이식 시점에는
+     * 드러나지 않았다(2026-10-06 실데이터가 생기자 목록 화면 500). num/str과 같은 방어 변환.
+     */
+    private static LocalDateTime dt(Object value) {
+        if (value == null) {
+            return null;
+        }
+        return value instanceof Timestamp timestamp ? timestamp.toLocalDateTime() : (LocalDateTime) value;
+    }
+
     private static String str(Object value) {
         return value == null ? null : value.toString();
     }

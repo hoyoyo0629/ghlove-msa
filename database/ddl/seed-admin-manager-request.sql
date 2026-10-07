@@ -23,10 +23,14 @@
 -- 건드리지 않되, reqst_se_code 가 AS-IS에 없는 '1' 이던 1행만 바로잡는다.
 
 -- 0) AS-IS에 없는 신청구분 3개를 비활성으로 (화면 select에서 사라진다)
-UPDATE admin.admin_common_code
-   SET use_yn = 'N'
- WHERE code_type = 'REQST_SE_CODE'
-   AND id IN ('LOCALGOV', 'PROVIDER', 'OPERATOR');
+-- [2026-10-07 폐기] admin.admin_common_code는 공통코드 표 통합으로 DROP됐다(AS-IS 실명
+-- op_common_code로 일원화). op_common_code의 REQST_SE_CODE는 애초부터 LOCALGOV/PROVIDER/
+-- OPERATOR가 없고 AS-IS 실제 6종(ROLE_ADMIN_2/4/6/8/10/11)뿐이라 이 UPDATE 자체가 불필요 -
+-- 재실행하면 "relation does not exist" 에러만 나므로 주석 처리.
+-- UPDATE admin.admin_common_code
+--    SET use_yn = 'N'
+--  WHERE code_type = 'REQST_SE_CODE'
+--    AND id IN ('LOCALGOV', 'PROVIDER', 'OPERATOR');
 
 -- 0-2) 기존 1행의 신청구분이 AS-IS에 없는 '1' 이었다. locgov_code 가 채워져 있으므로 지자체로.
 UPDATE admin.g_mngr_reqst

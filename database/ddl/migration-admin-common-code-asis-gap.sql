@@ -1,3 +1,9 @@
+-- [2026-10-07 후속 조율로 폐기] admin.admin_common_code는 같은 날 뒤이은 조율로 DROP됐다
+-- (공통코드 표를 AS-IS 실명 op_common_code 하나로 통합). 재실행하면 "relation does not exist"
+-- 에러만 난다. 이 파일이 하던 71유형/1091행 대조는 이제 op_common_code 쪽에서 이미 끝난
+-- 상태다(여기서 찾은 ORDER_STATUS 98/99 2건도 op_common_code에 이미 들어있음, 2026-10-07
+-- 확인). 아래는 원문 그대로 보존 - 대조 방법론 참고용.
+--
 -- AS-IS OP_COMMON_CODE(운영DB export) ↔ TO-BE admin.admin_common_code 전수 대조 결과 보정.
 -- 대조: AS-IS 71개 code_type / 1091행이 ADMIN_COMMON_CODE에 이미 전부 이식돼 있었고(code_type 누락 0),
 -- 행 단위로 AS-IS에만 있던 것은 아래 2건뿐이다. TO-BE에만 있는 7개 code_type

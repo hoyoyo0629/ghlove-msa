@@ -373,5 +373,16 @@
 		});
 	}
 </script>
+
+<!-- AS-IS list.jsp 끝의 페이지 전용 <style> 그대로. 공용 CSS(opmanager.css)의
+     `.admin_wrap .tabs li.active { border-bottom: 1px solid #fff; }` 는 탭이 한 줄일 때
+     아래 본문과 이어 보이게 하려는 것인데, 이 화면은 탭이 두 줄이라 그대로 두면
+     선택한 칸의 아래 테두리가 흰색으로 뚫려 밑줄이 끊긴다. AS-IS도 같은 이유로
+     이 한 줄을 덮어썼다(#999 로 되돌림). 지우지 말 것. -->
+<style>
+	.admin_wrap .tabs li.active{
+		border-bottom: 1px solid #999;
+	}
+</style>
 </body>
 </html>

@@ -1,7 +1,7 @@
 - [메모리는 저장소 docs/memory](memory-lives-in-repo-docs-memory.md) — 실제 위치가 repo 안, .claude 경로는 정션. 메모리 파일은 통합 금지(한 사실=한 파일)
 - [th:onclick 문자열 변수식 위험](admin-thymeleaf-onclick-string-hazard.md) — 숫자/불린 아니면 렌더링 중 예외→응답 끊김(1405에서 실제 발생). th:attr로 전환+가드테스트 추가(2026-10-07)
 - [ISMS관리 AS-IS 동기화 완료](admin-isms-config-port-progress.md) — 발명 시드 3건 삭제+실데이터 12건 교체+정렬버그 수정(2026-10-07). 11개 키는 값만 있고 소비 로직 없음(별도 과제)
-- [공통코드 AS-IS 동기화·테이블 정정](admin-common-code-asis-sync-2026-10-07.md) — 코드(id) readonly 제거, ORDERING NULLS FIRST, 저장 에러 수정, ★ADMIN_COMMON_CODE(AS-IS에 없는 이름) DROP+DDL정리, 엔티티는 OP_COMMON_CODE(AS-IS 실명)로 전환완료
+- [공통코드 AS-IS 동기화·테이블 정정](admin-common-code-asis-sync-2026-10-07.md) — 코드(id) readonly 제거, ORDERING NULLS FIRST, 저장 에러 수정, ★ADMIN_COMMON_CODE(AS-IS에 없는 이름) DROP+DDL정리, 엔티티는 OP_COMMON_CODE(AS-IS 실명)로 전환완료. 동료와 병행조사 충돌→조율 후 이 방향 확정(git merge 처리 경위 포함)
 - [AS-IS 테이블 실데이터 export 폴더 확대](asis-table-dump-path.md) — 2026-10-07부터 Desktop 1.DB 폴더에 테이블별 대량 export 상시 추가됨, 확인 전 먼저 거기 찾아보기
 - [이벤트 관리(featured) 이식 진척](admin-featured-event-port-progress.md) — featured=지자체별 이벤트(실사용). 목록 완료, 등록/수정 폼 잔여. [[featured-unused-skip]]은 '미사용' 오판 기록
 - [커밋은 요청 시에만](commit-only-when-asked.md) — 사용자가 git 커밋 직접 관리, 커밋 여부 확인 금지
@@ -74,3 +74,8 @@
 - [공개 FAQ 정본은 op_faq + FaqType enum](public-faq-canonical-table.md) — 시드가 지자체FAQ 표에 자체코드로 넣어둔 걸 2026-10-05 교정, 11403은 중지라 그 표 유지
 - [국민비서 문자 발송부 위치](ips-sms-sender-lives-in-admin.md) — TIF_IPS_SNDNG_M 적재가 "발송", admin SmsIpsService 하나뿐·기부/주문 문자는 미이식
 - [수신동의 인코딩 두 갈래](receive-sms-encoding-split.md) — AS-IS 0/1인데 TO-BE가 Y/N과 0 혼용, 운영자화면 "비동의" 오표시·문자 누락
+- [내 PC 설정변경은 푸시 금지](local-env-changes-never-pushed.md) — 공유 저장소. 추적파일은 skip-worktree(.vscode/settings.json 적용중), 무시규칙은 .git/info/exclude. git rm --cached 금지
+- [VS Code JDK 경로가 업데이트마다 깨짐](vscode-java-jdk-path-breaks-on-update.md) — Temurin 패치 시 폴더명 변경(.8→.101), 에디터만 죽고 빌드는 멀쩡. LS Clean 재시작 필요
+- [admin 공통코드 표가 둘(★해소됨)](admin-common-code-two-tables.md) — 2026-10-07 같은날 후속조율로 op_common_code 단일표 통합 확정, ADMIN_COMMON_CODE DROP. 과거 두표 상태는 기록으로 보존
+- [★구조적 결함은 보고할 것](report-structural-landmines-to-user.md) — 또 터질 뿌리를 찾으면 조용히 우회 금지. 범위를 수치로 재고 좁은수정/근본수정 선택지+추천 제시
+- [AS-IS JSP 꼬리의 <style> 누락](asis-jsp-tail-style-block.md) — JSP 끝 페이지전용 스타일 116화면. 2026-10-07 전수점검 완료, 실결함 2건(FAQ 탭 밑줄·로그인 disabled-div) 수정. 오탐 3건도 기록
