@@ -20,13 +20,32 @@ const errorMessage = ref('')
 
 const terms = reactive({
   agreeTerms: false,
+  disagreeTerms: false,
   agreePrivacy: false,
+  disagreePrivacy: false,
   agreeAd: false,
   adSms: false,
   adEmail: false,
   adPbanc: false,
   adKakao: false,
 })
+
+// AS-IS agree.vue getPolicyInfo() - 약관동의 요약 박스 본문은 admin 약관관리(OP_POLICY)가
+// 원본이다(체크박스 라벨 문구도 AS-IS는 하드코딩이 아니라 이 title을 그대로 쓴다).
+// "알림서비스 수신 동의" 박스는 AS-IS도 DB가 아니라 agree.vue에 하드코딩된 고정 문구라
+// 그 원문을 그대로 옮긴다(동의 체크박스 4개 - 국민비서/Email/SMS/알림톡 - 는 이미 있던 것).
+const policyContent = reactive({ terms: null, collectionAgree: null })
+const AD_INFO_CONTENT = `<p><span style="font-family: 나눔고딕; letter-spacing: 0pt; font-weight: bold; font-size: 14pt;">■</span><span lang="EN-US" style="font-weight: bold; font-size: 11pt;">&nbsp;<font face="나눔고딕">알림서비스 수신 동의</font></span>&nbsp;</p><p class="0" style="line-height:146%;margin-left:18.9pt;text-indent:-18.9pt;margin-top:2.0pt;text-autospace:none;"></p><div><font face="나눔고딕"><span style="font-size: 13.3333px;">&nbsp;고향사랑e음에서 제공하는 유익한 홍보성 정보를 SMS나 이메일 또는 카카오톡으로 받아 보실 수 있습니다.</span></font></div><div><font face="나눔고딕"><span style="font-size: 13.3333px;">단, 주요 정책과 관련된 내용은 수신 동의 여부와 관계없이 발송됩니다.</span></font></div><div><font face="나눔고딕"><span style="font-size: 13.3333px;">선택 약관에 동의하지 않으셔도 회원가입은 가능하며, 회원가입 후 <a href="/mypage/profile" target="_blank" title="새창 열림" rel="noopener" style="text-decoration: underline; color: blue; "><strong>마이페이지 &gt; 회원정보수정</strong></a>에서 언제든지 수신여부를 변경하실 수 있습니다.</span></font></div><div><font face="나눔고딕"><span style="font-size: 13.3333px;"></span></font></div><p></p><div><span style="font-family: 나눔고딕; letter-spacing: 0pt; font-weight: bold; font-size: 14pt;"><br></span></div><div><span style="font-family: 나눔고딕; letter-spacing: 0pt; font-weight: bold; font-size: 14pt;"><span style="letter-spacing: 0pt; font-family: 나눔고딕; font-weight: bold; font-size: 14pt;">■</span><span lang="EN-US" style="font-weight: bold; font-size: 11pt;"><span style="font-size: 14pt;">&nbsp;</span>국민비서 알림서비스</span><br></span></div><div><font face="나눔고딕"><span style="font-size: 13.3333px;">&nbsp;알림서비스는 국민비서 회원에게 제공되니 회원가입 해 주시기 바랍니다.</span></font></div><div><font face="나눔고딕"><span style="font-size: 13.3333px;"><a href="https://www.ips.go.kr/pot/forwardMain.do" target="_blank" title="새창 열림" rel="noopener" style="text-decoration: underline; color: blue; "><strong>국민비서 가입하기</strong></a> 국민비서 홈 &gt; 알림설정(기타-고향사랑e음 안내 알림 선택)</span></font></div><div><font face="나눔고딕"><span style="font-size: 13.3333px;">※ 알림서비스 설정 후 다음날부터 되는 점 참고 바랍니다.</span></font></div>`
+async function loadPolicyContent() {
+  try {
+    const data = await api.get('member', '/api/signup-policies')
+    policyContent.terms = data.terms
+    policyContent.collectionAgree = data.collectionAgree
+  } catch (e) {
+    // 조회 실패해도 가입 자체는 막지 않는다(AS-IS도 체크박스 검증만 하지 조회를 필수로 두지 않음)
+  }
+}
+onMounted(loadPolicyContent)
 const allChecked = computed({
   get: () => terms.agreeTerms && terms.agreePrivacy && terms.agreeAd && terms.adSms && terms.adEmail && terms.adPbanc && terms.adKakao,
   set: (v) => {
@@ -37,6 +56,9 @@ const allChecked = computed({
     terms.adEmail = v
     terms.adPbanc = v
     terms.adKakao = v
+    // AS-IS allCheck() - 전체동의를 누르면(켜든 끄든) 비동의 선택은 항상 비운다.
+    terms.disagreeTerms = false
+    terms.disagreePrivacy = false
   },
 })
 function onAdParentChange() {
@@ -47,6 +69,23 @@ function onAdParentChange() {
 }
 function onAdChildChange() {
   terms.agreeAd = terms.adSms && terms.adEmail && terms.adPbanc && terms.adKakao
+}
+
+// AS-IS agree.vue selected()/selectDisagree() - 동의·비동의는 서로소 토글이다(같은 항목을
+// 동의로 체크하면 비동의가 풀리고, 비동의로 체크하면 동의가 풀린다). AS-IS는 두 체크박스를
+// 서로 다른 배열(checkResult/disagreeResult)에 담아 상대 배열에서 값을 지우는 방식으로
+// 구현했는데, TO-BE는 불리언 한 쌍이라 직접 상대를 끈다 - 결과는 동일하다.
+function onAgreeTermsChange() {
+  if (terms.agreeTerms) terms.disagreeTerms = false
+}
+function onDisagreeTermsChange() {
+  if (terms.disagreeTerms) terms.agreeTerms = false
+}
+function onAgreePrivacyChange() {
+  if (terms.agreePrivacy) terms.disagreePrivacy = false
+}
+function onDisagreePrivacyChange() {
+  if (terms.disagreePrivacy) terms.agreePrivacy = false
 }
 
 /** 필수약관 2건 - 다음 단계로 넘어갈 때와 카카오톡/네이버 인증으로 넘어갈 때 모두 검사한다
@@ -248,36 +287,30 @@ async function onSubmit() {
           <div class="accept-terms-item agree_check">
             <div class="accept-terms_wrap">
               <div class="accept-check">
-                <input type="checkbox" id="agreeTerms" v-model="terms.agreeTerms" />
-                <label for="agreeTerms">이용약관 동의 <strong>(필수)</strong></label>
+                <input type="checkbox" id="agreeTerms" v-model="terms.agreeTerms" @change="onAgreeTermsChange" />
+                <label for="agreeTerms">{{ policyContent.terms?.title || '이용약관 동의' }} <strong>(필수)</strong></label>
+                <input class="disagreeInput" type="checkbox" id="disagreeUsePolicy" v-model="terms.disagreeTerms" @change="onDisagreeTermsChange" style="margin:0 0 0 20px" />
+                <label for="disagreeUsePolicy">비동의</label>
               </div>
               <router-link to="/policy/auth" target="_blank" title="새창 열림" class="moreView"><span class="sr-only">이용약관 </span>자세히 보기</router-link>
             </div>
             <div class="terms-box" tabindex="0">
-              <div class="terms-article">
-                <h3>제1조 (목적)</h3>
-                <p class="article-txt">이 약관은 고향사랑e음(이하 "회사")이 제공하는 고향사랑기부제 관련 서비스의 이용조건 및 절차, 회원과 회사의 권리·의무 및 책임사항을 규정함을 목적으로 합니다.</p>
-                <h3>제2조 (회원가입)</h3>
-                <p class="article-txt">회원가입은 이용자가 약관 내용에 동의를 하고 회원정보를 기입하여 가입신청을 한 후 회사가 이러한 신청에 대하여 승낙함으로써 체결됩니다.</p>
-              </div>
+              <div class="terms-article" v-html="policyContent.terms?.content"></div>
             </div>
           </div>
 
           <div class="accept-terms-item agree_check">
             <div class="accept-terms_wrap">
               <div class="accept-check">
-                <input type="checkbox" id="agreePrivacy" v-model="terms.agreePrivacy" />
-                <label for="agreePrivacy">개인정보 수집·이용 동의 <strong>(필수)</strong></label>
+                <input type="checkbox" id="agreePrivacy" v-model="terms.agreePrivacy" @change="onAgreePrivacyChange" />
+                <label for="agreePrivacy">{{ policyContent.collectionAgree?.title || '개인정보 수집·이용 동의' }} <strong>(필수)</strong></label>
+                <input class="disagreeInput" type="checkbox" id="disagreeInfoPolicy" v-model="terms.disagreePrivacy" @change="onDisagreePrivacyChange" style="margin:0 0 0 20px" />
+                <label for="disagreeInfoPolicy">비동의</label>
               </div>
               <router-link to="/policy/privacy" target="_blank" title="새창 열림" class="moreView"><span class="sr-only">개인정보처리방침 </span>자세히 보기</router-link>
             </div>
             <div class="terms-box" tabindex="0">
-              <div class="terms-article">
-                <h3>수집 항목</h3>
-                <p class="article-txt">아이디, 비밀번호, 이름, 생년월일, 이메일, 휴대폰번호, 주소</p>
-                <h3>수집 및 이용 목적</h3>
-                <p class="article-txt">회원 식별 및 가입의사 확인, 고향사랑기부 신청·처리, 기부확인증 발급, 답례품 배송</p>
-              </div>
+              <div class="terms-article" v-html="policyContent.collectionAgree?.content"></div>
             </div>
           </div>
 
@@ -305,6 +338,9 @@ async function onSubmit() {
                 <input type="checkbox" id="adKakao" v-model="terms.adKakao" @change="onAdChildChange" />
                 <label for="adKakao">알림톡 <strong>(선택)</strong></label>
               </div>
+            </div>
+            <div class="terms-box" tabindex="0">
+              <div class="terms-article" v-html="AD_INFO_CONTENT"></div>
             </div>
           </div>
         </div>

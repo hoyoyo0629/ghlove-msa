@@ -26,13 +26,18 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PolicyApiController {
 
-    /** AS-IS ApiPolicyController의 엔드포인트 이름 → POLICY_TYPE 매핑. */
+    /** AS-IS ApiPolicyController의 엔드포인트 이름 → POLICY_TYPE 매핑.
+     *  "collection"(타입 6, 개인정보 수집·이용 동의)은 AS-IS ApiPolicyController에는 없고
+     *  회원가입 전용 JoinController.getPolicyInfo가 같은 조회를 한다 - 이름은 AS-IS
+     *  PolicyInfo.POLICY_TYPE_COLLECTION_POLICY 상수명을 따서 새로 붙였다(기능은 AS-IS에
+     *  이미 있는 것, URL 이름만 신규). */
     private static final Map<String, String> TYPE_BY_NAME = Map.of(
             "clause", Policy.TYPE_AGREEMENT,
             "protect", Policy.TYPE_PROTECT_POLICY,
             "trader-raw", Policy.TYPE_TRADER_RAW,
             "marketing", Policy.TYPE_MARKETING_AGREEMENT,
-            "copyright", Policy.TYPE_COPYRIGHT);
+            "copyright", Policy.TYPE_COPYRIGHT,
+            "collection", "6");
 
     private final PolicyRepository policyRepository;
 

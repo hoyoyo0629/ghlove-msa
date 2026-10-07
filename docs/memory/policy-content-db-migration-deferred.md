@@ -1,12 +1,24 @@
 ---
 name: policy-content-db-migration-deferred
-description: 약관·정책 3건(이용약관/개인정보처리방침/저작권정책) 원문의 DB 이관은 2026-09-09 보류 - 운영데이터 수령 후 적재하고 재검토
+description: "[2026-10-07 완료] 약관 원문 DB 이관 - OP_POLICY AS-IS 실데이터 22건 적재 완료, 보류 해소. 아래는 보류 당시 기록"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 961fe3c7-599d-469a-81b9-785e75e64136
   modified: 2026-09-09T01:22:13.091Z
 ---
+
+**★[2026-10-07 완료] 보류 해소됨.** 사용자가 CUBRID 개발DB에서 export한 `OP_POLICY` 22건을
+`admin.op_policy`에 그대로 적재했다([[admin-policy-asis-data-loaded]]). 타입별 전시중(Y) 행
+개수: 0(약관)=1, 1(개인정보처리방침)=1(policy_id=2000125, title에 "테스트"라고 적혀 있음 -
+개발DB 데이터라 그대로임, 지어낸 게 아니라 원본 그대로), 5(저작권정책)=1 - 아래 ③에서
+걱정했던 "타입 라벨 빈칸" 문제는 실제로 존재하지만(TYPE 6도 getPolicyTypeLabel에 분기 없음)
+AS-IS 자체의 동작이라 그대로 둔다. TYPE 2·3(특정상거래법·마케팅이용약관)은 AS-IS에도 행이
+아예 없어 폴백(아래 ①)이 그대로 쓰인다 - 결함이 아니라 데이터가 그렇다. `policy_id=1000`
+플레이스홀더 행은 이미 없었다(아래 ①·②는 완료 처리로 더 볼 필요 없음).
+
+---
+아래는 보류 당시(2026-09-09) 기록:
 
 개인정보처리방침/저작권정책/이용약관 콘텐츠 관리 구조를 2026-09-09에 admin 기준으로 연결했고, **원문 DB 이관은 운영데이터를 받은 뒤로 미뤘다.**
 
