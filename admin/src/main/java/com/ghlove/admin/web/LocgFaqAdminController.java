@@ -38,7 +38,7 @@ import java.time.LocalDateTime;
  * {@link com.ghlove.admin.domain.CommonCode}·{@link com.ghlove.admin.service.CommonCodeService#labelsOf}
  * → {@code ADMIN_COMMON_CODE}, 네이티브 SQL 10여 곳 → {@code op_common_code}) 담당자용
  * FAQ(11405)가 {@code CMNTY_FAQ_TYPE}을 {@code op_common_code}에서만 찾다 탭이 '전체' 하나만
- * 보이던 걸 양쪽에 다 넣어 좁게 고쳤다({@code migration-admin-cmnty-faq-type-codes-admin-table.sql}).
+ * 보이던 걸 양쪽에 다 넣어 좁게 고쳤다({@code migration-admin-cmnty-faq-type-codes-admin-table.sql} - 그 파일은 이후 삭제됐다).
  *
  * <p><b>최종 조율 결과(같은 날, 사용자 확인): 전자(단일 {@code op_common_code}, AS-IS 실제 이름)로
  * 확정.</b> AS-IS 소스 41개 매퍼 전체에 {@code ADMIN_COMMON_CODE}는 0건이라 그 이름 자체가 TO-BE

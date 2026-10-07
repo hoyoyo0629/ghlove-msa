@@ -1,44 +1,45 @@
 ---
 name: admin-common-code-two-tables
-description: "[2026-10-07 후속 조율로 해소] admin 공통코드가 표 둘로 갈려 있던 상태 기록 - 같은 날 op_common_code 단일표로 통합 확정, ADMIN_COMMON_CODE는 DROP됨"
+description: "[해소됨 - 과거 기록] admin 공통코드가 2026-10-07 하루 동안 표 둘로 갈려 있던 사건. 지금은 op_common_code 단일표이고 ADMIN_COMMON_CODE는 DROP됐다"
 metadata:
   type: project
 ---
 
-**★[2026-10-07 같은 날 후속 조율] 이 메모가 기록한 "두 표 유지" 상태는 해소됐다.** 병행 조사에서
-AS-IS 소스 41개 매퍼 전체에 `ADMIN_COMMON_CODE`가 0건임이 확인돼, 그 표는 TO-BE가 지은
-이름이었다고 결론 - 사용자 확인 후 `op_common_code`(AS-IS 실명) 하나로 통합하고
-`ADMIN_COMMON_CODE`는 DROP했다. 아래 "이미 두 번 사고가 났다"의 1번(FAQ 11405)은 애초에
-`CMNTY_FAQ_TYPE`이 `op_common_code`에 있었으므로 통합만으로도 그대로 해결된다. 자세한 경위·
-위험성 검토는 [[admin-common-code-asis-sync-2026-10-07]] 참고. 아래 본문은 당시 상태 기록으로
-그대로 둔다.
+> **⚠ 이 메모는 끝난 사건의 기록이다. 지금 따라야 할 규칙은 여기 없다.**
+> 현재 공통코드는 **`admin.op_common_code` 하나뿐**이고 `CommonCode` 엔티티가 그 표를 가리킨다
+> (언어 컬럼 `LANGUAGE`). `ADMIN_COMMON_CODE`는 **DROP됐다** - 이 이름이 보이면 옛 코드다.
+> 현행 내용은 [[admin-common-code-asis-sync-2026-10-07]]를 본다.
 
-admin 서비스에서 공통코드를 읽는 경로가 **두 갈래**이고, 각자 **다른 표**를 본다.
+## 무슨 일이 있었나 (2026-10-07 하루)
 
-| 읽는 경로 | 표 | 비고 |
-|---|---|---|
-| JPA 엔티티 `CommonCode` → `CommonCodeService.labelsOf()` / `listByType()` | `admin.ADMIN_COMMON_CODE` | 언어 컬럼명이 `code_language` |
-| 네이티브 SQL 10여 곳(Mnl·Qna·OffSrBbs·HonorUser·OffPersonInCharge…) | `admin.op_common_code` | 언어 컬럼명이 `language` |
+admin 공통코드를 읽는 경로가 **두 갈래**였고 각자 **다른 표**를 봤다.
 
-2026-10-07 실측: 코드유형 **71개가 양쪽에 중복**. `ADMIN_COMMON_CODE` 전용 7개
-(`BSNS_PURPS_CODE`·`DELIVERY_CARRIER`·`MANAGER_STATUS`·`NOTICE_CATEGORY`·`POLICY_TYPE`·
-`POPUP_TYPE`·`SETTLEMENT_STATUS`), `op_common_code` 전용 1개(`CMNTY_FAQ_TYPE`).
+| 읽는 경로 | 당시 보던 표 |
+|---|---|
+| JPA 엔티티 `CommonCode` → `CommonCodeService.labelsOf()` | `admin.ADMIN_COMMON_CODE` (언어컬럼 `code_language`) |
+| 네이티브 SQL 10여 곳(Mnl·Qna·OffSrBbs·HonorUser…) | `admin.op_common_code` (언어컬럼 `language`) |
 
-## 이미 두 번 사고가 났다
+코드유형 71개가 양쪽에 중복이었다. 이 상태에서 **담당자용 FAQ(11405) 질문유형 탭이 '전체'
+하나만 보이는 증상**이 났다 - `CMNTY_FAQ_TYPE` 11건이 `op_common_code`에만 있었는데 화면은
+JPA 경로였기 때문이다.
 
-1. **담당자용 FAQ(11405) 질문유형 탭이 '전체' 하나만 보임** — `CMNTY_FAQ_TYPE` 11건을
-   `op_common_code`에만 넣었는데 화면은 `labelsOf` = JPA 경로였다.
-   → `migration-admin-cmnty-faq-type-codes-admin-table.sql`로 같은 11건을 `ADMIN_COMMON_CODE`에도 적재.
-   **사용자 결정(2026-10-07): 이 화면은 ADMIN_COMMON_CODE를 보게 둔다**(코드 수정 없이 데이터만 맞춤).
-2. **"ADMIN_COMMON_CODE는 없는 표"라는 오판** — `LocgFaqAdminController` 주석이 그렇게 단정하고
-   있었으나 표는 실재하고 1,134행이 있다. 그 주석은 2026-10-07에 정정했다.
+처음엔 "두 표가 둘 다 실재하니 화면이 보는 쪽에 데이터를 맞추자"로 좁게 패치했다
+(`ADMIN_COMMON_CODE`에도 11건 복제). **그 판단은 뒤집혔다.** 같은 날 병행 조사에서
+**AS-IS 소스 41개 매퍼 전체에 `ADMIN_COMMON_CODE`가 0건**임이 확인됐다 - AS-IS의 공통코드
+표는 `OP_COMMON_CODE` 하나뿐이고, `ADMIN_COMMON_CODE`는 TO-BE가 지어낸 이름이었다.
+사용자 확인 후 **단일표(`op_common_code`)로 통합하고 `ADMIN_COMMON_CODE`는 DROP**했다.
 
-## 규칙
+좁은 패치용으로 만들었던 `migration-admin-cmnty-faq-type-codes-admin-table.sql`은
+**사용자 결정으로 삭제했다**(대상 표가 없어져 재실행하면 `relation does not exist`).
+FAQ 11405는 `CMNTY_FAQ_TYPE`이 원래부터 `op_common_code`에 있었으므로 통합만으로 해결됐고,
+`migration-admin-cmnty-faq-type-codes.sql`(원본, `op_common_code` 대상)은 지금도 유효하다.
 
-**공통코드를 새로 넣거나 "코드 라벨이 빈 값"이 나오면, 읽는 쪽이 JPA인지 네이티브 SQL인지부터 본다.**
-`labelsOf(...)`면 `ADMIN_COMMON_CODE`, 쿼리에 `op_common_code`가 박혀 있으면 그쪽이다.
-확신이 안 서면 양쪽 표를 다 조회해 본다.
+## 배울 점 - 이게 이 메모를 남겨 두는 이유
 
-표 일원화(엔티티를 `op_common_code`로 돌리고 전용 7유형 23행 이관)는 **별도 과제로 보류** -
-`labelsOf()` 호출이 53곳·관련 파일 31개이고, 같은 코드의 `use_yn`이 양쪽에서 다른 경우가 있어
-켜짐/꺼짐이 바뀔 수 있다. 관련: [[report-structural-landmines-to-user]]
+1. **"표가 둘 다 실재한다"는 실측이 "둘 다 맞다"는 뜻은 아니다.** 나는 TO-BE 양쪽 표를
+   조회해 중복을 확인하는 데서 멈췄고, **AS-IS 소스에 그 표 이름이 있는지**를 묻지 않았다.
+   그 한 번의 grep이 결론을 뒤집었다. [[as-is-logic-is-the-spec]]대로 정본은 AS-IS다.
+2. **TO-BE에만 있는 이름은 의심 대상이다.** `ADMIN_COMMON_CODE`·`CODE_LANGUAGE` 모두
+   TO-BE 발명이었다. [[no-invented-features-ask-first]]
+3. 같은 날 **다른 세션이 정반대 결론을 병행으로 내고 있었다.** 구조적 결함을 발견하면
+   좁게 때우기 전에 사용자에게 범위와 선택지를 보고할 것 - [[report-structural-landmines-to-user]]
