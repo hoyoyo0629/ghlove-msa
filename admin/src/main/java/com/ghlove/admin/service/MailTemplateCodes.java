@@ -39,6 +39,9 @@ public class MailTemplateCodes {
         templates.put("manager_request_reject", "관리자 권한 거절");
 
         // AS-IS MailConfigServiceImpl.getMailChangeCodes 의 템플릿 → 메일클래스 매핑 그대로
+        // AS-IS OrderMail.getMap() - bankVirtualNo는 "입금은행정보"가 활성 코드다. AS-IS 소스
+        // 바로 아래 줄에 `// map.put("bankVirtualNo", "가상계좌번호");`로 주석처리된 죽은 라벨이
+        // 있는데, 예전 TO-BE가 그 죽은 값을 잘못 가져다 썼었다(2026-10-07 교정).
         Map<String, String> orderMail = map(
                 "orderName", "주문자명", "orderCode", "주문코드", "orderDate", "주문일자",
                 "mobile", "휴대폰번호", "email", "이메일", "orderDetailList", "주문상품정보",
@@ -46,7 +49,7 @@ public class MailTemplateCodes {
                 "orderTotalPrice", "총 결제금액", "approvalType", "결제방법",
                 "bankInName", "입금자명", "bankDate", "입금기한", "orderItemPayment", "결제내역",
                 "siteName", "상점명", "siteUrl", "상점URL", "bankAmount", "입금요청액",
-                "bankVirtualNo", "가상계좌번호");
+                "bankVirtualNo", "입금은행정보");
         changeCodeMaps.put("order_deposit_wait", orderMail);
         changeCodeMaps.put("order_cready_payment", orderMail);
         changeCodeMaps.put("order_delivering", map(
