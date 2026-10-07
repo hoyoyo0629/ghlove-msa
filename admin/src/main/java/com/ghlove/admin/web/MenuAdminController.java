@@ -4,8 +4,6 @@ import com.ghlove.admin.repository.MenuTreeRepository;
 import com.ghlove.admin.service.CommonMessageService;
 import com.ghlove.admin.service.ManagerException;
 import com.ghlove.admin.service.MenuAdminService;
-import com.ghlove.admin.web.support.Pagination;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -41,30 +39,24 @@ public class MenuAdminController {
      * AS-IS menuList - where(OPMANAGER/SELLER) 기본값은 OPMANAGER이고, 메뉴상태 코드값을
      * 사용(M00083)/사용안함(M00089) 문구로 바꿔 내려준다.
      *
-     * AS-IS는 목록에 {@code LIMIT 10}(framework paginationFooter)을 걸면서도 JSP에 페이저
-     * 태그를 넣지 않아 11번째 메뉴부터는 화면에서 볼 수 없다 - 컨트롤러가 Pagination을 만들어
-     * 넘기는 걸 보면 페이징이 의도였으므로, 여기서는 페이저를 함께 렌더해 전체를 볼 수 있게 했다.
+     * AS-IS는 페이저 UI가 없다(JSP에 페이저 태그가 없음) - 트리 전체를 그대로 보여준다.
+     * [2026-10-07] 이전 TO-BE는 AS-IS의 "LIMIT 10인데 페이저가 없어 11번째부터 안 보이는" 결함을
+     * 고치려고 페이저를 추가했었는데, 사용자가 AS-IS처럼 페이징 없이 전체를 보여주는 쪽으로
+     * 되돌리라고 해서 제거했다.
      */
     @RequestMapping(method = { RequestMethod.GET, RequestMethod.POST })
-    public String list(@RequestParam(value = "where", required = false) String where,
-                       @RequestParam(defaultValue = "1") int page,
-                       HttpServletRequest request, Model model) {
+    public String list(@RequestParam(value = "where", required = false) String where, Model model) {
         String menuGubun = MenuAdminService.GUBUN_SELLER.equals(where)
                 ? MenuAdminService.GUBUN_SELLER : MenuAdminService.GUBUN_MANAGER;
 
         List<MenuTreeRepository.MenuRow> all = menuAdminService.tree(menuGubun);
-        Pagination pagination = Pagination.of(all.size(), page).withLinkFrom(request);
-
         List<MenuRowView> rows = all.stream()
-                .skip(pagination.getStartRow())
-                .limit(pagination.getItemsPerPage())
                 .map(r -> new MenuRowView(r, statusLabel(r.statusCode())))
                 .toList();
 
         model.addAttribute("where", menuGubun);
         model.addAttribute("menuCount", all.size());
         model.addAttribute("menuList", rows);
-        model.addAttribute("pagination", pagination);
         return "menu-admin/list";
     }
 

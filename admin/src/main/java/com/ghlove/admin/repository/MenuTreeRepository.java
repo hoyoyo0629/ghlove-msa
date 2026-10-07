@@ -68,10 +68,14 @@ public class MenuTreeRepository {
         List<Object[]> rows = query.getResultList();
         return rows.stream()
                 .map(r -> new MenuRow(
-                        asInt(r[0]), asInt(r[1]), asInt(r[2]), (String) r[3], (String) r[4],
-                        (String) r[5], asInt(r[6]), (String) r[7], (String) r[8],
-                        r[9] == null ? 0L : ((Number) r[9]).longValue(), (String) r[10]))
+                        asInt(r[0]), asInt(r[1]), asInt(r[2]), asString(r[3]), asString(r[4]),
+                        asString(r[5]), asInt(r[6]), asString(r[7]), asString(r[8]),
+                        r[9] == null ? 0L : ((Number) r[9]).longValue(), asString(r[10])))
                 .toList();
+    }
+
+    private static String asString(Object value) {
+        return value == null ? null : value.toString();
     }
 
     /** AS-IS getFirstMenuList - MENU_TYPE=1(상단 메뉴)만, MENU_SEQ 순. */

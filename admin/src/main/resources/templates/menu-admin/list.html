@@ -10,7 +10,7 @@
 <!-- AS-IS opmanager/i18n/menu/list.jsp 이식. 카테고리 전환(관리자 OP_MENU / 답례품관리자
      OP_MENU_SELLER) + 계층 전개 목록(메뉴타입에 따라 들여쓰기) + 등록/수정 팝업 + 삭제 ajax.
      하위메뉴·메뉴경로 컬럼은 AS-IS처럼 숨겨 두고 JS가 값만 읽어 쓴다.
-     AS-IS는 LIMIT 10을 걸면서 페이저 태그를 빠뜨려 11번째부터 볼 수 없었다 - 페이저를 넣었다. -->
+     AS-IS처럼 페이저 없이 트리 전체를 보여준다. -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
@@ -130,10 +130,6 @@
                 <div class="flex_box">
                     <a href="javascript:fnInsertMenu();" class="btn btn-default btn-mini" th:text="${msg.get('M01697')}">생성하기</a>
                 </div>
-            </div>
-
-            <div class="pagination-wrap">
-                <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
             </div>
 
         </form>
