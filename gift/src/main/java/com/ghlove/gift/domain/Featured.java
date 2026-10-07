@@ -47,11 +47,26 @@ public class Featured {
     @Column(name = "FEATURED_CONTENT")
     private String featuredContent;
 
+    /** 상단 대표 이미지(PC). */
     @Column(name = "FEATURED_IMAGE")
     private String featuredImage;
 
+    /** 상단 대표 이미지(모바일). AS-IS 폼 "상단 이미지 mobile". */
+    @Column(name = "FEATURED_IMAGE_MOBILE")
+    private String featuredImageMobile;
+
     @Column(name = "THUMBNAIL_IMAGE")
     private String thumbnailImage;
+
+    @Column(name = "THUMBNAIL_IMAGE_MOBILE")
+    private String thumbnailImageMobile;
+
+    /** 목록용 이미지. AS-IS 폼 "목록 이미지"(권장 300x300). */
+    @Column(name = "FEATURED_LIST_IMAGE")
+    private String featuredListImage;
+
+    @Column(name = "THUMBNAIL_LIST_IMAGE")
+    private String thumbnailListImage;
 
     /** 노출여부(Y/N). */
     @Column(name = "FEATURED_FLAG")
@@ -79,8 +94,34 @@ public class Featured {
     @Column(name = "START_DATE")
     private String startDate;
 
+    /** 진행 시작 시각(시, 2자리). AS-IS 폼 진행기간 시작 시간 select. */
+    @Column(name = "START_TIME")
+    private String startTime;
+
     @Column(name = "END_DATE")
     private String endDate;
+
+    /** 진행 종료 시각(시, 2자리). */
+    @Column(name = "END_TIME")
+    private String endTime;
+
+    /** 주최/주관 명. */
+    @Column(name = "FEATURED_HOST")
+    private String featuredHost;
+
+    /** 대표연락처 앞/중간/뒷번호. */
+    @Column(name = "FEATURED_PHONE_NO1")
+    private String featuredPhoneNo1;
+
+    @Column(name = "FEATURED_PHONE_NO2")
+    private String featuredPhoneNo2;
+
+    @Column(name = "FEATURED_PHONE_NO3")
+    private String featuredPhoneNo3;
+
+    /** 선택상품 그룹형태(Y:기본선택, N:사용자 그룹). AS-IS prodState. */
+    @Column(name = "PROD_STATE")
+    private String prodState;
 
     @Column(name = "LOCGOV_CODE")
     private String locgovCode;

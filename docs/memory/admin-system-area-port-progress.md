@@ -57,7 +57,7 @@ metadata:
 0-3. `Policy.getPolicyTypeLabel()`에 `'6'` 분기가 없어 "개인정보 수집·이용 동의"는 목록 정책구분이 빈칸이다(검색/등록 라디오에는 있음). `'1'`도 라디오는 "개인정보처리방침", 라벨 메서드는 "개인정보취급방침"으로 다르다. 둘 다 AS-IS 그대로 보존.
 
 **AS-IS 자체 결함 2건(권한그룹):**
-1. 권한그룹 **생성**: `user-group/form.jsp`의 authority가 `<input type="hidden" id="authority" />`로 **name이 없어** 서버로 전송되지 않는다 → AS-IS `insertRole`이 AUTHORITY=null로 INSERT를 시도하는 상태. 권한코드를 내가 지어내면 AS-IS에 없는 동작이 되므로, 값이 없으면 저장하지 않고 사유를 알리도록 했다.
+1. 권한그룹 **생성**: `user-group/form.jsp`의 authority hidden에 name이 없어 폼은 authority를 안 보낸다. **[2026-10-06 정정]** 이걸 처음엔 "생성 불가 결함"으로 오판했으나, 사용자가 AS-IS에서 "test" 그룹을 실제로 생성해 보여줬다(authority=`ROLE_ADMIN_104`). AS-IS `RoleServiceImpl.insertRole`(바이트코드 확인)이 **`"ROLE_ADMIN_" + SequenceService.getId("ROLE_ADMIN")`으로 authority를 서버에서 채번**한다 - 폼이 안 보내도 서버가 만든다. TO-BE도 동일하게 서버 채번(기존 `ROLE_ADMIN_<숫자>` 최대값+1)으로 **생성이 되게 고쳤다**(`RoleAdminService.create(roleName, roleDesc)`). 교훈: 바이트코드/시퀀스까지 안 보고 JSP만 보고 "불가"로 단정한 오류.
 2. 권한그룹 **삭제** 버튼은 JSP에서 `<%-- --%>` 주석처리돼 노출되지 않는다 → TO-BE도 숨김 유지(엔드포인트만 보존). [[as-is-parity-includes-disabled-state]]
 또한 1404/1405가 둘 다 `/admin/roles`를 가리키고 있어 1404를 `/admin/roles/matrix`로 바로잡았다(`migration-admin-menu-1404-roles-matrix.sql`).
 

@@ -1,4 +1,6 @@
 - [메모리는 저장소 docs/memory](memory-lives-in-repo-docs-memory.md) — 실제 위치가 repo 안, .claude 경로는 정션. 메모리 파일은 통합 금지(한 사실=한 파일)
+- [th:onclick 문자열 변수식 위험](admin-thymeleaf-onclick-string-hazard.md) — 숫자/불린 아니면 렌더링 중 예외→응답 끊김(1405에서 실제 발생). th:attr로 전환+가드테스트 추가(2026-10-07)
+- [이벤트 관리(featured) 이식 진척](admin-featured-event-port-progress.md) — featured=지자체별 이벤트(실사용). 목록 완료, 등록/수정 폼 잔여. [[featured-unused-skip]]은 '미사용' 오판 기록
 - [커밋은 요청 시에만](commit-only-when-asked.md) — 사용자가 git 커밋 직접 관리, 커밋 여부 확인 금지
 - [빌드는 내가·재기동은 사용자](build-is-mine-restart-is-users.md) — compileJava만 X, bootJar까지 구워야 재기동에 반영. ★bootJar EXIT=0은 기동 보증 아님 → 여분 포트로 확인
 - [조건부 검색 LIKE는 cast 필수](hql-null-param-needs-cast.md) — concat 안의 파라미터는 cast(:x as String), 없으면 null이 bytea로 바인딩돼 500

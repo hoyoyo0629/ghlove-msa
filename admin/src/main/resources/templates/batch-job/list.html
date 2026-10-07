@@ -131,7 +131,7 @@
                 <td th:text="${list.batchExecuteDate}"></td>
                 <td th:text="${list.batchApplyFlagLabel}"></td>
                 <td>
-                    <button type="button" class="btn btn-gradient btn-xs" th:onclick="|fnBatchJobUpdate('${list.batchJobId}')|" th:text="${msg.get('M00087')}">수정</button> <!-- 수정 -->
+                    <button type="button" class="btn btn-gradient btn-xs" th:attr="onclick=|fnBatchJobUpdate('${list.batchJobId}')|" th:text="${msg.get('M00087')}">수정</button> <!-- 수정 -->
                 </td>
             </tr>
             </tbody>

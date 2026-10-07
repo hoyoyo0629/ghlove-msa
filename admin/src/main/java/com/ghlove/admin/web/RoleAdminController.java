@@ -66,17 +66,16 @@ public class RoleAdminController {
     }
 
     /**
-     * AS-IS groupInsertAction(POST create). 주의: AS-IS 등록 폼은 authority를
-     * {@code <input type="hidden" id="authority" />}로만 두고 name이 없어 서버로 보내지 않는다
-     * - 즉 AS-IS 생성 버튼은 권한코드 없이 INSERT를 시도하는 상태다. 여기서 권한코드를 임의로
-     * 지어내면 AS-IS에 없는 동작이 되므로, 값이 없으면 저장하지 않고 사유를 알려준다.
+     * AS-IS groupInsertAction(POST create). AS-IS 등록 폼은 authority를 서버로 보내지 않고
+     * (hidden 필드에 name이 없다) 서버의 {@code RoleServiceImpl.insertRole}이
+     * {@code "ROLE_ADMIN_" + 시퀀스}로 생성한다(실측: 신규 "test" → ROLE_ADMIN_104). TO-BE도
+     * 동일하게 서버에서 채번하므로 폼의 authority는 받지 않는다. 그룹명·그룹설명만 사용.
      */
     @PostMapping("/create")
-    public String create(@RequestParam(required = false) String authority,
-                         @RequestParam String roleName,
+    public String create(@RequestParam String roleName,
                          @RequestParam(required = false) String roleDesc, Model model) {
         try {
-            roleAdminService.create(authority, roleName, roleDesc, null);
+            roleAdminService.create(roleName, roleDesc);
             model.addAttribute("message", commonMessageService.get("M00632"));  // 등록되었습니다
             return "common/popup-result";
         } catch (ManagerException e) {

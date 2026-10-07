@@ -26,7 +26,7 @@
 <div class="btn_all btn_right mb15" th:if="${not #strings.isEmpty(policy.title)}">
     <div class="flex_box gap-08">
         <button type="submit" class="btn btn-dark-gray btn-mini">수정</button>
-        <button type="button" class="btn btn-dark-gray btn-mini" th:onclick="|deleteCheck('${policy.policyId}')|">삭제</button>
+        <button type="button" class="btn btn-dark-gray btn-mini" th:attr="onclick=|deleteCheck('${policy.policyId}')|">삭제</button>
         <button type="button" class="btn btn-dark-default btn-mini" onclick="location.href='/policy'">목록</button>
     </div>
 </div>

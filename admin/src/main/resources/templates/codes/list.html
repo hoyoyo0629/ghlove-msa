@@ -51,7 +51,7 @@
 
                         <ul class="list-group" id="simpleSearchList" style="height:600px;margin:30px 0px;overflow:auto">
                             <li class="list-group-item" th:each="entry : ${codeTypeList}"
-                                th:onclick="|fnCodeSearch('${entry.key}');|"
+                                th:attr="onclick=|fnCodeSearch('${entry.key}');|"
                                 th:style="${codeParam.codeType == entry.key} ? 'background-color:#C4DEFF;' : null">
                                 <span th:text="${entry.key}">CODE_TYPE</span> <span class="badge" th:text="${entry.value}">0</span></li>
                         </ul>

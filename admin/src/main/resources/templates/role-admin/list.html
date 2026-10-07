@@ -56,12 +56,16 @@
               <td th:text="${row.role.roleName}"></td>
               <td th:text="${row.role.roleDesc}"></td>
               <td th:text="${row.userCount}">0</td>
-              <!-- AS-IS ${op:date(role.createdDate)} = yyyy-MM-dd ([[admin-date-format-opdate-helper]]) -->
+              <!-- AS-IS op:date(role.createdDate) = yyyy-MM-dd (OpDate 헬퍼) -->
               <td th:text="${@opDate.ymd(row.role.createdDate)}"></td>
 
               <td>
                 <div class="flex_box juc-center gap-08">
-                  <button type="button" class="btn btn-default btn-sm" th:onclick="|fnGrpUpdate('${row.role.authority}')|" th:text="${msg.get('M00087')}">수정</button> <!-- 수정 -->
+                  <!-- th:onclick(DOM 이벤트 속성)은 Thymeleaf 3.1부터 숫자/불린만 허용해 authority 같은
+                       문자열을 넣으면 렌더링 중 TemplateProcessingException으로 응답이 끊긴다
+                       ([[admin-thymeleaf-onclick-string-hazard]]) - th:attr로 우회한다(이미 다른 화면
+                       15곳 이상에서 쓰는 패턴). -->
+                  <button type="button" class="btn btn-default btn-sm" th:attr="onclick=|fnGrpUpdate('${row.role.authority}')|" th:text="${msg.get('M00087')}">수정</button> <!-- 수정 -->
                   <!-- AS-IS도 삭제 버튼을 주석처리해 두었다:
                   <button type="button" class="btn btn-default btn-sm" onclick="fnGrpDelete(...)">삭제</button> -->
                 </div>

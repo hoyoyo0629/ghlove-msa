@@ -21,7 +21,7 @@
 
 <div class="btn_all btn_right mb15" th:if="${qestnar != null}">
     <div class="flex_box gap-08">
-        <button type="submit" class="btn btn-dark-gray btn-mini" th:onclick="|modifyQustnr('${qestnar.qustnrSn}')|">수정</button>
+        <button type="submit" class="btn btn-dark-gray btn-mini" th:attr="onclick=|modifyQustnr('${qestnar.qustnrSn}')|">수정</button>
         <button type="button" class="btn btn-dark-default btn-mini" onclick="location.href='/admin/surveys'">목록</button>
     </div>
 </div>

@@ -185,7 +185,7 @@
                         <td>
                             <div>
                                 <a href="javascript:;" style="cursor:pointer;"
-                                   th:onclick="|movePage('${row.locgovCode}','${bsnsType}','${prjStatus}','${frDt}','${toDt}')|"
+                                   th:attr="onclick=|movePage('${row.locgovCode}','${bsnsType}','${prjStatus}','${frDt}','${toDt}')|"
                                    th:text="${row.locgovNm}"></a>
                             </div>
                         </td>
@@ -207,7 +207,7 @@
 
             <div class="pagination-wrap" th:if="${totalPages > 1}" style="text-align:center; margin-top:16px;">
                 <a th:each="pn : ${#numbers.sequence(1, totalPages)}" href="javascript:;"
-                   th:text="${pn}" th:onclick="|goPage(${pn})|"
+                   th:text="${pn}" th:attr="onclick=|goPage(${pn})|"
                    th:style="${pn == page} ? 'font-weight:bold; margin:0 6px; text-decoration:underline;' : 'margin:0 6px;'"></a>
             </div>
         </div>

@@ -77,7 +77,7 @@
     </div>
 
     <form id="featuredForm" method="post" enctype="multipart/form-data"
-          th:action="${mode == 'create'} ? @{/admin/featured} : @{/admin/featured/{id}(id=${featured.featuredId})}"></form>
+          th:action="${mode == 'create'} ? @{/admin/featured/create} : @{/admin/featured/{id}(id=${featured.featuredId})}"></form>
     <div class="btn_all btn_center">
         <button type="submit" form="featuredForm" class="btn btn-dark-gray btn-small">저장</button>
         <a class="btn btn-small" th:href="@{/admin/featured}">목록</a>
