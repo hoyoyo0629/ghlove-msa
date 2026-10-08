@@ -77,7 +77,7 @@ public class SleepUserAdminController {
         // member API는 page가 0부터다. 이름/아이디는 AS-IS 안내대로 정확히 일치해야 하므로
         // member의 부분일치 결과를 admin에서 완전일치로 한 번 더 좁힌다.
         List<MemberAdminClient.SleepRow> found = memberAdminClient.searchSleep(
-                        searchParam.getSrchStartLoginDate(), searchParam.getSrchEndLoginDate(),
+                        searchParam.getSrchStartLoginDateForApi(), searchParam.getSrchEndLoginDateForApi(),
                         blankToNull(searchParam.getSrchKey()), blankToNull(searchParam.getSrchValue()), 0, 1000)
                 .content().stream()
                 .filter(r -> matchesExactly(searchParam, r))

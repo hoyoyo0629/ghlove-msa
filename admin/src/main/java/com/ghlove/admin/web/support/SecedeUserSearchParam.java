@@ -29,4 +29,21 @@ public class SecedeUserSearchParam {
     private String sort;
     private String orderBy;
     private String query;
+
+    /** member 검색 API는 yyyy-MM-dd를 받는다 - 화면이 쓰는 yyyyMMdd를 바꿔 준다. */
+    public String getSrchStartLeaveDateForApi() {
+        return toApiDate(srchStartLeaveDate);
+    }
+
+    public String getSrchEndLeaveDateForApi() {
+        return toApiDate(srchEndLeaveDate);
+    }
+
+    /** 8자리 숫자가 아니면 null - member는 빈 값을 "기간 무제한"으로 보고, 잘못된 값이면 터진다. */
+    private static String toApiDate(String yyyymmdd) {
+        if (yyyymmdd == null || !yyyymmdd.matches("\\d{8}")) {
+            return null;
+        }
+        return yyyymmdd.substring(0, 4) + "-" + yyyymmdd.substring(4, 6) + "-" + yyyymmdd.substring(6, 8);
+    }
 }

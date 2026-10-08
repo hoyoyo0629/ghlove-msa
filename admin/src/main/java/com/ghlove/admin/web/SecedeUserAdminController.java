@@ -137,7 +137,7 @@ public class SecedeUserAdminController {
 
         // member의 회원검색 API는 page가 0부터이고 페이징은 admin에서 다시 한다(AS-IS 탈퇴구분
         // 필터가 member에 없어 전량을 받아 걸러야 하기 때문)
-        return memberAdminClient.searchSecede(p.getSrchStartLeaveDate(), p.getSrchEndLeaveDate(),
+        return memberAdminClient.searchSecede(p.getSrchStartLeaveDateForApi(), p.getSrchEndLeaveDateForApi(),
                         blankToNull(p.getSrchKey()), blankToNull(p.getSrchValue()), 0, 1000)
                 .content().stream()
                 .filter(r -> matchesLeaveType(p.getSrchLeaveType(), r.leaveUserId()))

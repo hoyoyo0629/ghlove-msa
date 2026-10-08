@@ -58,13 +58,14 @@
 				</td>
 			</tr>
 			<tr>
+				<!-- AS-IS getGeneralCustomerDetails도 마스킹된 값이다(주소와 같은 이유) -->
 				<td class="label">휴대폰</td>
 				<td>
-					<div th:text="${details != null} ? ${details.phoneNumber} : ''"></div>
+					<div th:text="${phoneNumberText}"></div>
 				</td>
 				<td class="label">이메일 주소</td>
 				<td>
-					<div th:text="${details != null} ? ${details.email} : ''"></div>
+					<div th:text="${emailText}"></div>
 				</td>
 			</tr>
 			<tr>
@@ -75,8 +76,10 @@
 			</tr>
 			<tr>
 				<td colspan="3">
-					<div th:text="${details != null}
-					              ? (${details.address} ?: '') + ' ' + (${details.addressDetail} ?: '') : ''"></div>
+					<!-- AS-IS getGeneralCustomerDetails는 마스킹 처리된 주소를 보여준다(비마스킹은
+					     개인정보 열람 팝업 info-access.html 전용) - addressText는 컨트롤러에서
+					     GeneralCustomerEncryptor.masking()과 같은 규칙으로 미리 만든 값이다. -->
+					<div th:text="${addressText}"></div>
 				</td>
 			</tr>
 			<tr>
@@ -153,9 +156,9 @@
 <!--// 포인트 내역 목록  -->
 
 <!-- ================= 운영 기능 (AS-IS 4101에는 없는 TO-BE 전용) =================
-     계정잠금 해제·RBAC 권한 회수는 SFR-002로 추가된 기능이다. AS-IS 상세화면의 버튼은
-     위의 네 개(배송지 관리·개인정보 열람·회원탈퇴·목록)뿐이라, AS-IS 영역과 섞지 않고
-     여기 따로 뒀다(MemberAdminController). -->
+     계정잠금 해제·RBAC 권한 회수는 SFR-002로 추가된 기능이다. AS-IS 상세화면에는 이 블록이
+     없어(버튼은 배송지 관리·개인정보 열람·회원탈퇴·목록 네 개뿐) 2026-10-08 사용자 지시로
+     화면 노출을 주석처리했다 - 엔드포인트(MemberAdminController)는 그대로 남아 있다.
 <div class="board_write mt50" th:if="${details != null}">
 	<h3 class="fs24"><span>운영 기능 (AS-IS 외)</span></h3>
 	<p class="error" th:if="${redirectMessage != null}" th:text="${redirectMessage}"
@@ -176,7 +179,7 @@
 		</div>
 	</div>
 </div>
-<!--// 운영 기능 -->
+//// 운영 기능 -->
 
 <!-- 목록 검색 조건 -->
 <input type="hidden" id="listSearchParam" />
