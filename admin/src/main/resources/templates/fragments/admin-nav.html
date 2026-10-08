@@ -94,6 +94,24 @@
         </ul>
     </div>
     <a href="#" class="lnb_handle close" th:if="${activeTopMenuId != null}">메뉴 닫기</a>
+    <!-- AS-IS inc_header.jsp의 Lnb() - 섹션 헤더(.menu > a) 클릭 시 그 아래 .depth2를
+         슬라이드로 접고 펼친다. TO-BE엔 이 스크립트 자체가 없어 클릭해도 아무 반응이 없었다. -->
+    <script type="text/javascript" th:if="${activeTopMenuId != null}">
+        function Lnb(){
+            var menu_a  = $('.menu > a');
+
+            menu_a.click(function(e) {
+                e.preventDefault();
+                if(!$(this).hasClass('on')) {
+                    $(this).addClass('on').next().stop(true,true).slideDown('800');
+                } else {
+                    $(this).removeClass('on');
+                    $(this).next().stop(true,true).slideUp('800');
+                }
+            });
+        }
+        Lnb();
+    </script>
 </div>
 
 <!--/* AS-IS 각 화면 본문 최상단의 경로(breadcrumb) 엘리먼트. 내용(상단GNB>섹션>리프)은

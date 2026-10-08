@@ -36,6 +36,26 @@ public class BatchLogRepository {
             return executionDate.substring(0, 4) + "-" + executionDate.substring(4, 6)
                     + "-" + executionDate.substring(6, 8);
         }
+
+        /**
+         * AS-IS START_TIME/END_TIME은 CUBRID TIME 컬럼이라 JDBC가 "09:30:00" 모양으로 바로
+         * 내려준다. TO-BE는 같은 값을 VARCHAR(8) "HHmmss"(예: "013000")로 저장해서 그대로
+         * 찍으면 다르게 보인다 - 여기서 콜론을 끼워 맞춘다.
+         */
+        public String getStartTimeText() {
+            return toHms(startTime);
+        }
+
+        public String getEndTimeText() {
+            return toHms(endTime);
+        }
+
+        private static String toHms(String raw) {
+            if (raw == null || raw.length() < 6) {
+                return raw == null ? "" : raw;
+            }
+            return raw.substring(0, 2) + ":" + raw.substring(2, 4) + ":" + raw.substring(4, 6);
+        }
     }
 
     /**
