@@ -7,9 +7,13 @@
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<!-- AS-IS opmanager/i18n/sms-log/list.jsp 이식. 문자 구분(SmsType 24종) + 검색내용(이름·전화번호 등)
-     + 생성일 범위 + 9컬럼(일련번호/전화번호/구분/발송내용/생성일시/전송시작일시/전송완료일시/
-     문자처리상태/오류내용) + 페이지네이션. 읽는 표는 AS-IS와 같은 문자발송 연계표 TIF_IPS_SNDNG_M. -->
+<!-- AS-IS opmanager/i18n/sms-log/list.jsp 이식. 문자 구분(SmsType 24종) + 검색내용(SNDNG_CNTNTS만,
+     이름·전화번호가 그 안에 파이프로 들어가 있어 안내문구는 "이름, 전화번호 등") + 생성일 범위(실제론
+     ESB_INIT_TIME BETWEEN) + 9컬럼(일련번호/전화번호/구분/발송내용/생성일시/전송시작일시/전송완료일시/
+     문자처리상태/오류내용) + 페이지네이션. 읽는 표는 AS-IS와 같은 문자발송 연계표 TIF_IPS_SNDNG_M.
+     "생성일시"는 INFO_CRT_DT가 아니라 ESB_INIT_TIME, "전송시작일시"는 ESB_TX_TIME이다(AS-IS도
+     이렇게 매핑한다 - 컬럼명과 화면 라벨이 안 맞는 AS-IS 자체 불일치). "발송내용"은 SNDNG_CNTNTS
+     원문이 아니라 문자종류별 안내문구로 렌더링한 결과(@smsContent)를 20자로 자른 것이다. -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
@@ -20,9 +24,12 @@
 <h3><span>문자전송이력</span></h3>
 
 <form id="searchParam" method="post" th:action="@{/admin/send-sms-logs}">
+	<input type="hidden" id="itemsPerPage" name="itemsPerPage" th:value="${searchParam.itemsPerPage}"/>
 	<div class="board_write">
 		<table class="board_write_table" summary="문자전송이력">
 			<colgroup>
+				<col style="width:220px;">
+				<col>
 				<col style="width:220px;">
 				<col>
 			</colgroup>
@@ -30,7 +37,7 @@
 				 <tr>
 					<td class="label">문자 구분</td>
 					<td>
-						<div>
+						<div class="flex_box gap-08">
 							<select id="smsTypeStr" name="smsTypeStr" title="문자 구분" class="wd-400">
 								<option value="" th:selected="${#strings.isEmpty(searchParam.smsTypeStr)}">전체</option>
 								<option th:each="smsType : ${smsTypes}" th:value="${smsType.code}"
@@ -39,8 +46,6 @@
 							</select>
 						</div>
 					</td>
-				 </tr>
-				 <tr>
 					<td class="label">검색내용<br>(이름, 전화번호 등)</td>
 					<td>
 						<div>
@@ -51,11 +56,18 @@
 				 </tr>
 				<tr>
 					<td class="label" th:text="${msg.get('M01692')}">생성일자</td>
-					<td>
-						<div>
+					<td colspan="3">
+						<div class="search-date">
 							<span class="datepicker"><input type="text" id="searchStartDate" name="searchStartDate" class="datepicker optional " th:title="${msg.get('M00507')}" th:value="${searchParam.searchStartDate}" /></span>
 							<span class="wave">~</span>
 							<span class="datepicker"><input type="text" id="searchEndDate" name="searchEndDate" class="datepicker optional " th:title="${msg.get('M00509')}" th:value="${searchParam.searchEndDate}" /></span>
+							<span class="day_btns">
+								<a href="javascript:void(0);" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+								<a href="javascript:void(0);" class="btn_date week-1" th:text="${msg.get('M00027')}">1주</a>
+								<a href="javascript:void(0);" class="btn_date month-1" th:text="${msg.get('M00029')}">1개월</a>
+								<a href="javascript:void(0);" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+								<a href="javascript:void(0);" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a>
+							</span>
 						</div>
 					</td>
 				</tr>
@@ -65,13 +77,21 @@
 
 	<div class="btn_all btn_right">
 		<div class="flex_box gap-08">
-			<button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/admin/send-sms-logs';" th:text="${msg.get('M00047')}">초기화</button>
+			<button type="button" class="btn btn-default btn-mini" onclick="location.href='/admin/send-sms-logs';" th:text="${msg.get('M00047')}">초기화</button>
 			<button type="submit" class="btn btn-dark-gray btn-mini" th:text="${msg.get('M00048')}">검색</button>
 		</div>
 	</div>
 
 	<div class="count_title mt-40">
 		<h5><span th:text="${msg.get('M00045')}" th:remove="tag">총</span> <span th:text="${#numbers.formatInteger(count, 0, 'COMMA')}" th:remove="tag">0</span> <span th:text="${msg.get('M00272')}" th:remove="tag">건</span></h5>
+		<span>
+			<select name="displayCount" id="displayCount" th:title="${msg.get('M00239')}">
+				<option value="10" th:text="${msg.get('M00240')}">10개 출력</option>
+				<option value="20" th:text="${msg.get('M00241')}">20개 출력</option>
+				<option value="50" th:text="${msg.get('M00242')}">50개 출력</option>
+				<option value="100" th:text="${msg.get('M00243')}">100개 출력</option>
+			</select>
+		</span>
 	</div>
 </form>
 
@@ -94,14 +114,17 @@
 		<tbody>
 			<tr th:each="item : ${smsLogList}" style="background:#fff;">
 				<td><div th:text="${item.listSn}"></div></td>
-				<td><div th:text="${item.prvcIdntfcInfo}"></div></td>
+				<td><div th:text="${item.phoneNumberText}"></div></td>
 				<td><div th:text="${smsTypeTitles.containsKey(item.svcId)} ? ${smsTypeTitles.get(item.svcId)} : ${item.svcId}"></div></td>
-				<td style="text-align:left;"><div th:text="${item.sndngCntnts}"></div></td>
-				<td><div th:text="${item.infoCrtDtText}"></div></td>
-				<td><div th:text="${item.esbInitTime}"></div></td>
-				<td><div th:text="${item.esbComptTime}"></div></td>
-				<td><div th:text="${item.esbStatusCd}"></div></td>
-				<td><div th:text="${item.esbErrMsg}"></div></td>
+				<td style="text-align:left;"
+						th:with="smsContentText=${@smsContent.render(item.svcId, item.sndngCntnts, limitAmtString)}">
+						<div th:title="${smsContentText}" th:text="${@strcut.cut(smsContentText, 20)}"></div>
+					</td>
+				<td><div th:text="${@opDate.ymdHms(item.esbInitTime)}"></div></td>
+				<td><div th:text="${@opDate.ymdHms(item.esbTxTime)}"></div></td>
+				<td><div th:text="${@opDate.ymdHms(item.esbComptTime)}"></div></td>
+				<td><div th:text="${item.esbStatusText}"></div></td>
+				<td th:title="${item.esbErrMsg}"><div th:text="${@strcut.cut(item.esbErrMsg, 20)}"></div></td>
 			</tr>
 		</tbody>
 	</table>
@@ -119,5 +142,17 @@
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
+<script type="text/javascript">
+	$(function(){
+		$("#displayCount").val($("#itemsPerPage").val());
+		$("#displayCount").on('change', function(){
+			$("#itemsPerPage").val($(this).val());
+			$("#searchParam").submit();
+		});
+
+		Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="searchStartDate"]' , 'input[name="searchEndDate"]');
+		EventHandler.calendarStartDateAndEndDateVaild();
+	});
+</script>
 </body>
 </html>

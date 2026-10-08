@@ -1,9 +1,9 @@
 package com.ghlove.admin.web;
 
 import com.ghlove.admin.domain.IpsSendingMaster;
-import com.ghlove.admin.repository.IpsSendingMasterRepository;
 import com.ghlove.admin.repository.SendMailLogRepository;
 import com.ghlove.admin.repository.SendSmsLogRepository;
+import com.ghlove.admin.service.SmsIpsService;
 import com.ghlove.admin.service.SmsType;
 import com.ghlove.admin.web.support.Pagination;
 import com.ghlove.admin.web.support.SmsLogParam;
@@ -17,9 +17,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /** 메일/SMS 발송 이력 조회 (AS-IS opmanager/send-mail-log, send-sms-log). 조회 전용 -
@@ -31,7 +28,7 @@ public class SendLogAdminController {
 
     private final SendMailLogRepository sendMailLogRepository;
     private final SendSmsLogRepository sendSmsLogRepository;
-    private final IpsSendingMasterRepository ipsSendingMasterRepository;
+    private final SmsIpsService smsIpsService;
 
     @GetMapping("/admin/send-mail-logs")
     public String mailList(Model model) {
@@ -57,11 +54,11 @@ public class SendLogAdminController {
         if (searchParam.getItemsPerPage() <= 0) {
             searchParam.setItemsPerPage(10);
         }
-        List<IpsSendingMaster> all = ipsSendingMasterRepository.search(
+        List<IpsSendingMaster> all = smsIpsService.search(
                 blankToNull(searchParam.getSmsTypeStr()),
                 blankToNull(searchParam.getQuery()),
-                startOfDay(searchParam.getSearchStartDate()),
-                startOfNextDay(searchParam.getSearchEndDate()));
+                blankToNull(searchParam.getSearchStartDate()),
+                blankToNull(searchParam.getSearchEndDate()));
 
         Pagination pagination = Pagination.of(all.size(), searchParam.getPage(), searchParam.getItemsPerPage())
                 .withLinkFrom(request);
@@ -73,33 +70,11 @@ public class SendLogAdminController {
         model.addAttribute("pagination", pagination);
         model.addAttribute("smsTypes", SmsType.values());
         model.addAttribute("smsTypeTitles", SmsType.options());
+        model.addAttribute("limitAmtString", smsIpsService.donationLimitAmtDetail());
         return "send-log-admin/sms-list";
     }
 
     private static String blankToNull(String value) {
         return (value == null || value.isBlank()) ? null : value;
-    }
-
-    /** yyyyMMdd → 그 날 00:00. AS-IS도 생성일(DATETIME)을 날짜 범위로 비교한다. */
-    private static LocalDateTime startOfDay(String yyyymmdd) {
-        LocalDate date = parse(yyyymmdd);
-        return date == null ? null : date.atStartOfDay();
-    }
-
-    /** 종료일은 다음 날 00:00 미만으로 본다(그 날 전체 포함). */
-    private static LocalDateTime startOfNextDay(String yyyymmdd) {
-        LocalDate date = parse(yyyymmdd);
-        return date == null ? null : date.plusDays(1).atStartOfDay();
-    }
-
-    private static LocalDate parse(String yyyymmdd) {
-        if (yyyymmdd == null || yyyymmdd.length() != 8) {
-            return null;
-        }
-        try {
-            return LocalDate.parse(yyyymmdd, DateTimeFormatter.ofPattern("yyyyMMdd"));
-        } catch (RuntimeException e) {
-            return null;
-        }
     }
 }

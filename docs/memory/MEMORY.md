@@ -11,6 +11,9 @@
 - [엑셀다운로드사유 수정팝업 복원](admin-excel-download-log-reason-edit-popup.md) — succChk 분기 없어 항상 읽기전용이던 것을 AS-IS처럼 본인 작성글만 수정가능하게 복원, 이력팝업에 총건수+No.도 보강. admin 재기동 필요
 - [op_manager AS-IS 데이터 이관 보류](admin-op-manager-migration-deferred.md) — login_id/password/user_name까지 전부 암호화라 그대로 옮겨도 안 읽힘+13,495건 규모, 사용자가 패스 결정
 - [사유 수정이력 정렬순서 수정](admin-privacy-log-hist-sort-order.md) — HIST_ID DESC→AS-IS와 같은 CREATED_AT DESC, baseline 이력 보강 과정에서 순서역전 발견. admin 재기동 필요
+- [문자전송이력 500 수정](admin-sms-log-500-fix.md) — IpsSendingMasterRepository의 null LocalDateTime 바인딩 문제, 엑셀다운로드와 동일 패턴으로 SmsIpsService 조건부 조립으로 전환+회귀테스트. admin 재기동 필요
+- [문자전송이력 전화번호·처리상태 표시수정](admin-sms-log-phone-status-display.md) — 전화번호는 암호화 CI 아니라 발송내용 끝 토큰 파싱(필드 오바인딩 버그), 처리상태 N/S/F→대기/성공/실패 변환 추가. admin 재기동 필요
+- [문자전송이력 날짜컬럼+발송내용 수정](admin-sms-log-date-columns-and-content.md) — 생성일시/전송시작일시 필드매핑 밀림(INFO_CRT_DT 아님)+검색필터 컬럼오류, 발송내용은 원시값 아니라 24종 알림문구 렌더링(SmsContentRenderer 신설), 오류내용 20자자르기 추가. op:strcut은 opframework 소스 없어 추정구현. admin 재기동 필요
 - [ISMS관리 AS-IS 동기화 완료](admin-isms-config-port-progress.md) — 발명 시드 3건 삭제+실데이터 12건 교체+정렬버그 수정(2026-10-07). 11개 키는 값만 있고 소비 로직 없음(별도 과제)
 - [공통코드 AS-IS 동기화·테이블 정정](admin-common-code-asis-sync-2026-10-07.md) — 코드(id) readonly 제거, ORDERING NULLS FIRST, 저장 에러 수정, ★ADMIN_COMMON_CODE(AS-IS에 없는 이름) DROP+DDL정리, 엔티티는 OP_COMMON_CODE(AS-IS 실명)로 전환완료. 동료와 병행조사 충돌→조율 후 이 방향 확정(git merge 처리 경위 포함)
 - [AS-IS 테이블 실데이터 export 폴더 확대](asis-table-dump-path.md) — 2026-10-07부터 Desktop 1.DB 폴더에 테이블별 대량 export 상시 추가됨, 확인 전 먼저 거기 찾아보기
