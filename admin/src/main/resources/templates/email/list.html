@@ -125,7 +125,7 @@
 			<!-- AS-IS는 No. 칸에 행번호가 아니라 EMAIL_ID를 찍는다 - 그대로 둔다 -->
 			<tr th:each="email : ${list}" style="background:#fff;">
 				<td th:text="${email.emailId}"></td>
-				<td style="text-align:left;">
+				<td>
 					<a th:href="@{'/email/' + ${email.emailId}}" th:text="${email.subject}"></a>
 				</td>
 				<td th:text="${email.sendDateText}"></td>
