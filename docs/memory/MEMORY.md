@@ -16,6 +16,9 @@
 - [문자전송이력 날짜컬럼+발송내용 수정](admin-sms-log-date-columns-and-content.md) — 생성일시/전송시작일시 필드매핑 밀림(INFO_CRT_DT 아님)+검색필터 컬럼오류, 발송내용은 원시값 아니라 24종 알림문구 렌더링(SmsContentRenderer 신설), 오류내용 20자자르기 추가. op:strcut은 opframework 소스 없어 추정구현. admin 재기동 필요
 - [배치 실행로그 시간포맷 수정](admin-batch-log-time-format.md) — HHmmss 원시값→HH:mm:ss(AS-IS는 CUBRID TIME 컬럼이라 그냥 그렇게 나옴). admin 재기동 필요
 - [LNB 토글 스크립트 누락 복원](admin-lnb-toggle-script-missing.md) — 섹션헤더(.menu>a) 클릭 시 .depth2 slideDown/slideUp 하는 AS-IS Lnb() 스크립트가 TO-BE에 통째로 없었음. admin-nav.html lnb()에 추가. admin 재기동 필요
+- [주문번호 포맷 AS-IS와 통일](order-code-format-matches-asis.md) — TO-BE 발명값(O+시각+난수)→AS-IS와 같은 K+10자리 시퀀스, 기존 19건+참조테이블(품목/배송/클레임/포인트사용/admin통계) 전부 일괄변환. order 재기동 필요
+- [관리자 주문 수기등록 포팅+7210 수정](admin-order-manual-registration-port-progress.md) — AS-IS "AB"코드 관리자등록 주문 기능 신규(단건입력, 엑셀업로드 미포팅), 7210이 일반주문 전체 아니라 AB%만 보도록 쿼리 수정(진짜 버그였음), 검증샘플 25건(가짜데이터) 적재. ★메뉴위치 확인 안하고 임의로 링크 발명했다가 사용자 지적으로 되돌림(3000>3700>3701 전부 AS-IS 비활성, "오프라인 주문관리"(16409)는 별개기능). order+admin 재기동 필요
+- [화면/기능 포팅 전 메뉴위치 먼저 확인](verify-menu-location-before-building.md) — asis_dump.op_menu로 진짜 menu_id+상위체인 display_flag/status_code 확인 안 하면 발명된 네비게이션 만들게 됨. 반복 지적 대상에 추가
 - [ISMS관리 AS-IS 동기화 완료](admin-isms-config-port-progress.md) — 발명 시드 3건 삭제+실데이터 12건 교체+정렬버그 수정(2026-10-07). 11개 키는 값만 있고 소비 로직 없음(별도 과제)
 - [공통코드 AS-IS 동기화·테이블 정정](admin-common-code-asis-sync-2026-10-07.md) — 코드(id) readonly 제거, ORDERING NULLS FIRST, 저장 에러 수정, ★ADMIN_COMMON_CODE(AS-IS에 없는 이름) DROP+DDL정리, 엔티티는 OP_COMMON_CODE(AS-IS 실명)로 전환완료. 동료와 병행조사 충돌→조율 후 이 방향 확정(git merge 처리 경위 포함)
 - [AS-IS 테이블 실데이터 export 폴더 확대](asis-table-dump-path.md) — 2026-10-07부터 Desktop 1.DB 폴더에 테이블별 대량 export 상시 추가됨, 확인 전 먼저 거기 찾아보기

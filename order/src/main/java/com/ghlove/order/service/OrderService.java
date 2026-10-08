@@ -15,9 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -37,9 +35,6 @@ public class OrderService {
     private static final String DELIVERY_IN_TRANSIT = "IN_TRANSIT";
     private static final String DELIVERY_DELIVERED = "DELIVERED";
     private static final String DELIVERY_CONFIRMED = "CONFIRMED";
-    private static final DateTimeFormatter ID_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-    private static final SecureRandom RANDOM = new SecureRandom();
-
     private final OrderRepository orderRepository;
     private final CommonCodeRepository commonCodeRepository;
     private final OrderSagaPublisher orderSagaPublisher;
@@ -485,9 +480,15 @@ public class OrderService {
         order.setCancelReason(order.getCancelReason() == null ? reason : order.getCancelReason() + "; " + reason);
     }
 
-    /** 주문번호 생성 - 멀티아이템 체크아웃({@link CartService})도 헤더 주문번호를 이걸로 만든다. */
+    /**
+     * 주문번호 생성 - AS-IS {@code OrderServiceImpl.getNewOrderCode}와 동일하게
+     * {@code "K" + 10자리 0-패딩 숫자}(예: K0000000020). 멀티아이템 체크아웃
+     * ({@link CartService})도 헤더 주문번호를 이걸로 만든다.
+     *
+     * <p>이전엔 TO-BE가 지어낸 {@code "O"+yyyyMMddHHmmss+난수4자리} 포맷이었다(AS-IS와
+     * 다름) - migration-order-code-asis-format.sql로 기존 주문까지 전부 이 포맷으로 바꿨다.
+     */
     String generateOrderId() {
-        int suffix = RANDOM.nextInt(9000) + 1000;
-        return "O" + ID_FORMAT.format(LocalDateTime.now()) + suffix;
+        return "K" + String.format("%010d", orderRepository.nextOrderCodeSeq());
     }
 }

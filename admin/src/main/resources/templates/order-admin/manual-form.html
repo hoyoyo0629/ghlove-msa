@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <meta charset="UTF-8">
+    <title>관리자 주문 등록 - 고향사랑e음 (admin service)</title>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/order/admin(OrderAdminServiceImpl.insertOrderAdmin) 재현 - 전화주문·오프라인
+     거래처럼 온라인 체크아웃을 거치지 않은 주문을 관리자가 직접 기록한다.
+
+     ★AS-IS 메뉴 위치: 주문관리(3000, status_code='2' 사용안함) > 대량주문 관리(3700,
+     display_flag='N') > 작업 목록(3701, display_flag='N' → /opmanager/order/admin/list).
+     최상위부터 전부 비활성 - AS-IS 운영자도 메뉴로는 이 화면에 못 들어간다. "오프라인
+     주문관리"(16409, /opmanager/order/offList, 결제수단이 무통장입금/ARS인 주문의 읽기전용
+     조회화면)와는 이름만 비슷한 완전히 다른 기능이니 혼동하지 말 것.
+     TO-BE도 AS-IS 비활성 상태를 그대로 따라 이 화면을 메뉴/링크 어디에도 노출하지 않는다
+     (admin.op_menu에도 이 세 메뉴 자리를 display_flag='N'/status_code='2'로 그대로 심어
+     구조만 맞춰 뒀다 - migration-admin-menu-order-admin-hidden.sql). URL은 직접 입력해야
+     들어온다(AS-IS 숨김 메뉴와 동일한 성질).
+
+     AS-IS는 엑셀 업로드→목록검수의 2단계 워크플로지만, 그 전체(옵션그룹 UI·Daum 주소검색·
+     동일주문 묶음판정)는 별도 과제로 두고 이번엔 핵심(답례품 1건을 "AB" 코드로 직접 등록 -
+     포인트사용 정합성검증(7210)이 보는 그 데이터)만 단건 입력 폼으로 구현했다. 재고 차감·
+     쿠폰 적용은 AS-IS도 이 경로에서 하지 않는다(이미 성립된 거래의 사후 기록이라서). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+    <h3><span>관리자 주문 등록</span></h3>
+
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+    <form th:action="@{/admin/orders/manual}" method="post">
+        <div class="board_write">
+            <table class="board_write_table" summary="관리자 주문 등록">
+                <colgroup><col style="width:180px;"><col></colgroup>
+                <tbody>
+                <tr>
+                    <td class="label">답례품 ID<span style="color:red">*</span></td>
+                    <td><input type="number" name="itemId" class="input_txt" style="width:200px;" required="required"/></td>
+                </tr>
+                <tr>
+                    <td class="label">옵션 ID</td>
+                    <td>
+                        <input type="number" name="itemOptionId" class="input_txt" style="width:200px;"/>
+                        <span style="color:#888; margin-left:6px;">옵션이 있는 답례품만, 없으면 비워둔다</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">수량<span style="color:red">*</span></td>
+                    <td><input type="number" name="quantity" class="input_txt" style="width:120px;" min="1" value="1" required="required"/></td>
+                </tr>
+                <tr>
+                    <td class="label">구매자 회원ID</td>
+                    <td>
+                        <input type="number" name="buyerUserId" class="input_txt" style="width:200px;"/>
+                        <span style="color:#888; margin-left:6px;">비회원이면 비워두고 아래 이름/연락처만 입력</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">구매자 이름(비회원)</td>
+                    <td><input type="text" name="buyerName" class="input_txt" style="width:200px;"/></td>
+                </tr>
+                <tr>
+                    <td class="label">구매자 연락처(비회원)</td>
+                    <td><input type="text" name="buyerPhone" class="input_txt" style="width:200px;"/></td>
+                </tr>
+                <tr>
+                    <td class="label">받는사람 이름<span style="color:red">*</span></td>
+                    <td><input type="text" name="receiverName" class="input_txt" style="width:200px;" required="required"/></td>
+                </tr>
+                <tr>
+                    <td class="label">받는사람 연락처<span style="color:red">*</span></td>
+                    <td><input type="text" name="receiverPhone" class="input_txt" style="width:200px;" required="required"/></td>
+                </tr>
+                <tr>
+                    <td class="label">우편번호</td>
+                    <td><input type="text" name="receiverZipcode" class="input_txt" style="width:120px;"/></td>
+                </tr>
+                <tr>
+                    <td class="label">주소<span style="color:red">*</span></td>
+                    <td><input type="text" name="receiverAddress" class="input_txt full" required="required"/></td>
+                </tr>
+                <tr>
+                    <td class="label">상세주소</td>
+                    <td><input type="text" name="receiverAddressDetail" class="input_txt full"/></td>
+                </tr>
+                <tr>
+                    <td class="label">배송 요구사항</td>
+                    <td><input type="text" name="requestNote" class="input_txt full"/></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="btn_all btn_right">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-default btn-mini" onclick="location.href='/admin/orders';">목록으로</button>
+                <button type="submit" class="btn btn-dark-gray btn-mini">등록</button>
+            </div>
+        </div>
+    </form>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

@@ -370,6 +370,27 @@ public class OrderAdminClient {
         }
     }
 
+    // ==================== 관리자 주문 수기 등록 (AS-IS opmanager/order/admin) ====================
+
+    public record ManualOrderRequest(Long itemId, Long itemOptionId, Integer quantity, Long buyerUserId,
+                                      String buyerName, String buyerPhone, String receiverName, String receiverPhone,
+                                      String receiverZipcode, String receiverAddress, String receiverAddressDetail,
+                                      String requestNote) {
+    }
+
+    public String createManualOrder(Manager manager, ManualOrderRequest request) {
+        try {
+            Map<String, String> result = restClient.post().uri("/api/admin/orders/manual")
+                    .headers(h -> applyHeaders(h, manager))
+                    .body(request).retrieve()
+                    .body(new ParameterizedTypeReference<Map<String, String>>() {
+                    });
+            return result != null ? result.get("orderId") : null;
+        } catch (RestClientResponseException e) {
+            throw new ManagerException(extractMessage(e, "주문 등록에 실패했습니다."));
+        }
+    }
+
     private static String extractMessage(RestClientResponseException e, String fallback) {
         try {
             var body = e.getResponseBodyAs(Map.class);

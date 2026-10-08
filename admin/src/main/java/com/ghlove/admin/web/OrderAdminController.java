@@ -175,6 +175,49 @@ public class OrderAdminController {
         }
     }
 
+    // ==================== 관리자 주문 수기 등록 (AS-IS opmanager/order/admin) ====================
+    // ★AS-IS 메뉴 3000(주문관리,status_code=2 사용안함) > 3700(대량주문 관리,display_flag=N)
+    // > 3701(작업 목록,display_flag=N) - AS-IS 자체가 최상위부터 비활성이라 운영자도 메뉴로는
+    // 못 들어간다("오프라인 주문관리"(16409)와는 이름만 비슷한 별개 기능 - 그건 무통장입금/ARS
+    // 주문 조회화면). TO-BE도 같은 이유로 어디에도 링크를 두지 않는다(admin.op_menu에 자리만
+    // display_flag='N'으로 맞춰 둠 - migration-admin-menu-order-admin-hidden.sql). 직접
+    // URL을 입력해야 들어온다(AS-IS 숨김 메뉴와 같은 성질).
+    //
+    // AS-IS는 엑셀 업로드→목록검수 2단계 워크플로가 있지만, 그 전체를 옮기는 건 이번 범위를
+    // 넘는 별도 과제라 핵심(관리자가 답례품 하나를 직접 주문으로 등록 - "AB" 코드 채번 +
+    // 7210 정합성검증이 보는 바로 그 데이터)만 단건 입력 폼으로 우선 구현했다.
+
+    @GetMapping("/admin/orders/manual")
+    public String manualForm() {
+        return "order-admin/manual-form";
+    }
+
+    @PostMapping("/admin/orders/manual")
+    public String createManual(@RequestParam Long itemId,
+                                @RequestParam(required = false) Long itemOptionId,
+                                @RequestParam Integer quantity,
+                                @RequestParam(required = false) Long buyerUserId,
+                                @RequestParam(required = false) String buyerName,
+                                @RequestParam(required = false) String buyerPhone,
+                                @RequestParam String receiverName,
+                                @RequestParam String receiverPhone,
+                                @RequestParam(required = false) String receiverZipcode,
+                                @RequestParam String receiverAddress,
+                                @RequestParam(required = false) String receiverAddressDetail,
+                                @RequestParam(required = false) String requestNote,
+                                HttpSession session, Model model) {
+        try {
+            String orderId = orderAdminClient.createManualOrder(manager(session),
+                    new OrderAdminClient.ManualOrderRequest(itemId, itemOptionId, quantity, buyerUserId,
+                            buyerName, buyerPhone, receiverName, receiverPhone, receiverZipcode,
+                            receiverAddress, receiverAddressDetail, requestNote));
+            return "redirect:/admin/orders/" + orderId;
+        } catch (ManagerException e) {
+            model.addAttribute("errorMessage", e.getMessage());
+            return "order-admin/manual-form";
+        }
+    }
+
     // ==================== 클레임 처리 큐 ====================
 
     @GetMapping("/admin/claims")
