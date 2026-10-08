@@ -91,11 +91,42 @@ public class OperPersonInChargeAdminController {
     @GetMapping("/admin/person-in-charge/oper/edit/{userId}")
     public String editForm(@PathVariable Long userId, HttpSession session, Model model) {
         Manager viewer = viewer(session);
-        model.addAttribute("details", service.get(userId));
+        Manager details = service.get(userId);
+        model.addAttribute("details", details);
         model.addAttribute("adminRole", viewer == null ? null : viewer.getAuthority());
         model.addAttribute("loginUserId", viewer == null ? null : viewer.getUserId());
         model.addAttribute("editable", viewer != null && DELETE_VISIBLE_ROLES.contains(viewer.getAuthority()));
+        applyRoleFlags(model, viewer, details);
         return "person-in-charge/oper-edit";
+    }
+
+    /**
+     * AS-IS {@code adminRoleCheck()}(oper-charger/edit.jsp) verbatim 재현 - 원본은 jQuery로
+     * 라디오에 disabled를 다는 4개 규칙인데, 전부 "true로 켜질 조건"만 있고 끄는 분기가 없어서
+     * OR로 누적된다. 그대로 bool 식으로 옮긴다.
+     *
+     * <ul>
+     *   <li>대상 또는 보는 사람이 시스템(1·2)이면 → 행안부 옵션(3·4) 비활성</li>
+     *   <li>대상 또는 보는 사람이 행안부(3·4)이면 → 시스템 옵션(1·2) 비활성</li>
+     *   <li>(둘을 합치면 시스템↔행안부 그룹 전환 자체가 막힌다 - 같은 그룹 내 주/부 승격만 가능)</li>
+     *   <li>주담당자(1·3)가 본인을 보고 있으면 → 사용여부 비활성(자기 자신 중지 방지)</li>
+     *   <li>부담당자(2·4)는 → 회원구분·사용여부 둘 다 비활성</li>
+     * </ul>
+     */
+    private static void applyRoleFlags(Model model, Manager viewer, Manager details) {
+        String viewerRole = viewer == null ? null : viewer.getAuthority();
+        String targetRole = details == null ? null : details.getAuthority();
+        boolean viewerIsSys = "ROLE_ADMIN_1".equals(viewerRole) || "ROLE_ADMIN_2".equals(viewerRole);
+        boolean viewerIsGov = "ROLE_ADMIN_3".equals(viewerRole) || "ROLE_ADMIN_4".equals(viewerRole);
+        boolean viewerIsSub = "ROLE_ADMIN_2".equals(viewerRole) || "ROLE_ADMIN_4".equals(viewerRole);
+        boolean viewerIsMain = "ROLE_ADMIN_1".equals(viewerRole) || "ROLE_ADMIN_3".equals(viewerRole);
+        boolean targetIsSys = "ROLE_ADMIN_1".equals(targetRole) || "ROLE_ADMIN_2".equals(targetRole);
+        boolean targetIsGov = "ROLE_ADMIN_3".equals(targetRole) || "ROLE_ADMIN_4".equals(targetRole);
+        boolean isSelf = viewer != null && details != null && viewer.getUserId().equals(details.getUserId());
+
+        model.addAttribute("authorityGovDisabled", targetIsSys || viewerIsSys || viewerIsSub);
+        model.addAttribute("authoritySysDisabled", targetIsGov || viewerIsGov || viewerIsSub);
+        model.addAttribute("statusDisabled", (viewerIsMain && isSelf) || viewerIsSub);
     }
 
     /** AS-IS POST /edit - ajax. 응답은 {isSuccess, data:{code}}이고 화면은 code=="SUCC"만 성공으로 본다. */

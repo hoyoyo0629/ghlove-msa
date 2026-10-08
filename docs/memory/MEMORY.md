@@ -104,3 +104,4 @@
 - [지자체관리 검색+부서이력등록자 수정](admin-locgov-search-and-depthist-register-fix.md) — ①등록일 검색시 날짜포맷버그(같은클래스 4번째) ②등록/수정에 managerId 자체를 안보내 부서이력 등록자 항상 공백. 둘다 수정, admin 재기동 필요
 - [지자체담당자관리·운영관리자 상세 레이아웃+경로 수정](admin-locgov-charger-edit-layout-and-breadcrumb-fix.md) — 목록버튼이 flex_box 밖으로 분리돼있던것+메뉴경로 "상세" 크럼 누락(JS 자체가 없었음, LNB토글 누락과 같은유형), 2화면 수정. admin 재기동 필요
 - [메뉴경로 크럼 누락 전수조사 완료](admin-breadcrumb-append-script-audit.md) — AS-IS 25화면 전수대조, 17개 이미정상+6개(give-operation/point/reqmng-list/reqmng-form/state-detail, statistics-locgov) 신규수정+6개(통계통합)·1개(미이식) 적용대상아님 확인. admin 재기동 필요
+- [운영관리자 회원구분·사용여부 비활성규칙 신규구현](admin-oper-charger-authority-status-disable-rules.md) — AS-IS adminRoleCheck 4규칙(시스템↔행안부 그룹전환 금지·본인 사용여부 불가·부담당자 전체 불가) 전체가 안 포팅돼 있었음, th:disabled로 신규구현. admin 재기동 필요

@@ -49,22 +49,26 @@
 					<div class="flex_box gap-12">
 						<div class="input-form">
 							<input id="authoritySys_M" name="authority" type="radio" value="ROLE_ADMIN_1"
-							       th:checked="${details != null and details.authority == 'ROLE_ADMIN_1'}">
+							       th:checked="${details != null and details.authority == 'ROLE_ADMIN_1'}"
+							       th:disabled="${authoritySysDisabled}">
 							<label for="authoritySys_M">시스템 주관리자</label>
 						</div>
 						<div class="input-form">
 							<input id="authoritySys_S" name="authority" type="radio" value="ROLE_ADMIN_2"
-							       th:checked="${details != null and details.authority == 'ROLE_ADMIN_2'}">
+							       th:checked="${details != null and details.authority == 'ROLE_ADMIN_2'}"
+							       th:disabled="${authoritySysDisabled}">
 							<label for="authoritySys_S">시스템 부관리자</label>
 						</div>
 						<div class="input-form">
 							<input id="authorityGov_M" name="authority" type="radio" value="ROLE_ADMIN_3"
-							       th:checked="${details != null and details.authority == 'ROLE_ADMIN_3'}">
+							       th:checked="${details != null and details.authority == 'ROLE_ADMIN_3'}"
+							       th:disabled="${authorityGovDisabled}">
 							<label for="authorityGov_M">행안부 주담당자</label>
 						</div>
 						<div class="input-form">
 							<input id="authorityGov_S" name="authority" type="radio" value="ROLE_ADMIN_4"
-							       th:checked="${details != null and details.authority == 'ROLE_ADMIN_4'}">
+							       th:checked="${details != null and details.authority == 'ROLE_ADMIN_4'}"
+							       th:disabled="${authorityGovDisabled}">
 							<label for="authorityGov_S">행안부 부담당자</label>
 						</div>
 					</div>
@@ -110,12 +114,14 @@
 					<div class="flex_box gap-12">
 						<div class="input-form">
 							<input id="statusCode9" name="statusCode" type="radio" value="9"
-							       th:checked="${details != null and details.asIsStatusCode == '9'}">
+							       th:checked="${details != null and details.asIsStatusCode == '9'}"
+							       th:disabled="${statusDisabled}">
 							<label for="statusCode9">사용</label>
 						</div>
 						<div class="input-form">
 							<input id="statusCode2" name="statusCode" type="radio" value="2"
-							       th:checked="${details != null and details.asIsStatusCode == '2'}">
+							       th:checked="${details != null and details.asIsStatusCode == '2'}"
+							       th:disabled="${statusDisabled}">
 							<label for="statusCode2">중지</label>
 						</div>
 					</div>
