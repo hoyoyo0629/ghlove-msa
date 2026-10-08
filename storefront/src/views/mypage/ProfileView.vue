@@ -4,7 +4,6 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/http'
 import { useAuthStore } from '../../stores/auth'
-import { loadDaumPostcode } from '../../utils/daumPostcode'
 
 // AS-IS users/modify.html(및 Thymeleaf 버전 profile.html) 재현. 이름/생년월일은 본인인증
 // 연계가 없어 읽기전용, "개인정보 수정"(정적 안내뿐이라 아직 옛 member 서비스(8081) 화면
@@ -74,14 +73,16 @@ async function load() {
 }
 onMounted(load)
 
-async function searchAddress() {
-  await loadDaumPostcode()
-  new window.daum.Postcode({
-    oncomplete(data) {
-      post.value = data.zonecode
-      address.value = data.roadAddress || data.jibunAddress
-    },
-  }).open()
+// AS-IS users/modify.html은 행안부 juso.go.kr 팝업을 쓴다(Daum Postcode가 아니다 - 과거에
+// "다른 화면과 통일"하겠다고 Daum으로 바꿔놨던 건 AS-IS 미확인 상태의 임의 변경이었다,
+// 2026-10-08 사용자 지시로 원복). SignupView.vue와 동일한 public/juso-popup.html을 쓴다.
+function searchAddress() {
+  window.jusoCallBack = (addrPart1, addrPart2, addrDetail, zipNo) => {
+    post.value = zipNo
+    address.value = addrPart1 + addrPart2
+    addressDetail.value = addrDetail
+  }
+  window.open('/juso-popup.html', 'jusoPopup', 'width=570,height=520,scrollbars=yes')
 }
 
 async function onSubmit() {

@@ -1,10 +1,30 @@
 ---
 name: storefront-address-widget-mismatch-deferred
-description: "회원가입·마이페이지 개인정보수정 화면의 주소검색이 AS-IS(행안부 juso.go.kr)와 다른 위젯(Daum Postcode)을 쓰고 있음 - 외부연계 개발 가능해질 때까지 조치 보류(2026-10-08 사용자 지시)"
+description: "회원가입·마이페이지 개인정보수정 화면의 주소검색을 AS-IS(행안부 juso.go.kr)와 맞춰 Daum Postcode에서 전환완료(2026-10-08) - 처음엔 외부연계 필요하다고 보류했다가 admin의 기존 juso-popup이 이미 멀쩡히 동작하는 걸 사용자가 확인시켜 같은 날 번복/구현"
 metadata:
   node_type: memory
   type: project
 ---
+
+**★2026-10-08 같은 날 번복: 보류 → 구현 완료.** 처음엔 "행안부 API 도메인별 승인키가 새로
+필요할 수 있다"고 보고 보류를 결정했는데, 사용자가 지자체관리(4401) 등록화면에서 **admin의
+기존 `/admin/juso-popup`이 지금 이 환경에서 이미 정상 동작**하는 걸 확인시켜줬다 - 즉 새로운
+외부연계가 전혀 필요 없었다(행안부 승인키는 "운영 도메인 등록"이 아니라 단순 사용량 추적용
+키라 로컬/개발 환경에서도 그대로 작동한다). 아래 "사용자 결정(보류)" 단락은 **그 판단이
+틀렸던 경과 기록**으로 남겨두고, 실제 조치는 그 아래 "구현 완료" 단락을 본다.
+
+**구현 완료**: `storefront/public/juso-popup.html`(신규, admin의 `juso-popup.html`을 토대로
+마크업/스크립트 이식, confmKey만 이 화면 전용 AS-IS 값 `devU01TX0FVVEgyMDIyMTAwNjE2MzkwNzExMzAzMTg=`
+유지 - admin 키와 다르다, 화면마다 다른 키를 쓰는 AS-IS 그대로) + 정적자산 3종(`content/modules/juso/
+addrlink.js`, `content/opmanager/css/juso/addrlink.css`+이미지, `content/modules/jquery/
+jquery-1.11.0.min.js` - 전부 admin에 이미 포팅된 파일을 그대로 복사). `SignupView.vue`·
+`ProfileView.vue`의 `searchAddress()`를 Daum Postcode 호출에서 `window.open('/juso-popup.html', ...)`
++ `window.jusoCallBack = (addrPart1, addrPart2, addrDetail, zipNo) => {...}`(같은 오리진이라
+admin처럼 opener 직접호출 방식, postMessage 불필요)로 교체, 저장값은 `addrPart1+addrPart2`
+(AS-IS 원본 `vm.param.address = response.data.roadAddrPart1 + response.data.roadAddrPart2`와
+동일). `loadDaumPostcode` import는 두 파일에서 제거(DeliveryFormView.vue·CheckoutView.vue는
+그대로 Daum 유지 - 이 둘은 원래도 AS-IS와 일치했다). storefront는 Vite dev 서버라 재기동 없이
+즉시 반영됨(`public/`은 그대로 서빙, `.vue`는 HMR) - `npm run build`로 빌드 에러만 확인했다.
 
 **발견 경위**: admin 일반회원관리(4101) 상세화면에서 주소 표시형식을 AS-IS와 맞추다가, 실데이터의
 시/도명이 축약형("경기"/"서울")인 걸 발견해 회원가입 때 주소를 어떻게 입력받는지 역추적했다.

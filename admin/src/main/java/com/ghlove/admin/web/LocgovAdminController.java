@@ -158,7 +158,7 @@ public class LocgovAdminController {
         // donation 검색 API는 page가 0부터다(화면은 1부터)
         LocgovAdminClient.PageResult result = locgovAdminClient.search(null,
                 searchParam.locgovNmQuery(), searchParam.chargerNmQuery(), searchParam.chargerCttpcQuery(),
-                searchParam.getSrchStartCreated(), searchParam.getSrchEndCreated(),
+                searchParam.getSrchStartCreatedForApi(), searchParam.getSrchEndCreatedForApi(),
                 Math.max(searchParam.getPage() - 1, 0), searchParam.getItemsPerPage());
 
         List<String> codes = result.content().stream().map(LocgovAdminClient.Locgov::locgovCode).toList();
@@ -212,7 +212,8 @@ public class LocgovAdminController {
                                       HttpSession session) {
         Manager viewer = manager(session);
         try {
-            locgovAdminClient.register(form.locgovCode(), form.toFields(), offcsFile, addPcFile, addMbFile);
+            locgovAdminClient.register(form.locgovCode(), form.toFields(), offcsFile, addPcFile, addMbFile,
+                    viewer == null ? null : viewer.getUserId());
             upsertPointRate(form.locgovCode(), form.stdrYear(), form.pointRate(), viewer);
             applyLmtt(form, viewer);
             return data("SUCC");
@@ -271,7 +272,8 @@ public class LocgovAdminController {
             return data("FAIL");
         }
         try {
-            locgovAdminClient.update(form.locgovCode(), form.toFields(), offcsFile, addPcFile, addMbFile);
+            locgovAdminClient.update(form.locgovCode(), form.toFields(), offcsFile, addPcFile, addMbFile,
+                    viewer == null ? null : viewer.getUserId());
             applyLmtt(form, viewer);
             return data("SUCC");
         } catch (ManagerException e) {

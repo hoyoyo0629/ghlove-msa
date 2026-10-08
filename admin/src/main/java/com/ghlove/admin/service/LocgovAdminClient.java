@@ -80,11 +80,11 @@ public class LocgovAdminClient {
     }
 
     public void register(String locgovCode, Map<String, Object> fields, MultipartFile offcsFile,
-                          MultipartFile addPcFile, MultipartFile addMbFile) {
+                          MultipartFile addPcFile, MultipartFile addMbFile, Long managerId) {
         try {
             restClient.post().uri("/api/locgov-admin/{code}/register", locgovCode)
                     .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(toMultipart(fields, offcsFile, addPcFile, addMbFile))
+                    .body(toMultipart(fields, offcsFile, addPcFile, addMbFile, managerId))
                     .retrieve().toBodilessEntity();
         } catch (RestClientResponseException e) {
             String message = extractMessage(e, "지자체 등록에 실패했습니다.");
@@ -93,11 +93,11 @@ public class LocgovAdminClient {
     }
 
     public void update(String locgovCode, Map<String, Object> fields, MultipartFile offcsFile,
-                        MultipartFile addPcFile, MultipartFile addMbFile) {
+                        MultipartFile addPcFile, MultipartFile addMbFile, Long managerId) {
         try {
             restClient.post().uri("/api/locgov-admin/{code}", locgovCode)
                     .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(toMultipart(fields, offcsFile, addPcFile, addMbFile))
+                    .body(toMultipart(fields, offcsFile, addPcFile, addMbFile, managerId))
                     .retrieve().toBodilessEntity();
         } catch (RestClientResponseException e) {
             throw new ManagerException(extractMessage(e, "지자체 정보 수정에 실패했습니다."));
@@ -226,13 +226,20 @@ public class LocgovAdminClient {
     }
 
     private MultiValueMap<String, Object> toMultipart(Map<String, Object> fields, MultipartFile offcsFile,
-                                                        MultipartFile addPcFile, MultipartFile addMbFile) {
+                                                        MultipartFile addPcFile, MultipartFile addMbFile,
+                                                        Long managerId) {
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         fields.forEach((k, v) -> {
             if (v != null) {
                 body.add(k, String.valueOf(v));
             }
         });
+        // 등록/수정 수행자 - donation의 Locgov.frstRegisterId/lastUpdusrId + 부서코드 변경이력
+        // (LocgovDeptHist)의 "등록자" 칸이 이 값으로 채워진다. 빠지면 두 군데 다 null로 남는다
+        // (2026-10-08에 실제로 이 상태였다 - 부서코드 이력 팝업의 등록자가 항상 빈칸이었다).
+        if (managerId != null) {
+            body.add("managerId", String.valueOf(managerId));
+        }
         addFile(body, "offcsFile", offcsFile);
         addFile(body, "addPcFile", addPcFile);
         addFile(body, "addMbFile", addMbFile);

@@ -25,12 +25,16 @@
 
 <h3><span th:text="${msg.get('MENU_1101')}">운영자관리</span></h3>
 
-<div class="btn_all btn_right">
-	<div class="flex_box gap-08" th:if="${editable}">
-		<button type="button" class="btn btn-dark-gray btn-mini" onclick="chargerEdit();">수정</button>
-		<button type="button" class="btn btn-dark-gray btn-mini" onclick="chargerDelete();">삭제</button>
+<!-- AS-IS는 mb15 클래스가 있고, 수정/삭제/목록 세 버튼이 같은 flex_box 안에 있다
+     (2026-10-08 locgov-edit.html과 같은 문제를 발견해 같이 되돌림). -->
+<div class="btn_all btn_right mb15">
+	<div class="flex_box gap-08">
+		<th:block th:if="${editable}">
+			<button type="button" class="btn btn-dark-gray btn-mini" onclick="chargerEdit();">수정</button>
+			<button type="button" class="btn btn-dark-gray btn-mini" onclick="chargerDelete();">삭제</button>
+		</th:block>
+		<button type="button" class="btn btn-defualt btn-mini" onclick="moveListPage();">목록</button>
 	</div>
-	<button type="button" class="btn btn-defualt btn-mini" onclick="moveListPage();">목록</button>
 </div>
 
 <div class="board_write">
@@ -131,6 +135,13 @@
 
 <script type="text/javascript" th:inline="javascript">
 	var userId = [[${details != null ? details.userId : null}]];
+
+	$(function(){
+		// 네비게이션 수정(AS-IS) - 메뉴 경로 맨 끝에 "상세"를 덧붙인다(2026-10-08, locgov-edit.html과
+		// 같은 문제로 빠져 있었다).
+		$(".contents .contents_inner").find("div.location a").removeClass("on");
+		$(".contents .contents_inner").find("div.location").append('> <a href="'+location.pathname+'" class="on">상세</a>');
+	});
 
 	/**
 	 *	함 수 명 : moveListPage

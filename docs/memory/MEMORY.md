@@ -98,6 +98,8 @@
 - [admin 공통코드 표가 둘(★해소됨)](admin-common-code-two-tables.md) — 2026-10-07 같은날 후속조율로 op_common_code 단일표 통합 확정, ADMIN_COMMON_CODE DROP. 과거 두표 상태는 기록으로 보존
 - [★구조적 결함은 보고할 것](report-structural-landmines-to-user.md) — 또 터질 뿌리를 찾으면 조용히 우회 금지. 범위를 수치로 재고 좁은수정/근본수정 선택지+추천 제시
 - [AS-IS JSP 꼬리의 <style> 누락](asis-jsp-tail-style-block.md) — JSP 끝 페이지전용 스타일 116화면. 2026-10-07 전수점검 완료, 실결함 2건(FAQ 탭 밑줄·로그인 disabled-div) 수정. 오탐 3건도 기록
-- [storefront 주소검색 위젯 불일치(조치보류)](storefront-address-widget-mismatch-deferred.md) — 회원가입·개인정보수정은 AS-IS가 juso.go.kr인데 TO-BE는 Daum으로 임의통일, 배송지관리·주문결제는 이미 일치. 외부연계(행안부API 키) 가능해질 때 재개(2026-10-08)
+- [storefront 주소검색 juso.go.kr로 전환완료](storefront-address-widget-mismatch-deferred.md) — 회원가입·개인정보수정이 Daum으로 임의통일돼있던 것을 AS-IS대로 되돌림. "외부연계 필요해 보류"했다가 admin 기존 juso-popup이 이미 동작하는 걸 확인하고 같은날 번복/구현(2026-10-08)
 - [탈퇴회원리스트·휴면회원관리·대시보드 날짜포맷 버그](admin-member-date-range-api-format-bug.md) — admin이 member 검색API에 yyyyMMdd 그대로 보내 500→빈결과로 삼켜짐(4101만 변환로직 있어 안 걸림), 3곳 전부 수정. admin 재기동 필요
 - [휴면회원관리 시드 25건](admin-sleep-user-seed-data.md) — member.op_user DORMANT 25건, 최종방문일 3~13개월전 분산(오늘 범위면 0건 정상, 날짜버튼 넓혀야 보임)
+- [지자체관리 검색+부서이력등록자 수정](admin-locgov-search-and-depthist-register-fix.md) — ①등록일 검색시 날짜포맷버그(같은클래스 4번째) ②등록/수정에 managerId 자체를 안보내 부서이력 등록자 항상 공백. 둘다 수정, admin 재기동 필요
+- [지자체담당자관리·운영관리자 상세 레이아웃+경로 수정](admin-locgov-charger-edit-layout-and-breadcrumb-fix.md) — 목록버튼이 flex_box 밖으로 분리돼있던것+메뉴경로 "상세" 크럼 누락(JS 자체가 없었음, LNB토글 누락과 같은유형), 2화면 수정. admin 재기동 필요
