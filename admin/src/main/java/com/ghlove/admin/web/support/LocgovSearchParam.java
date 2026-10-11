@@ -58,6 +58,24 @@ public class LocgovSearchParam {
         return (srchKey == null || srchKey.isBlank()) ? "LOCGOV_NM" : srchKey;
     }
 
+    /** donation 검색 API는 yyyy-MM-dd를 받는다(LocgovAdminApiController.parseStart/parseEnd가
+     *  LocalDate.parse를 쓴다) - 화면이 쓰는 yyyyMMdd를 바꿔 준다. 안 바꾸면 날짜를 넣고 검색할
+     *  때마다 donation이 500을 내고 LocgovAdminClient가 그걸 빈 결과로 삼켜버린다. */
+    public String getSrchStartCreatedForApi() {
+        return toApiDate(srchStartCreated);
+    }
+
+    public String getSrchEndCreatedForApi() {
+        return toApiDate(srchEndCreated);
+    }
+
+    private static String toApiDate(String yyyymmdd) {
+        if (yyyymmdd == null || !yyyymmdd.matches("\\d{8}")) {
+            return null;
+        }
+        return yyyymmdd.substring(0, 4) + "-" + yyyymmdd.substring(4, 6) + "-" + yyyymmdd.substring(6, 8);
+    }
+
     private static String blankToNull(String value) {
         return (value == null || value.isBlank()) ? null : value;
     }

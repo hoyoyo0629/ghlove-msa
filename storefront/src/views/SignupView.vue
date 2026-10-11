@@ -5,7 +5,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api/http'
 import { useKakaoCert } from '../composables/useKakaoCert'
 import { useAuthStore } from '../stores/auth'
-import { loadDaumPostcode } from '../utils/daumPostcode'
 
 // AS-IS users/join.html(및 Thymeleaf 버전 signup.html)의 3단계(약관동의/본인인증/정보입력)
 // 위저드를 그대로 재현한다. 본인인증은 실제 연계가 없는 환경이라 로그인 화면과 동일하게
@@ -163,16 +162,17 @@ const form = reactive({
   addressDetail: '',
 })
 
-// 주소찾기 - 회원정보수정/배송지와 동일한 다음 우편번호 위젯(utils/daumPostcode). AS-IS 회원가입은
-// juso.go.kr 팝업이지만 이 프로젝트는 이미 daum.Postcode로 통일해 다른 화면과 동작을 맞춘다.
-async function searchAddress() {
-  await loadDaumPostcode()
-  new window.daum.Postcode({
-    oncomplete(data) {
-      form.post = data.zonecode
-      form.address = data.roadAddress || data.jibunAddress
-    },
-  }).open()
+// 주소찾기 - AS-IS users/join.html은 행안부 juso.go.kr 팝업(jusoPopup.html)을 쓴다(Daum
+// Postcode가 아니다 - 과거에 "다른 화면과 통일"하겠다고 Daum으로 바꿔놨던 건 AS-IS 미확인
+// 상태의 임의 변경이었다, 2026-10-08 사용자 지시로 원복). public/juso-popup.html이 그 팝업이고
+// window.jusoCallBack을 opener(이 화면)에 직접 호출한다(같은 오리진이라 postMessage 불필요).
+function searchAddress() {
+  window.jusoCallBack = (addrPart1, addrPart2, addrDetail, zipNo) => {
+    form.post = zipNo
+    form.address = addrPart1 + addrPart2
+    form.addressDetail = addrDetail
+  }
+  window.open('/juso-popup.html', 'jusoPopup', 'width=570,height=520,scrollbars=yes')
 }
 const phoneCode = ref('010')
 const phoneMid = ref('')

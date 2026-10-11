@@ -67,6 +67,14 @@ public enum SmsType {
                 .orElse(code == null ? "" : code);
     }
 
+    /** SVC_ID → enum. AS-IS {@code TifIpsSndngMDisplay.getSmsType} - 못 찾으면 null. */
+    public static SmsType fromCode(String code) {
+        return Arrays.stream(values())
+                .filter(t -> t.code.equals(code))
+                .findFirst()
+                .orElse(null);
+    }
+
     /** 화면 셀렉트용 - code → description(순서 유지). */
     public static Map<String, String> options() {
         Map<String, String> options = new LinkedHashMap<>();

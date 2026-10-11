@@ -4,10 +4,15 @@ import com.ghlove.order.domain.Claim;
 import com.ghlove.order.domain.ClaimMemo;
 
 import com.ghlove.order.domain.Order;
+import com.ghlove.order.domain.OrderItem;
+import com.ghlove.order.domain.Shipment;
 import com.ghlove.order.repository.ClaimMemoRepository;
 import com.ghlove.order.repository.ClaimRepository;
 
+import com.ghlove.order.repository.OrderItemRepository;
 import com.ghlove.order.repository.OrderRepository;
+import com.ghlove.order.repository.ShipmentRepository;
+import com.ghlove.order.event.OrderSagaPublisher;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,10 +40,14 @@ import java.util.Map;
 public class OrderAdminService {
 
     private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final ShipmentRepository shipmentRepository;
     private final ClaimRepository claimRepository;
     private final ClaimMemoRepository claimMemoRepository;
     private final OrderService orderService;
     private final ClaimService claimService;
+    private final GiftClient giftClient;
+    private final OrderSagaPublisher orderSagaPublisher;
 
     /**
      * 통합 검색. searchType/keyword는 AS-IS "검색구분" 셀렉트+검색어 입력 한 쌍을 재현한다.
@@ -349,5 +359,119 @@ public class OrderAdminService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
         return orderRepository.findAll(spec, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdDate")));
+    }
+
+    // ==================== 관리자 주문 수기 등록 (AS-IS opmanager/order/admin) ====================
+    // AS-IS OrderAdminServiceImpl.insertOrderAdmin - 전화주문·오프라인 거래 등 온라인 체크아웃을
+    // 거치지 않은 주문을 관리자가 직접 기록한다. AS-IS는 이미 성립된 거래를 "기록"하는 것이라
+    // 재고예약/포인트차감 SAGA(PENDING→비동기 확정)를 타지 않고 OP_ORDER/OP_ORDER_ITEM에 바로
+    // CONFIRMED로 꽂는다 - 여기도 그대로 따른다. 주문코드는 일반 주문("K")과 구분되는 "AB"
+    // 접두사를 쓴다(포인트사용 정합성검증(7210)이 AS-IS처럼 이 접두사만 걸러본다).
+    private static final DateTimeFormatter ADMIN_ORDER_DATE = DateTimeFormatter.ofPattern("yyMMdd");
+
+    public record ManualOrderRequest(Long itemId, Long itemOptionId, Integer quantity, Long buyerUserId,
+                                      String buyerName, String buyerPhone, String receiverName, String receiverPhone,
+                                      String receiverZipcode, String receiverAddress, String receiverAddressDetail,
+                                      String requestNote) {
+    }
+
+    /**
+     * AS-IS 결함 보존: 관리자 수기 주문은 재고를 차감하지 않는다(insertOrderAdmin 본문에
+     * 재고 갱신 호출이 없다 - 이미 외부에서 실물이 나간 거래를 사후 기록하는 용도라서로 보인다).
+     * 쿠폰·입금대기 상태도 없다 - AS-IS도 결제수단 없이 바로 OP_ORDER_PAYMENT를 꽂는다.
+     */
+    @Transactional
+    public String createManualOrder(ManualOrderRequest request) {
+        if (request.quantity() == null || request.quantity() <= 0) {
+            throw new OrderException("수량은 1개 이상이어야 합니다.");
+        }
+        if (notBlank(request.receiverAddress()) == false) {
+            throw new OrderException("받는사람 주소를 입력해 주세요.");
+        }
+
+        GiftItemInfo gift = giftClient.fetch(request.itemId());
+
+        String optionName = null;
+        int optionPrice = 0;
+        long itemOptionId = request.itemOptionId() != null ? request.itemOptionId() : 0L;
+        if (itemOptionId > 0) {
+            GiftClient.OptionInfo option = giftClient.fetchOption(itemOptionId);
+            optionName = option.optionName();
+            optionPrice = option.optionPrice() != null ? option.optionPrice() : 0;
+        }
+
+        long lineTotal = (long) (gift.salePrice() + optionPrice) * request.quantity();
+        LocalDateTime now = LocalDateTime.now();
+        String orderId = generateAdminOrderId();
+        String buyerMemo = notBlank(request.buyerName())
+                ? "관리자 수기 등록 - 구매자: " + request.buyerName()
+                        + (notBlank(request.buyerPhone()) ? " (" + request.buyerPhone() + ")" : "")
+                : "관리자 수기 등록";
+
+        Order order = new Order();
+        order.setOrderId(orderId);
+        order.setUserId(request.buyerUserId() != null ? request.buyerUserId() : 0L);
+        order.setItemId(gift.itemId());
+        order.setSellerId(gift.sellerId());
+        order.setItemName(gift.itemName());
+        order.setOptionName(optionName);
+        order.setOptionPrice(optionPrice);
+        order.setQuantity(request.quantity());
+        order.setUnitPrice(gift.salePrice());
+        order.setPointAmount(lineTotal);
+        order.setLocgovCode(gift.locgovCode());
+        order.setOrderStatus("CONFIRMED");
+        order.setCreatedDate(now);
+        order.setUpdatedDate(now);
+        order.setConfirmedDate(now);
+        order.setReceiverName(request.receiverName());
+        order.setReceiverPhone(request.receiverPhone());
+        order.setDeliveryAddress(request.receiverAddress());
+        order.setDeliveryAddressDetail(request.receiverAddressDetail());
+        order.setRequestNote(request.requestNote());
+        order.setAdminMemo(buyerMemo);
+        orderRepository.save(order);
+
+        Shipment shipment = new Shipment();
+        shipment.setOrderId(orderId);
+        shipment.setLocgovCode(gift.locgovCode());
+        shipment.setSellerId(gift.sellerId());
+        shipment.setPointAmount(lineTotal);
+        shipment.setShipmentStatus("CONFIRMED");
+        shipment.setConfirmedDate(now);
+        shipment.setCreatedDate(now);
+        shipment.setUpdatedDate(now);
+        shipmentRepository.save(shipment);
+
+        OrderItem item = new OrderItem();
+        item.setShipmentId(shipment.getShipmentId());
+        item.setOrderId(orderId);
+        item.setItemId(gift.itemId());
+        item.setItemOptionId(itemOptionId);
+        item.setSellerId(gift.sellerId());
+        item.setItemName(gift.itemName());
+        item.setOptionName(optionName);
+        item.setOptionPrice(optionPrice);
+        item.setQuantity(request.quantity());
+        item.setUnitPrice(gift.salePrice());
+        item.setPointAmount(lineTotal);
+        item.setItemStatus("CONFIRMED");
+        item.setCreatedDate(now);
+        item.setUpdatedDate(now);
+        orderItemRepository.save(item);
+
+        // admin 통계 ReadModel(stat_order_ledger)은 ORDER_CREATED로 행이 생기고 ORDER_CONFIRMED가
+        // 그 행의 상태만 바꾼다 - 생성 없이 확정만 보내면 반영되지 않아 둘 다 보낸다.
+        orderSagaPublisher.publishCreated(order);
+        orderSagaPublisher.publishConfirmed(order);
+
+        return orderId;
+    }
+
+    /** AS-IS "AB"+yyMMdd+8자리 - 날짜별로 다시 1부터 시작한다. */
+    private String generateAdminOrderId() {
+        String datePrefix = ADMIN_ORDER_DATE.format(LocalDate.now());
+        long seq = orderRepository.nextAdminOrderSeqForDate(datePrefix);
+        return "AB" + datePrefix + String.format("%08d", seq);
     }
 }

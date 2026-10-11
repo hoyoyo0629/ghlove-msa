@@ -35,6 +35,9 @@ TO-BE에 **아예 없어서** 버튼 세 개가 전부 오류였다. 메뉴 트�
 자세한 전수 결과: `docs/upload-file-parity-audit.md`
 
 **How to apply - 화면 1개당 고정절차:**
+0. **메뉴 위치 확인(2026-10-08 추가)** - 코드만 보고 바로 들어가지 말고 `asis_dump.op_menu`로
+   진짜 menu_id/부모/display_flag/status_code를 먼저 확인한다. 상위 체인이 비활성이면
+   기능은 만들되 네비게이션은 발명하지 않는다. 자세한 사고 경위: [[verify-menu-location-before-building]]
 1. **원본 확정 3종**: `.../opmanager/i18n/<영역>/<화면>.jsp` + `saleson/shop/<영역>/*ManagerController.java`
    + **`saleson/shop/<영역>/*ServiceImpl.java`** + `sqlmapper/cubrid/<영역>-mapper.xml`
 2. **로직**: 컨트롤러 메서드·파라미터명·검증·롤 스코프 분기·매퍼 SQL 컬럼까지 1:1 대조. 누락 0.

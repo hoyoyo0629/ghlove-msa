@@ -11,6 +11,14 @@
 - [엑셀다운로드사유 수정팝업 복원](admin-excel-download-log-reason-edit-popup.md) — succChk 분기 없어 항상 읽기전용이던 것을 AS-IS처럼 본인 작성글만 수정가능하게 복원, 이력팝업에 총건수+No.도 보강. admin 재기동 필요
 - [op_manager AS-IS 데이터 이관 보류](admin-op-manager-migration-deferred.md) — login_id/password/user_name까지 전부 암호화라 그대로 옮겨도 안 읽힘+13,495건 규모, 사용자가 패스 결정
 - [사유 수정이력 정렬순서 수정](admin-privacy-log-hist-sort-order.md) — HIST_ID DESC→AS-IS와 같은 CREATED_AT DESC, baseline 이력 보강 과정에서 순서역전 발견. admin 재기동 필요
+- [문자전송이력 500 수정](admin-sms-log-500-fix.md) — IpsSendingMasterRepository의 null LocalDateTime 바인딩 문제, 엑셀다운로드와 동일 패턴으로 SmsIpsService 조건부 조립으로 전환+회귀테스트. admin 재기동 필요
+- [문자전송이력 전화번호·처리상태 표시수정](admin-sms-log-phone-status-display.md) — 전화번호는 암호화 CI 아니라 발송내용 끝 토큰 파싱(필드 오바인딩 버그), 처리상태 N/S/F→대기/성공/실패 변환 추가. admin 재기동 필요
+- [문자전송이력 날짜컬럼+발송내용 수정](admin-sms-log-date-columns-and-content.md) — 생성일시/전송시작일시 필드매핑 밀림(INFO_CRT_DT 아님)+검색필터 컬럼오류, 발송내용은 원시값 아니라 24종 알림문구 렌더링(SmsContentRenderer 신설), 오류내용 20자자르기 추가. op:strcut은 opframework 소스 없어 추정구현. admin 재기동 필요
+- [배치 실행로그 시간포맷 수정](admin-batch-log-time-format.md) — HHmmss 원시값→HH:mm:ss(AS-IS는 CUBRID TIME 컬럼이라 그냥 그렇게 나옴). admin 재기동 필요
+- [LNB 토글 스크립트 누락 복원](admin-lnb-toggle-script-missing.md) — 섹션헤더(.menu>a) 클릭 시 .depth2 slideDown/slideUp 하는 AS-IS Lnb() 스크립트가 TO-BE에 통째로 없었음. admin-nav.html lnb()에 추가. admin 재기동 필요
+- [주문번호 포맷 AS-IS와 통일](order-code-format-matches-asis.md) — TO-BE 발명값(O+시각+난수)→AS-IS와 같은 K+10자리 시퀀스, 기존 19건+참조테이블(품목/배송/클레임/포인트사용/admin통계) 전부 일괄변환. order 재기동 필요
+- [관리자 주문 수기등록 포팅+7210 수정](admin-order-manual-registration-port-progress.md) — AS-IS "AB"코드 관리자등록 주문 기능 신규(단건입력, 엑셀업로드 미포팅), 7210이 일반주문 전체 아니라 AB%만 보도록 쿼리 수정(진짜 버그였음), 검증샘플 25건(가짜데이터) 적재. ★메뉴위치 확인 안하고 임의로 링크 발명했다가 사용자 지적으로 되돌림(3000>3700>3701 전부 AS-IS 비활성, "오프라인 주문관리"(16409)는 별개기능). order+admin 재기동 필요
+- [화면/기능 포팅 전 메뉴위치 먼저 확인](verify-menu-location-before-building.md) — asis_dump.op_menu로 진짜 menu_id+상위체인 display_flag/status_code 확인 안 하면 발명된 네비게이션 만들게 됨. 반복 지적 대상에 추가
 - [ISMS관리 AS-IS 동기화 완료](admin-isms-config-port-progress.md) — 발명 시드 3건 삭제+실데이터 12건 교체+정렬버그 수정(2026-10-07). 11개 키는 값만 있고 소비 로직 없음(별도 과제)
 - [공통코드 AS-IS 동기화·테이블 정정](admin-common-code-asis-sync-2026-10-07.md) — 코드(id) readonly 제거, ORDERING NULLS FIRST, 저장 에러 수정, ★ADMIN_COMMON_CODE(AS-IS에 없는 이름) DROP+DDL정리, 엔티티는 OP_COMMON_CODE(AS-IS 실명)로 전환완료. 동료와 병행조사 충돌→조율 후 이 방향 확정(git merge 처리 경위 포함)
 - [AS-IS 테이블 실데이터 export 폴더 확대](asis-table-dump-path.md) — 2026-10-07부터 Desktop 1.DB 폴더에 테이블별 대량 export 상시 추가됨, 확인 전 먼저 거기 찾아보기
@@ -90,3 +98,10 @@
 - [admin 공통코드 표가 둘(★해소됨)](admin-common-code-two-tables.md) — 2026-10-07 같은날 후속조율로 op_common_code 단일표 통합 확정, ADMIN_COMMON_CODE DROP. 과거 두표 상태는 기록으로 보존
 - [★구조적 결함은 보고할 것](report-structural-landmines-to-user.md) — 또 터질 뿌리를 찾으면 조용히 우회 금지. 범위를 수치로 재고 좁은수정/근본수정 선택지+추천 제시
 - [AS-IS JSP 꼬리의 <style> 누락](asis-jsp-tail-style-block.md) — JSP 끝 페이지전용 스타일 116화면. 2026-10-07 전수점검 완료, 실결함 2건(FAQ 탭 밑줄·로그인 disabled-div) 수정. 오탐 3건도 기록
+- [storefront 주소검색 juso.go.kr로 전환완료](storefront-address-widget-mismatch-deferred.md) — 회원가입·개인정보수정이 Daum으로 임의통일돼있던 것을 AS-IS대로 되돌림. "외부연계 필요해 보류"했다가 admin 기존 juso-popup이 이미 동작하는 걸 확인하고 같은날 번복/구현(2026-10-08)
+- [탈퇴회원리스트·휴면회원관리·대시보드 날짜포맷 버그](admin-member-date-range-api-format-bug.md) — admin이 member 검색API에 yyyyMMdd 그대로 보내 500→빈결과로 삼켜짐(4101만 변환로직 있어 안 걸림), 3곳 전부 수정. admin 재기동 필요
+- [휴면회원관리 시드 25건](admin-sleep-user-seed-data.md) — member.op_user DORMANT 25건, 최종방문일 3~13개월전 분산(오늘 범위면 0건 정상, 날짜버튼 넓혀야 보임)
+- [지자체관리 검색+부서이력등록자 수정](admin-locgov-search-and-depthist-register-fix.md) — ①등록일 검색시 날짜포맷버그(같은클래스 4번째) ②등록/수정에 managerId 자체를 안보내 부서이력 등록자 항상 공백. 둘다 수정, admin 재기동 필요
+- [지자체담당자관리·운영관리자 상세 레이아웃+경로 수정](admin-locgov-charger-edit-layout-and-breadcrumb-fix.md) — 목록버튼이 flex_box 밖으로 분리돼있던것+메뉴경로 "상세" 크럼 누락(JS 자체가 없었음, LNB토글 누락과 같은유형), 2화면 수정. admin 재기동 필요
+- [메뉴경로 크럼 누락 전수조사 완료](admin-breadcrumb-append-script-audit.md) — AS-IS 25화면 전수대조, 17개 이미정상+6개(give-operation/point/reqmng-list/reqmng-form/state-detail, statistics-locgov) 신규수정+6개(통계통합)·1개(미이식) 적용대상아님 확인. admin 재기동 필요
+- [운영관리자 회원구분·사용여부 비활성규칙 신규구현](admin-oper-charger-authority-status-disable-rules.md) — AS-IS adminRoleCheck 4규칙(시스템↔행안부 그룹전환 금지·본인 사용여부 불가·부담당자 전체 불가) 전체가 안 포팅돼 있었음, th:disabled로 신규구현. admin 재기동 필요

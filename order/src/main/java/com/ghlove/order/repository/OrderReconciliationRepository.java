@@ -26,6 +26,12 @@ import java.util.List;
  * 입금대기금액은 TO-BE에 '입금대기' 상태가 없어 늘 0이다.
  * 정산금액·미정주문건수는 AS-IS와 같은 표({@code op_remittance_detail},
  * {@code op_order_item_hold})에서 그대로 읽는다 - 지금은 두 표에 쌓이는 것이 없어 0이다.
+ *
+ * <p><b>2026-10-08 추가</b>: AS-IS {@code pointcheck-mapper}는 네 군데 전부
+ * {@code ORDER_CODE LIKE 'AB%'}로 필터한다 - 일반 고객주문("K" 접두사, {@code OrderService
+ * .generateOrderId})이 아니라 <b>관리자 수기/엑셀 주문등록</b>({@code OrderAdminService
+ * .createManualOrder}, "AB" 접두사)만 보는 화면이다. 처음엔 이 필터를 빠뜨려 전체 주문을
+ * 보여주고 있었다 - [[order-code-format-matches-asis]] 참고.
  */
 @Repository
 @RequiredArgsConstructor
@@ -59,7 +65,7 @@ public class OrderReconciliationRepository {
                                                        and oi.item_sequence = h.item_sequence)), 0) as hold_cnt
                      , max(o.created_date)                                               as created_date
                   from ord.od_order o
-                 where 1 = 1
+                 where o.order_id like 'AB%'
                 """
                 + (isBlank(query) ? "" : "   and o.order_id like concat('%', :query, '%')\n")
                 + """

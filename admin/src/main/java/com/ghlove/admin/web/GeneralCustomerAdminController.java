@@ -83,8 +83,9 @@ public class GeneralCustomerAdminController {
                       String addressDetail, String receiveEmail, BigDecimal totalCntrAmt,
                       Long totalCntrBlcePoint, String sbscrbSeNm) {
 
+        /** AS-IS {@code GeneralCustomerEncryptor.masking()}이 적용하는 마스킹을 그대로 재현한다. */
         public String getAddressText() {
-            return (address == null ? "" : address) + " " + (addressDetail == null ? "" : addressDetail);
+            return (maskAddress(address) + " " + maskAddressDetail(addressDetail)).strip();
         }
 
         /** AS-IS: '0'이면 동의, 그 외(1·null)는 비동의. */
@@ -170,11 +171,20 @@ public class GeneralCustomerAdminController {
 
     /* ==================== 상세 ==================== */
 
-    /** AS-IS GET /details/{userId}. */
+    /**
+     * AS-IS GET /details/{userId}. {@code getGeneralCustomerDetails}가
+     * {@code GeneralCustomerEncryptor.masking()}(마스킹 true)을 거친 값을 돌려주므로 주소뿐 아니라
+     * 휴대폰·이메일도 이 화면에서는 마스킹된 채로 보인다 - 비마스킹은 개인정보 열람 팝업
+     * (informationAccess, info-access.html) 전용이다.
+     */
     @GetMapping("/details/{userId}")
     public String details(@PathVariable Long userId, Model model) {
         MemberAdminClient.Detail detail = memberAdminClient.detail(userId);
         fillDetail(model, detail);
+        model.addAttribute("addressText", detail == null ? ""
+                : (maskAddress(detail.address()) + " " + maskAddressDetail(detail.addressDetail())).strip());
+        model.addAttribute("phoneNumberText", detail == null ? "" : maskPhoneNumber(detail.phoneNumber()));
+        model.addAttribute("emailText", detail == null ? "" : maskEmail(detail.email()));
         model.addAttribute("cumclativeTotal", cumulativeTotal(userId));
         return "member-admin/details";
     }
@@ -416,6 +426,91 @@ public class GeneralCustomerAdminController {
     /** AS-IS는 지자체를 '시도명 공백 시군구명'으로 붙여 보여준다. */
     private static String locgovText(String upperLocgovNm, String locgovNm) {
         return (upperLocgovNm == null ? "" : upperLocgovNm) + " " + (locgovNm == null ? "" : locgovNm);
+    }
+
+    /**
+     * AS-IS {@code DefaultDataMasking.mask(..., Masking.GH_ADDRESS)} verbatim 재현 - 공백으로
+     * 나눈 토큰 중 앞 2개(시/도, 시/군/구)는 그대로 두고, 그 뒤 토큰은 각각
+     * <b>(글자수-1)개의 '*'</b>로 바꿔 <b>구분자 없이 이어붙인다</b>(AS-IS 원본이 그렇다 - 토큰이
+     * 여러 개 남으면 공백 없이 별표만 길게 이어진다).
+     */
+    private static String maskAddress(String address) {
+        if (address == null || address.isBlank()) {
+            return "";
+        }
+        String[] tokens = address.split(" ");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < tokens.length; i++) {
+            if (i < 2) {
+                sb.append(tokens[i]).append(" ");
+            } else if (!tokens[i].isEmpty()) {
+                sb.append("*".repeat(Math.max(tokens[i].length() - 1, 0)));
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
+     * AS-IS {@code DefaultDataMasking.mask(..., Masking.ADDRESS_DETAIL)} verbatim 재현 - 공백으로
+     * 나눈 토큰 전부(첫 토큰 포함)를 각각 (글자수-1)개의 '*'로 바꾸고 토큰마다 뒤에 공백을 붙인다.
+     */
+    private static String maskAddressDetail(String addressDetail) {
+        if (addressDetail == null || addressDetail.isBlank()) {
+            return "";
+        }
+        String[] tokens = addressDetail.split(" ");
+        StringBuilder sb = new StringBuilder();
+        for (String token : tokens) {
+            if (!token.isEmpty()) {
+                sb.append("*".repeat(Math.max(token.length() - 1, 0))).append(" ");
+            }
+        }
+        return sb.toString().stripTrailing();
+    }
+
+    private static final java.util.regex.Pattern PHONE_PATTERN =
+            java.util.regex.Pattern.compile("^(\\d{2,3})-?(\\d{3,4})-?(\\d{4})$");
+
+    /**
+     * AS-IS {@code DefaultDataMasking.mask(..., Masking.GH_PHONE_NUMBER)} verbatim 재현 - 첫
+     * 그룹(지역/통신사 번호)만 남기고 가운데·끝 그룹은 전부 '*'로 바꾼다(일반 PHONE_NUMBER보다
+     * 더 많이 가리는 고향사랑 전용 변형). 패턴에 안 맞으면 원문 그대로(AS-IS 그대로).
+     */
+    private static String maskPhoneNumber(String phoneNumber) {
+        if (phoneNumber == null) {
+            return null;
+        }
+        java.util.regex.Matcher m = PHONE_PATTERN.matcher(phoneNumber);
+        if (!m.matches()) {
+            return phoneNumber;
+        }
+        boolean hyphen = phoneNumber.indexOf('-') > -1;
+        String sep = hyphen ? "-" : "";
+        return m.group(1) + sep + "*".repeat(m.group(2).length()) + sep + "*".repeat(m.group(3).length());
+    }
+
+    private static final java.util.regex.Pattern EMAIL_PATTERN = java.util.regex.Pattern.compile("^(.)(.*)([@]{1})(.*)$");
+
+    /**
+     * AS-IS {@code DefaultDataMasking.mask(..., Masking.GH_EMAIL)} verbatim 재현 - 아이디 첫
+     * 글자만 남기고 나머지를 '*'로 바꾼다. 단, <b>아이디가 2글자뿐이면(첫글자+1글자) AS-IS 알고리즘이
+     * 그 첫 글자까지 통째로 별표로 덮어버린다</b>(원본 구현의 그 특이점까지 그대로 옮긴다).
+     * 도메인은 가리지 않는다. 패턴에 안 맞으면 원문 그대로.
+     */
+    private static String maskEmail(String email) {
+        if (email == null) {
+            return null;
+        }
+        java.util.regex.Matcher m = EMAIL_PATTERN.matcher(email);
+        if (!m.matches()) {
+            return email;
+        }
+        String first = m.group(1);
+        String rest = m.group(2);
+        String maskedLocal = rest.length() < 2
+                ? "*".repeat(first.length() + rest.length())
+                : first + rest.charAt(0) + "*".repeat(rest.length() - 1);
+        return maskedLocal + m.group(3) + m.group(4);
     }
 
     /** yyyyMMdd[HHmmss] → yyyy-MM-dd (AS-IS DATE_FORMAT). 이미 구분자가 있으면 앞 10자만 쓴다. */

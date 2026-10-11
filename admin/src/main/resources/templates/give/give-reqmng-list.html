@@ -170,6 +170,13 @@
 </div><!-- /.admin_wrap -->
 
 <script th:inline="none">
+$(function(){
+    // 네비게이션 수정(AS-IS give-reqmng/list.jsp·list_locgov.jsp) - 메뉴 경로 맨 끝에 "목록"을
+    // 덧붙인다(이 화면은 give-state 상세의 "변경신청" 링크로 들어오는 승인 큐라 AS-IS도 메뉴
+    // 경로 밖의 별도 화면으로 취급한다).
+    $(".contents_inner").find("div.location a").removeClass("on");
+    $(".contents_inner").find("div.location").append('> <a href="javascript:;" class="on">목록</a>');
+});
 function filterLocgov() {
     var upper = document.getElementById('upperLocgovCode').value;
     var select = document.getElementById('locgovCode');

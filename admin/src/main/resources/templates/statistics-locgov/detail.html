@@ -49,6 +49,13 @@
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
+<script th:inline="none">
+$(function(){
+    // 네비게이션 수정(AS-IS statistics/locgov/detail.jsp) - 메뉴 경로 맨 끝에 "상세"를 덧붙인다.
+    $(".contents_inner").find("div.location a").removeClass("on");
+    $(".contents_inner").find("div.location").append('> <a href="javascript:;" class="on">상세</a>');
+});
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

@@ -43,7 +43,11 @@ public class AdminHomeController {
 
         long todayMemberCount = 0;
         try {
-            todayMemberCount = memberAdminClient.search(today, today, null, null, null, null, 0, 1).totalElements();
+            // member 검색 API는 yyyy-MM-dd를 받는다(GeneralCustomerSearchParam.getFromDateForApi()와
+            // 같은 변환) - yyyyMMdd를 그대로 보내면 member의 LocalDate.parse에서 500이 난다.
+            String todayForApi = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
+            todayMemberCount = memberAdminClient.search(todayForApi, todayForApi, null, null, null, null, 0, 1)
+                    .totalElements();
         } catch (Exception ignored) {
         }
 

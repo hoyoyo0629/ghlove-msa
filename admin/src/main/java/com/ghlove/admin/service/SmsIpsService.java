@@ -1,13 +1,19 @@
 package com.ghlove.admin.service;
 
+import com.ghlove.admin.domain.CommonCode;
+import com.ghlove.admin.domain.CommonCodeId;
 import com.ghlove.admin.domain.IpsSendingMaster;
+import com.ghlove.admin.repository.CommonCodeRepository;
 import com.ghlove.admin.repository.IpsSendingMasterRepository;
+import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 국민비서(IPS) 문자발송 - AS-IS {@code saleson.common.sms.SmsIpsServiceImpl}의
@@ -43,22 +49,89 @@ public class SmsIpsService {
     /** AS-IS 수신동의 값 - 이 값일 때만 보낸다. */
     private static final String RECEIVE_SMS_AGREED = "0";
 
+    /** AS-IS 공통코드 DONATION_LIMIT_AMT - 연도별 한도금액 DETAIL(예: "2천만"). */
+    private static final String DONATION_LIMIT_AMT_CODE_TYPE = "DONATION_LIMIT_AMT";
+
     private final IpsSendingMasterRepository ipsSendingMasterRepository;
+    private final CommonCodeRepository commonCodeRepository;
+    private final EntityManager entityManager;
     private final boolean enabled;
     private final String svcGrpId;
     private final String prvcIdntfcSeCd;
     private final String esbIfId;
 
     public SmsIpsService(IpsSendingMasterRepository ipsSendingMasterRepository,
+                         CommonCodeRepository commonCodeRepository,
+                         EntityManager entityManager,
                          @Value("${ghlove.integrations.sms-ips.enabled:false}") boolean enabled,
                          @Value("${ghlove.integrations.sms-ips.svc-grp-id:}") String svcGrpId,
                          @Value("${ghlove.integrations.sms-ips.prvc-idntfc-se-cd:}") String prvcIdntfcSeCd,
                          @Value("${ghlove.integrations.sms-ips.esb-if-id:}") String esbIfId) {
         this.ipsSendingMasterRepository = ipsSendingMasterRepository;
+        this.commonCodeRepository = commonCodeRepository;
+        this.entityManager = entityManager;
         this.enabled = enabled;
         this.svcGrpId = svcGrpId;
         this.prvcIdntfcSeCd = prvcIdntfcSeCd;
         this.esbIfId = esbIfId;
+    }
+
+    /**
+     * AS-IS {@code SmsIpsServiceImpl.getSmsSendList}가 각 행에 채워주는
+     * {@code donationVerification.donationLimitAmt().getDetail()} - 공통코드
+     * {@code DONATION_LIMIT_AMT}의 올해 DETAIL. 목록의 "발송내용" 렌더링에 쓰인다.
+     */
+    @Transactional(readOnly = true)
+    public String donationLimitAmtDetail() {
+        String year = String.valueOf(LocalDate.now().getYear());
+        return commonCodeRepository.findById(new CommonCodeId(DONATION_LIMIT_AMT_CODE_TYPE, "ko", year))
+                .map(CommonCode::getDetail)
+                .orElse("");
+    }
+
+    /**
+     * AS-IS {@code sms-mapper.getSmsSendList} - 문자 구분(SVC_ID)·검색내용(SNDNG_CNTNTS)·
+     * 생성일 범위로 걸러 최신순(AS-IS는 INSTT_CRT_SN DESC, TO-BE는 같은 값이 들어가는 LIST_SN
+     * DESC)으로 돌려준다.
+     *
+     * <p>검색내용은 {@code SNDNG_CNTNTS}만 본다 - AS-IS 매퍼에 {@code PRVC_IDNTFC_INFO}(CI)
+     * 조건은 없다(화면 안내문구 "이름, 전화번호 등"은 발송내용 안에 그 값들이 파이프로 들어가
+     * 있어서다). 생성일 범위는 화면 라벨이 "생성일자"지만 실제로는 {@code INFO_CRT_DT}가 아니라
+     * {@code ESB_INIT_TIME}(연계발생일시, yyyyMMddHHmmss 문자열)을
+     * {@code BETWEEN CONCAT(start,'000000') AND CONCAT(end,'999999')}로 비교한다 - AS-IS
+     * 그대로다.
+     *
+     * <p>조건절을 Java에서 조립한다 - {@code (:x is null or ...)} 형태로 JPQL에 그대로 두면
+     * null 파라미터의 타입을 PostgreSQL이 못 정해서 500이 난다
+     * (String은 {@code cast(:x as String)}으로 고쳐지지만 LocalDateTime/Long은 cast로도
+     * 안 고쳐진다 - [[hql-null-param-needs-cast]], [[admin-excel-download-log-500-fix]] 참고).
+     */
+    @Transactional(readOnly = true)
+    public List<IpsSendingMaster> search(String svcId, String query, String searchStartDate, String searchEndDate) {
+        StringBuilder jpql = new StringBuilder("select m from IpsSendingMaster m where 1 = 1");
+        if (svcId != null) {
+            jpql.append(" and m.svcId = :svcId");
+        }
+        if (query != null) {
+            jpql.append(" and m.sndngCntnts like concat('%', :query, '%')");
+        }
+        if (searchStartDate != null) {
+            jpql.append(" and m.esbInitTime between concat(:startDate, '000000') and concat(:endDate, '999999')");
+        }
+        jpql.append(" order by m.listSn desc");
+
+        var typedQuery = entityManager.createQuery(jpql.toString(), IpsSendingMaster.class);
+        if (svcId != null) {
+            typedQuery.setParameter("svcId", svcId);
+        }
+        if (query != null) {
+            typedQuery.setParameter("query", query);
+        }
+        if (searchStartDate != null) {
+            typedQuery.setParameter("startDate", searchStartDate);
+            typedQuery.setParameter("endDate", searchEndDate != null ? searchEndDate : searchStartDate);
+        }
+        return typedQuery.getResultList();
     }
 
     /**

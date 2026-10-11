@@ -31,13 +31,16 @@
 
 <h3><span th:text="${msg.get('MENU_4402')}">지자체담당자관리</span></h3>
 
-<!-- 수정/삭제/목록 버튼 -->
+<!-- 수정/삭제/목록 버튼 - AS-IS는 수정/삭제/목록 세 버튼이 같은 flex_box 안에 있다(목록만
+     바깥으로 뺀 상태였던 걸 2026-10-08 사용자 지적으로 되돌림). -->
 <div class="btn_all btn_right mb15">
-	<div class="flex_box gap-08" th:if="${editable}">
-		<button type="button" class="btn btn-dark-gray btn-mini" onclick="chargerEdit();">수정</button>
-		<button type="button" class="btn btn-dark-gray btn-mini" onclick="chargerDelete();" style="display:none;">삭제</button>
+	<div class="flex_box gap-08">
+		<th:block th:if="${editable}">
+			<button type="button" class="btn btn-dark-gray btn-mini" onclick="chargerEdit();">수정</button>
+			<button type="button" class="btn btn-dark-gray btn-mini" onclick="chargerDelete();" style="display:none;">삭제</button>
+		</th:block>
+		<button type="button" class="btn btn-defualt btn-mini" onclick="moveListPage();">목록</button>
 	</div>
-	<button type="button" class="btn btn-defualt btn-mini" onclick="moveListPage();">목록</button>
 </div>
 
 <div class="board_write">
@@ -161,6 +164,11 @@
 	var detailsLocgovCode = [[${details != null ? details.locgovCode : null}]];
 
 	$(function(){
+		// 네비게이션 수정(AS-IS) - 메뉴 경로 맨 끝에 "상세"를 덧붙인다. 이게 없어서
+		// 메뉴 경로가 "회원관리 > 지자체관리 > 지자체담당자관리"에서 멈춰 있었다(2026-10-08).
+		$(".contents .contents_inner").find("div.location a").removeClass("on");
+		$(".contents .contents_inner").find("div.location").append('> <a href="'+location.pathname+'" class="on">상세</a>');
+
 		// 목록 검색 조건 저장(AS-IS listSearchParamSave) - 주소창에서는 지우고 hidden에 보관한다
 		$("#listSearchParam").val(location.search);
 		history.replaceState({}, null, location.pathname);

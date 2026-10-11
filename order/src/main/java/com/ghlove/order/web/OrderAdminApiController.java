@@ -209,6 +209,18 @@ public class OrderAdminApiController {
         }
     }
 
+    // ==================== 관리자 주문 수기 등록 ====================
+
+    @PostMapping("/manual")
+    public ResponseEntity<?> createManual(@RequestBody OrderAdminService.ManualOrderRequest request) {
+        try {
+            String orderId = orderAdminService.createManualOrder(request);
+            return ResponseEntity.ok(Map.of("orderId", orderId));
+        } catch (OrderException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
     private String decode(String value) {
         if (value == null || value.isBlank()) {
             return null;
