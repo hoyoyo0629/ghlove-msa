@@ -105,12 +105,15 @@
 - [지자체담당자관리·운영관리자 상세 레이아웃+경로 수정](admin-locgov-charger-edit-layout-and-breadcrumb-fix.md) — 목록버튼이 flex_box 밖으로 분리돼있던것+메뉴경로 "상세" 크럼 누락(JS 자체가 없었음, LNB토글 누락과 같은유형), 2화면 수정. admin 재기동 필요
 - [메뉴경로 크럼 누락 전수조사 완료](admin-breadcrumb-append-script-audit.md) — AS-IS 25화면 전수대조, 17개 이미정상+6개(give-operation/point/reqmng-list/reqmng-form/state-detail, statistics-locgov) 신규수정+6개(통계통합)·1개(미이식) 적용대상아님 확인. admin 재기동 필요
 - [운영관리자 회원구분·사용여부 비활성규칙 신규구현](admin-oper-charger-authority-status-disable-rules.md) — AS-IS adminRoleCheck 4규칙(시스템↔행안부 그룹전환 금지·본인 사용여부 불가·부담당자 전체 불가) 전체가 안 포팅돼 있었음, th:disabled로 신규구현. admin 재기동 필요
-<<<<<<< Updated upstream
 - [PG numeric 나눗셈 스케일이 화면을 깨뜨림](pg-numeric-division-scale-breaks-display.md) — CUBRID 2자리가 PG에선 16+자리 → 0E-20/0.61000000000000000000. SQL 캐스팅+AS-IS와 같은 float+요약만 @opNum.format(목록은 포맷 안 함). 다른 비율 컬럼 소급점검
 - [AS-IS 라디오는 input+형제 label](asis-radio-needs-sibling-label.md) — label로 감싸면 .input-form flex gap이 죽어 글자가 라디오에 달라붙음. gapPx·중심선 Y 실측으로 검증. 잔여 2곳(access/form, featured-admin/list)
 - [발명된 "← …" 링크는 화면별로 정리](admin-invented-backlink-per-screen-cleanup.md) — AS-IS 0건인데 21화면에 있음. 충돌 위험으로 일괄제거 금지, 원장 docs/admin-invented-backlink-cleanup-ledger.md의 화면별 조치만 수행. 19화면 잔여
-=======
 - [개인정보 다운로드 사유모달 분류코드 select 추가](admin-privacy-access-modal-reasontype-dropdown.md) — AS-IS는 공통JS(Shop.downloadExcelOrder)가 열때마다 DOM에 끼워넣어서 마크업만 봐서는 "없다"고 오판했던 것, 백엔드(EXCELDOWNLOAD_REASON_TYPE 공통코드+엔드포인트)는 이미 준비돼 있어 프론트만 추가. 이 모달 쓰는 화면 전부에 적용됨. admin 재기동 필요
 - [엑셀다운로드 CSV→진짜xlsx 진행중(2/7)](admin-excel-download-real-xlsx-progress.md) — ★AS-IS에 클래스 있어도 실제론 안쓰이는 죽은코드 다수 발견(살아있는 stream*() 기준으로 재구현), 오프라인담당자·기부혜택증열람현황 완료, 운영유지관리·오프라인기부접수는 컬럼수 자체가 부족해 다음세션 재개 필요, gift/order 서비스 3곳은 admin 확인후 착수. admin 재기동 필요
 - [기부금관리(14000) 4축분석 완료·구현보류](admin-give-state-area-port-progress.md) — 14101 역할분기(mois/locgov)·GET빈화면·카드4개(5개는발명)·No컬럼·엑셀 등 상세스펙 확정. 발생포인트·답례품사용금액 정합화는 ReadModel 스키마 확장 필요해 DA설계안 대기로 보류(RFP SFR-009와 상충하지만 기존 동결결정 우선). 기금사업소개(14201)는 menu_url 빈값이라 LNB에서 안보임, 신규구현 대상
->>>>>>> Stashed changes
+- [★고객센터 11화면 전부 완료](admin-customer-center-area-port-progress.md) — 2026-10-12 5110·5111·5107·5113·5114 완료 + 5112 재검수. ★화면마다 날짜기본값·GET진입조회·역할분기·라디오래퍼·배지문구·확장자(16 vs 18종)가 AS-IS가 다르다, 합치지 말 것. 자료실 첨부업로드 불능·SR번호 채번·제공자공지 선택삭제 404도 수정
+- [네이티브쿼리 varchar(1)은 Character로 온다](native-query-varchar1-returns-character.md) — record 매핑에서 (String) 캐스팅하면 목록이 ClassCastException 500. *_YN·*_FLAG·CASE 'Y'/'N' 칸은 toString()으로
+- [푸터는 화면마다 직접 넣어야 한다](admin-footer-fragment-must-be-added-per-screen.md) — AS-IS는 전역 레이아웃이라 전 화면에 있는데 TO-BE는 템플릿별 fragment. 2026-10-12 42화면 누락 발견·일괄 추가. 새 화면은 header/lnb/breadcrumb/footer 네 조각이 한 세트
+- [운영관리 h3 제목은 JS가 메뉴명으로 덮어쓴다](admin-h3-title-overwritten-by-menu-name.md) — op.manager.js:46이 첫 `.contents h3 > span`을 3단 메뉴명으로 교체(.custom만 예외). JSP h3 문구를 "화면에 보이는 값"으로 오해하지 말 것
+- [Playwright+SmartEditor 제출 버튼클릭 버그](playwright-smarteditor-submit-quirk.md) — 헤드리스에서 실버튼클릭하면 /admin/login으로 튕김(faq-admin에서도 재현, 화면버그 아님). 검증 땐 form.submit() 직접 호출로 우회
+- [admin Playwright 테스트계정 2개](admin-pwtest-manager-accounts.md) — pwtest_sys(ROLE_ADMIN_1)/pwtest_loc(ROLE_ADMIN_6, 11230), 비번 Test1234!, 지우지 않고 재사용

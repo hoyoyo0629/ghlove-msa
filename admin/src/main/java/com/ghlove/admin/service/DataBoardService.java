@@ -64,7 +64,7 @@ public class DataBoardService {
         dataBoardRepository.findById(dataId).ifPresent(d -> d.setHits((d.getHits() == null ? 0 : d.getHits()) + 1));
     }
 
-    public DataBoardFile fileOrThrow(String dataFileId) {
+    public DataBoardFile fileOrThrow(Integer dataFileId) {
         return dataBoardFileRepository.findById(dataFileId)
                 .orElseThrow(() -> new IllegalArgumentException("첨부파일이 존재하지 않습니다: " + dataFileId));
     }

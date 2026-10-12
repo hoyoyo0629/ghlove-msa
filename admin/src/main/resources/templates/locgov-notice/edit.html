@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>지자체 공지사항 수정 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/locgov-notice/edit.jsp 이식(수정 화면 - form.jsp와 별도 파일이다).
+     ★ AS-IS edit.jsp는 role을 전혀 참조하지 않는다 - 상단 버튼바(수정/삭제)도 없고, 하단
+     버튼은 역할 구분 없이 항상 보인다(저장 버튼 라벨은 M00088 "등록"을 그대로 재사용한다 -
+     AS-IS 문구 그대로, 바꾸지 않는다). 삭제 버튼 자체가 이 화면에는 없다(목록의 선택삭제로만
+     지운다). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span>지자체 공지사항</span></h3>
+
+<p th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c00; margin-bottom:12px;"></p>
+
+<div class="board_write">
+    <form id="notice" method="post" th:action="@{'/admin/locgov-notices/edit/' + ${notice.noticeId}}">
+        <table class="board_write_table" summary="지자체 공지사항 수정">
+            <colgroup>
+                <col style="width:220px;">
+            </colgroup>
+            <tbody>
+            <tr>
+                <td class="label">상단공지</td>
+                <td>
+                    <div class="flex_box gap-08 item-center">
+                        <div class="checkbox">
+                            <input type="checkbox" id="noticeFlag" name="noticeFlag" value="Y"
+                                   th:checked="${notice.noticeFlag == 'Y'}"/>
+                            <label for="noticeFlag" th:text="${msg.get('M00083')}">사용</label>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span><span th:text="${msg.get('M00275')}">제목</span></td>
+                <td>
+                    <div>
+                        <input type="text" id="subject" name="subject" th:title="${msg.get('M00275')}"
+                               th:value="${notice.subject}" class="input_txt required _filter half" maxlength="255"/>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span><span th:text="${msg.get('M00006')}">내용</span></td>
+                <td>
+                    <!-- smart_editor2 area -->
+                    <div>
+                        <textarea id="content" name="content" cols="30" rows="20" class="w90 editor-content"
+                                  th:title="${msg.get('M00006')}" th:text="${notice.content}"></textarea>
+                    </div>
+                    <!-- smart_editor2 area -->
+                </td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>게시여부</td>
+                <td>
+                    <!-- AS-IS locgov-notice/edit.jsp는 라디오를 .input-form으로 감싸지 않는다
+                         (5111 notice/form.jsp만 감싼다) - 감싸면 flex gap이 달라져 간격이 틀어진다 -->
+                    <div class="flex_box gap-12">
+                        <input type="radio" id="useYnY" name="useYn" value="Y" title="게시여부" class="required"
+                               th:checked="${notice.useYn == 'Y'}"/>
+                        <label for="useYnY">게시</label>
+                        <input type="radio" id="useYnN" name="useYn" value="N" title="게시여부" class="required"
+                               th:checked="${notice.useYn == 'N'}"/>
+                        <label for="useYnN">중지</label>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div class="btn_all btn_center">
+            <div class="flex_box gap-08">
+                <button type="submit" class="btn btn-dark-gray btn-small"><span th:text="${msg.get('M00088')}">등록</span></button>
+                <button type="button" class="btn btn-defualt btn-small" onclick="location.href='/admin/locgov-notices'"
+                        th:text="${msg.get('M00037')}">목록</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+    </div>
+    </div>
+</div>
+</div>
+
+<div th:replace="~{fragments/smarteditor :: init}"></div>
+<div th:replace="~{fragments/smarteditor :: editor('content')}"></div>
+
+<script type="text/javascript">
+$(function() {
+    try {
+        $('#notice').validator(function() {
+            Common.getEditorContent("content");
+
+            if ($('#content').val().toLowerCase() == '<p>&nbsp;</p>' || $('#content').val() == '') {
+                alert($.validator.messages['text'].format($('#content').attr('title')));
+                return false;
+            }
+        });
+    } catch (e) {
+        alert(e.message);
+    }
+});
+</script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

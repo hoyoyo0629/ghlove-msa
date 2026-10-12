@@ -45,6 +45,20 @@ public class AdminFileStorageService {
      */
     public String store(MultipartFile file, String subdir,
                         java.util.Set<String> allowedExtensions, long maxSize) {
+        return store(file, subdir, allowedExtensions, maxSize, false);
+    }
+
+    /** AS-IS {@code Const.DATENANO_FORMAT} - 초 뒤 4자리까지 붙인다. */
+    private static final java.time.format.DateTimeFormatter DATENANO =
+            java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSSS");
+
+    /**
+     * {@code asIsFileName=true}면 저장명을 AS-IS 규칙({@code yyyyMMddHHmmssSSSS_원본명})으로 만든다.
+     * 기존 호출부는 UUID 그대로라 영향이 없다 - 운영유지관리 SR게시판처럼 AS-IS가 그 규칙을
+     * 쓰는 화면에서만 켠다.
+     */
+    public String store(MultipartFile file, String subdir,
+                        java.util.Set<String> allowedExtensions, long maxSize, boolean asIsFileName) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("빈 파일은 업로드할 수 없습니다.");
         }
@@ -60,7 +74,14 @@ public class AdminFileStorageService {
         if (file.getSize() > maxSize) {
             throw new IllegalArgumentException("업로드 가능한 최대 용량 : " + (maxSize / (1024 * 1024)) + "MB 입니다");
         }
-        String storedName = UUID.randomUUID() + (ext.isEmpty() ? "" : "." + ext);
+        String storedName;
+        if (asIsFileName) {
+            // 경로조작 방지로 원본명에서 파일명만 뽑아 쓴다(AS-IS엔 없는 보강)
+            String baseName = original == null ? "" : Paths.get(original).getFileName().toString();
+            storedName = java.time.LocalDateTime.now().format(DATENANO) + "_" + baseName;
+        } else {
+            storedName = UUID.randomUUID() + (ext.isEmpty() ? "" : "." + ext);
+        }
 
         try {
             Path dir = Paths.get(uploadDir, subdir);

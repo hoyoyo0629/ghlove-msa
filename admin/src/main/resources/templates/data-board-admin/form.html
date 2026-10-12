@@ -1,78 +1,208 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <title>자료실 - 고향사랑e음 (admin service)</title>
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
-    <title>자료 등록/수정 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
+<!-- AS-IS opmanager/i18n/data-board/form.jsp 이식(메뉴 5107 자료실 등록·수정).
+     ★ AS-IS는 등록과 수정이 같은 화면이고 dataId 유무로 버튼만 갈린다(공지사항 5111과 같은 구조):
+     - dataId != 0 → 상단 [수정][삭제][목록]
+     - dataId == 0 → 하단 [등록][취소]
+
+     AS-IS verbatim:
+     - h3 소스가 "글쓰기" 리터럴이다. 다만 op.manager.js:46 이 `.contents h3`의 첫 span을
+       3단 메뉴명으로 덮어쓰므로 화면에는 AS-IS·TO-BE 모두 "자료실"이 찍힌다.
+     - 표 summary가 M00269("공지사항")다 - 자료실인데 공지사항, 복사 흔적 그대로.
+     - 라벨이 "상단공지"가 아니라 "상단게시"다.
+     - ★ 상단게시 체크박스에 checked가 하드코딩돼 있어 등록·수정 모두 항상 체크된 채로 뜬다
+       (수정화면에서 DB값이 'N'이어도 체크되어 보인다) - AS-IS 결함이지만 그대로 둔다.
+     - 첨부는 input[type=file] multiple 하나로 여러 건을 한 번에 올린다(name="detailImageFiles[]").
+       수정화면일 때만 "파일 수정 : " 안내가 앞에 붙는다.
+     - 기존 첨부는 .file_camera 로 줄줄이 나오고 파일명을 누르면 내려받기, [x]를 누르면 즉시 삭제다
+       (확인 문구가 Common.confirm이 아니라 브라우저 confirm이다).
+     - 내용 textarea는 .smart_editor2-wrap 안에 있고 클래스가 editor-content 하나다.
+     - 게시여부 라디오는 .input-form 으로 하나씩 감싸고 <b>기본 선택이 없다</b>(등록 시 둘 다 해제).
+     - 취소 버튼 클래스의 btn-defualt 오타도 AS-IS 그대로다.
+
+     AS-IS 비활성 그대로(옮기지 않음): 판매자 선택(addSeller/deleteSeller/deleteNoticeSeller),
+     visibleType·sellerSelectFlag 핸들러, noticeList(), databoardParam hidden(#searchParam이
+     이 화면에 없어 항상 빈 값), 주석처리된 multiple_files div.
+     ※ AS-IS는 "자료 업로드 전 보안 점검" 모달을 전역으로 깔아두지만 이 화면은 그 흐름을 쓰지
+       않는다(파일 선택창이 바로 열린다) - 그래서 모달 조각을 붙이지 않았다. -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <div class="location"><a th:href="@{/admin/data-board}">고객센터 자료실 관리</a></div>
-    <h3><span th:text="${board.dataId} != null ? '자료 수정' : '자료 등록'"></span></h3>
+
+<h3><span>글쓰기</span></h3>
+
+<p th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c00; margin-bottom:12px;"></p>
+
+<form id="databoard" method="post" enctype="multipart/form-data"
+      th:action="${databoard != null} ? @{'/admin/data-board/edit/' + ${databoard.dataId}} : @{/admin/data-board/create}">
+
+    <div class="btn_all btn_right mb15" th:if="${databoard != null}">
+        <div class="flex_box gap-08">
+            <button type="submit" class="btn btn-dark-gray btn-mini">수정</button>
+            <!-- th:onclick은 Thymeleaf 3.1 제한에 걸려 빌드 가드가 막는다 - th:attr로 쓴다 -->
+            <button type="button" class="btn btn-dark-gray btn-mini"
+                    th:attr="onclick=|deleteDataboard(${databoard.dataId});|">삭제</button>
+            <button type="button" class="btn btn-dark-default btn-mini"
+                    onclick="location.href='/admin/data-board'">목록</button>
+        </div>
+    </div>
 
     <div class="board_write">
-        <table class="board_write_table" summary="자료 등록/수정">
-            <colgroup><col style="width:220px;"><col></colgroup>
+        <table class="board_write_table" th:attr="summary=${msg.get('M00269')}">
+            <colgroup>
+                <col style="width:220px;">
+            </colgroup>
             <tbody>
             <tr>
-                <td class="label"><span class="required_mark">*</span>제목</td>
-                <td><input type="text" id="subject" name="subject" th:value="${board.subject}" required form="boardForm"></td>
-            </tr>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>내용</td>
-                <td><textarea id="content" name="content" rows="12" th:text="${board.content}" required form="boardForm"></textarea></td>
-            </tr>
-            <tr>
-                <td class="label">공지로 등록</td>
-                <td><input type="checkbox" name="noticeFlag" th:checked="${board.noticeFlag == 'Y'}" form="boardForm"></td>
-            </tr>
-            <tr>
-                <td class="label">첨부파일 추가</td>
-                <td><input type="file" name="file" form="boardForm"></td>
-            </tr>
-            <tr th:if="${board.dataId} != null">
-                <td class="label">기존 첨부파일</td>
+                <td class="label">상단게시</td>
                 <td>
-                    <ul>
-                        <li th:each="f : ${files}">
-                            <a th:href="@{'/data-board/file-download/' + ${f.dataFileId}}" th:text="${f.orgFileName}"></a>
-                            <form th:action="@{'/admin/data-board/' + ${board.dataId} + '/files/' + ${f.dataFileId} + '/delete'}"
-                                  method="post" class="inline-form" onsubmit="return confirm('첨부파일을 삭제하시겠습니까?')">
-                                <button type="submit" class="small-btn danger">삭제</button>
-                            </form>
-                        </li>
-                    </ul>
-                    <p th:if="${#lists.isEmpty(files)}">첨부파일 없음</p>
+                    <div class="flex_box gap-08">
+                        <div class="checkbox">
+                            <!-- AS-IS가 checked를 하드코딩해 항상 체크된 채로 뜬다(수정화면 포함) -->
+                            <input type="checkbox" id="noticeFlag" name="noticeFlag" value="Y" checked="checked"/>
+                            <label for="noticeFlag" th:text="${msg.get('M00083')}">사용</label>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span><span th:text="${msg.get('M00275')}">제목</span></td>
+                <td>
+                    <div>
+                        <input type="text" id="subject" name="subject" th:title="${msg.get('M00275')}"
+                               th:value="${databoard != null} ? ${databoard.subject} : ''"
+                               class="input_txt required _filter half" maxlength="255"/>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label" th:text="${msg.get('M01699')}">첨부파일</td>
+                <td>
+                    <div class="flex_box item-center">
+                        <span class="input_file_txt" th:if="${databoard != null}">파일 수정 : </span>
+                        <input type="file" name="detailImageFiles[]" multiple="multiple"/>
+                    </div>
+
+                    <div class="file_camera" th:each="itemImage, i : ${files}"
+                         th:id="'file_camera_' + ${i.index}">
+                        <a th:attr="onclick=|downloadItemImage(${itemImage.dataFileId});|" href="javascript:;"
+                           th:text="${itemImage.orgFileName}"></a>
+                        <a th:attr="onclick=|deleteItemImage(${itemImage.dataFileId}, ${i.index});|" href="javascript:;">
+                            <img th:src="@{/content/images/btn/file_close.gif}" alt="close">
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span><span th:text="${msg.get('M00006')}">내용</span></td>
+                <td>
+                    <!-- smart_editor2 area -->
+                    <div class="smart_editor2-wrap">
+                        <textarea id="content" name="content" cols="30" rows="20" class="editor-content"
+                                  th:title="${msg.get('M00006')}"
+                                  th:text="${databoard != null} ? ${databoard.content} : ''"></textarea>
+                    </div>
+                    <!-- smart_editor2 area -->
+                </td>
+            </tr>
+            <tr>
+                <td class="label"><span class="required_mark">*</span>게시여부</td>
+                <td>
+                    <div class="flex_box gap-12">
+                        <div class="input-form">
+                            <input type="radio" id="useYnY" name="useYn" value="Y" title="게시여부" class="required"
+                                   th:checked="${databoard != null and databoard.useYn == 'Y'}"/>
+                            <label for="useYnY">게시</label>
+                        </div>
+                        <div class="input-form">
+                            <input type="radio" id="useYnN" name="useYn" value="N" title="게시여부" class="required"
+                                   th:checked="${databoard != null and databoard.useYn == 'N'}"/>
+                            <label for="useYnN">중지</label>
+                        </div>
+                    </div>
                 </td>
             </tr>
             </tbody>
         </table>
+
+        <div class="btn_all btn_center" th:if="${databoard == null}">
+            <div class="flex_box gap-08">
+                <button type="submit" class="btn btn-dark-gray btn-small"><span th:text="${msg.get('M00088')}">등록</span></button>
+                <button type="button" class="btn btn-defualt btn-small" onclick="location.href='/admin/data-board'"
+                        th:text="${msg.get('M00037')}">취소</button>
+            </div>
+        </div>
     </div>
-    <form id="boardForm" enctype="multipart/form-data"
-          th:action="${board.dataId} != null ? @{'/admin/data-board/' + ${board.dataId}} : @{/admin/data-board}" method="post"></form>
-    <div class="btn_all btn_center">
-        <button type="submit" form="boardForm" class="btn btn-dark-gray btn-small">저장</button>
-        <form th:if="${board.dataId} != null" th:action="@{'/admin/data-board/' + ${board.dataId} + '/delete'}"
-              method="post" class="inline-form" onsubmit="return confirm('삭제하시겠습니까?')" style="display:inline;">
-            <button type="submit" class="btn btn-small">삭제</button>
-        </form>
+</form>
+
     </div>
-    </div><!-- /.contents_inner -->
-    </div><!-- /.contents -->
-</div><!-- /#container -->
-</div><!-- /.admin_wrap -->
+    </div>
+</div>
+</div>
+
+<div th:replace="~{fragments/smarteditor :: init}"></div>
+<div th:replace="~{fragments/smarteditor :: editor('content')}"></div>
+
+<script type="text/javascript" th:inline="javascript">
+var redirectMessage = /*[[${redirectMessage}]]*/ null;
+
+$(function() {
+    if (redirectMessage) {
+        alert(redirectMessage);
+    }
+
+    try {
+        $('#databoard').validator(function() {
+            Common.getEditorContent("content");
+
+            if ($('#content').val().toLowerCase() == '<p>&nbsp;</p>' || $('#content').val() == '') {
+                alert($.validator.messages['text'].format($('#content').attr('title')));
+                return false;
+            }
+        });
+    } catch (e) {
+        alert(e.message);
+    }
+});
+
+function downloadItemImage(id) {
+    location.href = '/admin/data-board/file-download/' + encodeURIComponent(id);
+}
+
+function deleteItemImage(id, index) {
+    var message = '파일이 실제로 삭제됩니다.\n삭제하시겠습니까?';
+    if (!confirm(message)) {
+        return;
+    }
+
+    var param = {'itemId': id};
+    $.post('/admin/data-board/delete-item-image', param, function(response){
+        Common.responseHandler(response);
+        $("#file_camera_" + index).remove();
+    });
+}
+
+function deleteDataboard(dataId) {
+    Common.confirm(/*[[${msg.get('M00196')}]]*/ '삭제하시겠습니까?', function() {
+        $.post(url("/admin/data-board/delete/" + dataId), {}, function(response) {
+            Common.responseHandler(response, function() {
+                alert(/*[[${msg.get('M00205')}]]*/ '삭제 되었습니다.');
+                location.href = "/admin/data-board";
+            });
+        });
+    });
+}
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

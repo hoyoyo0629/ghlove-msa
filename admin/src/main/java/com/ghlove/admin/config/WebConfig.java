@@ -49,7 +49,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/codes", "/codes/**", "/banners", "/banners/**", "/popups", "/popups/**",
                         "/admin/notices", "/admin/notices/**",
                         // 지자체공지사항(메뉴 5110) - 공지사항(5111)과 같은 표를 쓰고 조회범위만 다르다
-                        "/admin/locgov-notices", "/stats", "/stats/**",
+                        "/admin/locgov-notices", "/admin/locgov-notices/**", "/stats", "/stats/**",
                         "/settlements", "/settlements/**", "/delivery-tracking", "/batch/**",
                         "/admin/manager-requests", "/admin/manager-requests/*/*/approve", "/admin/manager-requests/*/*/reject",
                         "/admin/manager-requests/popup/**",

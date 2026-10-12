@@ -46,47 +46,8 @@ public class OperationContentService {
         return noticeRepository.findById(id).orElseThrow(() -> new ContentException("공지사항을 찾을 수 없습니다."));
     }
 
-    @Transactional
-    public Notice createNotice(String subject, String content, String categoryCode, String locgovCode) {
-        if (subject == null || subject.isBlank()) {
-            throw new ContentException("제목을 입력해 주세요.");
-        }
-        Notice notice = new Notice();
-        notice.setSubject(subject);
-        notice.setContent(content);
-        notice.setCategoryCode(categoryCode);
-        notice.setLocgovCode(locgovCode == null || locgovCode.isBlank() ? null : locgovCode);
-        notice.setCreatedDate(NOTICE_DATE_FORMAT.format(LocalDateTime.now()));
-        notice.setUseYn(USE_Y);
-        notice.setHits(0);
-        return noticeRepository.save(notice);
-    }
-
-    /** AS-IS give-notice의 edit/{noticeId} (기금사업소개 > 지자체공지사항 CRUD 재현). */
-    @Transactional
-    public Notice updateNotice(Integer id, String subject, String content, String categoryCode, String locgovCode) {
-        if (subject == null || subject.isBlank()) {
-            throw new ContentException("제목을 입력해 주세요.");
-        }
-        Notice notice = notice(id);
-        notice.setSubject(subject);
-        notice.setContent(content);
-        notice.setCategoryCode(categoryCode);
-        notice.setLocgovCode(locgovCode == null || locgovCode.isBlank() ? null : locgovCode);
-        return noticeRepository.save(notice);
-    }
-
-    @Transactional
-    public void deleteNotice(Integer id) {
-        noticeRepository.delete(notice(id));
-    }
-
-    @Transactional
-    public Notice toggleNotice(Integer id) {
-        Notice notice = notice(id);
-        notice.setUseYn(USE_Y.equals(notice.getUseYn()) ? USE_N : USE_Y);
-        return noticeRepository.save(notice);
-    }
+    // 공지사항 등록·수정·삭제는 운영 콘솔 화면별로 분리되어 있다
+    // (5111 NoticeAdminService / 5110 LocgovNoticeAdminService) - 여기엔 공개 조회만 남는다.
 
     // ---- 배너 ----
 
