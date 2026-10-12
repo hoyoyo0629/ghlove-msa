@@ -123,5 +123,15 @@
 <div class="location" th:fragment="breadcrumb()" th:if="${activeMenu != null}">
     <a href="#"></a> &gt; <a href="#"></a> &gt; <a href="#" class="on"></a>
 </div>
+
+<!--/* 메뉴 트리에 없는 하위 화면(공지사항·공지사항입력처럼 목록에서 한 단계 더 들어간 화면)용.
+     Thymeleaf 는 조각 "오버로드"(같은 이름 + 다른 인자수)를 지원하지 않는다 - breadcrumb(tail)
+     로 두면 "Signature breadcrumb declares no parameters" 로 터진다. 그래서 이름을 나눈다.
+     AS-IS도 그런 JSP는 location 에 네 번째 칸을 "글자로" 덧붙인다(링크가 아니다):
+       <a href="#"></a> > <a href="#"></a> > <a href="#" class="on"></a> > 공지사항
+     앞의 세 칸은 기존과 똑같이 op.manager.js 가 메뉴에서 채운다. */-->
+<div class="location" th:fragment="breadcrumbTail(tail)" th:if="${activeMenu != null}">
+    <a href="#"></a> &gt; <a href="#"></a> &gt; <a href="#" class="on"></a> &gt; <span th:text="${tail}"></span>
+</div>
 </body>
 </html>

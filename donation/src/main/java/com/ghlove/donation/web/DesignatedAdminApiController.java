@@ -77,11 +77,30 @@ public class DesignatedAdminApiController {
         }
     }
 
+    /** AS-IS 등록/수정 화면의 썸네일 목록. 노출 순서대로 내려준다. */
+    @GetMapping("/api/designated-projects/admin/{id}/images")
+    public List<Map<String, Object>> images(@PathVariable Long id) {
+        return designatedAdminService.imagesOf(id).stream()
+                .map(i -> Map.<String, Object>of(
+                        "imageId", i.getDsgnDntnBizImgId(),
+                        "imageUrl", "/uploads/donation/designated-project/" + i.getImgNm(),
+                        "seq", i.getImgSeq()))
+                .toList();
+    }
+
+    /** AS-IS 썸네일의 x 버튼(deleteDsgncntrPrjImageId). 한 장만 지운다. */
+    @DeleteMapping("/api/designated-projects/admin/images/{imageId}")
+    public ResponseEntity<?> deleteImage(@PathVariable Long imageId) {
+        designatedAdminService.deleteImage(imageId);
+        return ResponseEntity.ok(Map.of("status", "OK"));
+    }
+
     @PostMapping(value = "/api/designated-projects/admin", consumes = "multipart/form-data")
     public ResponseEntity<?> create(@ModelAttribute ProjectForm form, @RequestParam(required = false) MultipartFile image,
+                                     @RequestParam(required = false) java.util.List<MultipartFile> images,
                                      @RequestParam boolean canSelfApprove, @RequestParam Long managerId) {
         try {
-            DesignatedProject saved = designatedAdminService.create(form.toEntity(), image, canSelfApprove, managerId);
+            DesignatedProject saved = designatedAdminService.create(form.toEntity(), image, images, canSelfApprove, managerId);
             return ResponseEntity.ok(ProjectDto.of(saved));
         } catch (DonationException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -91,9 +110,10 @@ public class DesignatedAdminApiController {
     @PostMapping(value = "/api/designated-projects/admin/{id}", consumes = "multipart/form-data")
     public ResponseEntity<?> update(@PathVariable Long id, @ModelAttribute ProjectForm form,
                                      @RequestParam(required = false) MultipartFile image,
+                                     @RequestParam(required = false) java.util.List<MultipartFile> images,
                                      @RequestParam boolean canSelfApprove, @RequestParam Long managerId) {
         try {
-            DesignatedProject saved = designatedAdminService.update(id, form.toEntity(), image, canSelfApprove, managerId);
+            DesignatedProject saved = designatedAdminService.update(id, form.toEntity(), image, images, canSelfApprove, managerId);
             return ResponseEntity.ok(ProjectDto.of(saved));
         } catch (DonationException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -118,26 +138,49 @@ public class DesignatedAdminApiController {
         return designatedAdminService.approvalLogOf(id).stream().map(ApprovalLogDto::of).toList();
     }
 
-    // ---- 공지사항 ----
+    // ---- 공지사항 (AS-IS G_DSGN_DNTN_BIZ_NTC_MNG) ----
 
     @GetMapping("/api/designated-projects/admin/{id}/notices")
     public List<NoticeDto> notices(@PathVariable Long id) {
         return designatedAdminService.noticesOf(id).stream().map(NoticeDto::of).toList();
     }
 
-    @PostMapping("/api/designated-projects/admin/{id}/notices")
-    public ResponseEntity<?> createNotice(@PathVariable Long id, @RequestParam String subject, @RequestParam String content) {
+    @GetMapping("/api/designated-projects/admin/notices/{noticeId}")
+    public ResponseEntity<?> notice(@PathVariable Long noticeId) {
         try {
-            return ResponseEntity.ok(NoticeDto.of(designatedAdminService.createNotice(id, subject, content)));
+            return ResponseEntity.ok(NoticeDto.of(designatedAdminService.noticeOrThrow(noticeId)));
         } catch (DonationException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
-    @PostMapping("/api/designated-projects/admin/notices/{noticeId}")
-    public ResponseEntity<?> updateNotice(@PathVariable Long noticeId, @RequestParam String subject, @RequestParam String content) {
+    @PostMapping(value = "/api/designated-projects/admin/{id}/notices", consumes = "multipart/form-data")
+    public ResponseEntity<?> createNotice(@PathVariable Long id,
+                                           @RequestParam String subject,
+                                           @RequestParam(required = false) String content,
+                                           @RequestParam(required = false) String rlsYn,
+                                           @RequestParam(required = false) List<MultipartFile> files,
+                                           @RequestParam(required = false) List<String> imgExplns,
+                                           @RequestParam Long managerId) {
         try {
-            return ResponseEntity.ok(NoticeDto.of(designatedAdminService.updateNotice(noticeId, subject, content)));
+            return ResponseEntity.ok(NoticeDto.of(
+                    designatedAdminService.createNotice(id, subject, content, rlsYn, files, imgExplns, managerId)));
+        } catch (DonationException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping(value = "/api/designated-projects/admin/notices/{noticeId}", consumes = "multipart/form-data")
+    public ResponseEntity<?> updateNotice(@PathVariable Long noticeId,
+                                           @RequestParam String subject,
+                                           @RequestParam(required = false) String content,
+                                           @RequestParam(required = false) String rlsYn,
+                                           @RequestParam(required = false) List<MultipartFile> files,
+                                           @RequestParam(required = false) List<String> imgExplns,
+                                           @RequestParam Long managerId) {
+        try {
+            return ResponseEntity.ok(NoticeDto.of(
+                    designatedAdminService.updateNotice(noticeId, subject, content, rlsYn, files, imgExplns, managerId)));
         } catch (DonationException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -146,6 +189,30 @@ public class DesignatedAdminApiController {
     @PostMapping("/api/designated-projects/admin/notices/{noticeId}/delete")
     public void deleteNotice(@PathVariable Long noticeId) {
         designatedAdminService.deleteNotice(noticeId);
+    }
+
+    /** AS-IS 목록 하단 [공개]/[비공개] 일괄처리. */
+    @PostMapping("/api/designated-projects/admin/notices/display")
+    public Map<String, Object> updateNoticeDisplay(@RequestParam List<Long> noticeIds,
+                                                    @RequestParam String rlsYn,
+                                                    @RequestParam Long managerId) {
+        return Map.of("changed", designatedAdminService.updateNoticeDisplay(noticeIds, rlsYn, managerId));
+    }
+
+    @GetMapping("/api/designated-projects/admin/notices/{noticeId}/files")
+    public List<NoticeFileDto> noticeFiles(@PathVariable Long noticeId) {
+        return designatedAdminService.noticeFilesOf(noticeId).stream().map(NoticeFileDto::of).toList();
+    }
+
+    @PostMapping("/api/designated-projects/admin/notices/{noticeId}/files/{fileSeq}/delete")
+    public void deleteNoticeFile(@PathVariable Long noticeId, @PathVariable Integer fileSeq) {
+        designatedAdminService.deleteNoticeFile(noticeId, fileSeq);
+    }
+
+    @GetMapping("/api/designated-projects/admin/notices/{noticeId}/img-explns")
+    public List<String> noticeImgExplns(@PathVariable Long noticeId) {
+        return designatedAdminService.noticeImgExplnsOf(noticeId).stream()
+                .map(com.ghlove.donation.domain.DesignatedNoticeImgExpln::getImgExpln).toList();
     }
 
     // ---- 담당부서 ----
@@ -330,11 +397,24 @@ public class DesignatedAdminApiController {
         }
     }
 
+    /**
+     * 공지 한 건. {@code frstRegistPnttm} 은 화면 표기용 yyyyMMddHHmmss - 옮기기 전 표가
+     * 문자열로 들고 있던 포맷을 유지해 admin 쪽 표시 로직을 안 건드린다.
+     */
     public record NoticeDto(Long prjNoticeId, Long dsgnDntnBizId, String prjNoticeSubject, String prjNoticeCn,
-                             String frstRegistPnttm) {
-        static NoticeDto of(PrjNotice n) {
-            return new NoticeDto(n.getPrjNoticeId(), n.getDsgnDntnBizId(), n.getPrjNoticeSubject(),
-                    n.getPrjNoticeCn(), n.getFrstRegistPnttm());
+                             String frstRegistPnttm, String rlsYn) {
+        static NoticeDto of(com.ghlove.donation.domain.DesignatedNotice n) {
+            return new NoticeDto(n.getNoticeId(), n.getDsgnDntnBizId(), n.getSubject(), n.getContent(),
+                    n.getFrstRegDt() == null ? null
+                            : n.getFrstRegDt().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss")),
+                    n.getRlsYn());
+        }
+    }
+
+    /** 첨부 한 건 - 화면에는 원본 파일명이 보이고 다운로드는 seq 로 건다. */
+    public record NoticeFileDto(Long noticeId, Integer fileSeq, String orgnflNm) {
+        static NoticeFileDto of(com.ghlove.donation.domain.DesignatedNoticeFile f) {
+            return new NoticeFileDto(f.getNoticeId(), f.getFileSeq(), f.getOrgnflNm());
         }
     }
 

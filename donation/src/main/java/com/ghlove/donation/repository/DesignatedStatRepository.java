@@ -286,12 +286,17 @@ public interface DesignatedStatRepository extends JpaRepository<DesignatedProjec
     // 상태파생: 진행('2'=OPEN)인데 모금>목표(strict) 또는 종료일<오늘(IN_DATE=3)이면 종료('9'). 월별통계와
     // 동일한 스키마 치환(확정기부=COMPLETED, 상태 OPEN/CLOSED/PENDING→2/9/1, 조인키 DSGN_DNTN_BIZ_ID).
     // 기간필터 frDt~toDt(yyyyMMdd)는 사업기간과 겹치면 포함.
+    //
+    // 달성율은 AS-IS와 같은 식 FLOOR(모금액*10000.0/목표금액)/100(소수 2자리 절사)을 쓰되
+    // 결과를 numeric(20,2)로 캐스팅한다. PostgreSQL은 numeric 나눗셈 결과 스케일을 16자리 이상으로
+    // 잡아서 CUBRID에서 0.61이던 값이 0.61000000000000000000 로, 0은 0E-20 으로 나온다
+    // (화면에 그대로 찍혀 실제 깨졌다). 캐스팅은 값이 아니라 스케일만 고정한다.
 
     /** 요약: 총목표금액/총모금액/총달성율(%)/총기부건수(=참여건수). */
     @Query(nativeQuery = true, value = """
         SELECT COALESCE(SUM(TARGET_AMT), 0) AS tot_target_amt
              , COALESCE(SUM(CNTR_AMT),   0) AS tot_cntr_amt
-             , CASE WHEN COALESCE(SUM(TARGET_AMT), 0) <> 0 THEN FLOOR(SUM(CNTR_AMT) * 10000.0 / SUM(TARGET_AMT)) / 100 ELSE 0 END AS tot_achv_rt
+             , CAST(CASE WHEN COALESCE(SUM(TARGET_AMT), 0) <> 0 THEN FLOOR(SUM(CNTR_AMT) * 10000.0 / SUM(TARGET_AMT)) / 100 ELSE 0 END AS numeric(20, 2)) AS tot_achv_rt
              , COALESCE(SUM(CNTR_CNT),   0) AS tot_cntr_cnt
         FROM (
             SELECT X.TARGET_AMT, X.CNTR_AMT, X.CNTR_CNT, X.PRJ_STATUS
@@ -347,7 +352,7 @@ public interface DesignatedStatRepository extends JpaRepository<DesignatedProjec
              , SUM(BSNS_TYPE_400_CNT) AS bsns_type_400_cnt
              , SUM(TARGET_AMT)        AS target_amt
              , SUM(CNTR_AMT)          AS cntr_amt
-             , CASE WHEN SUM(TARGET_AMT) <> 0 THEN FLOOR(SUM(COALESCE(CNTR_AMT, 0)) * 10000.0 / SUM(TARGET_AMT)) / 100 ELSE 0 END AS achv_rt
+             , CAST(CASE WHEN SUM(TARGET_AMT) <> 0 THEN FLOOR(SUM(COALESCE(CNTR_AMT, 0)) * 10000.0 / SUM(TARGET_AMT)) / 100 ELSE 0 END AS numeric(20, 2)) AS achv_rt
         FROM (
             SELECT  X.PRJ_ID
                   , X.LOCGOV_CODE

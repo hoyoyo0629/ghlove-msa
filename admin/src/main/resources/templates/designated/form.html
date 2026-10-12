@@ -25,94 +25,121 @@
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
     <div class="location"><a th:href="@{/designated-projects}">지정기부 관리</a></div>
-    <h3><span th:text="${projectId != null} ? '지정기부사업 수정' : '지정기부사업 등록'"></span></h3>
 
     <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
 
+    <!-- ── AS-IS form.jsp 레이아웃 그대로 ──────────────────────────────────────
+         AS-IS는 한 줄에 "라벨+입력" 쌍을 2개(수정 모드는 3개) 배치하는 4열(수정 6열) 표다.
+         TO-BE가 2열 1필드/행으로 풀어 놓아 화면이 전혀 달라 보였다(2026-10-07 사용자 지적).
+         행 순서·라벨 문구·입력 폭(wd-*)까지 AS-IS를 따른다 - 특히 라벨은 "기간"이지
+         "모금 기간"이 아니다. AS-IS에 없던 안내문구(※ 3년 제한, ※ 승인 필요)는 뺐다
+         - 3년 제한은 AS-IS에서 제출 시 alert으로만 알린다. -->
+    <h3 class="custom">특정사업에 기부하기 정보</h3>
+    <div class="item_info_wrap">
+    <div class="item_list mt70">
     <div class="board_write">
-        <table class="board_write_table" summary="지정기부사업 등록/수정">
-            <colgroup><col style="width:220px;"><col></colgroup>
+        <table class="board_write_table" summary="특정사업에 기부하기 정보">
+            <colgroup>
+                <col style="width: 120px" />
+                <col style="width: auto;" />
+                <col style="width: 120px" />
+                <col style="width: auto;" />
+                <!-- AS-IS: 수정 모드에서만 3번째 쌍(남은 일수·모금 된 금액·달성률)이 붙는다 -->
+                <th:block th:if="${projectId != null}">
+                    <col style="width: 120px" />
+                    <col style="width: auto;" />
+                </th:block>
+            </colgroup>
             <tbody>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>사업명</td>
-                <td><input type="text" id="dsgnDntnBizTtl" name="dsgnDntnBizTtl" required maxlength="255"
-                           th:value="${project != null} ? ${project.dsgnDntnBizTtl} : ''" form="projectForm"></td>
-            </tr>
             <tr>
                 <td class="label"><span class="required_mark">*</span>지자체</td>
                 <td>
                     <div class="flex_box gap-08">
-                        <select id="upperLocgovCode" onchange="filterLocgov()">
-                            <option value="">시·도 선택</option>
+                        <select id="upperLocgovCode" class="wd-150 required" onchange="filterLocgov()" title="상위 지자체">
+                            <option value="">-전체-</option>
                             <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"
                                     th:attr="data-code=${p.key}"></option>
                         </select>
-                        <select id="lclgvCd" name="lclgvCd" required form="projectForm">
-                            <option value="">시·군·구 선택</option>
+                        <select id="lclgvCd" name="lclgvCd" class="wd-150" required form="projectForm" title="지자체">
+                            <option value="">-시,군,구-</option>
                             <option th:each="l : ${allLocgovs}" th:value="${l.locgovCode}" th:text="${l.locgovNm}"
                                     th:attr="data-upper=${l.upperLocgovCode}"
                                     th:selected="${project != null and project.lclgvCd == l.locgovCode}"></option>
                         </select>
                     </div>
                 </td>
+                <td class="label"><span class="required_mark">*</span>사업구분</td>
+                <!-- AS-IS: 수정 모드에선 이 칸이 colspan=3 으로 남은 두 칸을 먹는다 -->
+                <td th:attr="colspan=${projectId != null} ? '3' : null">
+                    <div class="flex_box gap-08">
+                        <select id="dsgnDntnBizSeCd" name="dsgnDntnBizSeCd" class="wd-400 required" required onchange="bsnsTypeChange(this.value)"
+                                form="projectForm" title="사업구분">
+                            <option value="">-선택-</option>
+                            <option th:each="c : ${bsnsTypes}" th:value="${c.key}" th:text="${c.value}"
+                                    th:selected="${project != null and project.dsgnDntnBizSeCd == c.key}"></option>
+                        </select>
+                        <!-- AS-IS는 대분류를 고를 때마다 ajax로 중분류를 다시 그린다. 24건뿐이라 전부
+                             내려보내고 data-up(up_id)으로 걸러 쓴다 - 보이는 결과는 같다. -->
+                        <select id="bsnsSubType" name="bsnsSubType" class="wd-200" title="사업부문" form="projectForm">
+                            <option value="">-선택-</option>
+                            <option th:each="s : ${bsnsSubTypes}" th:value="${s.id}" th:text="${s.label}"
+                                    th:attr="data-up=${s.upId}"
+                                    th:selected="${project != null and project.bsnsSubType == s.id}"></option>
+                        </select>
+                    </div>
+                </td>
             </tr>
             <tr>
-                <!-- AS-IS 라벨은 "사업부서"이고, 지자체를 바꾸면 그 지자체 부서로 다시 채운다
-                     (getDsgncntrPartList). 첫 항목은 "-부서 미지정-"(값 0)이다. -->
-                <td class="label">사업부서</td>
+                <td class="label"><span class="required_mark">*</span>기간</td>
                 <td>
-                    <select id="deptId" name="deptId" class="wd-500" title="사업부서" form="projectForm">
-                        <option value="0">-부서 미지정-</option>
-                        <option th:each="d : ${departments}" th:value="${d.deptId}" th:text="${d.deptNm}"
-                                th:attr="data-locgov=${d.locgovCode}"
-                                th:selected="${project != null and project.deptId == d.deptId}"></option>
-                    </select>
+                    <div>
+                        <span class="datepicker"><input type="text" id="dsgnDntnBizBgngYmd" name="dsgnDntnBizBgngYmd"
+                               maxlength="8" pattern="[0-9]{8}" class="datepicker required" required form="projectForm"
+                               title="기부 시작 기간"
+                               th:value="${project != null} ? ${project.dsgnDntnBizBgngYmd} : ''"/></span>
+                        <span class="wave">~</span>
+                        <span class="datepicker mr10"><input type="text" id="dsgnDntnBizEndYmd" name="dsgnDntnBizEndYmd"
+                               maxlength="8" pattern="[0-9]{8}" class="datepicker required" required form="projectForm"
+                               title="기부 종료 기간"
+                               th:value="${project != null} ? ${project.dsgnDntnBizEndYmd} : ''"/></span>
+                    </div>
                 </td>
-                <!-- AS-IS: 남은 일수는 수정 모드에서만 읽기전용으로 보여준다 -->
+                <td class="label"><span class="required_mark">*</span>목표금액(원)</td>
+                <td>
+                    <div class="flex_box gap-12 item-center">
+                        <input type="text" id="goalAmt" name="goalAmt" class="input_txt required _filter wd-500"
+                               required maxlength="12" title="목표금액"
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+                               th:value="${project != null} ? ${project.goalAmt} : ''" form="projectForm">
+                    </div>
+                </td>
                 <th:block th:if="${projectId != null}">
                     <td class="label">남은 일수</td>
                     <td>
-                        <div class="flex_box gap-12 item-center">
-                            <span th:text="${stat.leftDays}">0</span> 일
-                        </div>
+                        <div class="flex_box gap-12 item-center"><span th:text="${stat.leftDays}">0</span> 일</div>
                     </td>
                 </th:block>
             </tr>
             <tr>
-                <td class="label"><span class="required_mark">*</span>사업구분</td>
+                <td class="label"><span class="required_mark">*</span>사업명</td>
                 <td>
-                    <select id="dsgnDntnBizSeCd" name="dsgnDntnBizSeCd" required form="projectForm">
-                        <option value="">선택</option>
-                        <option th:each="c : ${bsnsTypes}" th:value="${c.key}" th:text="${c.value}"
-                                th:selected="${project != null and project.dsgnDntnBizSeCd == c.key}"></option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <td class="label">사업 세부구분</td>
-                <td><input type="text" id="bsnsSubType" name="bsnsSubType" maxlength="50"
-                           th:value="${project != null} ? ${project.bsnsSubType} : ''" form="projectForm"></td>
-            </tr>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>모금 기간</td>
-                <td>
-                    <div class="flex_box gap-08">
-                        <input type="date" id="dsgnDntnBizBgngYmd" name="dsgnDntnBizBgngYmd" required form="projectForm"
-                               th:value="${project != null and project.dsgnDntnBizBgngYmd != null and #strings.length(project.dsgnDntnBizBgngYmd) == 8}
-                                          ? (${#strings.substring(project.dsgnDntnBizBgngYmd,0,4)} + '-' + ${#strings.substring(project.dsgnDntnBizBgngYmd,4,6)} + '-' + ${#strings.substring(project.dsgnDntnBizBgngYmd,6,8)}) : ''">
-                        <span class="wave">~</span>
-                        <input type="date" id="dsgnDntnBizEndYmd" name="dsgnDntnBizEndYmd" required form="projectForm"
-                               th:value="${project != null and project.dsgnDntnBizEndYmd != null and #strings.length(project.dsgnDntnBizEndYmd) == 8}
-                                          ? (${#strings.substring(project.dsgnDntnBizEndYmd,0,4)} + '-' + ${#strings.substring(project.dsgnDntnBizEndYmd,4,6)} + '-' + ${#strings.substring(project.dsgnDntnBizEndYmd,6,8)}) : ''">
+                    <div class="flex_box gap-12 item-center">
+                        <input type="text" id="dsgnDntnBizTtl" name="dsgnDntnBizTtl" class="input_txt required _filter wd-500"
+                               required maxlength="50" title="특정사업에 기부하기 사업명"
+                               th:value="${project != null} ? ${project.dsgnDntnBizTtl} : ''" form="projectForm">
                     </div>
-                    <p style="font-size:12px; color:#666; margin-top:4px;">※ 모금 기간은 최대 3년까지 가능합니다.</p>
                 </td>
-            </tr>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>목표금액(원)</td>
-                <td><input type="number" id="goalAmt" name="goalAmt" required min="1" max="999999999999"
-                           th:value="${project != null} ? ${project.goalAmt} : ''" form="projectForm"> 원</td>
-                <!-- AS-IS: 모금 된 금액도 수정 모드에서만 보여준다 -->
+                <td class="label">사업부서</td>
+                <td>
+                    <div class="flex_box gap-12 item-center">
+                        <select id="deptId" name="deptId" class="wd-500" title="사업부서" form="projectForm">
+                            <option value="0">-부서 미지정-</option>
+                            <option th:each="d : ${departments}" th:value="${d.deptId}" th:text="${d.deptNm}"
+                                    th:attr="data-locgov=${d.locgovCode}"
+                                    th:selected="${project != null and project.deptId == d.deptId}"></option>
+                        </select>
+                    </div>
+                </td>
                 <th:block th:if="${projectId != null}">
                     <td class="label">모금 된 금액</td>
                     <td>
@@ -123,7 +150,6 @@
                 </th:block>
             </tr>
             <tr>
-                <!-- AS-IS는 상태·공개여부를 라디오로 받고 문구도 아래와 같다 -->
                 <td class="label"><span class="required_mark">*</span>상태</td>
                 <td>
                     <div class="flex_box gap-12">
@@ -140,7 +166,6 @@
                                    th:checked="${project == null or project.dsgnDntnBizSttsCd == 'PENDING'}"/>
                             <label for="stts_pending">대기(승인 전)</label></span></div>
                     </div>
-                    <p style="font-size:12px; color:#666; margin-top:4px;">※ 담당자(운영자) 계정은 "진행중"으로 직접 전환할 수 없습니다 - 관리자 승인이 필요합니다.</p>
                 </td>
                 <td class="label"><span class="required_mark">*</span>공개여부</td>
                 <td>
@@ -154,44 +179,81 @@
                                    th:checked="${project != null and project.rlsYn == 'N'}"/>
                             <label for="rls_n">비공개</label></span></div>
                     </div>
-                    <!-- AS-IS: 달성률도 수정 모드에서만 -->
-                    <div class="flex_box gap-12 item-center" th:if="${projectId != null}" style="margin-top:8px;">
-                        <span class="label" style="background:none;">달성률</span>
-                        <span th:text="${stat.rateAmt} + '%'">0%</span>
-                    </div>
                 </td>
-            </tr>
-            <tr>
-                <td class="label">
-                    <p><span class="required_mark">*</span>특정사업에 기부하기 이미지</p>
-                    <p>(600px * 600px)</p>
-                </td>
-                <td colspan="3">
-                    <input type="file" id="image" name="image" accept="image/png, image/jpeg, image/gif"
-                           class="full input_file" form="projectForm">
-                    <div th:if="${project != null and project.imageUrl != null}" style="margin-top:8px;">
-                        <img th:src="@{${project.imageUrl}}" style="max-width:200px; border-radius:8px;" alt="대표이미지">
-                    </div>
-                </td>
+                <th:block th:if="${projectId != null}">
+                    <td class="label">달성률</td>
+                    <td>
+                        <div class="flex_box gap-12 item-center"><span th:text="${stat.rateAmt} + '%'">0%</span></div>
+                    </td>
+                </th:block>
             </tr>
             </tbody>
         </table>
     </div>
+    </div>
 
-    <!-- AS-IS는 상세 설명과 기타 사항을 표 밖의 별도 섹션(h3)으로 둔다 -->
-    <h3 style="margin-top:28px;"><span>상세 설명</span></h3>
-    <div class="board_write">
+    <!-- AS-IS: 이미지는 정보 표와 분리된 블록이고 제목이 "특정사업에 기부하기 이미지 등록"이다.
+         표도 별도(item_image_info, 라벨칸 220px). -->
+    <div class="item_list mt70">
+        <h3><span>특정사업에 기부하기 이미지 등록</span></h3>
+        <div class="board_write">
+            <table class="board_write_table item_image_info">
+                <colgroup><col style="width: 220px;"><col></colgroup>
+                <tbody>
+                <tr>
+                    <td class="label"><p><span class="required_mark">*</span>특정사업에 기부하기 이미지</p><p>(600px * 600px)</p></td>
+                    <td>
+                        <div class="flex_box item-center">
+                            <!-- AS-IS prjImageFiles[] : multiple. 안내문구도 AS-IS 그대로이고,
+                                 AS-IS는 이 문구에 hidden 클래스를 걸어 숨겨 둔다(그대로 유지). -->
+                            <p class="text-info text-sm hidden">
+                                * 상품 이미지는 제한 없이 등록이 가능합니다.<br />
+                                * [파일선택] 버튼을 선택한 후 파일 선택 창에서 상품 이미지를 복수로 선택하거나 드레그 하여 선택 후 등록해 주십시오.<br /><br />
+                            </p>
+                            <input type="file" id="images" name="images" multiple="multiple"
+                                   accept="image/png, image/jpeg, image/gif" class="full input_file" form="projectForm">
+                            <!-- 이미 올라간 이미지: 순번 + x 삭제(AS-IS deleteDsgncntrPrjImageId 와 같은 동작).
+                                 삭제는 폼 저장과 별개로 바로 반영된다 - AS-IS도 ajax로 즉시 지운다. -->
+                            <ul id="prjImages" class="sortable_item_image clear"
+                                th:if="${projectImages != null and !#lists.isEmpty(projectImages)}">
+                                <li th:each="img, i : ${projectImages}" th:id="'prj_image_id_' + ${img.imageId}">
+                                    <img th:src="@{${img.imageUrl}}" class="item_image size-100" alt="">
+                                    <span class="ordering" th:text="${i.count}">1</span>
+                                    <!-- 썸네일마다 전용 폼을 둔다. 한 폼의 action 을 JS로 바꿔 쓰려다
+                                         자리표시자 __IMG__ 가 Thymeleaf 전처리 구문(__...__)에 먹혀
+                                         "IMG" 로 전송돼 400이 났다(2026-10-07). th:action 이면 CSRF 토큰도
+                                         Thymeleaf가 알아서 넣어 준다. -->
+                                    <form method="post" style="display:inline;"
+                                          th:action="@{/designated-projects/{id}/images/{imageId}/delete(id=${projectId},imageId=${img.imageId})}"
+                                          onsubmit="return confirm('이미지를 삭제하시겠습니까?');">
+                                        <button type="submit" class="delete_item_image"
+                                                style="background:none; border:0; padding:0; cursor:pointer;">
+                                            <img th:src="@{/content/opmanager/images/icon/icon_x.gif}" alt="삭제">
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="item_list mt70">
+        <h3><span>상세 설명</span></h3>
         <textarea id="dsgnDntnBizCn" name="dsgnDntnBizCn" cols="30" rows="20" class="editor-content"
                   style="width:99%;" title="상세 설명" form="projectForm"
                   th:text="${project != null} ? ${project.dsgnDntnBizCn} : ''"></textarea>
     </div>
 
-    <h3 style="margin-top:28px;"><span>기타 사항</span></h3>
-    <div class="board_write">
+    <div class="item_list mt70">
+        <h3><span>기타 사항</span></h3>
         <textarea id="contentEtc" name="contentEtc" style="height:200px; width:99%;" title="기타 사항"
                   form="projectForm" th:text="${project != null} ? ${project.contentEtc} : ''"></textarea>
     </div>
-
+    </div>
     <form id="projectForm" th:action="${projectId != null} ? @{/designated-projects/{id}(id=${projectId})} : @{/designated-projects}"
           method="post" enctype="multipart/form-data"></form>
     <div class="btn_all btn_center">
@@ -204,95 +266,89 @@
         </div>
     </div>
 
-    <div th:if="${projectId != null}">
-        <h4 style="margin-top:36px;">공지사항</h4>
-        <table class="board_list_table" style="margin-bottom:16px;">
-            <thead><tr><th>제목</th><th>등록일</th><th>관리</th></tr></thead>
-            <tbody>
-            <tr th:each="n : ${notices}">
-                <td th:text="${n.prjNoticeSubject}"></td>
-                <td th:text="${n.frstRegistPnttm != null and #strings.length(n.frstRegistPnttm) >= 8} ? ${#strings.substring(n.frstRegistPnttm,0,8)} : ''"></td>
-                <td>
-                    <button type="button" class="edit-notice-btn small-btn"
-                            th:data-notice-id="${n.prjNoticeId}" th:data-subject="${n.prjNoticeSubject}"
-                            th:data-content="${n.prjNoticeCn}" onclick="editNotice(this)">수정</button>
-                    <form th:action="@{/designated-projects/{id}/notices/{nid}/delete(id=${projectId},nid=${n.prjNoticeId})}" method="post" style="display:inline;" onsubmit="return confirm('삭제하시겠습니까?');">
-                        <button type="submit" class="small-btn ghost">삭제</button>
-                    </form>
-                </td>
-            </tr>
-            </tbody>
-        </table>
-        <p class="empty" th:if="${#lists.isEmpty(notices)}">등록된 공지사항이 없습니다.</p>
-
-        <h4 id="noticeFormTitle" style="margin-top:36px;">공지사항 등록</h4>
-        <div class="board_write">
-            <table class="board_write_table" summary="공지사항 등록/수정">
-                <colgroup><col style="width:220px;"><col></colgroup>
-                <tbody>
-                <tr><td class="label">제목</td><td><input type="text" id="noticeSubject" name="subject" required maxlength="255" form="noticeForm"></td></tr>
-                <tr><td class="label">내용</td><td><textarea id="noticeContent" name="content" rows="4" required form="noticeForm"></textarea></td></tr>
-                </tbody>
-            </table>
-        </div>
-        <form id="noticeForm" th:action="@{/designated-projects/{id}/notices(id=${projectId})}" method="post"></form>
-        <div class="btn_all btn_center">
-            <div class="flex_box gap-08">
-                <button type="submit" form="noticeForm" class="btn btn-dark-gray btn-small">저장</button>
-                <button type="button" class="btn btn-dark-default btn-small" onclick="resetNoticeForm()">취소</button>
-            </div>
-        </div>
-
-        <h4 style="margin-top:36px;">상태변경 이력</h4>
-        <table class="board_list_table">
-            <thead><tr><th>변경일시</th><th>이전상태</th><th>변경상태</th><th>처리자ID</th></tr></thead>
-            <tbody>
-            <tr th:each="l : ${approvalLog}">
-                <td th:text="${@opDate.ymd(l.frstRegistPnttm)}"></td>
-                <td th:text="${statusLabels.get(l.beforeStatusCode)} ?: '-'"></td>
-                <td th:text="${statusLabels.get(l.afterStatusCode)} ?: l.afterStatusCode"></td>
-                <td th:text="${l.frstRgtrId}"></td>
-            </tr>
-            </tbody>
-        </table>
-        <p class="empty" th:if="${#lists.isEmpty(approvalLog)}">변경 이력이 없습니다.</p>
-    </div>
+    <!-- [2026-10-07 제거] 여기 있던 "공지사항"·"상태변경 이력" 두 블록을 들어냈다.
+         AS-IS form.jsp 에는 그 둘이 없다(검색 0건). AS-IS는 각각 별도 화면이다:
+           - 공지사항      : opmanager/designated-donation/notice/{list,form}.jsp
+           - 상태변경 이력 : opmanager/designated-donation/popup-confirm-log.jsp (팝업)
+         TO-BE는 아직 그 두 화면이 없어서, 이 블록을 빼면 공지사항 등록·삭제와 승인이력
+         조회에 들어갈 입구가 사라진다(컨트롤러 엔드포인트는 그대로 살아 있다).
+         두 화면 이식은 별도 과제다. -->
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
 
+<!-- 서버 데이터 주입은 th:inline="javascript" 에서만 한다(아래 로직 블록은 th:inline="none"
+     이라 Thymeleaf 표현식이 동작하지 않는다). designated/list.html 과 같은 방식. -->
+<script type="text/javascript" th:inline="javascript">
+    var allLocgovs = /*[[${allLocgovs}]]*/ [];
+
+</script>
 <script th:inline="none">
+/* 지자체 2단 - designated/list.html 의 wdrChange 와 같은 방식으로 "시,군,구" 옵션을
+   다시 그린다. 이전 구현은 option.hidden 만 켜고 껐는데 브라우저에 따라 먹지 않고,
+   숨겨진 옵션이 선택된 채로 남는 문제가 있었다(2026-10-07 사용자 지적). */
 function filterLocgov() {
     var upper = document.getElementById('upperLocgovCode').value;
-    var select = document.getElementById('lclgvCd');
-    Array.prototype.forEach.call(select.options, function (opt) {
-        if (!opt.value) { return; }
-        opt.hidden = upper !== '' && opt.dataset.upper !== upper;
-    });
-}
-(function preselectProvince() {
-    var citySelect = document.getElementById('lclgvCd');
-    var selected = citySelect.options[citySelect.selectedIndex];
-    if (selected && selected.dataset.upper) {
-        document.getElementById('upperLocgovCode').value = selected.dataset.upper;
+    var $locgov = $('#lclgvCd');
+    var keep = $locgov.val();
+    $locgov.find('option').not(':first-child').remove();
+    for (var i = 0; i < allLocgovs.length; i++) {
+        var l = allLocgovs[i];
+        if (!upper || l.upperLocgovCode === upper) {
+            $locgov.append($('<option></option>').attr('value', l.locgovCode).text(l.locgovNm));
+        }
     }
-})();
-filterLocgov();
+    if (keep && $locgov.find('option[value="' + keep + '"]').length) {
+        $locgov.val(keep);
+    }
+}
 
-var noticeCreateAction = document.getElementById('noticeForm') ? document.getElementById('noticeForm').action : null;
-function editNotice(btn) {
-    document.getElementById('noticeFormTitle').textContent = '공지사항 수정';
-    document.getElementById('noticeSubject').value = btn.dataset.subject;
-    document.getElementById('noticeContent').value = btn.dataset.content;
-    document.getElementById('noticeForm').action = noticeCreateAction + '/' + btn.dataset.noticeId + '/update';
-    document.getElementById('noticeFormTitle').scrollIntoView({behavior: 'smooth'});
+/* 사업구분 중분류(사업부문) - 대분류(up_id)에 속한 것만 남긴다. AS-IS는 대분류를 고를 때마다
+   /opmanager/designated-donation/bsnsSubType 로 ajax를 쳐서 다시 그리는데, 24건뿐이라
+   화면에 전부 내려받아 두고 걸러 쓴다. 보이는 결과는 같다. */
+var allBsnsSubTypes = [];
+function bsnsTypeChange(value) {
+    var $sub = $('#bsnsSubType');
+    var keep = $sub.val();
+    $sub.find('option').not(':first-child').remove();
+    for (var i = 0; i < allBsnsSubTypes.length; i++) {
+        var s = allBsnsSubTypes[i];
+        if (value && s.up === value) {
+            $sub.append($('<option></option>').attr('value', s.id).text(s.text));
+        }
+    }
+    if (keep && $sub.find('option[value="' + keep + '"]').length) {
+        $sub.val(keep);
+    }
 }
-function resetNoticeForm() {
-    document.getElementById('noticeFormTitle').textContent = '공지사항 등록';
-    document.getElementById('noticeForm').reset();
-    document.getElementById('noticeForm').action = noticeCreateAction;
-}
+
+$(function () {
+    /* 서버가 그려 준 중분류 전체를 기억해 두고(대분류별로 다시 그릴 때 쓴다),
+       현재 고른 대분류에 맞게 한 번 걸러 준다. 수정 화면이면 기존 선택이 유지된다. */
+    $('#bsnsSubType option').each(function () {
+        if (this.value) {
+            allBsnsSubTypes.push({ id: this.value, text: $(this).text(), up: this.getAttribute('data-up') });
+        }
+    });
+    var selectedSub = $('#bsnsSubType').val();
+    bsnsTypeChange($('#dsgnDntnBizSeCd').val());
+    if (selectedSub) {
+        $('#bsnsSubType').val(selectedSub);
+    }
+
+    /* 수정 화면: 저장된 지자체로부터 시·도를 거꾸로 맞춘 뒤 시,군,구 목록을 그린다. */
+    var citySelect = document.getElementById('lclgvCd');
+    var selectedCity = citySelect.value;
+    var selectedOpt = citySelect.options[citySelect.selectedIndex];
+    if (selectedOpt && selectedOpt.dataset.upper) {
+        document.getElementById('upperLocgovCode').value = selectedOpt.dataset.upper;
+    }
+    filterLocgov();
+    if (selectedCity) {
+        $('#lclgvCd').val(selectedCity);
+    }
+});
 </script>
 <script type="text/javascript" th:inline="javascript">
 var projectId = /*[[${projectId}]]*/ null;

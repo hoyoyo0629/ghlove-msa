@@ -105,3 +105,6 @@
 - [지자체담당자관리·운영관리자 상세 레이아웃+경로 수정](admin-locgov-charger-edit-layout-and-breadcrumb-fix.md) — 목록버튼이 flex_box 밖으로 분리돼있던것+메뉴경로 "상세" 크럼 누락(JS 자체가 없었음, LNB토글 누락과 같은유형), 2화면 수정. admin 재기동 필요
 - [메뉴경로 크럼 누락 전수조사 완료](admin-breadcrumb-append-script-audit.md) — AS-IS 25화면 전수대조, 17개 이미정상+6개(give-operation/point/reqmng-list/reqmng-form/state-detail, statistics-locgov) 신규수정+6개(통계통합)·1개(미이식) 적용대상아님 확인. admin 재기동 필요
 - [운영관리자 회원구분·사용여부 비활성규칙 신규구현](admin-oper-charger-authority-status-disable-rules.md) — AS-IS adminRoleCheck 4규칙(시스템↔행안부 그룹전환 금지·본인 사용여부 불가·부담당자 전체 불가) 전체가 안 포팅돼 있었음, th:disabled로 신규구현. admin 재기동 필요
+- [PG numeric 나눗셈 스케일이 화면을 깨뜨림](pg-numeric-division-scale-breaks-display.md) — CUBRID 2자리가 PG에선 16+자리 → 0E-20/0.61000000000000000000. SQL 캐스팅+AS-IS와 같은 float+요약만 @opNum.format(목록은 포맷 안 함). 다른 비율 컬럼 소급점검
+- [AS-IS 라디오는 input+형제 label](asis-radio-needs-sibling-label.md) — label로 감싸면 .input-form flex gap이 죽어 글자가 라디오에 달라붙음. gapPx·중심선 Y 실측으로 검증. 잔여 2곳(access/form, featured-admin/list)
+- [발명된 "← …" 링크는 화면별로 정리](admin-invented-backlink-per-screen-cleanup.md) — AS-IS 0건인데 21화면에 있음. 충돌 위험으로 일괄제거 금지, 원장 docs/admin-invented-backlink-cleanup-ledger.md의 화면별 조치만 수행. 19화면 잔여

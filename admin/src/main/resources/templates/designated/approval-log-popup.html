@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>승인이력조회 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <style>
+        /* AS-IS popup-confirm-log.jsp 의 페이지 전용 style 그대로 */
+        .popup_contents02 {
+            width: 1500px !important;
+            padding-right: 7px;
+        }
+    </style>
+</head>
+<!-- AS-IS opmanager/designated-donation/popup-confirm-log.jsp 이식.
+     목록(17101)의 [승인이력]이 showLog(prjId) -> window.open(..., 1510x700) 으로 띄운다.
+     AS-IS는 페이징이 붙어 있으나 한 사업의 승인 이력은 많아야 몇 건이라 전량을 내려준다
+     (donation approvalLogOf 가 logId 역순으로 전부 준다). -->
+<body>
+<div class="popup_wrap">
+    <div id="pop_header">
+        <h1 class="popup_title">승인이력조회</h1>
+        <a href="javascript:self.close();" class="btn_close">
+            <img th:src="@{/content/opmanager/images/btn/btn_close.png}" alt="닫기">
+        </a>
+    </div>
+
+    <div class="popup_contents02">
+        <div class="count_title">
+            <h5>총 <span th:text="${#lists.size(logs)}">0</span> 건</h5>
+        </div>
+
+        <div class="board_write">
+            <table class="board_list_table" summary="승인이력">
+                <caption>승인이력</caption>
+                <colgroup>
+                    <col style="width:50px;">
+                    <col style="width:400px;">
+                    <col style="width:200px;">
+                    <col style="width:200px;">
+                    <col style="width:200px;">
+                    <col style="width:200px;">
+                </colgroup>
+                <thead>
+                <tr>
+                    <th scope="col">로그 아이디</th>
+                    <th scope="col">특정사업 기부 사업명</th>
+                    <th scope="col">승인 전 상태</th>
+                    <th scope="col">승인 후 상태</th>
+                    <th scope="col">승인자</th>
+                    <th scope="col">승인일시</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="log : ${logs}">
+                    <td th:text="${log.logId}"></td>
+                    <td th:text="${project != null} ? ${project.dsgnDntnBizTtl} : ''"></td>
+                    <!-- 최초 등록 로그는 승인 전 상태가 없다(AS-IS도 빈 칸) -->
+                    <td th:text="${log.beforeStatusCode != null} ? ${statusLabels.getOrDefault(log.beforeStatusCode, log.beforeStatusCode)} : ''"></td>
+                    <td th:text="${statusLabels.getOrDefault(log.afterStatusCode, log.afterStatusCode)}"></td>
+                    <td th:text="${log.frstRgtrId != null} ? ${registerNames.get(log.frstRgtrId)} : ''"></td>
+                    <td th:text="${log.frstRegistPnttm}"></td>
+                </tr>
+                <tr class="no_content" th:if="${#lists.isEmpty(logs)}">
+                    <td colspan="13">승인 이력이 없습니다.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div><!-- // board_write -->
+
+        <p class="popup_btns">
+            <button type="button" class="btn btn-active" onclick="javascript:self.close();">확인</button>
+        </p>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>특정사업에 기부하기 미리보기 - 고향사랑e음</title>
+    <link rel="icon" th:href="@{/content/images/common/favicon.ico}">
+    <!-- AS-IS preview.jsp 가 거는 프런트 CSS 그대로(관리자 CSS가 아니다 - 대민 화면을 그대로 띄우는 화면이라서). -->
+    <link rel="stylesheet" th:href="@{/content/modules/front/bootstrap/bootstrap.css}">
+    <link rel="stylesheet" th:href="@{/content/opmanager/css/swiper.min.css}">
+    <link rel="stylesheet" th:href="@{/content/opmanager/css/front/common.css}">
+    <link rel="stylesheet" th:href="@{/content/opmanager/css/front/default_ali.css}">
+    <link rel="stylesheet" th:href="@{/content/opmanager/css/front/item.css}">
+    <link rel="stylesheet" th:href="@{/content/opmanager/css/front/designation.css}">
+    <!-- AS-IS preview.jsp 끝의 <style scoped> 그대로. 공용 CSS만으로는 탭 폭·높이·가운데 정렬이
+         맞지 않고, 마지막 규칙이 없으면 스티키로 바뀌는 순간 본문이 탭 밑으로 숨는다. -->
+    <style>
+        .item_tab .nav-tabs { justify-content: center; }
+        .nav-justified .nav-item { flex-basis: unset; flex-grow: unset; width: 20%; }
+        .item_tab .nav-link .txt {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 70px;
+            padding: 0;
+        }
+        .item_tab.prj_tab.sticky + .tab_container .tab-content > .tab-pane { padding-top: 190px; }
+    </style>
+</head>
+<!-- AS-IS opmanager/designated-donation/preview.jsp 이식(2026-10-08 실화면 대조).
+     목록(17101)의 [미리보기]가 openPreview(prjId) -> Common.popup(..., 1600x800) 으로 띄운다.
+
+     이 화면은 "대민에 이렇게 보인다"를 확인하는 용도라, 데이터도 관리자 API가 아니라
+     대민 상세 API(/api/designated-donation/projects/{id})를 그대로 쓴다.
+
+     AS-IS 실화면에서 확인한 구성:
+       1) 브레드크럼  🏠 > 기부하기 > 특정사업에 기부하기
+       2) 상단 2단    이미지 캐러셀(메인+썸네일+좌우화살표) | 정보패널
+       3) 정보패널    지자체 · 사업명 · 기간 · 기부총액 · 게이지 · 달성률 · D-N ·
+                      목표금액 · 기부참여 · 안내문구 · [기부하기]
+       4) 스티키바    스크롤하면 게이지+달성률+D-N+기부총액+[기부하기]가 상단에 붙는다
+       5) 탭 3개      사업소개 / 응원메시지(기부내역) / 공지사항
+       6) 사업소개    .total_top>p.total "사업 소개" + .detailContent>.sampleContents>p.pointGray
+       7) 응원메시지  고향이 말풍선("총 N건이 기부되었습니다.")은 **이 탭** 안에 있다(사업소개 아님) +
+                      기부내역 {금액}원 참여 | 이름마스킹 | 아이디마스킹 | 날짜
+       8) 공지사항    "공지사항 N" + 아코디언(제목 | 작성자 | ∨)
+       9) [목록 페이지] 버튼
+
+     ★ AS-IS는 Vue로 탭/페이징을 돌리지만 미리보기는 "보기 전용"이라 서버가 한 번에 그린다
+       (AS-IS도 세 탭 내용을 한 페이지에 쌓아 두고 탭으로 스크롤/토글만 한다).
+     ★ [기부하기]는 미리보기에서 눌러도 실제 기부로 가면 안 된다 - AS-IS도 운영자 화면이라
+       동작하지 않는다. 안내만 띄운다. -->
+<body class="prj_preview">
+
+<div class="center" style="padding-top:20px;">
+    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}"
+       style="color:#c0392b; padding:40px; text-align:center;"></p>
+</div>
+
+<th:block th:if="${detail != null}">
+<!-- 1) 브레드크럼 -->
+<div class="center">
+    <div class="location_wrap" style="padding:20px 0;">
+        <a href="javascript:;"><img th:src="@{/content/opmanager/images/items/cli-icon_home.png}" alt="홈으로" class="icon-img"></a>
+        <span> &gt; </span><a href="javascript:;">기부하기</a>
+        <span> &gt; </span><a href="javascript:;">특정사업에 기부하기</a>
+    </div>
+</div>
+
+<!-- 2) 상단 - 이미지 + 정보 -->
+<section class="center prj_details" id="contents" style="padding-top:0px">
+    <div class="goods_view_top prj">
+        <div class="prj_img">
+            <div class="target_img">
+                <div class="swiper-container" id="mainSwiper">
+                    <div class="swiper-wrapper">
+                        <div class="swiper-slide" th:each="img : ${images}">
+                            <img th:src="${donationBaseUrl} + ${img.imageUrl}" alt="">
+                        </div>
+                        <!-- 멀티 이미지가 없으면 대표이미지 한 장으로 캐러셀을 채운다 -->
+                        <div class="swiper-slide" th:if="${#lists.isEmpty(images)} and ${detail.imageUrl != null}">
+                            <img th:src="${donationBaseUrl} + ${detail.imageUrl}" alt="">
+                        </div>
+                    </div>
+                    <div class="swiper-button-prev pc main-button-prev"><span class="screen_out">이전 특정사업에 기부하기 이미지 보기</span></div>
+                    <div class="swiper-button-next pc main-button-next"><span class="screen_out">다음 특정사업에 기부하기 이미지 보기</span></div>
+                    <div class="swiper-pagination"></div>
+                </div>
+            </div>
+            <div class="thumb_box">
+                <button type="button" class="swiper-button-prev thumb-button-prev">
+                    <img th:src="@{/content/opmanager/images/items/thumb_arrow-prev.png}" alt="이전 특정사업에 기부하기 이미지 보기">
+                </button>
+                <div class="swiper-container thumb_area d-lg-block" id="mainThumbSwiper">
+                    <div class="swiper-wrapper">
+                        <div class="swiper-slide" th:each="img : ${images}">
+                            <button type="button" class="cursor swiper_img"><img th:src="${donationBaseUrl} + ${img.imageUrl}" alt=""></button>
+                        </div>
+                        <div class="swiper-slide" th:if="${#lists.isEmpty(images)} and ${detail.imageUrl != null}">
+                            <button type="button" class="cursor swiper_img"><img th:src="${donationBaseUrl} + ${detail.imageUrl}" alt=""></button>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="swiper-button-next thumb-button-next">
+                    <img th:src="@{/content/opmanager/images/items/thumb_arrow-next.png}" alt="다음 특정사업에 기부하기 이미지 보기">
+                </button>
+            </div>
+        </div>
+
+        <div class="goods_info prj_info">
+            <div class="info_box">
+                <div class="prj_progress">
+                    <div class="brand_mall d_area">
+                        <img th:src="@{/content/opmanager/images/items/d-area.png}" alt="지역 위치 모양 마커">
+                        <span th:text="${detail.locgovName}"></span>
+                        <div class="info_title">
+                            <h2 th:text="${detail.dsgnDntnBizTtl}"></h2>
+                            <p class="s-txt" th:text="${detail.periodText}"></p>
+                        </div>
+                    </div>
+                    <div class="donation_amount">
+                        <span class="txt">기부총액 </span>
+                        <span class="pointblue">
+                            <strong th:text="${#numbers.formatInteger(detail.raisedAmount, 1, 'COMMA')}">0</strong> 원
+                        </span>
+                    </div>
+                    <div class="prj_progress">
+                        <div class="prj_gauge">
+                            <div class="gauge_back">
+                                <div th:class="'gauge_result ' + ${detail.gaugeClass}"
+                                     th:style="'width:' + ${detail.rate} + '%'"></div>
+                            </div>
+                        </div>
+                        <div class="inner_wrap">
+                            <div class="prj_gaugePer">
+                                <img th:src="@{/content/opmanager/images/items/cli-icon_btn-donation2.png}" alt="초과달성"
+                                     th:if="${detail.overGoal}">
+                                <span class="perNum" th:text="${detail.rate}">0.0</span>%
+                            </div>
+                            <div class="on prj_status" th:text="'D-' + ${stat.leftDays}">D-0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info_row etc nomargin">
+                    <div class="line top-nomargin"></div>
+                    <div class="shop_info">
+                        <div class="title_col"><p>목표금액</p></div>
+                        <div class="para_col">
+                            <p class="txt" th:text="${#numbers.formatInteger(detail.goalAmt, 1, 'COMMA')} + ' 원'">0 원</p>
+                        </div>
+                    </div>
+                    <div class="shop_info">
+                        <div class="title_col"><p>기부참여</p></div>
+                        <div class="para_col"><p class="txt" th:text="${detail.participantCount} + ' 명'">0 명</p></div>
+                    </div>
+                    <div class="line bt-nomargin"></div>
+                </div>
+
+                <p class="txt">특정사업에 기부하기는 지역이 가진 문제를 해결하기 위해 고향사랑기부제를 프로젝트화하고 그 취지에 공감하는 특정사업을 직접 선택하여 기부할 수 있습니다.</p>
+
+                <div class="prj_donation-btns">
+                    <button class="formBtn donation" type="button" id="donationBtn">
+                        <img th:src="@{/content/opmanager/images/items/cli-icon_btn-donation2.png}" alt="하트와 월계수"><span>기부하기</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 4)5) 스티키 바 + 탭 -->
+<section>
+    <div class="item_tab prj_tab" id="item_tab_wrap">
+        <div class="sticky-prj_info">
+            <div class="center">
+                <div class="prj_progress_wrap prj_details">
+                    <div class="prj_progress">
+                        <div class="prj_gauge">
+                            <div class="gauge_back">
+                                <div th:class="'gauge_result ' + ${detail.gaugeClass}"
+                                     th:style="'width:' + ${detail.rate} + '%'"></div>
+                            </div>
+                        </div>
+                        <!-- AS-IS 스티키 바는 inner_wrap 에 달성률·D-N 만 넣고, 기부총액은 prj_progress 의
+                             "형제"로 둔다(상단 정보패널과 구조가 다르다). 안에 같이 넣으면 간격이 붙어
+                             D-N 배지가 % 에 겹친다. -->
+                        <div class="inner_wrap">
+                            <div class="prj_gaugePer">
+                                <span class="perNum" th:text="${detail.rate}">0.0</span>%
+                            </div>
+                            <div class="prj_status on" th:text="'D-' + ${stat.leftDays}">D-0</div>
+                        </div>
+                    </div>
+                    <div class="donation_amount">
+                        <span class="txt">기부총액 </span>
+                        <span class="pointblue">
+                            <strong th:text="${#numbers.formatInteger(detail.raisedAmount, 1, 'COMMA')}">0</strong> 원
+                        </span>
+                    </div>
+                    <!-- AS-IS는 스티키 바에서 버튼을 prj_donation-btns 로 감싸지 않고 바로 둔다. -->
+                    <button class="formBtn donation" type="button" id="tabDonationBtn">
+                        <img th:src="@{/content/opmanager/images/items/cli-icon_btn-donation2.png}" alt=""><span>기부하기</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <ul class="nav nav-tabs nav-justified">
+            <li class="nav-item"><a href="#nav-detail" class="nav-link active"><span class="txt">사업소개</span></a></li>
+            <li class="nav-item"><a href="#nav-review" class="nav-link"><span class="txt">응원메시지<br>(기부내역)</span></a></li>
+            <li class="nav-item"><a href="#nav-qna" class="nav-link"><span class="txt">공지사항</span></a></li>
+        </ul>
+    </div>
+
+    <div class="center tab_container">
+    <div class="tab-content item_view">
+        <!-- AS-IS 구조 그대로 - tab-pane 안에 item_* 래퍼가 따로 있고, 제목은 h3 가 아니라
+             .total_top > p.total 이다(폰트·크기·굵기가 전부 거기서 나온다). -->
+
+        <!-- 6) 사업소개 -->
+        <div class="tab-pane show active" id="nav-detail">
+            <div class="item_detail">
+                <div class="total_top">
+                    <p class="total">사업 소개<span class="pointblue"></span></p>
+                </div>
+                <div class="detailContent">
+                    <div class="sampleContents">
+                        <p class="pointGray" th:utext="${detail.dsgnDntnBizCn}"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7) 응원메시지(기부내역)
+             ★ 고향이 말풍선은 사업소개가 아니라 "이 탭" 안에 있다(AS-IS 확인). -->
+        <div class="tab-pane" id="nav-review">
+            <div class="item_review">
+                <div class="total_top"></div>
+                <div class="total-noti-wrap">
+                    <div class="noti_wrap">
+                        <div class="noti-box">
+                            <div class="noti_txt"
+                                 th:text="'&quot;총 ' + ${detail.participantCount} + '건이 기부되었습니다.&quot;'">"총 0건이 기부되었습니다."</div>
+                        </div>
+                        <img th:src="@{/content/opmanager/images/items/dsg-donation_gohyangee.png}" alt="고향이" class="gohyangee">
+                    </div>
+                </div>
+
+                <div class="list_wrap review_list">
+                    <ul>
+                        <li class="list_area" th:each="c : ${detail.cheerMessages}">
+                            <div class="review_open">
+                                <div class="list_top">
+                                    <div class="review_para" style="width: 70%">
+                                        <p class="prj-tab-list_point-txt">
+                                            <strong class="pointRed"
+                                                    th:text="${#numbers.formatInteger(c.cntrAmt, 1, 'COMMA')}">0</strong>원 참여
+                                        </p>
+                                    </div>
+                                    <div class="review_para"
+                                         style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding-right: 0px">
+                                        <div><p style="white-space: normal" th:text="${c.cheerMsg}"></p></div>
+                                    </div>
+                                    <div class="m-field" style="min-width: 30%">
+                                        <div class="review_id"><p th:text="${c.maskedUserName}"></p></div>
+                                        <div class="review_id"><p th:text="${c.maskedLoginId}"></p></div>
+                                        <div class="review_date"><p th:text="${c.cntrDeFormatted}"></p></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                    <div class="list-none" th:if="${#lists.isEmpty(detail.cheerMessages)}">
+                        <img th:src="@{/content/opmanager/images/items/non-list.png}" alt="기부내역이 없음">
+                        <p>기부내역이 없습니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 8) 공지사항 -->
+        <div class="tab-pane" id="nav-qna">
+            <div class="item_qna">
+                <div class="total_top">
+                    <p class="total">공지사항 <span class="pointblue" th:text="${#lists.size(detail.notices)}">0</span></p>
+                </div>
+                <div class="list_wrap qna_list">
+                    <ul>
+                        <!-- AS-IS 아코디언 구조 그대로: button.dropdown-toggle > .header-faq 안에
+                             .faq_txt(제목, 왼쪽) + .col_group(오른쪽, position:absolute). flex 로
+                             흉내 내면 위치가 안 맞는다 - 오른쪽 칸은 absolute 로 띄우는 구조다.
+                             ※ AS-IS는 오른쪽에 "작성자"를 찍는데 대민 상세 API 응답에 작성자가 없어
+                               등록일을 둔다(작성자를 넣으려면 donation NoticeDto 확장이 필요). -->
+                        <li class="list_top dropdown cursor" th:each="n : ${detail.notices}" accordion-option="toggle">
+                            <button type="button" aria-level="2" class="dropdown-toggle" data-toggle="dropdown">
+                                <div class="header-faq">
+                                    <div class="faq_txt" style="white-space: normal; padding-right: 70px"
+                                         th:text="${n.prjNoticeSubject}"></div>
+                                    <div class="col_group" style="right: 50px; position: absolute">
+                                        <div th:text="${n.dateText}"></div>
+                                    </div>
+                                </div>
+                            </button>
+                            <div class="dropdown-menu" role="region" style="z-index: 500">
+                                <div tabindex="0" class="notice-wrap">
+                                    <div class="header-faq">
+                                        <div class="faq_txt" style="white-space: normal" th:utext="${n.prjNoticeCn}"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                    <div class="list-none" th:if="${#lists.isEmpty(detail.notices)}">
+                        <img th:src="@{/content/opmanager/images/items/non-list.png}" alt="">
+                        <p>게시글이 없습니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+</section>
+
+<!-- 9) 목록 페이지 - AS-IS 마크업 그대로(.btn-box many mb_b60 > button.blueBtn.u-confirm).
+     인라인 style 로 흉내 내지 않는다 - 가운데 정렬·버튼 모양이 전부 저 클래스에서 나온다.
+     버튼 안의 &nbsp; 떡칠도 AS-IS 원문 그대로다(그게 버튼 폭을 만든다). -->
+<div class="center" style="margin-top: 100px">
+    <div class="btn-box many mb_b60">
+        <button type="button" title="특정사업에 기부하기 목록으로 이동" class="blueBtn u-confirm"
+                onclick="javascript:self.close();">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 목록 페이지 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</button>
+    </div>
+</div>
+</th:block>
+
+<script th:src="@{/content/modules/jquery/jquery-1.11.0.min.js}"></script>
+<script th:inline="none">
+/* 미리보기는 "보기 전용"이다 - AS-IS 운영자 화면에서도 실제 기부로 넘어가지 않는다. */
+document.addEventListener('DOMContentLoaded', function () {
+	['donationBtn', 'tabDonationBtn'].forEach(function (id) {
+		var el = document.getElementById(id);
+		if (el) { el.addEventListener('click', function () { alert('미리보기 화면에서는 기부할 수 없습니다.'); }); }
+	});
+
+	/* 탭 클릭 시 해당 영역으로 이동 + 선택 표시(AS-IS는 Vue가 하던 것). */
+	/* AS-IS preview.jsp 의 window.onscroll + myFunction 그대로 - 탭 묶음(#item_tab_wrap)이
+	   화면 상단에 닿으면 sticky 클래스를 붙여 게이지·달성률·D-N·기부총액·[기부하기]를 고정한다.
+	   offsetTop 은 sticky 가 붙기 전에 재야 한다(붙은 뒤엔 0이 돼 계속 붙어 있게 된다). */
+	var itemTab = document.getElementById('item_tab_wrap');
+	if (itemTab) {
+		var stickyTop = itemTab.offsetTop - 30;
+		window.onscroll = function () {
+			if (window.pageYOffset >= stickyTop) {
+				itemTab.classList.add('sticky');
+			} else {
+				itemTab.classList.remove('sticky');
+			}
+		};
+	}
+
+	var links = document.querySelectorAll('.nav-tabs .nav-link');
+	links.forEach(function (a) {
+		a.addEventListener('click', function (e) {
+			e.preventDefault();
+			links.forEach(function (x) { x.classList.remove('active'); });
+			a.classList.add('active');
+			var target = document.querySelector(a.getAttribute('href'));
+			if (target) { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+		});
+	});
+});
+</script>
+</body>
+</html>

@@ -53,6 +53,8 @@ public class DesignatedProjectAdminController {
     private final DesignatedProjectClient designatedProjectClient;
     private final com.ghlove.admin.web.support.FlashRedirect flashRedirect;
     private final LocgovClient locgovClient;
+    private final com.ghlove.admin.service.CommonCodeService commonCodeService;
+    private final com.ghlove.admin.repository.ManagerRepository managerRepository;
 
     /**
      * AS-IS GET·POST {@code designated-donation/list} - 특정사업 목록(메뉴 17101).
@@ -105,7 +107,7 @@ public class DesignatedProjectAdminController {
         model.addAttribute("projectCount", totalCount);
         model.addAttribute("pagination", Pagination.of(totalCount, currentPage, size));
         model.addAttribute("statusLabels", statusLabels());
-        model.addAttribute("bsnsTypes", designatedProjectClient.codesOf("DSGN_BSNS_TYPE"));
+        model.addAttribute("bsnsTypes", bsnsTypes());
         model.addAttribute("provinces", provinces());
         model.addAttribute("allLocgovs", locgovClient.allLocgovs());
         model.addAttribute("locgovScoped", locgovScoped);
@@ -183,14 +185,13 @@ public class DesignatedProjectAdminController {
         }
         model.addAttribute("project", project);
         commonFormAttrs(model, id, manager);
-        model.addAttribute("notices", designatedProjectClient.noticesOf(id));
-        model.addAttribute("approvalLog", designatedProjectClient.approvalLogOf(id));
         return "designated/form";
     }
 
     private void commonFormAttrs(Model model, Long id, Manager manager) {
         model.addAttribute("statusLabels", statusLabels());
-        model.addAttribute("bsnsTypes", designatedProjectClient.codesOf("DSGN_BSNS_TYPE"));
+        model.addAttribute("bsnsTypes", bsnsTypes());
+        model.addAttribute("bsnsSubTypes", bsnsSubTypes());
         model.addAttribute("provinces", provinces());
         model.addAttribute("allLocgovs", locgovClient.allLocgovs());
         // 지자체담당자는 자기 지자체 부서만 고르게 한다(AS-IS도 지자체를 못 바꾼다)
@@ -205,15 +206,142 @@ public class DesignatedProjectAdminController {
         if (id != null) {
             model.addAttribute("stat", designatedProjectClient.statOf(id));
         }
+        // AS-IS prjImages - 올라간 이미지 썸네일(순번 + x 삭제). 등록 화면에서는 아직 없다.
+        model.addAttribute("projectImages",
+                id != null ? designatedProjectClient.imagesOf(id) : java.util.List.of());
+    }
+
+    /**
+     * AS-IS 목록(17101)의 [공지사항] - {@code /opmanager/designated-donation/list/notice/{prjId}}.
+     * 팝업이 아니라 <b>페이지 이동</b>이다(AS-IS도 {@code <a href>}).
+     *
+     * <p>AS-IS 목록 화면은 제목 검색 + 표(체크박스/ID/제목/공개여부) + 일괄 공개·비공개 +
+     * 신규등록 + "특정사업에 기부하기 목록" 버튼이다. TO-BE 공지 표에는 <b>공개여부 칸이 없어</b>
+     * 그 열과 일괄 버튼은 아직 못 만든다(경위는 템플릿 주석 참고).
+     */
+    @GetMapping("/designated-projects/{id}/notices")
+    public String noticeList(@PathVariable Long id, @RequestParam(required = false) String query,
+                              @RequestParam(required = false, defaultValue = "1") int page,
+                              @RequestParam(required = false, defaultValue = "10") int itemsPerPage,
+                              HttpSession session, Model model) {
+        manager(session);
+        model.addAttribute("project", designatedProjectClient.get(id));
+        model.addAttribute("projectId", id);
+        List<DesignatedProjectClient.Notice> notices = designatedProjectClient.noticesOf(id);
+        // AS-IS 매퍼: DSGN_DNTN_BIZ_NTC_TTL LIKE '%키워드%'
+        if (query != null && !query.isBlank()) {
+            String keyword = query.trim();
+            notices = notices.stream()
+                    .filter(n -> n.prjNoticeSubject() != null && n.prjNoticeSubject().contains(keyword))
+                    .toList();
+        }
+        // AS-IS 출력수는 10/50/100/200/500 이고 목록 위에 "총 N 건"이 붙는다.
+        int size = itemsPerPage <= 0 ? 10 : itemsPerPage;
+        int totalCount = notices.size();
+        int totalPages = (int) Math.ceil(totalCount / (double) size);
+        int currentPage = Math.max(1, Math.min(page, Math.max(totalPages, 1)));
+        int from = Math.min((currentPage - 1) * size, totalCount);
+        int to = Math.min(from + size, totalCount);
+        model.addAttribute("notices", notices.subList(from, to));
+        model.addAttribute("noticeCount", totalCount);
+        model.addAttribute("pagination", Pagination.of(totalCount, currentPage, size));
+        model.addAttribute("itemsPerPage", size);
+        model.addAttribute("query", query);
+        return "designated/notice-list";
+    }
+
+    /** AS-IS {@code /notice/form/{prjId}/{noticeId}} - noticeId 가 0이면 신규등록이다. */
+    @GetMapping("/designated-projects/{id}/notices/form")
+    public String noticeForm(@PathVariable Long id, @RequestParam(required = false) Long noticeId,
+                              HttpSession session, Model model) {
+        manager(session);
+        model.addAttribute("project", designatedProjectClient.get(id));
+        model.addAttribute("projectId", id);
+        DesignatedProjectClient.Notice target = null;
+        if (noticeId != null && noticeId != 0L) {
+            target = designatedProjectClient.noticesOf(id).stream()
+                    .filter(n -> noticeId.equals(n.prjNoticeId()))
+                    .findFirst().orElse(null);
+        }
+        model.addAttribute("notice", target);
+        // AS-IS 폼의 "파일 첨부" 표와 에디터 아래 "이미지 설명" 표.
+        model.addAttribute("noticeFiles",
+                target != null ? designatedProjectClient.noticeFilesOf(target.prjNoticeId()) : java.util.List.of());
+        model.addAttribute("imgExplns",
+                target != null ? designatedProjectClient.noticeImgExplnsOf(target.prjNoticeId()) : java.util.List.of());
+        return "designated/notice-form";
+    }
+
+    /**
+     * AS-IS 목록의 [미리보기] - {@code openPreview(prjId)} 가
+     * {@code Common.popup('/opmanager/designated-donation/preview?prjId=', "preview", 1600, 800)} 로 띄운다.
+     *
+     * <p>"대민에 이렇게 보인다"를 확인하는 화면이라 관리자 API가 아니라 <b>대민 상세 API</b>를
+     * 그대로 호출한다 - 공개 규칙(비공개 공지 제외 등)이 저절로 같아진다. 남은 일수(D-N)만
+     * 관리자 집계({@code statOf})에서 가져오고, 캐러셀은 멀티 이미지 목록을 쓴다.
+     */
+    @GetMapping("/designated-projects/{id}/preview")
+    public String preview(@PathVariable Long id, HttpSession session, Model model) {
+        manager(session);
+        DesignatedProjectClient.PublicDetail detail = designatedProjectClient.publicDetail(id);
+        if (detail == null) {
+            model.addAttribute("errorMessage", "미리보기할 사업을 찾을 수 없습니다.");
+        }
+        model.addAttribute("detail", detail);
+        model.addAttribute("projectId", id);
+        model.addAttribute("stat", designatedProjectClient.statOf(id));
+        // 대표이미지 1장만 있는 사업도 있으므로, 멀티 이미지가 없으면 대표이미지로 캐러셀을 채운다.
+        List<DesignatedProjectClient.ProjectImage> images = designatedProjectClient.imagesOf(id);
+        model.addAttribute("images", images);
+        // donation 이 서빙하는 업로드 경로라 호스트를 앞에 붙여야 admin 화면에서 보인다.
+        model.addAttribute("donationBaseUrl", designatedProjectClient.getDonationBaseUrl());
+        return "designated/preview";
+    }
+
+    /**
+     * AS-IS 목록의 [승인이력] - {@code showLog(prjId)} 가
+     * {@code /opmanager/designated-donation/popup-confirm-log/{prjId}} 를 window.open 하는 팝업이다
+     * (1510x700). 표는 로그아이디·사업명·승인 전 상태·승인 후 상태·승인자·승인일시.
+     *
+     * <p>승인자는 AS-IS가 이름({@code registerName})을 찍는데 donation은 관리자 id만 내려주므로,
+     * op_manager 를 가진 admin 이 이름을 붙인다(ManagerRequestController 의 updaterLabels 와 같은 방식).
+     */
+    @GetMapping("/designated-projects/{id}/approval-log")
+    public String approvalLogPopup(@PathVariable Long id, HttpSession session, Model model) {
+        manager(session);
+        model.addAttribute("project", designatedProjectClient.get(id));
+        List<DesignatedProjectClient.ApprovalLog> logs = designatedProjectClient.approvalLogOf(id);
+        model.addAttribute("logs", logs);
+        model.addAttribute("statusLabels", statusLabels());
+        java.util.Map<Long, String> registerNames = new java.util.LinkedHashMap<>();
+        for (DesignatedProjectClient.ApprovalLog log : logs) {
+            Long rgtrId = log.frstRgtrId();
+            if (rgtrId == null || registerNames.containsKey(rgtrId)) {
+                continue;
+            }
+            managerRepository.findById(rgtrId)
+                    .ifPresent(m -> registerNames.put(rgtrId, m.getUserName()));
+        }
+        model.addAttribute("registerNames", registerNames);
+        return "designated/approval-log-popup";
+    }
+
+    /** AS-IS 썸네일의 x(deleteDsgncntrPrjImageId) - 한 장만 지우고 수정 화면으로 돌아온다. */
+    @PostMapping("/designated-projects/{id}/images/{imageId}/delete")
+    public String deleteImage(@PathVariable Long id, @PathVariable Long imageId, HttpSession session) {
+        manager(session);
+        designatedProjectClient.deleteImage(imageId);
+        return "redirect:/designated-projects/" + id;
     }
 
     @PostMapping("/designated-projects")
     public String create(@ModelAttribute DesignatedProjectClient.ProjectForm form,
                           @RequestParam(required = false) MultipartFile image,
+                          @RequestParam(required = false) List<MultipartFile> images,
                           HttpSession session, Model model) {
         Manager manager = manager(session);
         try {
-            designatedProjectClient.create(toYmd(forceOwnLocgov(form, manager)), image, canSelfApprove(manager), manager.getUserId());
+            designatedProjectClient.create(toYmd(forceOwnLocgov(form, manager)), image, images, canSelfApprove(manager), manager.getUserId());
             return "redirect:/designated-projects";
         } catch (ManagerException e) {
             model.addAttribute("errorMessage", e.getMessage());
@@ -226,6 +354,7 @@ public class DesignatedProjectAdminController {
     @PostMapping("/designated-projects/{id}")
     public String update(@PathVariable Long id, @ModelAttribute DesignatedProjectClient.ProjectForm form,
                           @RequestParam(required = false) MultipartFile image,
+                          @RequestParam(required = false) List<MultipartFile> images,
                           HttpSession session, Model model) {
         Manager manager = manager(session);
         if (MenuService.isLocgovScoped(manager)) {
@@ -238,14 +367,12 @@ public class DesignatedProjectAdminController {
             }
         }
         try {
-            designatedProjectClient.update(id, toYmd(forceOwnLocgov(form, manager)), image, canSelfApprove(manager), manager.getUserId());
+            designatedProjectClient.update(id, toYmd(forceOwnLocgov(form, manager)), image, images, canSelfApprove(manager), manager.getUserId());
             return "redirect:/designated-projects/" + id;
         } catch (ManagerException e) {
             model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute("project", form);
             commonFormAttrs(model, id, manager);
-            model.addAttribute("notices", designatedProjectClient.noticesOf(id));
-            model.addAttribute("approvalLog", designatedProjectClient.approvalLogOf(id));
             return "designated/form";
         }
     }
@@ -274,24 +401,54 @@ public class DesignatedProjectAdminController {
                 form.rlsYn(), manager.getLocgovCode(), form.dsgnDntnBizSeCd(), form.bsnsSubType(),
                 form.contentEtc(), form.deptId());
     }
-
+    /** AS-IS 공지 등록 - 제목·공개여부·첨부·이미지설명을 한 번에 저장한다. */
     @PostMapping("/designated-projects/{id}/notices")
-    public String createNotice(@PathVariable Long id, @RequestParam String subject, @RequestParam String content) {
-        designatedProjectClient.createNotice(id, subject, content);
-        return "redirect:/designated-projects/" + id;
+    public String createNotice(@PathVariable Long id, @RequestParam String subject,
+                                @RequestParam(required = false) String content,
+                                @RequestParam(required = false) String rlsYn,
+                                @RequestParam(required = false) List<MultipartFile> files,
+                                @RequestParam(required = false) List<String> imgExplns,
+                                HttpSession session) {
+        Manager manager = manager(session);
+        designatedProjectClient.createNotice(id, subject, content, rlsYn, files, imgExplns, manager.getUserId());
+        return "redirect:/designated-projects/" + id + "/notices";
     }
 
     @PostMapping("/designated-projects/{id}/notices/{noticeId}/update")
     public String updateNotice(@PathVariable Long id, @PathVariable Long noticeId,
-                                @RequestParam String subject, @RequestParam String content) {
-        designatedProjectClient.updateNotice(noticeId, subject, content);
-        return "redirect:/designated-projects/" + id;
+                                @RequestParam String subject,
+                                @RequestParam(required = false) String content,
+                                @RequestParam(required = false) String rlsYn,
+                                @RequestParam(required = false) List<MultipartFile> files,
+                                @RequestParam(required = false) List<String> imgExplns,
+                                HttpSession session) {
+        Manager manager = manager(session);
+        designatedProjectClient.updateNotice(noticeId, subject, content, rlsYn, files, imgExplns, manager.getUserId());
+        return "redirect:/designated-projects/" + id + "/notices";
     }
 
     @PostMapping("/designated-projects/{id}/notices/{noticeId}/delete")
     public String deleteNotice(@PathVariable Long id, @PathVariable Long noticeId) {
         designatedProjectClient.deleteNotice(noticeId);
-        return "redirect:/designated-projects/" + id;
+        return "redirect:/designated-projects/" + id + "/notices";
+    }
+
+    /** AS-IS 목록 하단 [공개]/[비공개] - 체크한 공지들의 공개여부를 한 번에 바꾼다. */
+    @PostMapping("/designated-projects/{id}/notices/display")
+    public String updateNoticeDisplay(@PathVariable Long id,
+                                       @RequestParam(required = false) List<Long> noticeIds,
+                                       @RequestParam String rlsYn, HttpSession session) {
+        Manager manager = manager(session);
+        designatedProjectClient.updateNoticeDisplay(noticeIds, rlsYn, manager.getUserId());
+        return "redirect:/designated-projects/" + id + "/notices";
+    }
+
+    /** AS-IS 첨부 옆 x - 한 개만 지우고 폼으로 돌아온다. */
+    @PostMapping("/designated-projects/{id}/notices/{noticeId}/files/{fileSeq}/delete")
+    public String deleteNoticeFile(@PathVariable Long id, @PathVariable Long noticeId,
+                                    @PathVariable Integer fileSeq) {
+        designatedProjectClient.deleteNoticeFile(noticeId, fileSeq);
+        return "redirect:/designated-projects/" + id + "/notices/form?noticeId=" + noticeId;
     }
 
     @GetMapping("/designated-projects/analysis")
@@ -309,8 +466,39 @@ public class DesignatedProjectAdminController {
     }
 
     // ---- 지자체별 통계 - AS-IS designated-donation/analysis/locgov 재현(차트 없는 서버렌더 표+요약) ----
+    //
+    // AS-IS는 같은 URL에 GET/POST 두 핸들러를 두고 동작이 다르다(DesignatedDonationManagerController
+    // #locgovStat / #searchLocgovStat). GET(최초 진입·초기화)은 조회를 "하지 않고" count=0,
+    // list=EMPTY, summaryData=빈 객체로 화면만 그린다 - 그래서 안내문이 "검색 버튼을 클릭하면
+    // 조건에 맞는 검색결과를 확인할 수 있습니다."다. 실제 집계는 POST에서만 돈다.
+    // 기간은 두 핸들러 모두 빈값이면 오늘(yyyyMMdd)로 채운다.
 
     @GetMapping("/designated-projects/analysis/locgov")
+    public String analysisLocgovForm(HttpSession session,
+            @RequestParam(required = false, defaultValue = "") String shWdr,
+            @RequestParam(required = false, defaultValue = "") String shLocgovCode,
+            @RequestParam(required = false, defaultValue = "") String bsnsType,
+            @RequestParam(required = false, defaultValue = "") String frDt,
+            @RequestParam(required = false, defaultValue = "") String toDt,
+            @RequestParam(required = false, defaultValue = "0") String prjStatus,
+            @RequestParam(required = false, defaultValue = "10") int itemsPerPage,
+            Model model) {
+        Manager manager = manager(session);
+        boolean scoped = MenuService.isLocgovScoped(manager);
+        int size = itemsPerPage <= 0 ? 10 : itemsPerPage;
+
+        model.addAttribute("summary", new DesignatedProjectClient.LocgovStatSummary(0, 0, 0f, 0));
+        model.addAttribute("rows", List.of());
+        model.addAttribute("startNo", 0);
+        model.addAttribute("total", 0);
+        model.addAttribute("totalPages", 1);
+        model.addAttribute("page", 1);
+        model.addAttribute("itemsPerPage", size);
+        locgovStatForm(model, scoped, shWdr, shLocgovCode, bsnsType, frDt, toDt, prjStatus);
+        return "designated/analysis-locgov";
+    }
+
+    @PostMapping("/designated-projects/analysis/locgov")
     public String analysisLocgov(HttpSession session,
             @RequestParam(required = false, defaultValue = "") String shWdr,
             @RequestParam(required = false, defaultValue = "") String shLocgovCode,
@@ -325,11 +513,13 @@ public class DesignatedProjectAdminController {
         boolean scoped = MenuService.isLocgovScoped(manager);
         String effWdr = scoped ? "" : shWdr;
         String effLocgov = scoped ? manager.getLocgovCode() : shLocgovCode;
+        String effFrDt = orToday(frDt);
+        String effToDt = orToday(toDt);
 
         DesignatedProjectClient.LocgovStatSummary summary =
-                designatedProjectClient.locgovStatSummary(effWdr, effLocgov, bsnsType, frDt, toDt, prjStatus);
+                designatedProjectClient.locgovStatSummary(effWdr, effLocgov, bsnsType, effFrDt, effToDt, prjStatus);
         List<DesignatedProjectClient.LocgovStatRow> all =
-                designatedProjectClient.locgovStatList(effWdr, effLocgov, bsnsType, frDt, toDt, prjStatus);
+                designatedProjectClient.locgovStatList(effWdr, effLocgov, bsnsType, effFrDt, effToDt, prjStatus);
 
         int total = all.size();
         int size = itemsPerPage <= 0 ? 10 : itemsPerPage;
@@ -346,17 +536,31 @@ public class DesignatedProjectAdminController {
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("page", cur);
         model.addAttribute("itemsPerPage", size);
+        locgovStatForm(model, scoped, shWdr, shLocgovCode, bsnsType, effFrDt, effToDt, prjStatus);
+        return "designated/analysis-locgov";
+    }
+
+    /** 지자체별통계 검색폼에 필요한 모델(선택목록 + 검색조건 되돌리기). GET/POST 공통. */
+    private void locgovStatForm(Model model, boolean scoped, String shWdr, String shLocgovCode,
+            String bsnsType, String frDt, String toDt, String prjStatus) {
         model.addAttribute("scoped", scoped);
         model.addAttribute("provinces", provinces());
         model.addAttribute("allLocgovs", locgovClient.allLocgovs());
-        model.addAttribute("bsnsTypes", designatedProjectClient.codesOf("DSGN_BSNS_TYPE"));
+        model.addAttribute("bsnsTypes", bsnsTypes());
         model.addAttribute("shWdr", shWdr);
         model.addAttribute("shLocgovCode", shLocgovCode);
         model.addAttribute("bsnsType", bsnsType);
-        model.addAttribute("frDt", frDt);
-        model.addAttribute("toDt", toDt);
+        model.addAttribute("frDt", orToday(frDt));
+        model.addAttribute("toDt", orToday(toDt));
         model.addAttribute("prjStatus", prjStatus);
-        return "designated/analysis-locgov";
+    }
+
+    /** AS-IS: frDt/toDt가 비어 있으면 오늘(yyyyMMdd)로 채운다. */
+    private static String orToday(String yyyyMMdd) {
+        if (yyyyMMdd != null && !yyyyMMdd.isBlank()) {
+            return yyyyMMdd.trim();
+        }
+        return java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
     }
 
     // ---- 월별통계(특정사업 월별통계) - AS-IS designated-donation/analysis/month 재현 ----
@@ -630,6 +834,40 @@ public class DesignatedProjectAdminController {
         map.put(STATUS_OPEN, "진행중");
         map.put(STATUS_CLOSED, "종료");
         return map;
+    }
+
+    /**
+     * 사업구분 대분류 - AS-IS {@code CodeUtils.getCodeList("BUSINESS_TYPE")} 과 같은 목록이다.
+     *
+     * <p>이전에는 donation 서비스의 {@code /api/codes/DSGN_BSNS_TYPE} 를 불렀는데 <b>그 코드유형은
+     * 0건</b>이라 select가 늘 비어 있었고(2026-10-07 사용자 지적), donation이 내려가 있으면
+     * 예외를 삼키고 빈 Map을 돌려줘 증상이 겹쳐 보였다. 코드 자체는 admin 스키마
+     * {@code op_common_code} 에 있으므로 admin 자기 공통코드에서 직접 읽는다.
+     *
+     * <p>화면에 보이는 글자는 AS-IS와 같이 {@code detail}("사회적 취약계층의 지원 및 …")이다.
+     */
+    private java.util.Map<String, String> bsnsTypes() {
+        java.util.Map<String, String> map = new java.util.LinkedHashMap<>();
+        for (com.ghlove.admin.domain.CommonCode c : commonCodeService.listByType("BUSINESS_TYPE")) {
+            if (!"Y".equals(c.getUseYn())) {
+                continue;
+            }
+            map.put(c.getId(), c.getDetail() != null && !c.getDetail().isBlank() ? c.getDetail() : c.getLabel());
+        }
+        return map;
+    }
+
+    /**
+     * 사업구분 중분류(사업부문) - {@code BUSINESS_SUB_TYPE}. 대분류와는 {@code up_id} 로 묶인다
+     * (101~108 → 100, 201~207 → 200 …). AS-IS는 대분류를 고를 때마다
+     * {@code /opmanager/designated-donation/bsnsSubType} 로 ajax를 쳐서 다시 그리는데,
+     * 24건뿐이라 화면에 전부 내려보내고 {@code data-up} 으로 걸러 쓴다(보이는 결과는 같다).
+     * 표시 글자는 AS-IS ajax 응답과 같이 {@code label} 이다.
+     */
+    private List<com.ghlove.admin.domain.CommonCode> bsnsSubTypes() {
+        return commonCodeService.listByType("BUSINESS_SUB_TYPE").stream()
+                .filter(c -> "Y".equals(c.getUseYn()))
+                .toList();
     }
 
     private java.util.Map<String, String> provinces() {

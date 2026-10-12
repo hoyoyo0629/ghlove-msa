@@ -32,8 +32,11 @@ import java.util.UUID;
 public class RepresentativeBannerService {
 
     private static final String PROCESS_TYPE = "DESIGNATED_DONATION";
-    private static final int MAX_SLOTS = 15;
-    private static final long MAX_SIZE = 5 * 1024 * 1024; // 5MB
+    /** AS-IS 화면 validator와 같은 한도 - 20MB. */
+    private static final long MAX_SIZE = 20L * 1024 * 1024;
+    /** AS-IS 화면 validator의 허용 확장자 목록 그대로(pdf가 섞여 있는 것까지 동일). */
+    private static final java.util.Set<String> ALLOWED_EXT =
+            java.util.Set.of("jpg", "gif", "png", "pdf", "jpeg");
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final RepresentativeBannerRepository repository;
@@ -50,22 +53,28 @@ public class RepresentativeBannerService {
                 .orElseThrow(() -> new RepresentativeBannerException("배너를 찾을 수 없습니다."));
     }
 
+    /**
+     * AS-IS {@code editRepresentativeBanner}(id==0 분기) + {@code insertRepresentativeBanner}.
+     *
+     * <p>AS-IS는 <b>노출순서를 폼에서 받지 않는다</b> - INSERT문이
+     * {@code (SELECT NVL(MAX(DISPLAY_ORDER),0)+1 FROM G_REPRST_BANNER)}로 직접 채운다.
+     * 즉 맨 뒤에 붙고, 순서는 목록 화면의 select로 바꾼다.
+     * (AS-IS SQL이 PROCESS_TYPE을 안 걸고 테이블 전체의 MAX를 쓰는 것까지 그대로 옮긴다.)
+     */
     @Transactional
-    public RepresentativeBanner create(String title, String linkUrl, String bannerContent, Integer displayOrder,
+    public RepresentativeBanner create(String title, String linkUrl, String bannerContent, String useYn,
                                         MultipartFile pcImage, MultipartFile mobileImage, Long managerId) {
-        validate(title, displayOrder, null);
-        if (pcImage == null || pcImage.isEmpty() || mobileImage == null || mobileImage.isEmpty()) {
-            throw new RepresentativeBannerException("PC/모바일 이미지를 모두 첨부해 주세요.");
-        }
+        validateTitle(title);
         RepresentativeBanner banner = new RepresentativeBanner();
         banner.setTitle(title);
         banner.setLinkUrl(linkUrl);
         banner.setBannerContent(bannerContent);
-        banner.setDisplayOrder(displayOrder);
-        banner.setUseYn("Y");
+        banner.setDisplayOrder(repository.findMaxDisplayOrder() + 1);
+        banner.setUseYn(normalizeUseYn(useYn));
         banner.setProcessType(PROCESS_TYPE);
-        banner.setFileNamePc(store(pcImage));
-        banner.setFileNameMobile(store(mobileImage));
+        // AS-IS는 파일이 없으면 빈 문자열을 넣는다(검증은 화면 validator가 한다).
+        banner.setFileNamePc(hasFile(pcImage) ? store(pcImage) : "");
+        banner.setFileNameMobile(hasFile(mobileImage) ? store(mobileImage) : "");
         banner.setFrstRegisterId(managerId);
         banner.setFrstRegistPnttm(LocalDateTime.now());
         banner.setLastUpdusrId(managerId);
@@ -73,20 +82,30 @@ public class RepresentativeBannerService {
         return repository.save(banner);
     }
 
+    /**
+     * AS-IS {@code editRepresentativeBanner}(id>0 분기) + {@code updateRepresentativeBanner}.
+     *
+     * <p>AS-IS UPDATE문은 TITLE·LINK_URL·USE_YN은 <b>항상</b> 쓰고,
+     * FILE_NAME_PC·FILE_NAME_MOBILE·BANNER_CONTENT는 {@code <if test="... != ''">}로
+     * <b>값이 있을 때만</b> 쓴다. 즉 파일을 다시 첨부하지 않거나 배너 설명을 비워 보내면
+     * 기존 값이 그대로 남는다. 노출순서는 건드리지 않는다.
+     */
     @Transactional
     public RepresentativeBanner update(Integer id, String title, String linkUrl, String bannerContent,
-                                        Integer displayOrder, MultipartFile pcImage, MultipartFile mobileImage,
+                                        String useYn, MultipartFile pcImage, MultipartFile mobileImage,
                                         Long managerId) {
-        validate(title, displayOrder, id);
+        validateTitle(title);
         RepresentativeBanner banner = get(id);
         banner.setTitle(title);
         banner.setLinkUrl(linkUrl);
-        banner.setBannerContent(bannerContent);
-        banner.setDisplayOrder(displayOrder);
-        if (pcImage != null && !pcImage.isEmpty()) {
+        banner.setUseYn(normalizeUseYn(useYn));
+        if (bannerContent != null && !bannerContent.isEmpty()) {
+            banner.setBannerContent(bannerContent);
+        }
+        if (hasFile(pcImage)) {
             banner.setFileNamePc(store(pcImage));
         }
-        if (mobileImage != null && !mobileImage.isEmpty()) {
+        if (hasFile(mobileImage)) {
             banner.setFileNameMobile(store(mobileImage));
         }
         banner.setLastUpdusrId(managerId);
@@ -94,13 +113,13 @@ public class RepresentativeBannerService {
         return repository.save(banner);
     }
 
-    @Transactional
-    public RepresentativeBanner toggle(Integer id, Long managerId) {
-        RepresentativeBanner banner = get(id);
-        banner.setUseYn("Y".equals(banner.getUseYn()) ? "N" : "Y");
-        banner.setLastUpdusrId(managerId);
-        banner.setLastUpdtPnttm(LocalDateTime.now());
-        return repository.save(banner);
+    private static boolean hasFile(MultipartFile file) {
+        return file != null && !file.isEmpty();
+    }
+
+    /** AS-IS 폼은 라디오라 Y/N만 온다 - 그 외 값은 'Y'로 본다(라디오 기본 checked가 사용). */
+    private static String normalizeUseYn(String useYn) {
+        return "N".equals(useYn) ? "N" : "Y";
     }
 
     /**
@@ -159,28 +178,28 @@ public class RepresentativeBannerService {
         return repository.save(banner);
     }
 
-    private void validate(String title, Integer displayOrder, Integer editingId) {
+    /**
+     * AS-IS 화면 validator가 보는 것 중 서버에서도 지켜야 하는 것만 남긴다 - 배너명 필수.
+     * 노출순서는 폼에 없으므로 검증 대상이 아니고(순서 중복은 목록 화면 저장에서 막는다),
+     * PC/모바일 이미지 2개 필수는 AS-IS가 화면 validator에서만 본다.
+     */
+    private void validateTitle(String title) {
         if (title == null || title.isBlank()) {
-            throw new RepresentativeBannerException("제목을 입력해 주세요.");
-        }
-        if (displayOrder == null || displayOrder < 1 || displayOrder > MAX_SLOTS) {
-            throw new RepresentativeBannerException("노출순서는 1~" + MAX_SLOTS + " 사이여야 합니다.");
-        }
-        boolean duplicate = list().stream()
-                .anyMatch(b -> displayOrder.equals(b.getDisplayOrder()) && !b.getReprstBannerId().equals(editingId));
-        if (duplicate) {
-            throw new RepresentativeBannerException("이미 사용 중인 노출순서입니다.");
+            throw new RepresentativeBannerException("배너명을 입력해 주세요.");
         }
     }
 
     private String store(MultipartFile file) {
         if (file.getSize() > MAX_SIZE) {
-            throw new RepresentativeBannerException("이미지 크기는 5MB를 초과할 수 없습니다.");
+            throw new RepresentativeBannerException("첨부파일 사이즈는 20MB 이내로 등록 가능합니다. ");
         }
         String original = file.getOriginalFilename();
         String ext = "";
         if (original != null && original.contains(".")) {
             ext = original.substring(original.lastIndexOf('.'));
+        }
+        if (!ALLOWED_EXT.contains(ext.toLowerCase().replace(".", ""))) {
+            throw new RepresentativeBannerException("등록할 수 없는 파일확장자입니다.");
         }
         String storedName = UUID.randomUUID() + ext;
         try {

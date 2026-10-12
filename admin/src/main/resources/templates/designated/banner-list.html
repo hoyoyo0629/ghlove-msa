@@ -3,91 +3,173 @@
 <head>
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
-    <title>지정기부 대표배너 관리 - 고향사랑e음 (admin service)</title>
+    <!-- op.common.js 전역 ajax beforeSend가 CSRF 헤더를 붙이므로(없으면 setRequestHeader('','')
+         예외로 모든 ajax 중단) meta를 넣는다. admin은 CSRF 미사용이라 헤더명만 유효하게·토큰은 빈 값. -->
+    <meta name="_csrf_header" content="X-CSRF-TOKEN">
+    <meta name="_csrf" content="">
+    <title>대표배너관리 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<!-- AS-IS opmanager/designated-donation/banner/list.jsp 재현 - PC/모바일 이미지 분리,
-     최대 15슬롯 노출순서 관리. -->
+<!-- AS-IS opmanager/i18n/designated-donation/banner/list.jsp 이식(메뉴 17301 특정사업 기부 배너관리).
+
+     AS-IS verbatim 실측(2026-10-08, Playwright로 실화면 DOM 확인):
+     - 컬럼 4개: 배너명 / 사용여부 / 관리 / 순서. 순서가 "마지막" 칸이다.
+     - 표는 <b>항상 15행</b>이다. 등록된 배너 N행 뒤에 빈 행을 15-N개 채우고, 빈 행의 관리 칸에는
+       [등록] 버튼(form/0)을 둔다. 등록된 행에는 [수정] 버튼.
+     - 순서는 input이 아니라 <b>select</b>다 - "-선택-" + 1~15 (옵션 16개).
+     - 사용여부는 매퍼가 DECODE(USE_YN,'Y','사용','N','중지') 해서 내려주므로 화면 글자는
+       "사용"/"중지"다("미사용"이 아니다).
+     - 하단은 <b>가운데</b> [저장] 하나뿐이다(btn_all btn_center mt40 / btn-small).
+     - PC·모바일 이미지 컬럼, 상단 [배너 등록] 버튼, 사용여부 토글 버튼, 빈 목록 문구는
+       AS-IS에 <b>없다</b>(TO-BE가 만들어 넣었던 것들이라 전부 제거했다).
+     - 제목 위에 되돌아가기 링크도 없다 - .location 브레드크럼만 있다. -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <div class="location"><a th:href="@{/designated-projects}">지정기부 관리</a></div>
-    <h3><span>지정기부 대표배너 관리</span></h3>
-    <div class="btn_all btn_right" style="margin-bottom:16px;">
-        <a th:href="@{/designated-projects/banners/new}" class="btn btn-dark-gray btn-small">배너 등록</a>
-    </div>
 
-    <!-- AS-IS: 노출순서는 행마다 입력칸으로 고쳐 [순서변경]으로 한꺼번에 저장한다
-         (id[]와 ordering[]을 같은 인덱스로 짝지어 ajax 전송). -->
-    <form id="bannerOrderForm">
-        <table class="board_list_table" summary="지정기부대표배너관리">
-            <thead><tr><th scope="col">순서</th><th scope="col">PC 이미지</th><th scope="col">모바일 이미지</th><th scope="col">제목</th><th scope="col">사용여부</th><th scope="col">관리</th></tr></thead>
-            <tbody>
-            <tr th:each="b : ${banners}">
-                <td>
-                    <input type="hidden" name="id" th:value="${b.reprstBannerId}"/>
-                    <input type="text" name="ordering" class="input_txt _number" style="width:60px;text-align:center;"
-                           maxlength="2" th:value="${b.displayOrder}" title="노출순서"/>
-                </td>
-                <td><img th:if="${b.fileNamePc}" th:src="@{${b.fileNamePc}}" style="height:40px;" alt="PC 이미지"></td>
-                <td><img th:if="${b.fileNameMobile}" th:src="@{${b.fileNameMobile}}" style="height:40px;" alt="모바일 이미지"></td>
-                <td th:text="${b.title}"></td>
-                <td th:text="${b.useYn == 'Y'} ? '사용' : '미사용'"></td>
-                <td>
-                    <a th:href="@{/designated-projects/banners/{id}/edit(id=${b.reprstBannerId})}" class="small-btn">수정</a>
-                    <button type="button" class="small-btn ghost" style="margin-left:4px;"
-                            th:attr="onclick=|toggleBanner(${b.reprstBannerId})|"
-                            th:text="${b.useYn == 'Y'} ? '미사용으로' : '사용으로'"></button>
-                </td>
-            </tr>
-            </tbody>
-        </table>
-    </form>
-    <p class="empty" th:if="${#lists.isEmpty(banners)}">등록된 배너가 없습니다.</p>
+    <h3><span>대표배너관리</span></h3>
 
-    <div class="btn_all btn_right" th:if="${not #lists.isEmpty(banners)}">
-        <div class="flex_box gap-08">
-            <button type="button" class="btn btn-dark-gray btn-mini" onclick="changeOrdering();">순서변경</button>
+    <form id="listForm">
+        <div class="board_list">
+            <table class="board_list_table" summary="대표배너관리">
+                <caption>대표배너관리</caption>
+                <colgroup>
+                    <col style="width:500px;">
+                    <col style="width:150px;">
+                    <col style="width:150px;">
+                    <col style="width:150px;">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th scope="col">배너명</th>
+                        <th scope="col">사용여부</th>
+                        <th scope="col">관리</th>
+                        <th scope="col">순서</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="banner : ${bannerList}" style="background:#fff;">
+                        <td>
+                            <input type="hidden" name="id" th:value="${banner.reprstBannerId}"/>
+                            <div th:text="${banner.title}"></div>
+                        </td>
+                        <td>
+                            <!-- AS-IS 매퍼 DECODE 재현 - 'Y'는 사용, 'N'은 중지 -->
+                            <div th:text="${banner.useYn == 'Y'} ? '사용' : (${banner.useYn == 'N'} ? '중지' : '')"></div>
+                        </td>
+                        <td>
+                            <div class="flex_box juc-center gap-08">
+                                <button type="button" class="btn btn-dark-gray btn-sm"
+                                        th:attr="onclick=|location.href='/designated-projects/banners/${banner.reprstBannerId}/edit'|">수정</button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex_box juc-center">
+                                <select id="ordering" name="ordering" title="순서" class="wd-80">
+                                    <option value="">-선택-</option>
+                                    <option th:each="i : ${#numbers.sequence(1, 15)}" th:value="${i}" th:text="${i}"
+                                            th:selected="${i == banner.displayOrder}"></option>
+                                </select>
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- AS-IS: insertRow = 15 - 등록된 배너 수. 남는 슬롯을 빈 행으로 채운다.
+                         th:each와 th:if를 한 태그에 같이 쓰면 안 된다 - each가 먼저 돌고,
+                         #numbers.sequence(1,0)은 빈 목록이 아니라 [1,0](내림차순)이라 행이 2개 생긴다.
+                         그래서 th:block으로 감싸 0건일 때 each 자체를 타지 않게 한다. -->
+                    <th:block th:if="${emptySlots > 0}">
+                    <tr th:each="r : ${#numbers.sequence(1, emptySlots)}" style="background:#fff;">
+                        <td><div></div></td>
+                        <td><div></div></td>
+                        <td>
+                            <div class="flex_box juc-center gap-08">
+                                <button type="button" class="btn btn-default btn-sm"
+                                        onclick="location.href='/designated-projects/banners/new'">등록</button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex_box juc-center">
+                                <select id="ordering" name="ordering" title="순서" class="wd-80">
+                                    <option value="">-선택-</option>
+                                    <option th:each="i : ${#numbers.sequence(1, 15)}" th:value="${i}" th:text="${i}"></option>
+                                </select>
+                            </div>
+                        </td>
+                    </tr>
+                    </th:block>
+                </tbody>
+            </table>
         </div>
-    </div>
 
-    <!-- 사용여부 전환은 POST다 - 행마다 폼을 두지 않고 하나를 재사용한다 -->
-    <form id="toggleForm" method="post" style="display:none;"></form>
+        <div class="btn_all btn_center mt40">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-dark-gray btn-small" onclick="changeOrdering()">저장</button>
+            </div>
+        </div>
+    </form>
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
+<div th:replace="~{fragments/alert :: gh-alert}"></div>
 
-<script type="text/javascript">
-/* AS-IS /banner/change-ordering - 순서 일괄 변경(ajax, JSON 응답). */
-function changeOrdering() {
-	if (!confirm("노출순서를 저장하시겠습니까?")) {
-		return;
-	}
-	$.post('/designated-projects/banners/change-ordering', $('#bannerOrderForm').serialize(), function(response) {
-		Common.responseHandler(response, function() {
-			alert("저장되었습니다.");
-			location.reload();
-		});
-	});
-}
+<script th:inline="javascript">
+/*<![CDATA[*/
+    var ADMIN_ROLE = /*[[${adminRole}]]*/ '';
+    var BANNER_CNT = /*[[${bannerCount}]]*/ 0;
 
-function toggleBanner(id) {
-	var $form = $('#toggleForm');
-	$form.attr('action', '/designated-projects/banners/' + id + '/toggle').submit();
-}
+    // AS-IS changeOrdering() 그대로 - 노출순서 일괄 변경.
+    // ※ AS-IS 주석은 "지자체 관리자만 권한있음"이라고 적혀 있지만 실제 코드는 adminRole != 'SYS'를
+    //   막고 문구도 "시스템 관리자만 저장이 가능합니다."다. 코드를 정본으로 본다.
+    function changeOrdering() {
+
+        if (ADMIN_ROLE != 'SYS') {
+            alert("시스템 관리자만 저장이 가능합니다.");
+            return false;
+        }
+
+        var $form = $('#listForm');
+        var sort = document.getElementsByName("ordering");
+        var bannerCnt = BANNER_CNT;
+
+        for (j = 0; j < sort.length; j++) {
+            sort1 = $form.find('select[name=ordering]')[j].value;
+            if ("" == sort1 && (j + 1) <= bannerCnt) {
+                alert("배너순서를 선택하세요.");
+                $form.find('select[name=ordering]')[j].focus();
+                return false;
+            }
+
+            if (sort.length > j + 1) {
+                for (i = (j + 1); i < bannerCnt; i++) {
+                    sort2 = $form.find('select[name=ordering]')[i].value;
+                    if (sort1 == sort2) {
+                        alert('중복된 순서가 있어 저장되지 않았습니다. 확인해 주세요.');
+                        $form.find('select[name=ordering]')[i].focus();
+                        return false;
+                    }
+                }
+            }
+        }
+
+        $.post("/designated-projects/banners/change-ordering", $form.serialize(), function(response) {
+            Common.responseHandler(response, function(response) {
+                alert("저장되었습니다.");	// M00406
+                location.reload();
+            });
+        });
+    }
+/*]]>*/
 </script>
 </body>
 </html>

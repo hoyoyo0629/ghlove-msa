@@ -24,15 +24,16 @@
      - 컬럼 16개: 체크박스/ID/[지자체명]/모금상태/사업구분/사업명(이미지+링크)/기부건수/시작일/
        종료일/목표금액/모금액/달성율/공개여부/사업부서/공지사항/승인이력/미리보기.
      - 하단 왼쪽 일괄처리 4종: 진행(승인처리)[ROLE_ADMIN_1~5만]/종료/공개/비공개.
-       오른쪽: 엑셀 / 신규등록.
+       오른쪽: 엑셀. (신규등록은 AS-IS 실화면에 안 나와 숨겼다 - 아래 버튼 영역 주석 참고)
      - 빈 목록 문구는 M00473("데이터가 없습니다.")이고 표 밖 .no_content 다.
 
      ★ 모금상태는 저장값이 아니라 <b>다시 계산된</b> 값이다 - 진행이어도 목표금액을 넘었거나
        종료일이 지났으면 종료로 보여준다(donation DesignatedAdminService.search 주석).
      ★ AS-IS 결함 보정: 사업명 입력칸이 query로 전송되는데 목록 SQL은 searchKeyword를 봐서
        AS-IS에서는 사업명 검색이 전혀 걸리지 않는다 - TO-BE는 걸리게 했다.
-     ★ 아직 없는 것(원장의 다음 단계): 엑셀 다운로드, 미리보기, 승인이력 팝업. 버튼은 AS-IS
-       자리에 두되 미구현 안내를 띄운다(없는 화면으로 보내 404를 만드는 것보다 낫다). -->
+     ★ 아직 없는 것(원장의 다음 단계): 엑셀 다운로드, 미리보기. 버튼은 AS-IS 자리에 두되
+       미구현 안내를 띄운다(없는 화면으로 보내 404를 만드는 것보다 낫다).
+       승인이력 팝업과 공지사항 화면은 2026-10-08에 이식 완료. -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
@@ -249,19 +250,20 @@
                     <td th:text="${r.deptNm}"></td>
                     <td>
                         <div class="flex_box juc-center gap-08">
-                            <a th:href="@{/designated-projects/{id}(id=${r.dsgnDntnBizId})} + '#notices'"
+                            <a th:href="@{/designated-projects/{id}/notices(id=${r.dsgnDntnBizId})}"
                                class="btn btn-gradient btn-xs">공지사항</a>
                         </div>
                     </td>
                     <td>
                         <div class="flex_box juc-center gap-08">
-                            <a th:href="@{/designated-projects/{id}(id=${r.dsgnDntnBizId})} + '#approvalLog'"
-                               class="btn btn-gradient btn-xs">승인이력</a>
+                            <a href="javascript:;" class="btn btn-gradient btn-xs"
+                               th:attr="data-id=${r.dsgnDntnBizId}" onclick="showLog(this)">승인이력</a>
                         </div>
                     </td>
                     <td>
                         <div class="flex_box juc-center gap-08">
-                            <button type="button" class="btn btn-gradient btn-xs" onclick="notReady('미리보기');">미리보기</button>
+                            <button type="button" class="btn btn-gradient btn-xs"
+                                    th:attr="data-id=${r.dsgnDntnBizId}" onclick="openPreview(this)">미리보기</button>
                         </div>
                     </td>
                 </tr>
@@ -283,9 +285,30 @@
         </div>
         <div class="btn_all">
             <div class="flex_box gap-08">
+                <!--/* ── AS-IS 실측(2026-10-08, Playwright로 실화면 DOM 확인) ──────────────────
+                     AS-IS list.jsp 소스에는 [엑셀]·[신규등록]이 둘 다 있지만, 실제 서버가 내려주는
+                     HTML에는 두 버튼이 "존재하지 않는다". 위쪽 판매종료처리/품절해제/카테고리추가를
+                     감싼 HTML 주석이 닫히지 않기 때문이다 - 소스에서 그 주석을 끝맺던 한 줄짜리
+                     주석(카테고리추가)이 렌더링 과정에서 사라져, 주석이 2,717자(117줄)를 통째로
+                     삼키고 그 안에 이 두 버튼과 페이지네이션 일부까지 들어간다.
+                     즉 의도된 비활성이 아니라 AS-IS 주석 사고다.
+
+                     사용자 결정(2026-10-08): [신규등록]만 AS-IS와 같이 숨기고 [엑셀]은 남긴다.
+                       · 신규등록 - LNB "특정사업 기부 등록" 메뉴가 같은 화면으로 가므로 숨겨도 막히지 않는다.
+                       · 엑셀     - 다른 진입점이 없어 숨기면 기능 자체가 사라진다.
+                     [[as-is-parity-includes-disabled-state]] 를 기계적으로 적용하지 않은 유일한 예외다.
+
+                     ※ 이 설명은 Thymeleaf 주석으로 쓴다(서버가 렌더링 단계에서 통째로 지워
+                       브라우저로 아예 안 나간다). 그리고 주석 "본문"에는 주석 여는/닫는 기호를
+                       절대 글자로 적지 않는다 - 적는 순간 거기서 주석이 닫혀 뒤 내용이 화면에
+                       텍스트로 쏟아진다. 2026-10-08 이 자리에서 두 번 그렇게 깨뜨렸다.
+                       (위에서 설명한 AS-IS 사고와 똑같은 원리다.) */-->
                 <button type="button" class="btn btn-default btn-mini" onclick="notReady('엑셀 다운로드');">엑셀</button>
+                <!--/* AS-IS 실화면에 안 나오므로 숨긴다(위 설명 참고). 지우지 않고 남겨 둔다. */-->
+                <!--/*
                 <button type="button" class="btn btn-default btn-mini"
                         onclick="location.href='/designated-projects/new'">신규등록</button>
+                */-->
             </div>
         </div>
     </div>
@@ -384,6 +407,19 @@ function updateListDataLabel(value) {
 }
 
 /* 아직 이식하지 않은 기능 - 없는 화면으로 보내지 않고 안내만 한다(원장의 다음 단계). */
+/* AS-IS list.jsp 의 popupType·showLog·openPreview 그대로.
+   공지사항만 팝업이 아니라 페이지 이동이다(AS-IS도 <a href>). */
+var popupType = "toolbar=no,width=1510,height=700,top=150px,left=250px,directories=no,menubar=no,scrollbars=yes,location=no";
+
+function showLog(el) {
+	window.open('/designated-projects/' + el.getAttribute('data-id') + '/approval-log',
+			'dsgncntrConfirmPopup', popupType);
+}
+
+function openPreview(el) {
+	Common.popup('/designated-projects/' + el.getAttribute('data-id') + '/preview', "preview", 1600, 800, 0, 0, 0);
+}
+
 function notReady(name) {
 	alert(name + " 기능은 아직 준비되지 않았습니다.");
 }

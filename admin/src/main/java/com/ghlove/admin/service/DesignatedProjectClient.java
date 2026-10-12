@@ -24,8 +24,19 @@ public class DesignatedProjectClient {
 
     private final RestClient restClient;
 
+    /**
+     * donation 이 올려 둔 업로드 파일(사업 이미지 등)의 호스트. admin(8086)에서 그 이미지를
+     * 직접 보여줄 때 필요하다 - {@code /uploads/donation/**} 는 donation 이 서빙하고
+     * admin 의 {@code /uploads/**} 핸들러는 자기 업로드 폴더만 보기 때문이다.
+     * (offgive/detail.html 이 localhost:8082 를 하드코딩해 둔 것과 같은 필요인데, 환경에
+     *  묶이지 않도록 설정값을 그대로 쓴다.)
+     */
+    @lombok.Getter
+    private final String donationBaseUrl;
+
     public DesignatedProjectClient(@Value("${ghlove.donation-service.base-url}") String donationServiceBaseUrl,
             @Value("${ghlove.internal.admin-secret}") String adminSecret) {
+        this.donationBaseUrl = donationServiceBaseUrl;
         this.restClient = RestClient.builder().baseUrl(donationServiceBaseUrl)
                 .defaultHeader("X-Internal-Secret", adminSecret).build();
     }
@@ -115,22 +126,24 @@ public class DesignatedProjectClient {
         }
     }
 
-    public Project create(ProjectForm form, MultipartFile image, boolean canSelfApprove, Long managerId) {
+    public Project create(ProjectForm form, MultipartFile image, List<MultipartFile> images,
+                          boolean canSelfApprove, Long managerId) {
         try {
             return restClient.post().uri("/api/designated-projects/admin")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(toMultipart(form, image, canSelfApprove, managerId))
+                    .body(toMultipart(form, image, images, canSelfApprove, managerId))
                     .retrieve().body(Project.class);
         } catch (RestClientResponseException e) {
             throw new ManagerException(extractMessage(e, "지정기부사업 등록에 실패했습니다."));
         }
     }
 
-    public Project update(Long id, ProjectForm form, MultipartFile image, boolean canSelfApprove, Long managerId) {
+    public Project update(Long id, ProjectForm form, MultipartFile image, List<MultipartFile> images,
+                          boolean canSelfApprove, Long managerId) {
         try {
             return restClient.post().uri("/api/designated-projects/admin/{id}", id)
                     .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(toMultipart(form, image, canSelfApprove, managerId))
+                    .body(toMultipart(form, image, images, canSelfApprove, managerId))
                     .retrieve().body(Project.class);
         } catch (RestClientResponseException e) {
             throw new ManagerException(extractMessage(e, "지정기부사업 수정에 실패했습니다."));
@@ -180,26 +193,66 @@ public class DesignatedProjectClient {
         }
     }
 
-    public void createNotice(Long id, String subject, String content) {
+    public Notice noticeOf(Long noticeId) {
+        try {
+            return restClient.get().uri("/api/designated-projects/admin/notices/{noticeId}", noticeId)
+                    .retrieve().body(Notice.class);
+        } catch (RestClientResponseException e) {
+            throw new ManagerException(extractMessage(e, "공지사항을 찾을 수 없습니다."));
+        }
+    }
+
+    /**
+     * AS-IS 공지 등록 - 제목·내용 외에 공개여부·첨부파일·이미지설명이 함께 간다.
+     * 첨부가 있어 multipart 로 보낸다(파일이 없어도 같은 방식이라 분기하지 않는다).
+     */
+    public void createNotice(Long id, String subject, String content, String rlsYn,
+                              List<MultipartFile> files, List<String> imgExplns, Long managerId) {
         try {
             restClient.post().uri("/api/designated-projects/admin/{id}/notices", id)
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                    .body(formBody(Map.of("subject", subject, "content", content)))
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(noticeMultipart(subject, content, rlsYn, files, imgExplns, managerId))
                     .retrieve().toBodilessEntity();
         } catch (RestClientResponseException e) {
             throw new ManagerException(extractMessage(e, "공지사항 등록에 실패했습니다."));
         }
     }
 
-    public void updateNotice(Long noticeId, String subject, String content) {
+    public void updateNotice(Long noticeId, String subject, String content, String rlsYn,
+                              List<MultipartFile> files, List<String> imgExplns, Long managerId) {
         try {
             restClient.post().uri("/api/designated-projects/admin/notices/{noticeId}", noticeId)
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                    .body(formBody(Map.of("subject", subject, "content", content)))
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(noticeMultipart(subject, content, rlsYn, files, imgExplns, managerId))
                     .retrieve().toBodilessEntity();
         } catch (RestClientResponseException e) {
             throw new ManagerException(extractMessage(e, "공지사항 수정에 실패했습니다."));
         }
+    }
+
+    private static MultiValueMap<String, Object> noticeMultipart(String subject, String content, String rlsYn,
+                                                                   List<MultipartFile> files,
+                                                                   List<String> imgExplns, Long managerId) {
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("subject", subject);
+        body.add("content", content == null ? "" : content);
+        body.add("rlsYn", rlsYn == null ? "Y" : rlsYn);
+        body.add("managerId", managerId);
+        if (files != null) {
+            for (MultipartFile file : files) {
+                if (file != null && !file.isEmpty()) {
+                    body.add("files", toResource(file));
+                }
+            }
+        }
+        if (imgExplns != null) {
+            for (String expln : imgExplns) {
+                if (expln != null && !expln.isBlank()) {
+                    body.add("imgExplns", expln);
+                }
+            }
+        }
+        return body;
     }
 
     public void deleteNotice(Long noticeId) {
@@ -209,6 +262,95 @@ public class DesignatedProjectClient {
         } catch (RestClientException e) {
             throw new ManagerException("공지사항 삭제에 실패했습니다.");
         }
+    }
+
+    /** AS-IS 목록 하단 [공개]/[비공개] 일괄처리. @return 바뀐 건수 */
+    public int updateNoticeDisplay(List<Long> noticeIds, String rlsYn, Long managerId) {
+        if (noticeIds == null || noticeIds.isEmpty()) {
+            return 0;
+        }
+        try {
+            Map<String, Object> body = restClient.post()
+                    .uri(uriBuilder -> uriBuilder.path("/api/designated-projects/admin/notices/display")
+                            .queryParam("noticeIds", noticeIds)
+                            .queryParam("rlsYn", rlsYn)
+                            .queryParam("managerId", managerId)
+                            .build())
+                    .retrieve().body(new ParameterizedTypeReference<Map<String, Object>>() {
+                    });
+            Object changed = body == null ? null : body.get("changed");
+            return changed instanceof Number n ? n.intValue() : 0;
+        } catch (RestClientException e) {
+            throw new ManagerException("처리에 실패했습니다.");
+        }
+    }
+
+    public List<NoticeFile> noticeFilesOf(Long noticeId) {
+        try {
+            List<NoticeFile> list = restClient.get()
+                    .uri("/api/designated-projects/admin/notices/{noticeId}/files", noticeId)
+                    .retrieve().body(new ParameterizedTypeReference<List<NoticeFile>>() {
+                    });
+            return list != null ? list : List.of();
+        } catch (RestClientException e) {
+            return List.of();
+        }
+    }
+
+    public void deleteNoticeFile(Long noticeId, Integer fileSeq) {
+        try {
+            restClient.post()
+                    .uri("/api/designated-projects/admin/notices/{noticeId}/files/{fileSeq}/delete", noticeId, fileSeq)
+                    .retrieve().toBodilessEntity();
+        } catch (RestClientException e) {
+            throw new ManagerException("첨부파일 삭제에 실패했습니다.");
+        }
+    }
+
+    public List<String> noticeImgExplnsOf(Long noticeId) {
+        try {
+            List<String> list = restClient.get()
+                    .uri("/api/designated-projects/admin/notices/{noticeId}/img-explns", noticeId)
+                    .retrieve().body(new ParameterizedTypeReference<List<String>>() {
+                    });
+            return list != null ? list : List.of();
+        } catch (RestClientException e) {
+            return List.of();
+        }
+    }
+
+    /**
+     * AS-IS 목록의 [미리보기] - 운영자가 "대민에 이렇게 보인다"를 확인하는 화면이다.
+     * 그래서 관리자 전용 API가 아니라 <b>대민 상세화면이 쓰는 그 API</b>를 그대로 호출한다
+     * (공개 규칙 - 비공개 공지 제외 등 - 이 저절로 같아진다).
+     */
+    public PublicDetail publicDetail(Long id) {
+        try {
+            return restClient.get().uri("/api/designated-donation/projects/{id}", id)
+                    .retrieve().body(PublicDetail.class);
+        } catch (RestClientException e) {
+            return null;
+        }
+    }
+
+    /** donation 대민 상세 응답 - 미리보기 화면이 쓰는 것만 추렸다(나머지 필드는 무시된다). */
+    public record PublicDetail(Long dsgnDntnBizId, String dsgnDntnBizTtl, String dsgnDntnBizCn, String imageUrl,
+                                String lclgvCd, String locgovName, String periodText, Long goalAmt,
+                                java.math.BigDecimal raisedAmount, int participantCount, java.math.BigDecimal rate,
+                                String gaugeClass, boolean overGoal, String status,
+                                List<CheerMessage> cheerMessages, List<PublicNotice> notices) {
+    }
+
+    /** 기부내역 한 건 - AS-IS 미리보기의 "{금액}원 참여 / 이름 / 아이디 / 날짜" 행. */
+    public record CheerMessage(String cntrSn, int giveOrder, String maskedUserName, String maskedLoginId,
+                                String cntrDeFormatted, java.math.BigDecimal cntrAmt, String cheerMsg) {
+    }
+
+    public record PublicNotice(Long prjNoticeId, String prjNoticeSubject, String prjNoticeCn, String dateText) {
+    }
+
+    /** 공지 첨부 한 건 - 화면에는 원본 파일명이 보인다. */
+    public record NoticeFile(Long noticeId, Integer fileSeq, String orgnflNm) {
     }
 
     public List<Department> departments(String locgovCode) {
@@ -387,9 +529,9 @@ public class DesignatedProjectClient {
                             .queryParam("bsnsType", nz(bsnsType)).queryParam("frDt", nz(frDt))
                             .queryParam("toDt", nz(toDt)).queryParam("prjStatus", nz(prjStatus)).build())
                     .retrieve().body(LocgovStatSummary.class);
-            return s != null ? s : new LocgovStatSummary(0, 0, java.math.BigDecimal.ZERO, 0);
+            return s != null ? s : new LocgovStatSummary(0, 0, 0f, 0);
         } catch (RestClientException e) {
-            return new LocgovStatSummary(0, 0, java.math.BigDecimal.ZERO, 0);
+            return new LocgovStatSummary(0, 0, 0f, 0);
         }
     }
 
@@ -418,7 +560,35 @@ public class DesignatedProjectClient {
         return body;
     }
 
+    /** 등록/수정 화면 썸네일 목록(노출 순서). donation이 내려가 있으면 빈 목록이다. */
+    public List<ProjectImage> imagesOf(Long projectId) {
+        try {
+            List<ProjectImage> list = restClient.get()
+                    .uri("/api/designated-projects/admin/{id}/images", projectId)
+                    .retrieve().body(new ParameterizedTypeReference<List<ProjectImage>>() {
+                    });
+            return list != null ? list : List.of();
+        } catch (RestClientException e) {
+            return List.of();
+        }
+    }
+
+    /** AS-IS 썸네일의 x 버튼. */
+    public void deleteImage(Long imageId) {
+        try {
+            restClient.delete().uri("/api/designated-projects/admin/images/{imageId}", imageId)
+                    .retrieve().toBodilessEntity();
+        } catch (RestClientResponseException e) {
+            throw new ManagerException(extractMessage(e, "이미지 삭제에 실패했습니다."));
+        }
+    }
+
+    /** 썸네일 한 장. */
+    public record ProjectImage(Long imageId, String imageUrl, Integer seq) {
+    }
+
     private static MultiValueMap<String, Object> toMultipart(ProjectForm form, MultipartFile image,
+                                                               List<MultipartFile> images,
                                                                boolean canSelfApprove, Long managerId) {
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("dsgnDntnBizTtl", form.dsgnDntnBizTtl());
@@ -443,6 +613,15 @@ public class DesignatedProjectClient {
         body.add("managerId", managerId);
         if (image != null && !image.isEmpty()) {
             body.add("image", toResource(image));
+        }
+        // AS-IS prjImageFiles[] - 여러 장을 같은 이름("images")으로 반복해 넣는다.
+        // 받는 쪽은 List<MultipartFile> 로 선언돼 있어 그대로 묶인다.
+        if (images != null) {
+            for (MultipartFile file : images) {
+                if (file != null && !file.isEmpty()) {
+                    body.add("images", toResource(file));
+                }
+            }
         }
         return body;
     }
@@ -484,6 +663,7 @@ public class DesignatedProjectClient {
     }
 
     public record Notice(Long prjNoticeId, Long dsgnDntnBizId, String prjNoticeSubject, String prjNoticeCn,
+                          String rlsYn,
                           String frstRegistPnttm) {
     }
 
@@ -536,13 +716,16 @@ public class DesignatedProjectClient {
                               long m07, long m08, long m09, long m10, long m11, long m12, long total) {
     }
 
+    // 달성율은 AS-IS DesignatedStat 과 같은 float 이다 - BigDecimal로 받으면 PostgreSQL이 돌려준
+    // 스케일(16자리 이상)이 화면까지 따라가 0E-20 / 0.61000000000000000000 으로 찍힌다.
+
     /** 지자체별통계 요약(총목표/총모금/달성율%/총기부건수). */
-    public record LocgovStatSummary(long totTargetAmt, long totCntrAmt, java.math.BigDecimal totAchvRt, long totCntrCnt) {
+    public record LocgovStatSummary(long totTargetAmt, long totCntrAmt, float totAchvRt, long totCntrCnt) {
     }
 
     /** 지자체별통계 1행. */
     public record LocgovStatRow(String locgovCode, String locgovNm, long prjCnt, long statu2Cnt, long statu9Cnt,
                                 long totCntrCnt, long bsnsType100Cnt, long bsnsType200Cnt, long bsnsType300Cnt,
-                                long bsnsType400Cnt, long targetAmt, long cntrAmt, java.math.BigDecimal achvRt) {
+                                long bsnsType400Cnt, long targetAmt, long cntrAmt, float achvRt) {
     }
 }

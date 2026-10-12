@@ -254,9 +254,9 @@ public class DonationPublicApiController {
                 .toList();
         List<NoticeDto> notices = donationService.noticesOf(id).stream()
                 .map(n -> {
-                    String pnttm = n.getFrstRegistPnttm();
+                    String pnttm = n.getFrstRegDt() == null ? null : n.getFrstRegDt().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
                     String dateText = pnttm != null && pnttm.length() >= 8 ? formatYmd(pnttm.substring(0, 8)) : "";
-                    return new NoticeDto(n.getPrjNoticeId(), n.getPrjNoticeSubject(), n.getPrjNoticeCn(), dateText);
+                    return new NoticeDto(n.getNoticeId(), n.getSubject(), n.getContent(), dateText);
                 })
                 .toList();
         return ResponseEntity.ok(new DesignatedDetailDto(project.getDsgnDntnBizId(), project.getDsgnDntnBizTtl(),

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <meta charset="UTF-8">
+    <title>특정사업 기부 공지사항 - 고향사랑e음 (admin service)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+</head>
+<!-- AS-IS opmanager/designated-donation/notice/list.jsp 이식(2026-10-08 실화면 대조).
+     목록(17101)의 [공지사항]이 이 화면으로 "이동"한다(팝업 아님 - AS-IS도 <a href>).
+
+     AS-IS 실화면에서 확인한 것들 - 임의로 바꾸지 말 것:
+       · 제목은 "{사업명} 공지사항"
+       · 검색은 제목 하나뿐이고 [초기화]는 공지 목록이 아니라 **특정사업 기부 목록**으로 간다
+       · 목록 위에 "총 N 건" + 출력수 select(10/50/100/200/500)
+       · 표는 체크박스 / ID / 제목 / 공개여부 (등록일·삭제 칸은 AS-IS에 없다)
+       · 빈 목록 문구는 표 "밖"의 .no_content 블록이고 문구는 "데이터가 없습니다."
+       · 하단 왼쪽 [공개][비공개] 일괄, 오른쪽 [신규등록][특정사업에 기부하기 목록] -->
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumbTail('공지사항')}"></div>
+
+    <div class="item_list">
+    <!-- op.manager.js 가 '첫 h3 안의 span' 을 메뉴명으로 덮어쓴다(.custom 이면 제외).
+         AS-IS notice/list.jsp 도 그래서 span 없이 글자만 둔다 - 따라서 여기도 span 금지. -->
+    <h3 th:text="' ' + ${project != null ? project.dsgnDntnBizTtl : ''} + ' 공지사항'">공지사항</h3>
+
+    <form method="get" id="searchForm" th:action="@{/designated-projects/{id}/notices(id=${projectId})}">
+        <div class="board_write">
+            <table class="board_write_table" summary="특정사업에 기부하기 공지사항 목록">
+                <caption>공지사항 목록</caption>
+                <colgroup>
+                    <col style="width: 150px" />
+                    <col style="width: auto;" />
+                </colgroup>
+                <tbody>
+                <tr>
+                    <td class="label">제목</td>
+                    <td colspan="3">
+                        <div>
+                            <input type="text" id="query" name="query" class="input_txt wd-500" title="제목"
+                                   th:value="${query}">
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+            <div class="btn_all btn_right">
+                <div class="flex_box gap-08">
+                    <!-- AS-IS: 초기화는 특정사업 기부 목록으로 돌아간다(공지 목록이 아니다) -->
+                    <button type="button" class="btn btn-dark-gray btn-mini"
+                            th:attr="onclick=|location.href='@{/designated-projects}'|">초기화</button>
+                    <button type="submit" class="btn btn-dark-gray btn-mini">검색</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="count_title mt-40">
+            <!-- .count_title h5 span 은 display:block 이라(opmanager.css:1123) 안에 span 을 쓰면
+                 '총 / 1 / 건' 으로 세로로 깨진다. AS-IS처럼 글자만 넣는다. -->
+            <h5 th:text="'총 ' + ${noticeCount} + ' 건'">총 0 건</h5>
+            <span>
+                <select id="itemsPerPage" name="itemsPerPage" title="화면 출력수"
+                        onchange="document.getElementById('searchForm').submit();">
+                    <option value="10" th:selected="${itemsPerPage == 10}">10개 출력</option>
+                    <option value="50" th:selected="${itemsPerPage == 50}">50개 출력</option>
+                    <option value="100" th:selected="${itemsPerPage == 100}">100개 출력</option>
+                    <option value="200" th:selected="${itemsPerPage == 200}">200개 출력</option>
+                    <option value="500" th:selected="${itemsPerPage == 500}">500개 출력</option>
+                </select>
+            </span>
+        </div>
+    </form>
+
+    <div class="board_list">
+        <form id="listForm" method="post"
+              th:action="@{/designated-projects/{id}/notices/display(id=${projectId})}">
+            <input type="hidden" id="rlsYn" name="rlsYn" value="Y">
+            <table class="board_list_table" summary="특정사업에 기부하기 공지사항 목록">
+                <caption>공지사항 목록</caption>
+                <colgroup>
+                    <col style="width:50px;">
+                    <col style="width:100px;">
+                    <col style="width:1000px;">
+                    <col style="width:100px;">
+                </colgroup>
+                <thead>
+                <tr>
+                    <th scope="col"><input type="checkbox" id="check_all" onclick="toggleAll(this)" /></th>
+                    <th scope="col">ID</th>
+                    <th scope="col">제목</th>
+                    <th scope="col">공개여부</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="n : ${notices}" style="background:#fff;">
+                    <td><input type="checkbox" name="noticeIds" th:value="${n.prjNoticeId}" /></td>
+                    <td th:text="${n.prjNoticeId}"></td>
+                    <td>
+                        <a th:href="@{/designated-projects/{id}/notices/form(id=${projectId},noticeId=${n.prjNoticeId})}"
+                           th:text="${n.prjNoticeSubject}"></a>
+                    </td>
+                    <td th:text="${n.rlsYn == 'N'} ? '비공개' : '공개'"></td>
+                </tr>
+                </tbody>
+            </table>
+        </form>
+        <!-- AS-IS: 빈 목록 문구는 표 밖에 따로 둔다 -->
+        <div class="no_content" th:if="${#lists.isEmpty(notices)}">데이터가 없습니다.</div>
+
+        <div class="flex_box juc-sbt">
+            <div class="btn_all">
+                <div class="flex_box gap-08">
+                    <button type="button" class="btn btn-default btn-mini" onclick="updateListDataLabel('Y')">공개</button>
+                    <button type="button" class="btn btn-default btn-mini" onclick="updateListDataLabel('N')">비공개</button>
+                </div>
+            </div>
+            <div class="btn_all">
+                <div class="flex_box gap-08">
+                    <button type="button" class="btn btn-default btn-mini"
+                            th:attr="onclick=|location.href='@{/designated-projects/{id}/notices/form(id=${projectId})}'|">신규등록</button>
+                    <button type="button" class="btn btn-default btn-mini"
+                            th:attr="onclick=|location.href='@{/designated-projects}'|">특정사업에 기부하기 목록</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="pagination-wrap" th:if="${pagination != null and pagination.totalPages > 0}">
+            <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+        </div>
+    </div>
+    </div><!-- /.item_list -->
+
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script th:inline="none">
+function toggleAll(el) {
+	var boxes = document.getElementsByName('noticeIds');
+	for (var i = 0; i < boxes.length; i++) { boxes[i].checked = el.checked; }
+}
+
+/* AS-IS updateListDataLabel('Y'|'N') - 체크한 공지의 공개여부를 한 번에 바꾼다. */
+function updateListDataLabel(flag) {
+	var checked = document.querySelectorAll('input[name="noticeIds"]:checked');
+	if (checked.length === 0) {
+		alert('처리할 항목을 선택해 주세요.');
+		return;
+	}
+	if (!confirm(flag === 'Y' ? '공개 처리하시겠습니까?' : '비공개 처리하시겠습니까?')) { return; }
+	document.getElementById('rlsYn').value = flag;
+	document.getElementById('listForm').submit();
+}
+</script>
+</body>
+</html>

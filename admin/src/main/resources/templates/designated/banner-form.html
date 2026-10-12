@@ -3,103 +3,332 @@
 <head>
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
-    <title>지정기부 대표배너 등록/수정 - 고향사랑e음 (admin service)</title>
+    <meta name="_csrf_header" content="X-CSRF-TOKEN">
+    <meta name="_csrf" content="">
+    <title>대표배너관리 - 고향사랑e음 (admin service)</title>
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
     <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
+<!-- AS-IS opmanager/i18n/designated-donation/banner/form.jsp 이식.
+
+     AS-IS verbatim 실측(2026-10-08):
+     - 항목 6개: *배너명 / 배너 설명 / *이미지(PC·모바일 2행, 라벨 rowspan=2) / 이미지 링크 / *사용여부.
+       <b>노출순서 입력칸이 없다</b> - 등록할 때 매퍼가 MAX(DISPLAY_ORDER)+1을 넣고, 순서는 목록
+       화면에서 select로 바꾼다. (TO-BE가 폼에 "노출순서(1~15)" 칸을 만들어 뒀던 것은 발명이라 제거)
+     - 버튼 위치가 모드별로 다르다. 등록(id==0)은 <b>하단 가운데</b> [등록][취소],
+       수정(id>0)은 <b>상단 우측</b> [수정][목록]. 수정 모드에 하단 버튼은 없다.
+     - 수정 모드에서 이미지가 있으면 파일선택 영역을 숨기고(JS) 썸네일 + X(이미지 삭제)만 보여준다.
+       X는 배너를 지우지 않고 그 이미지 파일명만 비운다(/banner/delete, deleteFlag=pc|mobile).
+     - 사용여부 라디오는 rdo1-1(사용, 기본 checked) / rdo1-2(중지).
+     - 제목 위 되돌아가기 링크는 없다(.location 브레드크럼만). -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <div class="location"><a th:href="@{/designated-projects/banners}">대표배너 관리</a></div>
-    <h3><span th:text="${banner != null} ? '배너 수정' : '배너 등록'"></span></h3>
 
-    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+    <h3><span>대표배너관리</span></h3>
 
-    <div class="board_write">
-        <table class="board_write_table" summary="대표배너 등록/수정">
-            <colgroup><col style="width:220px;"><col></colgroup>
-            <tbody>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>제목</td>
-                <td><input type="text" id="title" name="title" required maxlength="255"
-                           th:value="${banner != null} ? ${banner.title} : ''" form="bannerForm"></td>
-            </tr>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>노출순서 (1~15)</td>
-                <td><input type="number" id="displayOrder" name="displayOrder" required min="1" max="15"
-                           th:value="${banner != null} ? ${banner.displayOrder} : ''" form="bannerForm"></td>
-            </tr>
-            <tr>
-                <td class="label">링크 URL</td>
-                <td><input type="text" id="linkUrl" name="linkUrl" th:value="${banner != null} ? ${banner.linkUrl} : ''" form="bannerForm"></td>
-            </tr>
-            <tr>
-                <td class="label"><span class="required_mark" th:if="${banner == null}">*</span>PC 이미지 (1280x400)</td>
-                <td>
-                    <input type="file" id="pcImage" name="pcImage" accept="image/*" th:required="${banner == null}" form="bannerForm">
-                    <!-- AS-IS /banner/delete - 배너가 아니라 이 이미지만 비운다(deleteFlag=pc) -->
-                    <div th:if="${banner != null and banner.fileNamePc != null and !banner.fileNamePc.isEmpty()}" style="margin-top:8px;">
-                        <img th:src="@{${banner.fileNamePc}}" style="max-width:300px;" alt="PC 이미지">
-                        <a th:href="|javascript:deleteImage(${banner.reprstBannerId}, 'pc');|" style="margin-left:6px;">
-                            <img src="/content/images/btn/file_close.gif" alt="이미지 삭제"></a>
-                    </div>
-                </td>
-            </tr>
-            <tr>
-                <td class="label"><span class="required_mark" th:if="${banner == null}">*</span>모바일 이미지 (768x280)</td>
-                <td>
-                    <input type="file" id="mobileImage" name="mobileImage" accept="image/*" th:required="${banner == null}" form="bannerForm">
-                    <div th:if="${banner != null and banner.fileNameMobile != null and !banner.fileNameMobile.isEmpty()}" style="margin-top:8px;">
-                        <img th:src="@{${banner.fileNameMobile}}" style="max-width:200px;" alt="모바일 이미지">
-                        <a th:href="|javascript:deleteImage(${banner.reprstBannerId}, 'mobile');|" style="margin-left:6px;">
-                            <img src="/content/images/btn/file_close.gif" alt="이미지 삭제"></a>
-                    </div>
-                </td>
-            </tr>
-            <tr>
-                <td class="label">배너 내용 (선택, HTML)</td>
-                <td><textarea id="bannerContent" name="bannerContent" rows="4" form="bannerForm"
-                              th:text="${banner != null} ? ${banner.bannerContent} : ''"></textarea></td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
-    <form id="bannerForm" th:action="${banner != null} ? @{/designated-projects/banners/{id}(id=${banner.reprstBannerId})} : @{/designated-projects/banners}"
-          method="post" enctype="multipart/form-data"></form>
-    <div class="btn_all btn_center">
-        <button type="submit" form="bannerForm" class="btn btn-dark-gray btn-small">저장</button>
-    </div>
+    <form id="representativeBanner" method="post" enctype="multipart/form-data"
+          th:action="${edit} ? @{/designated-projects/banners/{id}(id=${banner.reprstBannerId})} : @{/designated-projects/banners}">
+        <div class="btn_all btn_right mb15" th:if="${edit}">
+            <div class="flex_box gap-08">
+                <button type="submit" class="btn btn-dark-gray btn-mini">수정</button>
+                <button type="button" class="btn btn-default btn-mini"
+                        onclick="location.href='/designated-projects/banners'">목록</button>
+            </div>
+        </div>
+
+        <div class="board_write">
+            <table class="board_write_table mt30" summary="">
+                <colgroup>
+                    <col style="width:220px;">
+                    <col style="width:180px;">
+                </colgroup>
+                <tbody>
+                    <tr>
+                        <td class="label"><span class="required_mark">*</span>배너명</td>
+                        <td colspan="3">
+                            <div class="flex_box gap-08">
+                                <input name="title" title="배너명" class="input_txt required _filter half" type="text"
+                                       th:value="${edit} ? ${banner.title} : ''">
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="label">배너 설명</td>
+                        <td colspan="3">
+                            <div class="flex_box gap-08">
+                                <textarea name="bannerContent" title="배너 설명" class="input_txt required _filter half"
+                                          th:text="${edit} ? ${banner.bannerContent} : ''"></textarea>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- 등록 모드: 파일선택만 -->
+                    <th:block th:unless="${edit}">
+                    <tr>
+                        <td class="label" rowspan="2"><span class="required_mark">*</span>이미지</td>
+                        <td class="line-right tcenter">
+                            <div>
+                                <p>PC</p>
+                                <p class="mt10 point">권장사이즈는<br>1280px X 400px 입니다.</p>
+                            </div>
+                        </td>
+                        <td colspan="2">
+                            <div class="flex_box item-center">
+                                <input type="file" name="uploadFilePc" class="full input_file" title="이미지"
+                                       accept="image/png, image/jpeg, image/gif" />
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="line-right tcenter">
+                            <div>
+                                <p>mobile</p>
+                                <p class="mt10 point">권장사이즈는<br>768px X 280px 입니다.</p>
+                            </div>
+                        </td>
+                        <td colspan="2">
+                            <div class="flex_box item-center">
+                                <input type="file" name="uploadFileMobile" class="full input_file" title="이미지"
+                                       accept="image/png, image/jpeg, image/gif" />
+                            </div>
+                        </td>
+                    </tr>
+                    </th:block>
+
+                    <!-- 수정 모드: "파일 수정 :" + 기존 이미지 썸네일/삭제 -->
+                    <th:block th:if="${edit}">
+                    <tr>
+                        <td class="label" rowspan="2"><span class="required_mark">*</span>이미지</td>
+                        <td class="line-right tcenter">
+                            <div>
+                                <p>PC</p>
+                                <p class="mt10 point">권장 사이즈는<br>1280px X 400px 입니다.</p>
+                            </div>
+                        </td>
+                        <td colspan="2">
+                            <div class="flex_box item-center" id="imagePc">
+                                <span class="input_file_txt">파일 수정 : </span>
+                                <input type="file" name="uploadFilePc" class="full input_file" title="이미지"
+                                       accept="image/png, image/jpeg, image/gif" />
+                            </div>
+                            <div class="file_camera" th:if="${hasImagePc}">
+                                <div class="image-box">
+                                    <img th:src="@{${banner.fileNamePc}}" class="item_image size-100 none" alt="상품이미지">
+                                    <a th:attr="href=|javascript:deleteBanner('${banner.reprstBannerId}','pc');|">
+                                        <img th:src="@{/content/images/btn/file_close.gif}" alt="close"></a>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="line-right tcenter">
+                            <div>
+                                <p>mobile</p>
+                                <p class="mt10 point">권장사이즈는<br>768px X 280px 입니다.</p>
+                            </div>
+                        </td>
+                        <td colspan="2">
+                            <div class="flex_box item-center" id="imageMobile">
+                                <span class="input_file_txt">파일 수정 : </span>
+                                <input type="file" name="uploadFileMobile" class="full input_file" title="이미지"
+                                       accept="image/png, image/jpeg, image/gif" />
+                            </div>
+                            <div class="file_camera" th:if="${hasImageMobile}">
+                                <div class="image-box">
+                                    <img th:src="@{${banner.fileNameMobile}}" class="item_image size-100 none" alt="상품이미지">
+                                    <a th:attr="href=|javascript:deleteBanner('${banner.reprstBannerId}','mobile');|">
+                                        <img th:src="@{/content/images/btn/file_close.gif}" alt="close"></a>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    </th:block>
+
+                    <tr>
+                        <td class="label">이미지 링크</td>
+                        <td colspan="3">
+                            <div class="flex_box gap-08">
+                                <input name="linkUrl" title="이미지 링크" class="input_txt _filter half" type="text"
+                                       th:value="${edit} ? ${banner.linkUrl} : ''">
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="label"><span class="required_mark">*</span>사용여부</td>
+                        <td colspan="3">
+                            <!-- AS-IS와 같이 input + 형제 label(for) 구조여야 .input-form flex가 먹는다 -->
+                            <div class="flex_box gap-12">
+                                <div class="input-form">
+                                    <input id="rdo1-1" name="useYn" type="radio" value="Y"
+                                           th:checked="${!edit or banner.useYn != 'N'}">
+                                    <label for="rdo1-1">사용</label>
+                                </div>
+                                <div class="input-form">
+                                    <input id="rdo1-2" name="useYn" type="radio" value="N"
+                                           th:checked="${edit and banner.useYn == 'N'}">
+                                    <label for="rdo1-2">중지</label>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="btn_all btn_center mt30" th:unless="${edit}">
+            <div class="flex_box gap-08">
+                <button type="submit" class="btn btn-dark-gray btn-small">등록</button>
+                <button type="button" class="btn btn-default btn-small"
+                        onclick="location.href='/designated-projects/banners'">취소</button>
+            </div>
+        </div>
+    </form>
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
+<div th:replace="~{fragments/alert :: gh-alert}"></div>
 
-<script type="text/javascript">
-/* AS-IS /banner/delete - 이름은 삭제지만 배너 행이 아니라 이미지 파일명만 비운다. */
-function deleteImage(id, deleteFlag) {
-	if (!confirm("이미지를 삭제하시겠습니까?")) {
-		return;
-	}
-	$.post('/designated-projects/banners/delete',
-			{'representativeBannerId': id, 'deleteFlag': deleteFlag},
-			function(response) {
-		Common.responseHandler(response, function() {
-			alert("삭제 되었습니다.");
-			location.reload();
-		});
-	});
-}
+<script th:inline="javascript">
+/*<![CDATA[*/
+    var ADMIN_ROLE   = /*[[${adminRole}]]*/ '';
+    var IS_EDIT      = /*[[${edit}]]*/ false;
+    var HAS_IMAGE_PC = /*[[${hasImagePc}]]*/ false;
+    var HAS_IMAGE_MO = /*[[${hasImageMobile}]]*/ false;
+
+    $(document).ready(function(){
+        // AS-IS: 기존 이미지가 있으면 파일수정 영역을 숨긴다(삭제 X를 누르면 다시 보인다).
+        if (HAS_IMAGE_PC) { $('#imagePc').hide(); }
+        if (HAS_IMAGE_MO) { $('#imageMobile').hide(); }
+    });
+
+    $(function() {
+        try {
+            $('#representativeBanner').validator(function() {
+
+                // ※ AS-IS 주석은 "지자체 관리자만 권한있음"이지만 실제 코드는 'SYS'가 아니면 막는다.
+                if (ADMIN_ROLE != 'SYS') {
+                    alert("시스템 관리자만 등록/수정이 가능합니다.");
+                    return false;
+                }
+
+                // AS-IS는 location.href.includes("/0") 으로 등록모드를 판단한다. TO-BE URL은
+                // /banners/new · /banners/{id}/edit 라 "/0"이 없으므로 서버가 내려준 플래그를 쓴다.
+                var mode = !IS_EDIT;	// true면 등록모드
+
+                var selectFileCount = 0;
+                $.each($(':file[class*="input_file"]'), function(){
+                    if ($(this).val() != '') {
+                        selectFileCount++;
+                    }
+                });
+
+                var title = $('input[name="title"]').val();
+
+                if (title == '') {
+                    alert("배너명을 입력해 주세요.");
+                    $('input[name="title"]').focus();
+                    return false;
+                }
+
+                if (mode && selectFileCount < 2) {	// 등록일때는 파일 2개 모두 체크
+                    alert('PC와 모바일 이미지 모두 등록해주세요.');
+                    return false;
+                }
+
+                // 수정일때는 삭제된 파일만 체크 - AS-IS 조건식 그대로 옮겼다(괄호 위치까지 동일).
+                if (!mode && (selectFileCount == 0 && !HAS_IMAGE_PC) || (selectFileCount == 0 && !HAS_IMAGE_MO) || (selectFileCount < 2 && !HAS_IMAGE_PC && !HAS_IMAGE_MO)) {
+                    alert('PC와 모바일 이미지 모두 등록해주세요.');
+                    return false;
+                }
+
+                if ($('input[name=uploadFilePc]').val() != "") {
+                    var ext = $('input[name=uploadFilePc]').val().split('.').pop().toLowerCase();
+                    if ($.inArray(ext, ['jpg', 'gif', 'png', 'pdf', 'jpeg']) == -1) {
+                        alert('등록할 수 없는 파일확장자입니다.');
+                        $('input[name=uploadFilePc]').val("");
+                        return false;
+                    }
+                }
+
+                if ($('input[name=uploadFileMobile]').val() != "") {
+                    var ext = $('input[name=uploadFileMobile]').val().split('.').pop().toLowerCase();
+                    if ($.inArray(ext, ['jpg', 'gif', 'png', 'pdf', 'jpeg']) == -1) {
+                        alert('등록할 수 없는 파일확장자입니다.');
+                        $('input[name=uploadFileMobile]').val("");
+                        return false;
+                    }
+                }
+
+                if ($('input[name=uploadFilePc]').val() != "") {
+                    var fileSize = $('input[name=uploadFilePc]')[0].files[0].size;
+                    var maxSize = 20 * 1024 * 1024;	// 20MB
+                    if (fileSize > maxSize) {
+                        alert("첨부파일 사이즈는 20MB 이내로 등록 가능합니다. ");
+                        $('input[name=uploadFilePc]').val("");
+                        return false;
+                    }
+                }
+
+                if ($('input[name=uploadFileMobile]').val() != "") {
+                    var fileSize = $('input[name=uploadFileMobile]')[0].files[0].size;
+                    var maxSize = 20 * 1024 * 1024;	// 20MB
+                    if (fileSize > maxSize) {
+                        alert("첨부파일 사이즈는 20MB 이내로 등록 가능합니다. ");
+                        $('input[name=uploadFileMobile]').val("");
+                        return false;
+                    }
+                }
+
+                if (mode) {
+                    Common.confirm("정보를 등록 하시겠습니까?", function(form) {		// M00159
+                        $('#representativeBanner')[0].submit();
+                    });
+                } else {
+                    Common.confirm("정보를 수정 하시겠습니까?", function(form) {		// M00365
+                        $('#representativeBanner')[0].submit();
+                    });
+                }
+
+                return false;
+            });
+        } catch(e) {
+            alert(e.message);
+        }
+    });
+
+    // AS-IS deleteBanner() - 배너가 아니라 그 이미지 파일명만 비운다.
+    function deleteBanner(id, type) {
+        var param = {
+            "representativeBannerId" : id,
+            "deleteFlag" : type
+        };
+
+        if (confirm("삭제하시겠습니까?")) {		// M00196
+            $.post("/designated-projects/banners/delete", param, function(resp){
+                Common.responseHandler(resp, function(){
+                    if (type == 'pc') {
+                        $('#imagePc').show();
+                    } else if (type == 'mobile') {
+                        $('#imageMobile').show();
+                    }
+                    alert("삭제 되었습니다.");	// M00205
+                    location.reload();
+                });
+            });
+        }
+    }
+/*]]>*/
 </script>
 </body>
 </html>

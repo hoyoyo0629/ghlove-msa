@@ -2,6 +2,10 @@ package com.ghlove.donation.service;
 
 import com.ghlove.donation.domain.DesignatedPart;
 import com.ghlove.donation.domain.DesignatedProject;
+import com.ghlove.donation.domain.DesignatedNotice;
+import com.ghlove.donation.domain.DesignatedNoticeFile;
+import com.ghlove.donation.domain.DesignatedNoticeImgExpln;
+import com.ghlove.donation.domain.DesignatedProjectImage;
 import com.ghlove.donation.domain.Donation;
 import com.ghlove.donation.domain.DsgnAprvLog;
 import com.ghlove.donation.domain.Locgov;
@@ -71,6 +75,10 @@ public class DesignatedAdminService {
     //   쓰려고 이 서비스를 이미 주입하고 있다). 코드표 조회는 저장소를 직접 쓴다.
     private final CommonCodeRepository commonCodeRepository;
     private final FileStorageService fileStorageService;
+    private final com.ghlove.donation.repository.DesignatedNoticeRepository designatedNoticeRepository;
+    private final com.ghlove.donation.repository.DesignatedNoticeFileRepository designatedNoticeFileRepository;
+    private final com.ghlove.donation.repository.DesignatedNoticeImgExplnRepository designatedNoticeImgExplnRepository;
+    private final com.ghlove.donation.repository.DesignatedProjectImageRepository designatedProjectImageRepository;
 
     public List<DesignatedProject> listAll() {
         return designatedProjectRepository.findAll().stream()
@@ -96,7 +104,8 @@ public class DesignatedAdminService {
     /** true면 ROLE_OPERATOR 등급(AS-IS의 지정기부 담당자)이라 진행중(승인) 상태로 직접
      *  전환할 수 없다 - 반드시 상급자(ROLE_ADMIN)가 승인해야 한다(AS-IS 자기 승인 금지 규칙). */
     @Transactional
-    public DesignatedProject create(DesignatedProject form, MultipartFile image, boolean canSelfApprove, Long managerId) {
+    public DesignatedProject create(DesignatedProject form, MultipartFile image, List<MultipartFile> images,
+                                    boolean canSelfApprove, Long managerId) {
         validate(form);
         if (STATUS_OPEN.equals(form.getDsgnDntnBizSttsCd()) && !canSelfApprove) {
             form.setDsgnDntnBizSttsCd(STATUS_PENDING);
@@ -109,12 +118,14 @@ public class DesignatedAdminService {
         form.setFrstRegDt(LocalDateTime.now());
         form.setLastRegDt(LocalDateTime.now());
         DesignatedProject saved = designatedProjectRepository.save(form);
+        storeImages(saved, images, managerId);
         writeApprovalLog(saved.getDsgnDntnBizId(), null, saved.getDsgnDntnBizSttsCd(), managerId);
         return saved;
     }
 
     @Transactional
-    public DesignatedProject update(Long id, DesignatedProject form, MultipartFile image, boolean canSelfApprove, Long managerId) {
+    public DesignatedProject update(Long id, DesignatedProject form, MultipartFile image, List<MultipartFile> images,
+                                    boolean canSelfApprove, Long managerId) {
         validate(form);
         DesignatedProject entity = findOrThrow(id);
         String beforeStatus = entity.getDsgnDntnBizSttsCd();
@@ -143,12 +154,70 @@ public class DesignatedAdminService {
         }
 
         DesignatedProject saved = designatedProjectRepository.save(entity);
+        storeImages(saved, images, managerId);
         if (!beforeStatus.equals(saved.getDsgnDntnBizSttsCd())) {
             writeApprovalLog(id, beforeStatus, saved.getDsgnDntnBizSttsCd(), managerId);
         }
         return saved;
     }
 
+
+    /** 업로드 경로 접두어 - 단일 imageUrl 과 같은 규칙을 쓴다. */
+    private static final String IMAGE_URL_PREFIX = "/uploads/donation/designated-project/";
+
+    /**
+     * AS-IS {@code prjImageFiles[]} - 이미지를 여러 장 받아 뒤에 이어 붙인다.
+     *
+     * <p>기존 이미지를 지우지 않는다(AS-IS도 추가 등록이고, 삭제는 썸네일의 x 로 한 장씩 한다).
+     * 저장 뒤 대표 이미지({@code imageUrl})를 첫 장으로 맞춰 둔다 - 목록·상세 등 기존 화면이
+     * 그 칸만 보기 때문이다.
+     */
+    private void storeImages(DesignatedProject saved, List<MultipartFile> images, Long managerId) {
+        if (images == null || images.isEmpty()) {
+            return;
+        }
+        Long projectId = saved.getDsgnDntnBizId();
+        List<DesignatedProjectImage> exist =
+                designatedProjectImageRepository.findByDsgnDntnBizIdOrderByImgSeqAsc(projectId);
+        int seq = exist.isEmpty() ? 0 : exist.get(exist.size() - 1).getImgSeq();
+        boolean added = false;
+        for (MultipartFile file : images) {
+            if (file == null || file.isEmpty()) {
+                continue;
+            }
+            String stored = fileStorageService.store(file, "designated-project");
+            designatedProjectImageRepository.save(
+                    new DesignatedProjectImage(projectId, stored, ++seq, managerId));
+            added = true;
+        }
+        if (added) {
+            syncRepresentativeImage(saved);
+        }
+    }
+
+    /** 대표 이미지 = 순서가 가장 앞선 것. 한 장도 없으면 비운다. */
+    private void syncRepresentativeImage(DesignatedProject project) {
+        List<DesignatedProjectImage> all =
+                designatedProjectImageRepository.findByDsgnDntnBizIdOrderByImgSeqAsc(project.getDsgnDntnBizId());
+        project.setImageUrl(all.isEmpty() ? null : IMAGE_URL_PREFIX + all.get(0).getImgNm());
+        designatedProjectRepository.save(project);
+    }
+
+    /** 사업에 달린 이미지 목록(노출 순서). */
+    public List<DesignatedProjectImage> imagesOf(Long projectId) {
+        return designatedProjectImageRepository.findByDsgnDntnBizIdOrderByImgSeqAsc(projectId);
+    }
+
+    /** AS-IS 썸네일의 x 버튼 - 한 장만 지우고 대표 이미지를 다시 맞춘다. */
+    @Transactional
+    public void deleteImage(Long imageId) {
+        designatedProjectImageRepository.findById(imageId).ifPresent(img -> {
+            Long projectId = img.getDsgnDntnBizId();
+            designatedProjectImageRepository.delete(img);
+            designatedProjectImageRepository.flush();
+            designatedProjectRepository.findById(projectId).ifPresent(this::syncRepresentativeImage);
+        });
+    }
     public List<DsgnAprvLog> approvalLogOf(Long id) {
         return dsgnAprvLogRepository.findByDsgnDntnBizIdOrderByLogIdDesc(id);
     }
@@ -253,45 +322,165 @@ public class DesignatedAdminService {
         }
     }
 
-    // ---- 공지사항 ----
+    // ---- 공지사항 (AS-IS G_DSGN_DNTN_BIZ_NTC_MNG) ----
+    //
+    // 2026-10-08: AS-IS에 없는 이름의 표(G_DSGN_PRJ_NOTICE)를 쓰고 있던 것을 AS-IS 실명 표로
+    // 옮겼다. 그 표에는 공개여부(RLS_YN)·첨부·이미지설명이 없어 AS-IS 화면을 만들 수 없었다.
+    // [[no-invented-features-ask-first]] / ADMIN_COMMON_CODE 전환과 같은 유형.
 
-    public List<PrjNotice> noticesOf(Long dsgnDntnBizId) {
-        return prjNoticeRepository.findByDsgnDntnBizIdOrderByPrjNoticeIdDesc(dsgnDntnBizId);
+    /** AS-IS 허용 확장자 - 등록화면 안내문구에 적힌 그대로다. */
+    private static final java.util.Set<String> NOTICE_FILE_EXTS = java.util.Set.of(
+            "jpg", "jpeg", "gif", "bmp", "png", "doc", "docx", "xls", "xlsx",
+            "ppt", "pptx", "pdf", "tif", "tiff", "hwp", "hwpx", "zip");
+
+    /** 운영자 목록 - 공개/비공개 전부. AS-IS ORDER BY 공지ID DESC. */
+    public List<DesignatedNotice> noticesOf(Long dsgnDntnBizId) {
+        return designatedNoticeRepository.findByDsgnDntnBizIdOrderByNoticeIdDesc(dsgnDntnBizId);
     }
 
-    public PrjNotice noticeOrThrow(Long noticeId) {
-        return prjNoticeRepository.findById(noticeId)
+    /** 대민 목록 - AS-IS 매퍼가 display=='FRONT' 일 때 RLS_YN='Y' 를 건다. */
+    public List<DesignatedNotice> publicNoticesOf(Long dsgnDntnBizId) {
+        return designatedNoticeRepository.findByDsgnDntnBizIdAndRlsYnOrderByNoticeIdDesc(dsgnDntnBizId, "Y");
+    }
+
+    public DesignatedNotice noticeOrThrow(Long noticeId) {
+        return designatedNoticeRepository.findById(noticeId)
                 .orElseThrow(() -> new DonationException("공지사항을 찾을 수 없습니다."));
     }
 
     @Transactional
-    public PrjNotice createNotice(Long dsgnDntnBizId, String subject, String content) {
+    public DesignatedNotice createNotice(Long dsgnDntnBizId, String subject, String content, String rlsYn,
+                                          List<MultipartFile> files, List<String> imgExplns, Long managerId) {
         findOrThrow(dsgnDntnBizId);
-        if (subject == null || subject.isBlank()) {
-            throw new DonationException("제목을 입력해 주세요.");
-        }
-        PrjNotice notice = new PrjNotice();
+        validateNotice(subject);
+        DesignatedNotice notice = new DesignatedNotice();
         notice.setDsgnDntnBizId(dsgnDntnBizId);
-        notice.setPrjNoticeSubject(subject);
-        notice.setPrjNoticeCn(content);
-        notice.setFrstRegistPnttm(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")));
-        return prjNoticeRepository.save(notice);
+        notice.setSubject(subject);
+        notice.setContent(content);
+        notice.setRlsYn(normalizeRlsYn(rlsYn));
+        notice.setFrstRgtrId(managerId);
+        notice.setLastRgtrId(managerId);
+        notice.setFrstRegDt(LocalDateTime.now());
+        notice.setLastRegDt(LocalDateTime.now());
+        DesignatedNotice saved = designatedNoticeRepository.save(notice);
+        storeNoticeFiles(saved.getNoticeId(), files, managerId);
+        replaceImgExplns(saved.getNoticeId(), imgExplns, managerId);
+        return saved;
     }
 
     @Transactional
-    public PrjNotice updateNotice(Long noticeId, String subject, String content) {
-        PrjNotice notice = noticeOrThrow(noticeId);
-        if (subject == null || subject.isBlank()) {
-            throw new DonationException("제목을 입력해 주세요.");
-        }
-        notice.setPrjNoticeSubject(subject);
-        notice.setPrjNoticeCn(content);
-        return prjNoticeRepository.save(notice);
+    public DesignatedNotice updateNotice(Long noticeId, String subject, String content, String rlsYn,
+                                          List<MultipartFile> files, List<String> imgExplns, Long managerId) {
+        DesignatedNotice notice = noticeOrThrow(noticeId);
+        validateNotice(subject);
+        notice.setSubject(subject);
+        notice.setContent(content);
+        notice.setRlsYn(normalizeRlsYn(rlsYn));
+        notice.setLastRgtrId(managerId);
+        notice.setLastRegDt(LocalDateTime.now());
+        DesignatedNotice saved = designatedNoticeRepository.save(notice);
+        // 첨부는 AS-IS처럼 "덧붙이기"다(기존 파일은 x 로 한 장씩 지운다).
+        storeNoticeFiles(noticeId, files, managerId);
+        // 이미지 설명은 화면이 보낸 전체로 교체한다(행 추가/삭제를 화면에서 하기 때문).
+        replaceImgExplns(noticeId, imgExplns, managerId);
+        return saved;
     }
 
     @Transactional
     public void deleteNotice(Long noticeId) {
-        prjNoticeRepository.deleteById(noticeId);
+        designatedNoticeFileRepository.deleteByNoticeId(noticeId);
+        designatedNoticeImgExplnRepository.deleteByNoticeId(noticeId);
+        designatedNoticeRepository.deleteById(noticeId);
+    }
+
+    /** AS-IS 목록 하단의 [공개]/[비공개] 일괄 버튼. @return 바뀐 건수 */
+    @Transactional
+    public int updateNoticeDisplay(List<Long> noticeIds, String rlsYn, Long managerId) {
+        if (noticeIds == null || noticeIds.isEmpty()) {
+            return 0;
+        }
+        String value = normalizeRlsYn(rlsYn);
+        int changed = 0;
+        for (Long id : noticeIds) {
+            DesignatedNotice notice = designatedNoticeRepository.findById(id).orElse(null);
+            if (notice == null || value.equals(notice.getRlsYn())) {
+                continue;
+            }
+            notice.setRlsYn(value);
+            notice.setLastRgtrId(managerId);
+            notice.setLastRegDt(LocalDateTime.now());
+            designatedNoticeRepository.save(notice);
+            changed++;
+        }
+        return changed;
+    }
+
+    public List<DesignatedNoticeFile> noticeFilesOf(Long noticeId) {
+        return designatedNoticeFileRepository.findByNoticeIdOrderByFileSeqAsc(noticeId);
+    }
+
+    public DesignatedNoticeFile noticeFileOrThrow(Long noticeId, Integer fileSeq) {
+        return designatedNoticeFileRepository.findByNoticeIdAndFileSeq(noticeId, fileSeq)
+                .orElseThrow(() -> new DonationException("첨부파일을 찾을 수 없습니다."));
+    }
+
+    @Transactional
+    public void deleteNoticeFile(Long noticeId, Integer fileSeq) {
+        designatedNoticeFileRepository.findByNoticeIdAndFileSeq(noticeId, fileSeq)
+                .ifPresent(designatedNoticeFileRepository::delete);
+    }
+
+    public List<DesignatedNoticeImgExpln> noticeImgExplnsOf(Long noticeId) {
+        return designatedNoticeImgExplnRepository.findByNoticeIdOrderByImgSeqAsc(noticeId);
+    }
+
+    private void validateNotice(String subject) {
+        if (subject == null || subject.isBlank()) {
+            throw new DonationException("제목을 입력해 주세요.");
+        }
+    }
+
+    /** AS-IS 라디오는 Y/N 뿐이다. 값이 비면 공개(Y)로 본다(AS-IS 신규등록 기본값). */
+    private static String normalizeRlsYn(String rlsYn) {
+        return "N".equals(rlsYn) ? "N" : "Y";
+    }
+
+    private void storeNoticeFiles(Long noticeId, List<MultipartFile> files, Long managerId) {
+        if (files == null || files.isEmpty()) {
+            return;
+        }
+        List<DesignatedNoticeFile> exist = designatedNoticeFileRepository.findByNoticeIdOrderByFileSeqAsc(noticeId);
+        int seq = exist.isEmpty() ? 0 : exist.get(exist.size() - 1).getFileSeq();
+        for (MultipartFile file : files) {
+            if (file == null || file.isEmpty()) {
+                continue;
+            }
+            String original = file.getOriginalFilename() == null ? "" : file.getOriginalFilename();
+            int dot = original.lastIndexOf('.');
+            String ext = dot < 0 ? "" : original.substring(dot + 1).toLowerCase();
+            if (!NOTICE_FILE_EXTS.contains(ext)) {
+                throw new DonationException("첨부할 수 없는 확장자입니다: " + (ext.isEmpty() ? original : ext));
+            }
+            String stored = fileStorageService.store(file, "designated-notice");
+            designatedNoticeFileRepository.save(new DesignatedNoticeFile(
+                    noticeId, ++seq, stored, "designated-notice", original, managerId));
+        }
+    }
+
+    private void replaceImgExplns(Long noticeId, List<String> imgExplns, Long managerId) {
+        if (imgExplns == null) {
+            return;
+        }
+        designatedNoticeImgExplnRepository.deleteByNoticeId(noticeId);
+        designatedNoticeImgExplnRepository.flush();
+        int seq = 0;
+        for (String expln : imgExplns) {
+            if (expln == null || expln.isBlank()) {
+                continue;
+            }
+            designatedNoticeImgExplnRepository.save(
+                    new DesignatedNoticeImgExpln(noticeId, ++seq, expln, managerId));
+        }
     }
 
     // ---- 담당부서 ----

@@ -2,6 +2,7 @@ package com.ghlove.donation.service;
 
 import com.ghlove.donation.domain.CommonCodeId;
 import com.ghlove.donation.domain.CtbnySetup;
+import com.ghlove.donation.domain.DesignatedNotice;
 import com.ghlove.donation.domain.DesignatedProject;
 import com.ghlove.donation.domain.Donation;
 import com.ghlove.donation.domain.DonationLevy;
@@ -97,7 +98,7 @@ public class DonationService {
     private final HonorCntrbtrRepository honorCntrbtrRepository;
     private final com.ghlove.donation.repository.HonorViewHistRepository honorViewHistRepository;
     private final InterestLocgovRepository interestLocgovRepository;
-    private final com.ghlove.donation.repository.PrjNoticeRepository prjNoticeRepository;
+    private final com.ghlove.donation.repository.DesignatedNoticeRepository designatedNoticeRepository;
     private final DesignatedAdminService designatedAdminService;
 
     public List<Locgov> activeLocgovs() {
@@ -208,9 +209,15 @@ public class DonationService {
         return cntrDe.substring(0, 4) + "-" + cntrDe.substring(4, 6) + "-" + cntrDe.substring(6, 8);
     }
 
-    /** 상세화면 "공지사항" 탭. */
-    public List<PrjNotice> noticesOf(Long dsgnDntnBizId) {
-        return prjNoticeRepository.findByDsgnDntnBizIdOrderByPrjNoticeIdDesc(dsgnDntnBizId);
+    /**
+     * 상세화면 "공지사항" 탭.
+     *
+     * <p>AS-IS 매퍼는 대민(display=='FRONT')일 때 {@code RLS_YN = 'Y'} 를 건다 -
+     * <b>비공개 공지는 대민에 안 보인다.</b> 옮기기 전 표(G_DSGN_PRJ_NOTICE)에는 공개여부 칸
+     * 자체가 없어 전부 노출되고 있었다(2026-10-08 AS-IS 실명 표로 전환하며 해소).
+     */
+    public List<DesignatedNotice> noticesOf(Long dsgnDntnBizId) {
+        return designatedNoticeRepository.findByDsgnDntnBizIdAndRlsYnOrderByNoticeIdDesc(dsgnDntnBizId, "Y");
     }
 
     /** /designated-donation 목록 화면. AS-IS index-main.html의 상태(진행중/종료)·정렬(최근등록순/

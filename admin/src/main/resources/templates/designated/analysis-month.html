@@ -30,7 +30,6 @@
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <p><a th:href="@{/designated-projects}">&larr; 지정기부 관리</a></p>
 
     <div class="item_list">
         <h3><span>월별 통계</span></h3>
@@ -75,10 +74,18 @@
                             </td>
                             <td class="label">상태</td>
                             <td>
+                                <!-- AS-IS는 form:radiobutton 이라 input에 id(prjStatus1~3)가 붙고 label이
+                                     "형제"로 for= 로 연결된다. 이 구조가 중요하다 - opmanager.css:2496
+                                     '.admin_wrap .input-form { display:flex; gap:5px; align-items:center }'
+                                     는 input과 label이 각각 flex 아이템일 때만 간격·수직정렬이 먹는다.
+                                     label로 input을 감싸면 자식이 label 하나뿐이라 gap이 사라지고,
+                                     opmanager.css:414 'input[type=radio] { margin-right:-5px !important }'
+                                     때문에 글자가 라디오에 달라붙는다.
+                                     ※ 이 화면의 상태는 3개다(전체/진행/종료) - 지자체별통계와 달리 '대기'가 없다. -->
                                 <div class="flex_box gap-12">
-                                    <div class="input-form"><label><input type="radio" name="prjStatus" value="0" checked="checked"> 전체</label></div>
-                                    <div class="input-form"><label><input type="radio" name="prjStatus" value="2"> 진행</label></div>
-                                    <div class="input-form"><label><input type="radio" name="prjStatus" value="9"> 종료</label></div>
+                                    <div class="input-form"><input id="prjStatus1" name="prjStatus" type="radio" value="0" checked="checked"><label for="prjStatus1">전체</label></div>
+                                    <div class="input-form"><input id="prjStatus2" name="prjStatus" type="radio" value="2"><label for="prjStatus2">진행</label></div>
+                                    <div class="input-form"><input id="prjStatus3" name="prjStatus" type="radio" value="9"><label for="prjStatus3">종료</label></div>
                                 </div>
                             </td>
                         </tr>

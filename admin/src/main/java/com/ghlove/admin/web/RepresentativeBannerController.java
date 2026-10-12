@@ -23,6 +23,9 @@ public class RepresentativeBannerController {
     /** AS-IS 가드 문구 그대로. */
     private static final String DEPARTMENT_REQUIRED = "부서정보가 없어서 처리가 불가능합니다.";
 
+    /** M00406 - AS-IS가 등록/수정 후 목록으로 돌아가며 띄우는 문구. */
+    private static final String SAVED = "저장되었습니다.";
+
     /** AS-IS가 통과시키는 권한 - 최고관리자(1~4)·지자체담당자(5~6). */
     private static final java.util.Set<String> MASTER_OR_LOCGOV = java.util.Set.of(
             "ROLE_ADMIN_1", "ROLE_ADMIN_2", "ROLE_ADMIN_3", "ROLE_ADMIN_4",
@@ -30,64 +33,126 @@ public class RepresentativeBannerController {
 
     private final RepresentativeBannerService bannerService;
     private final DesignatedProjectClient designatedProjectClient;
+    private final com.ghlove.admin.web.support.FlashRedirect flashRedirect;
+
+    /** AS-IS 목록은 항상 15행이다 - 등록된 배너 뒤를 빈 슬롯으로 채운다. */
+    private static final int MAX_SLOTS = 15;
 
     @GetMapping
-    public String list(Model model) {
-        model.addAttribute("banners", bannerService.list());
+    public String list(HttpSession session, Model model) {
+        List<com.ghlove.admin.domain.RepresentativeBanner> banners = bannerService.list();
+        model.addAttribute("bannerList", banners);
+        model.addAttribute("bannerCount", banners.size());
+        model.addAttribute("emptySlots", Math.max(0, MAX_SLOTS - banners.size()));
+        model.addAttribute("adminRole", adminRole(manager(session)));
         return "designated/banner-list";
     }
 
     @GetMapping("/new")
-    public String newForm(Model model) {
+    public String newForm(HttpSession session, Model model) {
+        model.addAttribute("edit", false);
         model.addAttribute("banner", null);
+        model.addAttribute("hasImagePc", false);
+        model.addAttribute("hasImageMobile", false);
+        model.addAttribute("adminRole", adminRole(manager(session)));
         return "designated/banner-form";
     }
 
     @GetMapping("/{id}/edit")
-    public String editForm(@PathVariable Integer id, Model model) {
-        model.addAttribute("banner", bannerService.get(id));
+    public String editForm(@PathVariable Integer id, HttpSession session, Model model) {
+        putEditModel(model, bannerService.get(id), manager(session));
         return "designated/banner-form";
     }
 
+    /**
+     * AS-IS POST {@code /banner/form/{id}} - 등록. 등록 후 목록으로 돌아가며
+     * M00406("저장되었습니다.")을 flash로 넘긴다(AS-IS {@code ViewUtils.redirect(url, message)}).
+     *
+     * <p>파라미터 이름은 AS-IS 폼과 같다({@code title}/{@code bannerContent}/{@code linkUrl}/
+     * {@code useYn}/{@code uploadFilePc}/{@code uploadFileMobile}). 노출순서는 폼에 없고
+     * 매퍼가 {@code MAX(DISPLAY_ORDER)+1}을 넣는다.
+     */
     @PostMapping
-    public String create(@RequestParam String title, @RequestParam(required = false) String linkUrl,
-                          @RequestParam(required = false) String bannerContent, @RequestParam Integer displayOrder,
-                          @RequestParam(required = false) MultipartFile pcImage,
-                          @RequestParam(required = false) MultipartFile mobileImage,
-                          HttpSession session, Model model) {
-        Manager manager = manager(session);
-        try {
-            bannerService.create(title, linkUrl, bannerContent, displayOrder, pcImage, mobileImage, manager.getUserId());
-            return "redirect:/designated-projects/banners";
-        } catch (RepresentativeBannerException e) {
-            model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute("banner", null);
-            return "designated/banner-form";
-        }
-    }
-
-    @PostMapping("/{id}")
-    public String update(@PathVariable Integer id, @RequestParam String title,
+    public String create(@RequestParam(required = false) String title,
                           @RequestParam(required = false) String linkUrl,
-                          @RequestParam(required = false) String bannerContent, @RequestParam Integer displayOrder,
-                          @RequestParam(required = false) MultipartFile pcImage,
-                          @RequestParam(required = false) MultipartFile mobileImage,
+                          @RequestParam(required = false) String bannerContent,
+                          @RequestParam(required = false, defaultValue = "Y") String useYn,
+                          @RequestParam(required = false) MultipartFile uploadFilePc,
+                          @RequestParam(required = false) MultipartFile uploadFileMobile,
                           HttpSession session, Model model) {
         Manager manager = manager(session);
+        String denied = denyReason(manager);
+        if (denied != null) {
+            return flashRedirect.to("/designated-projects/banners", denied);
+        }
         try {
-            bannerService.update(id, title, linkUrl, bannerContent, displayOrder, pcImage, mobileImage, manager.getUserId());
-            return "redirect:/designated-projects/banners";
+            bannerService.create(title, linkUrl, bannerContent, useYn, uploadFilePc, uploadFileMobile,
+                    manager.getUserId());
+            return flashRedirect.to("/designated-projects/banners", SAVED);
         } catch (RepresentativeBannerException e) {
-            model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute("banner", bannerService.get(id));
+            model.addAttribute("edit", false);
+            model.addAttribute("banner", null);
+            model.addAttribute("hasImagePc", false);
+            model.addAttribute("hasImageMobile", false);
+            model.addAttribute("adminRole", adminRole(manager));
+            model.addAttribute("redirectMessage", e.getMessage());
             return "designated/banner-form";
         }
     }
 
-    @PostMapping("/{id}/toggle")
-    public String toggle(@PathVariable Integer id, HttpSession session) {
-        bannerService.toggle(id, manager(session).getUserId());
-        return "redirect:/designated-projects/banners";
+    /** AS-IS POST {@code /banner/form/{id}} - 수정. */
+    @PostMapping("/{id}")
+    public String update(@PathVariable Integer id,
+                          @RequestParam(required = false) String title,
+                          @RequestParam(required = false) String linkUrl,
+                          @RequestParam(required = false) String bannerContent,
+                          @RequestParam(required = false, defaultValue = "Y") String useYn,
+                          @RequestParam(required = false) MultipartFile uploadFilePc,
+                          @RequestParam(required = false) MultipartFile uploadFileMobile,
+                          HttpSession session, Model model) {
+        Manager manager = manager(session);
+        String denied = denyReason(manager);
+        if (denied != null) {
+            return flashRedirect.to("/designated-projects/banners", denied);
+        }
+        try {
+            bannerService.update(id, title, linkUrl, bannerContent, useYn, uploadFilePc, uploadFileMobile,
+                    manager.getUserId());
+            return flashRedirect.to("/designated-projects/banners", SAVED);
+        } catch (RepresentativeBannerException e) {
+            putEditModel(model, bannerService.get(id), manager);
+            model.addAttribute("redirectMessage", e.getMessage());
+            return "designated/banner-form";
+        }
+    }
+
+    private void putEditModel(Model model, com.ghlove.admin.domain.RepresentativeBanner banner, Manager manager) {
+        model.addAttribute("edit", true);
+        model.addAttribute("banner", banner);
+        model.addAttribute("hasImagePc", hasText(banner.getFileNamePc()));
+        model.addAttribute("hasImageMobile", hasText(banner.getFileNameMobile()));
+        model.addAttribute("adminRole", adminRole(manager));
+    }
+
+    private static boolean hasText(String s) {
+        return s != null && !s.isBlank();
+    }
+
+    /**
+     * AS-IS {@code LocgovServiceImpl#getLoginUserAdminRoleCheck()} 재현 - 화면이 쓰는 {@code adminRole}.
+     * 기본 SYS, ROLE_ADMIN_5/6은 LOC, 7/8은 OFF, 11은 WCM. 배너 등록/수정/순서저장은 SYS만 가능하다.
+     */
+    private static String adminRole(Manager manager) {
+        String authority = manager == null ? null : manager.getAuthority();
+        if (authority == null) {
+            return "SYS";
+        }
+        return switch (authority) {
+            case "ROLE_ADMIN_5", "ROLE_ADMIN_6" -> "LOC";
+            case "ROLE_ADMIN_7", "ROLE_ADMIN_8" -> "OFF";
+            case "ROLE_ADMIN_11" -> "WCM";
+            default -> "SYS";
+        };
     }
 
     /**

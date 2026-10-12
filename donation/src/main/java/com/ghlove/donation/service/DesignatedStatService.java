@@ -4,7 +4,6 @@ import com.ghlove.donation.repository.DesignatedStatRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -57,34 +56,38 @@ public class DesignatedStatService {
 
     // ---- 지자체별 통계 ----
 
+    // 달성율은 AS-IS DesignatedStat 과 같은 float 다(private float totAchvRt / achvRt). BigDecimal로
+    // 들고 있으면 PostgreSQL이 돌려준 스케일이 그대로 화면까지 따라가 0E-20 / 0.61000000000000000000
+    // 처럼 찍힌다. 매퍼가 2자리로 캐스팅한 값을 float으로 받아 AS-IS와 표시까지 동일하게 맞춘다.
+
     /** 요약 집계. */
-    public record LocgovSummary(long totTargetAmt, long totCntrAmt, BigDecimal totAchvRt, long totCntrCnt) {
+    public record LocgovSummary(long totTargetAmt, long totCntrAmt, float totAchvRt, long totCntrCnt) {
     }
 
     /** 지자체 1행. */
     public record LocgovStatRow(String locgovCode, String locgovNm, long prjCnt, long statu2Cnt, long statu9Cnt,
                                 long totCntrCnt, long bsnsType100Cnt, long bsnsType200Cnt, long bsnsType300Cnt,
-                                long bsnsType400Cnt, long targetAmt, long cntrAmt, BigDecimal achvRt) {
+                                long bsnsType400Cnt, long targetAmt, long cntrAmt, float achvRt) {
     }
 
     public LocgovSummary locgovSummary(String shWdr, String shLocgovCode, String bsnsType, String frDt, String toDt, String prjStatus) {
         List<Object[]> rows = repository.selectLocgovSummary(n(shWdr), n(shLocgovCode), b0(bsnsType), fr(frDt), to(toDt), n0(prjStatus));
         if (rows.isEmpty()) {
-            return new LocgovSummary(0, 0, BigDecimal.ZERO, 0);
+            return new LocgovSummary(0, 0, 0f, 0);
         }
         Object[] r = rows.get(0);
-        return new LocgovSummary(l(r[0]), l(r[1]), bd(r[2]), l(r[3]));
+        return new LocgovSummary(l(r[0]), l(r[1]), f(r[2]), l(r[3]));
     }
 
     public List<LocgovStatRow> locgovList(String shWdr, String shLocgovCode, String bsnsType, String frDt, String toDt, String prjStatus) {
         return repository.selectLocgovList(n(shWdr), n(shLocgovCode), b0(bsnsType), fr(frDt), to(toDt), n0(prjStatus)).stream()
                 .map(r -> new LocgovStatRow((String) r[0], (String) r[1], l(r[2]), l(r[3]), l(r[4]), l(r[5]),
-                        l(r[6]), l(r[7]), l(r[8]), l(r[9]), l(r[10]), l(r[11]), bd(r[12])))
+                        l(r[6]), l(r[7]), l(r[8]), l(r[9]), l(r[10]), l(r[11]), f(r[12])))
                 .toList();
     }
 
-    private static BigDecimal bd(Object o) {
-        return o == null ? BigDecimal.ZERO : (o instanceof BigDecimal d ? d : new BigDecimal(o.toString()));
+    private static float f(Object o) {
+        return o == null ? 0f : (o instanceof Number n ? n.floatValue() : Float.parseFloat(o.toString()));
     }
 
     /** bsnsType 빈값이면 '0'(전체). */
