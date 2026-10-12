@@ -4,10 +4,13 @@ import com.ghlove.admin.domain.Manager;
 import com.ghlove.admin.domain.Menu;
 import com.ghlove.admin.service.CommonMessageService;
 import com.ghlove.admin.service.MenuService;
+import com.ghlove.admin.service.PrivacyAccessLogService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
+
+import java.util.Map;
 
 /** fragments/admin-nav.html의 상단 1차메뉴(GNB) + 좌측 사이드바(2차) 렌더링에 필요한
  *  공통 모델 속성을 매 요청마다 주입한다(HeaderAuthAdvice와 동일한 패턴) - 그래야 각
@@ -23,6 +26,7 @@ public class ManagerAuthAdvice {
     private final MenuService menuService;
     private final CommonMessageService commonMessageService;
     private final com.ghlove.admin.repository.ConfigIsmsRepository configIsmsRepository;
+    private final PrivacyAccessLogService privacyAccessLogService;
 
     /**
      * AS-IS {@code layouts/opmanager/inc_head.jsp}의 {@code OP_MANAGER_TIMEOUT}
@@ -56,6 +60,19 @@ public class ManagerAuthAdvice {
     @ModelAttribute("loginManager")
     public Manager loginManager(HttpServletRequest request) {
         return currentManager(request);
+    }
+
+    /**
+     * fragments/privacy-access.html("개인정보 엑셀 다운로드 사유" 모달)의 분류코드 select 옵션.
+     * AS-IS는 이 모달을 여는 공통함수(op.shop.js의 {@code Shop.downloadExcelOrder})가
+     * 전역 JS 객체(1~5, "기부금 모금 실적 확인"... "기타")로 select를 그 자리에서 DOM에
+     * 끼워 넣는데, 이 모달을 쓰는 화면이 많아(엑셀다운로드 버튼이 있는 화면 전부) 여기서
+     * 한 번만 주입한다. 값은 엑셀다운로드사유관리(1411)의 "사유타입" 수정 select가 쓰는
+     * 것과 같은 공통코드(EXCELDOWNLOAD_REASON_TYPE)라 두 화면의 선택지가 항상 같다.
+     */
+    @ModelAttribute("reasonTypeOptions")
+    public Map<String, String> reasonTypeOptions() {
+        return privacyAccessLogService.reasonTypeOptions();
     }
 
     /**

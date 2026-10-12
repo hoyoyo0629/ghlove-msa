@@ -18,7 +18,14 @@
        그래서 REASON_TYPE은 실제로 비어 있고 1411의 "사유타입" 칸도 빈칸이다. 그대로 뒀다.
      - 성공 시 "다운로드가 진행 중입니다. 잠시만 기다려주세요." alert 후 이동.
      AS-IS에 있던 param(POST 방식 주문번호 전달) 분기는 배송준비중(모바일) 주문 엑셀 전용이라
-     그 화면을 이식할 때 함께 되살린다(지금은 uri 이동만 쓴다). -->
+     그 화면을 이식할 때 함께 되살린다(지금은 uri 이동만 쓴다).
+
+     ★2026-10-08 추가: 분류코드(#reasonType) select. AS-IS는 이 모달 자체 마크업엔 없고
+     Shop.downloadExcelOrder(공통 JS, op.shop.js)가 모달을 열 때마다 전역 reasonType
+     객체(1~5 고정값)로 DOM에 즉석으로 끼워 넣는다 - 그래서 마크업만 보고 "AS-IS에 없다"고
+     잘못 판단했었다(오프라인담당자 목록화면에서 실사용 확인 후 수정). TO-BE는 서버에서
+     한 번에 렌더링한다(ManagerAuthAdvice의 reasonTypeOptions, EXCELDOWNLOAD_REASON_TYPE
+     공통코드 - 1411 엑셀다운로드사유관리의 사유타입 수정 select와 같은 값). -->
 <th:block th:fragment="modal">
     <div class="modal fade" id="privacyModal" tabindex="-1" role="dialog" aria-labelledby="privacyAccessModal">
 
@@ -31,6 +38,10 @@
                         <h1 class="popup_title">개인정보 엑셀 다운로드 사유</h1>
                         <a href="javascript:popupClose();" class="btn_close"><img th:src="@{/content/opmanager/images/btn/btn_close.png}" alt="닫기"></a>
                     </div>
+                    <select id="reasonType" name="reasonType" title="엑셀다운로드타입" class="wd-400 required" style="margin-left:15px;margin-top:20px">
+                        <option value="">-선택-</option>
+                        <option th:each="entry : ${reasonTypeOptions}" th:value="${entry.key}" th:text="${entry.value}"></option>
+                    </select>
                     <div class="modal-body">
                         <div class="form-group">
                             <textarea name="reason" id="reason" title="개인정보 엑셀 다운로드 사유" class="required" style="height:200px;" maxlength="900"></textarea>
@@ -76,9 +87,15 @@
         // 접근로그 레지스트리(PrivacyAccess) 판정은 쿼리스트링 없는 경로로 한다
         $form.find("input[name='url']").val(String(downloadUri).split('?')[0]);
         $form.find("textarea[name='reason']").val('');
+        $("#reasonType").val('');
         $("#checkAccess").prop('checked', false);
         $("#privacyModal").modal('show');
     }
+
+    // AS-IS: 분류코드를 고르면 그 라벨을 사유란에 채워 준다(op.shop.js 공통 핸들러).
+    $("#formPrivacy").on("change", "#reasonType", function() {
+        $("#reason").val($(this).find("option:selected").text());
+    });
 
     $(function() {
         var $form = $("#formPrivacy");

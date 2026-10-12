@@ -3,12 +3,16 @@ package com.ghlove.admin.web;
 import com.ghlove.admin.domain.Manager;
 import com.ghlove.admin.service.ManagerException;
 import com.ghlove.admin.service.OffPersonInChargeAdminService;
+import com.ghlove.admin.web.support.ExcelDownloadWriter;
 import com.ghlove.admin.web.support.OffPersonInChargeSearchParam;
 import com.ghlove.admin.web.support.Pagination;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,7 +24,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -89,6 +92,7 @@ public class OffPersonInChargeAdminController {
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final OffPersonInChargeAdminService service;
+    private final ExcelDownloadWriter excelDownloadWriter;
 
     /** AS-IS GET /list - 권한 분기 후, 조회하지 않고 빈 목록. */
     @GetMapping
@@ -131,6 +135,13 @@ public class OffPersonInChargeAdminController {
      * AS-IS GET /list/download-excel - 전체 목록 엑셀 다운로드(페이징 없이 조건 전체).
      * 개인정보 사유 모달이 접근로그를 남긴 뒤 이 URL로 이동한다.
      */
+    /**
+     * ★주의: AS-IS {@code OffPersonInChargeExcelView} 클래스는 실제로 어디서도 호출되지 않는
+     * 죽은 코드다(2026-10-08 조사로 확인). 진짜 다운로드는 {@code OffPersonInChargeManagerController
+     * #downloadExcelProcessByList} → {@code PersonInChargeServiceImpl#streamChargerData}가
+     * 만든다 - 시트명 "CHARGER_DATA", 제목 "오프라인 회원 목록", 컬럼폭·번호매김(전체건수에서
+     * 역순)·소속 지점 조립 방식이 죽은 클래스와 다르다. 이 메서드는 그 실제 동작을 재현한다.
+     */
     @GetMapping("/list/download-excel")
     public void downloadExcel(@ModelAttribute("searchParam") OffPersonInChargeSearchParam searchParam,
                               HttpSession session, HttpServletResponse response) throws IOException {
@@ -139,27 +150,44 @@ public class OffPersonInChargeAdminController {
         List<OffPersonInChargeAdminService.Row> rows =
                 service.search(searchParam, viewer, 0, Integer.MAX_VALUE).content();
 
-        // AS-IS OffPersonInChargeExcelView의 헤더 8개 그대로
-        StringBuilder csv = new StringBuilder("﻿");
-        csv.append("No.,구분,소속지점,아이디,이름,개인번호,사용여부,중지일자\n");
+        SXSSFWorkbook workbook = new SXSSFWorkbook();
+        Sheet sheet = workbook.createSheet("CHARGER_DATA");
+        ExcelDownloadWriter.CellStyles styles = excelDownloadWriter.createStyles(workbook);
+        String[] headers = {"No", "구분", "소속 지점", "아이디", "이름", "개인번호", "사용여부", "중지일자"};
+        int[] widths = {2000, 3000, 10000, 3000, 3000, 5000, 3000, 5000};
+        int rowIndex = excelDownloadWriter.writeTitleAndHeaderRow(sheet, styles, "오프라인 회원 목록", headers, widths);
+
         int no = rows.size();
         for (OffPersonInChargeAdminService.Row row : rows) {
-            csv.append(no--).append(',')
-                    .append(csvEscape(row.getAuthorityText())).append(',')
-                    .append(csvEscape(row.getBranchText())).append(',')
-                    .append(csvEscape(row.loginId())).append(',')
-                    .append(csvEscape(row.userName())).append(',')
-                    .append(csvEscape(row.empId())).append(',')
-                    .append("2".equals(row.getAsIsStatusCode()) ? "중지" : "사용").append(',')
-                    .append("2".equals(row.getAsIsStatusCode()) ? csvEscape(row.getDenyDateText()) : "")
-                    .append('\n');
+            Row xlRow = sheet.createRow(rowIndex++);
+            xlRow.setHeight((short) 400);
+            int col = 0;
+            excelDownloadWriter.dataCell(xlRow, col++, styles, String.format("%,d", no--));
+            excelDownloadWriter.dataCell(xlRow, col++, styles, row.getAuthorityText());
+            excelDownloadWriter.dataCell(xlRow, col++, styles, branchNameForExcel(row));
+            excelDownloadWriter.dataCell(xlRow, col++, styles, row.loginId());
+            excelDownloadWriter.dataCell(xlRow, col++, styles, row.userName());
+            excelDownloadWriter.dataCell(xlRow, col++, styles, row.empId());
+            boolean stopped = "2".equals(row.getAsIsStatusCode());
+            excelDownloadWriter.dataCell(xlRow, col++, styles, stopped ? "중지" : "사용");
+            excelDownloadWriter.dataCell(xlRow, col, styles, stopped ? row.getDenyDateText() : "-");
         }
 
-        String fileName = "오프라인담당자회원목록_" + LocalDateTime.now().format(FILE_DATETIME) + ".csv";
-        response.setContentType("text/csv; charset=UTF-8");
-        response.setHeader("Content-Disposition", "attachment; filename=\"off-person-in-charge.csv\"; filename*=UTF-8''"
-                + java.net.URLEncoder.encode(fileName, StandardCharsets.UTF_8));
-        response.getOutputStream().write(csv.toString().getBytes(StandardCharsets.UTF_8));
+        String fileName = "오프라인담당자회원목록_" + LocalDateTime.now().format(FILE_DATETIME) + ".xlsx";
+        excelDownloadWriter.write(response, workbook, fileName, viewer == null ? null : viewer.getLoginId());
+    }
+
+    /** AS-IS streamChargerData의 '소속 지점' - bankNm 없으면 "-", 있으면 HTML 비이스케이프
+     *  (psitnNm이 있으면 공백 붙여 추가). AS-IS {@code ShopUtils.unescapeHtml}에 대응. */
+    private static String branchNameForExcel(OffPersonInChargeAdminService.Row row) {
+        if (row.bankNm() == null) {
+            return "-";
+        }
+        String branch = org.springframework.web.util.HtmlUtils.htmlUnescape(row.bankNm());
+        if (row.psitnNm() != null) {
+            branch += " " + org.springframework.web.util.HtmlUtils.htmlUnescape(row.psitnNm());
+        }
+        return branch;
     }
 
     /** AS-IS POST /status/edit - 목록에서 선택한 계정의 사용/중지 일괄변경. */
@@ -458,14 +486,5 @@ public class OffPersonInChargeAdminController {
 
     private static Manager viewer(HttpSession session) {
         return (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
-    }
-
-    private static String csvEscape(String value) {
-        if (value == null) {
-            return "";
-        }
-        String escaped = value.replace("\"", "\"\"");
-        return escaped.contains(",") || escaped.contains("\n") || escaped.contains("\"")
-                ? "\"" + escaped + "\"" : escaped;
     }
 }

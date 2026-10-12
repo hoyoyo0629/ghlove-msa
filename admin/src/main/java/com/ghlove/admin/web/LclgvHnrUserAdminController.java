@@ -6,12 +6,15 @@ import com.ghlove.admin.service.HonorUserAdminClient;
 import com.ghlove.admin.service.LocgovClient;
 import com.ghlove.admin.service.ManagerException;
 import com.ghlove.admin.service.MemberAdminClient;
+import com.ghlove.admin.web.support.ExcelDownloadWriter;
 import com.ghlove.admin.web.support.HonorUserSearchParam;
 import com.ghlove.admin.web.support.Pagination;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -27,6 +30,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -70,6 +75,7 @@ public class LclgvHnrUserAdminController {
     private final MemberAdminClient memberAdminClient;
     private final LocgovClient locgovClient;
     private final CommonCodeService commonCodeService;
+    private final ExcelDownloadWriter excelDownloadWriter;
 
     /** 목록 한 행 - AS-IS 6컬럼(골드·실버 금액 컬럼은 AS-IS에서 주석처리). */
     public record Row(int rowNumber, String lclgvCd, String upperLocgovNm, String lclgvCdNm,
@@ -245,7 +251,11 @@ public class LclgvHnrUserAdminController {
         return "honor-user-admin/view-history";
     }
 
-    /** AS-IS GET /lclgvHnrUserViewHist/list/excel - 엑셀 다운로드(TO-BE는 CSV). */
+    /**
+     * AS-IS GET /lclgvHnrUserViewHist/list/excel → {@code LclgvHnrUserViewHistExcelView}
+     * (이 화면은 죽은 클래스가 아니라 실제로 쓰인다 - 2026-10-08 확인). 시트명 "honorViewHist",
+     * 제목 "기부혜택증 열람현황", 번호는 1부터 올라간다.
+     */
     @GetMapping("/view-history/export")
     public void exportViewHistory(@ModelAttribute("searchParam") HonorUserSearchParam searchParam,
                                   HttpSession session, HttpServletResponse response) throws IOException {
@@ -253,21 +263,28 @@ public class LclgvHnrUserAdminController {
         searchParam.applyViewHistDefaults();
         List<ViewHistRow> rows = loadViewHist(searchParam, viewer);
 
-        StringBuilder csv = new StringBuilder("﻿");
-        csv.append("No.,열람일자,시도,지자체,사용자명,열람횟수\n");
+        SXSSFWorkbook workbook = new SXSSFWorkbook();
+        Sheet sheet = workbook.createSheet("honorViewHist");
+        ExcelDownloadWriter.CellStyles styles = excelDownloadWriter.createStyles(workbook);
+        String[] headers = {"No.", "열람일자", "시도", "지자체", "사용자명", "열람횟수"};
+        int[] widths = {700, 2500, 3500, 3500, 2500, 3500};
+        int rowIndex = excelDownloadWriter.writeTitleAndHeaderRow(sheet, styles, "기부혜택증 열람현황", headers, widths);
+
         for (ViewHistRow row : rows) {
-            csv.append(row.rowNumber()).append(',')
-                    .append(csvEscape(row.viewYm())).append(',')
-                    .append(csvEscape(row.upperLocgovNm())).append(',')
-                    .append(csvEscape(row.lclgvCdNm())).append(',')
-                    .append(csvEscape(row.userName())).append(',')
-                    .append(row.viewCnt()).append('\n');
+            org.apache.poi.ss.usermodel.Row xlRow = sheet.createRow(rowIndex++);
+            xlRow.setHeight((short) 400);
+            int col = 0;
+            excelDownloadWriter.dataCell(xlRow, col++, styles, String.valueOf(row.rowNumber()));
+            excelDownloadWriter.dataCell(xlRow, col++, styles, row.viewYm());
+            excelDownloadWriter.dataCell(xlRow, col++, styles, row.upperLocgovNm());
+            excelDownloadWriter.dataCell(xlRow, col++, styles, row.lclgvCdNm());
+            excelDownloadWriter.dataCell(xlRow, col++, styles, row.userName());
+            excelDownloadWriter.dataCell(xlRow, col, styles, String.format("%,d", row.viewCnt()));
         }
-        response.setContentType("text/csv; charset=UTF-8");
-        response.setHeader("Content-Disposition",
-                "attachment; filename=\"honor-view-history.csv\"; filename*=UTF-8''"
-                        + java.net.URLEncoder.encode("기부혜택증 열람현황 엑셀.csv", StandardCharsets.UTF_8));
-        response.getOutputStream().write(csv.toString().getBytes(StandardCharsets.UTF_8));
+
+        String fileName = "기부혜택증열람현황_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+                + ".xlsx";
+        excelDownloadWriter.write(response, workbook, fileName, viewer == null ? null : viewer.getLoginId());
     }
 
     /* ==================== 내부 ==================== */
@@ -360,15 +377,6 @@ public class LclgvHnrUserAdminController {
                 .map(l -> (l.upperLocgovNm() == null ? "" : l.upperLocgovNm()) + " "
                         + (l.locgovNm() == null ? "" : l.locgovNm()))
                 .findFirst().orElse(lclgvCd);
-    }
-
-    private static String csvEscape(String value) {
-        if (value == null) {
-            return "";
-        }
-        String escaped = value.replace("\"", "\"\"");
-        return escaped.contains(",") || escaped.contains("\n") || escaped.contains("\"")
-                ? "\"" + escaped + "\"" : escaped;
     }
 
     private static String encode(String value) {
