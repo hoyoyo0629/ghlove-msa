@@ -112,4 +112,5 @@
 =======
 - [개인정보 다운로드 사유모달 분류코드 select 추가](admin-privacy-access-modal-reasontype-dropdown.md) — AS-IS는 공통JS(Shop.downloadExcelOrder)가 열때마다 DOM에 끼워넣어서 마크업만 봐서는 "없다"고 오판했던 것, 백엔드(EXCELDOWNLOAD_REASON_TYPE 공통코드+엔드포인트)는 이미 준비돼 있어 프론트만 추가. 이 모달 쓰는 화면 전부에 적용됨. admin 재기동 필요
 - [엑셀다운로드 CSV→진짜xlsx 진행중(2/7)](admin-excel-download-real-xlsx-progress.md) — ★AS-IS에 클래스 있어도 실제론 안쓰이는 죽은코드 다수 발견(살아있는 stream*() 기준으로 재구현), 오프라인담당자·기부혜택증열람현황 완료, 운영유지관리·오프라인기부접수는 컬럼수 자체가 부족해 다음세션 재개 필요, gift/order 서비스 3곳은 admin 확인후 착수. admin 재기동 필요
+- [기부금관리(14000) 4축분석 완료·구현보류](admin-give-state-area-port-progress.md) — 14101 역할분기(mois/locgov)·GET빈화면·카드4개(5개는발명)·No컬럼·엑셀 등 상세스펙 확정. 발생포인트·답례품사용금액 정합화는 ReadModel 스키마 확장 필요해 DA설계안 대기로 보류(RFP SFR-009와 상충하지만 기존 동결결정 우선). 기금사업소개(14201)는 menu_url 빈값이라 LNB에서 안보임, 신규구현 대상
 >>>>>>> Stashed changes
