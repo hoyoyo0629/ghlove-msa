@@ -78,3 +78,35 @@ admin이 아니라 **다른 서비스를 호출**해서 그 서비스가 CSV를 
 
 **상태**: admin `compileJava+test+bootJar` EXIT=0(완료된 2곳만 반영, 나머지 2곳은 아직
 CSV 그대로). **재기동 필요: admin**(완료된 2화면만 테스트 가능).
+
+## 통계 > 지자체별 엑셀 신규 추가 (2026-10-13, 사용자 지적)
+
+위 7개 목록과 **별개 건**이다. 그쪽은 "CSV로 대체해 둔 것을 진짜 xlsx로 교체"인데,
+**통계 > 지자체별(`/give-statistics/locgov`)은 엑셀 기능 자체가 없었다**
+(템플릿에 "엑셀은 후속 작업으로 보류" 주석이 달려 있었다).
+
+**AS-IS**: `give/statistics/locgov/list.jsp` 의 `downloadExcel()` →
+`Shop.downloadExcelOrder("/opmanager/give/statistics/locgov/excel", 검색조건, true)` →
+컨트롤러가 `GiveStatisticsExcelView` 에 `type="locgov"` 로 넘긴다.
+- 제목·시트: **"기부금 모금 현황"** · 파일명 `기부금_모금_현황_yyyyMMddHHmmss.xlsx`
+- 헤더 6칸: No. / 년도 / 지자체 / 기부인원 / 기부금액 / 기부건수 (폭 700,2500,3500×4)
+- 지자체는 **"광역명 시군구명"**, 번호는 **1부터 증가**(목록의 역순 번호와 다르다)
+- **페이징 없이 조건 전체**(`searchParam.setPagination(null)`)
+- 버튼은 표 바로 아래 **`btn_all btn_left`**(오른쪽 아님), 라벨 "엑셀"
+
+**TO-BE 추가분**: `GiveStatisticsController#locgovExcel` + 템플릿 버튼/`downloadExcel()` +
+`fragments/privacy-access :: modal`. 목록과 엑셀이 같은 정렬을 쓰도록 `sortLocgovRows` 로 뽑았다.
+
+**★놓치기 쉬운 것 - PrivacyAccess 에 TO-BE 경로 등록이 필요하다**
+`Shop.downloadExcelOrder(..., true)` 의 세 번째 인자가 "사유 모달을 먼저 띄운다"는 뜻이라
+개인정보 접근로그를 남기는데, `PrivacyAccess` 에 **등록되지 않은 URL이면 저장이 거부된다**
+("개인정보 접근 URL이 아닙니다"). `GIVE_STATISTICS_LOCGOV` 항목은 있었지만 AS-IS 패턴만
+있고 `tobePattern` 이 비어 있어서 `/give-statistics/locgov/excel` 이 안 걸렸다 →
+**다섯 번째 인자로 TO-BE 경로를 덧붙였다**. 엑셀을 새로 붙이는 화면마다 확인할 것.
+
+**검증**(여분 포트 8099, Playwright): 버튼 `btn btn-dark-gray btn-mini` / 영역 `btn_all btn_left` ·
+사유 모달 열림(분류코드 select 포함)·uri/url 정상 · 다운로드 파일
+`기부금_모금_현황_20261013102144.xlsx`(9,728바이트) · 선두 4바이트 `d0 cf 11 e0`(암호화 OLE2) ·
+**POI로 복호화해 내용 확인**: 비밀번호 = 로그인ID, 시트 "기부금 모금 현황",
+0행 제목 / 1행 헤더 6칸 / 2행부터 `1 | 2026 | 서울특별시 강남구 | 2 | 250,000 | 3` ·
+데이터 21행(목록 1페이지 10건과 달리 전체) · 콘솔/HTTP 오류 0. admin `test`+`bootJar` EXIT=0.

@@ -88,7 +88,7 @@
 - [전환 방법론 두 갈래](continue-vs-rebuild-msa-decision.md) — A안 AS-IS in-place 추출(Desktop 분석문서) vs B안 현재 ghlove-msa 클린 재구현, 세션마다 답 갈린 원인
 - [API vs Kafka 판단기준](api-vs-kafka-decision-criteria.md) — 서비스 종류 아닌 상호작용 성격, 조회·즉시결과필요=API / 확정사실전파=Kafka(사용자 반복질문)
 - [고객센터 영역 이식 원장](admin-customer-center-area-port-progress.md) — 11화면 AS-IS 대조표, 구조갭 6건 해소, **승인순서 4건 전부 완료**(5112 Q&A·5104 FAQ·매뉴얼2화면·5102 1:1문의), 남은 건 축소화면 3건(5113/5114/5107)
-- [특정사업 기부 영역 이식 원장](admin-designated-donation-area-port-progress.md) — AS-IS 1262줄+JSP 7275줄 대조표, 갭 실측(목록14%·폼26%·part/request/preview 0%), **기부금관리·통계는 ReadModel/DA 결정 대기로 보류**
+- [특정사업 기부 영역 이식 원장](admin-designated-donation-area-port-progress.md) — AS-IS 1262줄+JSP 7275줄 대조표. 2026-10-13 등록/수정폼 재검수: ★에디터·이미지설명(접근성) 블록이 통째로 빠져 있었고 승인버튼 조건이 목록(1~5)과 폼(1~4+대기상태)을 혼동. **기부금관리·통계는 ReadModel/DA 결정 대기로 보류**
 - [op_qna는 QNA_TYPE으로 세 화면이 나뉜다](op-qna-split-by-qna-type.md) — 0=1:1문의(5102)/1=상품문의(중지)/2=공개Q&A(5112), 공개 쪽 필터 누락으로 개인문의 노출됐던 것 2026-10-05 수정
 - [공개 FAQ 정본은 op_faq + FaqType enum](public-faq-canonical-table.md) — 시드가 지자체FAQ 표에 자체코드로 넣어둔 걸 2026-10-05 교정, 11403은 중지라 그 표 유지
 - [국민비서 문자 발송부 위치](ips-sms-sender-lives-in-admin.md) — TIF_IPS_SNDNG_M 적재가 "발송", admin SmsIpsService 하나뿐·기부/주문 문자는 미이식
@@ -117,3 +117,7 @@
 - [운영관리 h3 제목은 JS가 메뉴명으로 덮어쓴다](admin-h3-title-overwritten-by-menu-name.md) — op.manager.js:46이 첫 `.contents h3 > span`을 3단 메뉴명으로 교체(.custom만 예외). JSP h3 문구를 "화면에 보이는 값"으로 오해하지 말 것
 - [Playwright+SmartEditor 제출 버튼클릭 버그](playwright-smarteditor-submit-quirk.md) — 헤드리스에서 실버튼클릭하면 /admin/login으로 튕김(faq-admin에서도 재현, 화면버그 아님). 검증 땐 form.submit() 직접 호출로 우회
 - [admin Playwright 테스트계정 2개](admin-pwtest-manager-accounts.md) — pwtest_sys(ROLE_ADMIN_1)/pwtest_loc(ROLE_ADMIN_6, 11230), 비번 Test1234!, 지우지 않고 재사용
+- [★admin 로그인 게이트 블랙리스트 전환](admin-login-gate-whitelist-gaps.md) — 화이트리스트라 13화면이 로그인 없이 열려 있었음(point-history 69행 노출·NPE 500 3건). 2026-10-13 `/**` 전부 보호+공개만 제외로 뒤집음. ★이제 **공개 화면 만들면 exclude에 추가**해야 함(정적경로 누락 시 CSS까지 튕김)
+- [통계>매출통계 4화면 이식](admin-sales-day-statistics-port.md) — 발명된 5칸 축소판을 AS-IS 17칸 2단헤더로 교체(표는 fragments/stats-date-list 공유). ★취소는 전부 음수, ★기간 기본값은 게터가 만듦(일=이번달1일~오늘, 월=올해·이번달), 주문방법은 device_type 없어 "-", 엑셀버튼은 AS-IS도 ROLE_EXCEL이 판매자 전용이라 숨김. 일자별·월별·년도별·결제타입별 4화면 완료(앞 3개는 fragments/stats-date-list 공유). ★결제타입별은 결제수단·기기 축이 둘 다 없어 36칸 중 기부포인트×기타 1칸에만 값. ★AS-IS의 "99"(없는 날짜) 상한은 날짜가 VARCHAR라 가능했던 편법 - TO-BE는 timestamp 비교로 전환(드릴다운도 실제 말일)
+- [통계 전체(all) 화면 교정](admin-give-statistics-year-select-source.md) — ①년도 select는 YYYY 공통코드(데이터 있는 해만 뽑아 2026 하나뿐이었음) ②★차트 축은 서비스에서 빈 구간 0으로 채울 것(월 12·시 24) - 안 하면 0원인 날 그래프가 아예 안 그려짐
+- [주문 표 인덱스 누락](order-table-missing-indexes.md) — od_order·od_claim·od_claim_memo가 PK 하나뿐. 보강 DDL 작성했으나 ★동료 협의 전까지 .git/info/exclude로 로컬 보관(푸시 금지). 적용도 ord 테이블 owner가 postgres라 사용자가 psql -U postgres로 해야 함

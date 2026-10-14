@@ -206,6 +206,107 @@ function renumberImgExpln() {
 }
 
 document.addEventListener('DOMContentLoaded', renumberImgExpln);
+
+/* AS-IS notice/form.jsp 의 validator(submitHandler) 이식.
+   TO-BE에는 제출 검증이 통째로 없어서, 상세설명에 사진을 넣고도 이미지 설명 없이
+   등록이 됐다(2026-10-13 사용자 지적). 문구는 AS-IS 그대로다.
+   ※ AS-IS가 주석처리해 둔 500KB 용량 검사는 켜지 않는다. */
+
+/* AS-IS scrollButtons - 바닥 근처가 아니면 버튼 영역을 화면에 고정한다. */
+function scrollButtons() {
+	$(window).scroll(function () {
+		var scrollBottom = $(document).height() - $(window).height() - $(window).scrollTop();
+		if (scrollBottom < 170) {
+			$('#buttons').removeClass('fixed_button');
+		} else {
+			$('#buttons').addClass('fixed_button');
+		}
+	});
+}
+
+/* 상세설명 에디터(iframe 안의 iframe)에 들어간 이미지들. 에디터가 아직 안 떴으면 빈 배열. */
+function editorImages() {
+	var outer = document.getElementById('editor_frame');
+	if (!outer) {
+		return [];
+	}
+	var outerDoc = outer.contentDocument || outer.contentWindow.document;
+	var inner = outerDoc.querySelector("#smart_editor2_content iframe");
+	if (!inner) {
+		return [];
+	}
+	var innerDoc = inner.contentDocument || inner.contentWindow.document;
+	return innerDoc.querySelectorAll("img");
+}
+
+$(function() {
+	scrollButtons();
+
+	$('#noticeForm').on('submit', function(e) {
+		if (!validateNoticeForm()) {
+			e.preventDefault();
+			// op.common.js 가 모든 form 의 submit 에서 로딩막을 띄운다(1683행).
+			// 여기서 막으면 그 막이 남아 화면을 덮으므로 반드시 내려 준다.
+			Common.loading.hide();
+			return false;
+		}
+	});
+});
+
+function validateNoticeForm() {
+	if (!$('input[name=rlsYn]:checked').val()) {
+		alert('공개여부 항목을 입력해주세요.');
+		$('#rls_y').focus();
+		return false;
+	}
+
+	// 첨부파일 갯수 제한
+	var files = document.getElementById('files');
+	if (files && files.files && files.files.length > 10) {
+		alert('파일은 최대 10까지 등록할 수 있습니다.');
+		$(files).focus();
+		return false;
+	}
+
+	// AS-IS: 공백만 든 이미지 설명 줄은 저장 전에 걷어낸다(IMG_EXPLN 이 not null)
+	$('#imgExplnBody tr').each(function() {
+		var v = $(this).find('textarea').val();
+		if (!v || v.trim() === '') {
+			$(this).remove();
+		}
+	});
+	renumberImgExpln();
+
+	// AS-IS: 상세설명 이미지 개수와 이미지 설명 개수가 같아야 저장된다
+	var rows = $('#imgExplnBody tr');
+	var optionSize = rows.length;
+	var images = editorImages();
+	var imageSize = images.length;
+
+	if (optionSize == 0 && imageSize > 0) {
+		alert("시각 장애인을 위한 이미지 설명을 입력 부탁드립니다.");
+		return false;
+	}
+	if (optionSize != imageSize) {
+		alert('상세설명에 올리신 사진의 갯수와 \n이미지 설명의 갯수를 동일하게 맞추어 주셔야 합니다. \n현재 작성하신 이미지 설명 갯수: ' + optionSize + ' , 상세설명에 올리신 이미지 갯수: ' + imageSize + ' ');
+		return false;
+	}
+
+	// 설명을 이미지 alt 로 넣는다(저장되는 본문에 들어간다)
+	for (var i = 0; i < imageSize; i++) {
+		images[i].setAttribute("alt", $(rows[i]).find('textarea').val());
+	}
+
+	// 에디터 내용을 textarea 로 옮긴다(alt 를 넣은 뒤여야 alt 가 같이 저장된다)
+	Common.getEditorContent("content");
+
+	var content = $('#content').val();
+	if (!content || content.toLowerCase() == '<p>&nbsp;</p>') {
+		alert("내용을 입력해 주세요.");
+		return false;
+	}
+	return true;
+}
 </script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>

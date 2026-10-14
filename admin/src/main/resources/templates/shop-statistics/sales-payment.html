@@ -1,56 +1,217 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <title>결제타입별 매출 - 고향사랑e음 (admin service)</title>
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
-    <title>결제타입별 매출 통계 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <!-- AS-IS payment.jsp 꼬리의 페이지 전용 스타일 verbatim -->
+    <style type="text/css">
+    .board_list_table td {
+        border:1px solid #ECECE1;
+    }
+    </style>
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
+<!-- AS-IS opmanager/i18n/shop-statistics/sales/payment.jsp 이식.
+
+     ★ AS-IS 특징
+     - 표가 둘이다: ① 결제타입별 총 매출금액 요약  ② 날짜 × 결제타입 × 기기 피벗.
+     - ②는 조회 결과가 있을 때만 그린다(없으면 "등록된 데이터가 없습니다").
+     - 날짜 행은 조회 결과가 아니라 <b>기간 전체를 하루씩</b> 만든다(값 없는 날도 0원 행이 나온다).
+       AS-IS 컨트롤러가 endDate 부터 startDate 까지 거꾸로 담는다.
+     - 금액 색: 0원은 회색, 음수는 빨강 굵게, 양수는 파랑 굵게(매출총액 칸만). 타입별 칸은
+       0원 회색 / 그 외 굵게.
+     - 가로로 넓어서 .board_list 에 overflow-x:auto 가 걸려 있다.
+     - 결제타입 체크박스는 <b>데이터를 거르고</b>, 열은 늘 전체를 그린다.
+     - ★h3·location 문구가 "일자별 매출"로 되어 있다 - AS-IS 복붙 흔적이다. 실제로는
+       op.manager.js 가 메뉴명("결제타입별 매출")으로 덮어쓰므로 화면에는 메뉴명이 보인다.
+     - 엑셀은 Shop.downloadExcelOrder(..., <b>false</b>) 라 <b>사유 모달 없이</b> 바로 받는다.
+
+     ★ AS-IS와 다른 점(데이터 없음, 2026-10-13 사용자 결정으로 구조는 유지)
+     - 결제타입: TO-BE 주문은 전액 기부포인트 결제라 그 열에만 값이 들어가고 나머지 11종은 0원.
+     - 기기: device_type 이 없어 금액을 전부 "기타" 칸에 넣는다(PC·모바일은 0원). -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <h3>결제타입별 매출 통계</h3>
-    <p style="color:#666; margin-bottom:16px;">이 서비스는 전액 포인트결제이므로 결제타입은 "포인트" 단일 유형입니다.</p>
 
-    <form method="get" th:action="@{/shop-statistics/sales/payment}" class="field" style="display:flex; gap:8px; align-items:center;">
-        <input type="text" name="startDate" th:value="${startDate}" placeholder="yyyyMMdd">
-        <span>~</span>
-        <input type="text" name="endDate" th:value="${endDate}" placeholder="yyyyMMdd">
-        <button type="submit" class="btn">조회</button>
-    </form>
+<div class="statistics_web">
+	<h3><span>일자별 매출</span></h3>
+	<form id="statisticsParam" method="post" th:action="@{/shop-statistics/sales/payment}">
+		<div class="board_write">
+			<table class="board_write_table" summary="일자별 매출">
+				<caption>일자별 매출</caption>
+				<colgroup>
+					<col style="width: 140px;">
+					<col style="width: auto;">
+				</colgroup>
+				<tbody>
+					<tr>
+						<td class="label">기간</td>
+						<td>
+					 		<div>
+								<span class="datepicker"><input type="text" id="startDate" name="startDate"
+										class="term datepicker" title="시작일" maxlength="8"
+										th:value="${statisticsParam.startDate}"/></span>
+								<span class="wave">~</span>
+								<span class="datepicker"><input type="text" id="endDate" name="endDate"
+										class="term datepicker" title="종료일" maxlength="8"
+										th:value="${statisticsParam.endDate}"/></span>
+								<span class="day_btns">
+									<a href="javascript:;" class="btn_date today">오늘</a>
+									<a href="javascript:;" class="btn_date week-1">1주일</a>
+									<a href="javascript:;" class="btn_date day-15">15일</a>
+									<a href="javascript:;" class="btn_date month-1">한달</a>
+									<a href="javascript:;" class="btn_date month-3">3개월</a>
+									<a href="javascript:;" class="btn_date year-1">1년</a>
+								</span>
+							</div>
+				 		</td>
+					</tr>
+					<tr>
+						<td class="label">결제타입</td>
+						<td>
+							<div>
+								<!-- AS-IS form:checkboxes - input + 형제 label 로 렌더된다 -->
+								<th:block th:each="t : ${payTypes}">
+									<input type="checkbox" name="approvalTypes" th:value="${t.key}"
+										   th:id="'approvalTypes_' + ${t.key}"
+										   th:checked="${#lists.contains(statisticsParam.approvalTypes, t.key)}"/>
+									<label th:for="'approvalTypes_' + ${t.key}" th:text="${t.value}"></label>
+								</th:block>
+							</div>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</div> <!-- // board_write -->
 
-    <div th:each="pt : ${stats}">
-        <h4 th:text="${pt.payType()}"></h4>
-        <table class="board_list_table">
-            <thead>
-            <tr><th>일자</th><th>결제건수</th><th>결제포인트</th><th>취소건수</th><th>취소포인트</th></tr>
-            </thead>
-            <tbody>
-            <tr th:each="row : ${pt.byDay()}">
-                <td th:text="${row.period()}"></td>
-                <td th:text="${row.payCount()} + '건'"></td>
-                <td th:text="${#numbers.formatInteger(row.payAmount(), 0, 'COMMA')} + 'P'"></td>
-                <td th:text="${row.cancelCount()} + '건'"></td>
-                <td th:text="${#numbers.formatInteger(row.cancelAmount(), 0, 'COMMA')} + 'P'"></td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
+		<div class="btn_all btn_left">
+			<ul class="list-bullet point">
+				<li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li>
+			</ul>
+		</div>
+
+		<div class="btn_all btn_right">
+			<!-- AS-IS 주석처리: [초기화] 버튼 -->
+			<div class="flex_box gap-08">
+				<button type="submit" class="btn btn-dark-gray btn-sm"><span class="glyphicon glyphicon-search"></span>검색</button>
+			</div>
+		</div>
+	</form>
+
+	<!-- AS-IS는 이 요약줄이 비어 있다(다른 화면과 달리 문구가 없다) -->
+	<div class="sort_area mt30">
+		<div class="left">
+		</div>
+	</div>
+
+	<div class="board_list" style="overflow-x:auto">
+
+		<!-- ① 결제타입별 총 매출금액 -->
+		<table class="board_list_table">
+			<colgroup>
+				<col style="width: 20%;">
+				<col th:each="t : ${payTypes}" th:style="'width: ' + ${80.0 / payTypes.size()} + '%;'">
+			</colgroup>
+			<thead>
+				<tr>
+					<th>총 매출금액</th>
+					<th class="border_left" th:each="t : ${payTypes}" th:text="${t.value}"></th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td th:with="net=${#aggregates.sum(rowsByDate.isEmpty() ? {0} : rowsByDate.values().![totalPayAmount])}"
+						th:text="${#numbers.formatInteger(net, 0, 'COMMA')} + '원'">0원</td>
+					<td th:each="t : ${payTypes}"
+						th:with="net=${t.key == givePointCode ? #aggregates.sum(rowsByDate.isEmpty() ? {0} : rowsByDate.values().![totalPayAmount]) : 0}"
+						th:text="${#numbers.formatInteger(net, 0, 'COMMA')} + '원'">0원</td>
+				</tr>
+			</tbody>
+		</table>
+
+		<!-- ② 날짜 × 결제타입 × 기기 - AS-IS도 결과가 있을 때만 그린다 -->
+		<table class="board_list_table" th:if="${hasData}">
+			<colgroup>
+				<col style="width: 8%;">
+				<col style="width: 10%;">
+			</colgroup>
+			<thead>
+				<tr>
+					<th rowspan="2" class="border_left">날짜</th>
+					<th rowspan="2" class="border_left">매출총액</th>
+					<th colspan="3" class="border_left" th:each="t : ${payTypes}" th:text="${t.value}"></th>
+				</tr>
+				<tr>
+					<th:block th:each="t : ${payTypes}">
+						<th class="border_left">PC</th>
+						<th>모바일</th>
+						<th>기타</th>
+					</th:block>
+				</tr>
+			</thead>
+			<tbody>
+				<tr th:each="day : ${days}" th:with="row=${rowsByDate.get(day)},
+													 dayTotal=${row != null ? row.totalPayAmount : 0}">
+					<td th:text="${@opDate.ymd(day)}">-</td>
+					<td class="text-right">
+						<span th:if="${dayTotal == 0}" style="color:#bfbebe">0원</span>
+						<th:block th:unless="${dayTotal == 0}">
+							<strong th:style="${dayTotal < 0} ? 'color:red' : 'color:blue'"
+									th:text="${#numbers.formatInteger(dayTotal, 0, 'COMMA')}">0</strong>원
+						</th:block>
+					</td>
+
+					<th:block th:each="t : ${payTypes}">
+						<!-- PC: TO-BE에 기기 구분이 없어 늘 0원 -->
+						<td class="text-right"><span style="color:#bfbebe">0원</span></td>
+						<!-- 모바일: 동일 -->
+						<td class="text-right"><span style="color:#bfbebe">0원</span></td>
+						<!-- 기타: 기부포인트 열에만 금액이 들어간다 -->
+						<td class="text-right" th:with="v=${t.key == givePointCode ? dayTotal : 0}">
+							<span th:if="${v == 0}" style="color:#bfbebe">0원</span>
+							<th:block th:unless="${v == 0}">
+								<strong th:text="${#numbers.formatInteger(v, 0, 'COMMA')}">0</strong>원
+							</th:block>
+						</td>
+					</th:block>
+				</tr>
+			</tbody>
+		</table>
+
+		<div class="no_content" th:unless="${hasData}">
+			<p>등록된 데이터가 없습니다.</p>
+		</div>
+
+		<!-- AS-IS: sec:authorize hasRole('ROLE_EXCEL') -->
+		<div class="btn_all" th:if="${canExcel}">
+			<div class="right">
+				<a href="javascript:downloadExcel();" class="btn btn-success btn-sm"><span class="glyphicon glyphicon-save"></span>엑셀 다운로드</a>
+			</div>
+		</div>
+	</div>
+</div>
+
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
+
+<script type="text/javascript">
+	$(function(){
+		Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="startDate"]', 'input[name="endDate"]');
+	});
+
+	/* AS-IS downloadExcel - 세 번째 인자가 false 라 개인정보 사유 모달을 거치지 않고 바로 받는다
+	   (다른 엑셀 화면들과 다른 점이다). */
+	function downloadExcel() {
+		location.href = '/shop-statistics/sales/payment/excel-download?' + $('#statisticsParam').serialize();
+	}
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

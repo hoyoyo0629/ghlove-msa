@@ -125,6 +125,15 @@
         </table>
         <div class="no_content" th:if="${#lists.isEmpty(rows)}">조회정보가 존재하지 않습니다.</div>
 
+        <!-- AS-IS give/statistics/locgov/list.jsp 의 엑셀 버튼 - 표 바로 아래 btn_left 다
+             (오른쪽이 아니다). AS-IS는 Shop.downloadExcelOrder(..., true) 로 부르므로
+             개인정보 사유 모달을 먼저 거친다. -->
+        <div class="btn_all btn_left">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-dark-gray btn-mini" onclick="downloadExcel()">엑셀</button>
+            </div>
+        </div>
+
         <div class="pagination-wrap" th:if="${totalPages > 1}" style="text-align:center; margin-top:16px;">
             <a th:each="pn : ${#numbers.sequence(1, totalPages)}" href="javascript:;"
                th:text="${pn}" th:attr="onclick=|goPage(${pn})|"
@@ -162,8 +171,18 @@
         document.getElementById('page').value = pn;
         document.getElementById('searchParam').submit();
     }
+
+    /* AS-IS downloadExcel - Shop.downloadExcelOrder(url, 검색조건, true).
+       세 번째 인자 true 가 "개인정보 사유 모달을 먼저 띄운다"는 뜻이라, TO-BE도 다른 엑셀
+       화면과 같은 openPrivacyModal 을 쓴다(사유를 남긴 뒤 그 URL로 이동한다).
+       엑셀은 페이징과 무관한 전체이므로 page/itemsPerPage 는 보내지 않는다. */
+    function downloadExcel() {
+        openPrivacyModal('/give-statistics/locgov/excel?' + $('#searchParam').serialize());
+    }
 /*]]>*/
 </script>
+<!-- AS-IS Shop.downloadExcelOrder 가 띄우는 개인정보 다운로드 사유 모달 -->
+<div th:replace="~{fragments/privacy-access :: modal}"></div>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

@@ -38,6 +38,44 @@ public class OpDate {
         return ymd(raw);
     }
 
+    /**
+     * yyyyMM → yyyy-MM. 월별 통계의 "일자" 칸처럼 6자리로 오는 값에 쓴다
+     * (AS-IS {@code op:date} 가 월별 화면에서 받는 값이 6자리다).
+     * 8자리가 들어오면 {@link #ymd(String)} 로 넘긴다.
+     */
+    public String ym(String raw) {
+        String d = digits(raw);
+        if (d.length() >= 8) {
+            return ymd(raw);
+        }
+        if (d.length() >= 6) {
+            return d.substring(0, 4) + "-" + d.substring(4, 6);
+        }
+        return fallback(raw);
+    }
+
+    /**
+     * yyyyMM → 그 달 <b>말일</b>의 yyyyMMdd (예: 202610 → 20261031).
+     *
+     * <p>월별 통계에서 일자별 화면으로 드릴다운할 때 쓴다. AS-IS는 이 자리에
+     * {@code searchDate + "99"} 를 넘기는데(문자열 비교 상한으로는 동작한다) 받는 화면의
+     * 기간 입력칸에 <b>20261099 같은 없는 날짜가 그대로 찍힌다</b> - 사용자 지적(2026-10-13)으로
+     * 실제 말일을 넘기도록 바꿨다. 조회 범위는 둘 다 같다.
+     */
+    public String monthEnd(String raw) {
+        String d = digits(raw);
+        if (d.length() < 6) {
+            return fallback(raw);
+        }
+        try {
+            java.time.YearMonth ym = java.time.YearMonth.of(
+                    Integer.parseInt(d.substring(0, 4)), Integer.parseInt(d.substring(4, 6)));
+            return d.substring(0, 6) + String.format("%02d", ym.lengthOfMonth());
+        } catch (RuntimeException e) {
+            return fallback(raw);
+        }
+    }
+
     private static String digits(String raw) {
         if (raw == null) {
             return "";

@@ -91,6 +91,67 @@ public class OrderAdminClient {
         return (s == null || s.isBlank()) ? null : s;
     }
 
+    /**
+     * 일자/월/년 매출 통계 - AS-IS opmanager/shop-statistics/sales/{day,month,year}.
+     * 조회 실패는 빈 목록으로 삼킨다(화면이 비는 쪽이 500보다 낫다).
+     */
+    public List<DateStatRow> dateStats(Manager manager, String type, String startDate, String endDate) {
+        try {
+            List<DateStatRow> rows = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/orders/stats/date")
+                            .queryParam("type", type == null ? "day" : type)
+                            .queryParamIfPresent("startDate", java.util.Optional.ofNullable(blankToNull(startDate)))
+                            .queryParamIfPresent("endDate", java.util.Optional.ofNullable(blankToNull(endDate)))
+                            .build())
+                    .headers(h -> applyHeaders(h, manager))
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<DateStatRow>>() {
+                    });
+            return rows != null ? rows : List.of();
+        } catch (RestClientResponseException e) {
+            return List.of();
+        }
+    }
+
+    /**
+     * AS-IS {@code BaseStats} 한 줄. 소계·합계는 AS-IS처럼 <b>저장하지 않고 파생</b>한다
+     * (취소분이 음수라 "판매 + 취소"가 그대로 순액이다).
+     *
+     * <p>{@code deviceType}(주문방법)은 TO-BE 주문 표에 없는 값이라 화면이 "-"로 그린다.
+     */
+    public record DateStatRow(String searchDate,
+                               long saleCount, long itemPrice, long discountAmount, long saleAmount, long shipping,
+                               long cancelCount, long cancelItemPrice, long cancelDiscountAmount,
+                               long cancelAmount, long cancelShipping) {
+
+        /** AS-IS BaseStats.getPayAmount - 결제 소계. */
+        public long payAmount() {
+            return saleAmount + shipping;
+        }
+
+        /** AS-IS BaseStats.getCancelPayAmount - 취소 소계. */
+        public long cancelPayAmount() {
+            return cancelAmount + cancelShipping;
+        }
+
+        public long totalAmount() {
+            return saleAmount + cancelAmount;
+        }
+
+        public long totalShipping() {
+            return shipping + cancelShipping;
+        }
+
+        public long totalPayAmount() {
+            return totalAmount() + totalShipping();
+        }
+
+        /** AS-IS BaseStats.getTotalCount - 요약줄의 "총 주문건수". */
+        public long totalCount() {
+            return saleCount + cancelCount;
+        }
+    }
+
     public OrderDetail detail(Manager manager, String orderId) {
         try {
             return restClient.get().uri("/api/admin/orders/{id}", orderId)
