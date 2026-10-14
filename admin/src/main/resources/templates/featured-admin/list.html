@@ -103,7 +103,7 @@
 
             <!-- 결과 영역 -->
             <div class="count_title mt-40">
-                <h5>총 <span th:text="${featuredCount}">0</span>건</h5>
+                <h5>총 <span th:text="${featuredCount}" th:remove="tag">0</span>건</h5>
                 <span>
                     <select name="itemsPerPage" title="화면출력수" onchange="this.form.submit();">
                         <option value="10" th:selected="${itemsPerPage == 10}">10개 출력</option>

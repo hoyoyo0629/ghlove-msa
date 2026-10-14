@@ -1,45 +1,180 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
     <title>답례품 선호도 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
+<!-- AS-IS opmanager/i18n/shop-statistics/wish/list.jsp 이식.
+     찜(관심답례품) 등록수를 품목별로 센 목록(등록수 내림차순). 시스템/행안부(mois)는 지자체 2단 select +
+     "지자체" 열, 지자체담당자는 자기 지자체명 고정 + 지자체 열 없음. GET은 조회하지 않는다.
+     답례품명 링크는 AS-IS가 프론트 /items/details.html?code=ITEM_CODE 새 창 - TO-BE는 상품코드가 없어
+     storefront /gifts/{itemId} 를 연다(설문 미리보기와 같은 방식). 엑셀은 개인정보가 없어 사유모달 없음. -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <h3>답례품 선호도</h3>
-    <p style="color:#666; margin-bottom:16px;">관심답례품(찜) 등록 건수 기준입니다.</p>
+
+<h3><span>답례품 선호도</span></h3>
+<form id="wishlistParam" th:object="${wishlistParam}" method="post" th:action="@{/shop-statistics/wish/list}">
+    <input type="hidden" id="page" name="page" th:value="${pagination.currentPage}">
+    <div class="board_write">
+        <table class="board_write_table">
+            <colgroup>
+                <col style="width:220px;">
+                <col>
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td class="label">지자체</td>
+                    <td>
+                        <div class="flex_box gap-08" th:if="${role == 'mois'}">
+                            <select id="upperLocgovCode" name="upperLocgovCode" title="지자체" class="wd-150" onchange="wdrChange(this.value)">
+                                <option value="">-시,도 선택-</option>
+                                <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"
+                                        th:selected="${p.key == wishlistParam.upperLocgovCode}"></option>
+                            </select>
+                            <select id="locgovCode" name="locgovCode" title="지자체" class="wd-150">
+                                <option value="">-시,군,구-</option>
+                            </select>
+                        </div>
+                        <div class="flex_box gap-08" th:if="${role != 'mois'}" th:text="${locgovNm}"></div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">답례품명</td>
+                    <td>
+                        <div class="flex_box gap-08">
+                            <input type="text" id="itemName" name="itemName" class="input_txt required _filter full"
+                                   th:value="${wishlistParam.itemName}">
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="btn_all btn_left">
+            <ul class="list-bullet point">
+                <li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li>
+            </ul>
+        </div>
+        <div class="btn_all btn_right">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/shop-statistics/wish/list';">초기화</button>
+                <button type="submit" class="btn btn-dark-gray btn-mini" onclick="$('#page').val(1);">검색</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="count_title mt-40 flex_box juc-sbt item-center">
+        <h5>총 <span th:text="${#numbers.formatInteger(count, 0, 'COMMA')}" th:remove="tag">0</span>건</h5>
+        <div class="flex_box gap-08">
+            <span>
+                <select id="itemsPerPage" name="itemsPerPage" title="화면출력" onchange="$('#page').val(1); $('#wishlistParam').submit();">
+                    <option value="10" th:selected="${pagination.itemsPerPage == 10}">10개 출력</option>
+                    <option value="20" th:selected="${pagination.itemsPerPage == 20}">20개 출력</option>
+                    <option value="50" th:selected="${pagination.itemsPerPage == 50}">50개 출력</option>
+                    <option value="100" th:selected="${pagination.itemsPerPage == 100}">100개 출력</option>
+                </select>
+            </span>
+        </div>
+    </div>
+</form>
+
+<div class="board_list">
     <table class="board_list_table">
+        <caption></caption>
+        <colgroup>
+            <col style="width:50px;">
+            <col style="width:100px;">
+            <col style="width:200px;">
+            <col style="width:100px;">
+            <col style="width:100px;">
+            <col style="width:100px;" th:if="${role == 'mois'}">
+        </colgroup>
         <thead>
-        <tr><th>상품ID</th><th>상품명</th><th>지자체</th><th>찜 건수</th></tr>
+            <tr>
+                <th scope="col">No.</th>
+                <th scope="col">등록수</th>
+                <th scope="col">답례품명</th>
+                <th scope="col">상호명</th>
+                <th scope="col">금액</th>
+                <th scope="col" th:if="${role == 'mois'}">지자체</th>
+            </tr>
         </thead>
         <tbody>
-        <tr th:each="row : ${stats}">
-            <td th:text="${row.itemId()}"></td>
-            <td th:text="${row.itemName()}"></td>
-            <td th:text="${row.locgovName()}"></td>
-            <td th:text="${row.wishCount()} + '건'"></td>
-        </tr>
+            <tr th:each="row, i : ${dateList}" style="background:#fff;">
+                <td><div th:text="${pagination.itemNumber - i.count}">0</div></td>
+                <td><div th:text="${row.registrationNumber()}">0</div></td>
+                <td class="tleft">
+                    <div><a th:href="'http://localhost:5173/gifts/' + ${row.itemId()}" target="_blank" th:text="${row.itemName()}"></a></div>
+                </td>
+                <td><div th:text="${row.companyName()}"></div></td>
+                <td><div th:text="${#numbers.formatInteger(row.salePrice(), 0, 'COMMA')}">0</div></td>
+                <td th:if="${role == 'mois'}"><div th:text="${row.locgovNm()}"></div></td>
+            </tr>
         </tbody>
     </table>
-    <p class="empty" th:if="${#lists.isEmpty(stats)}">찜 데이터가 없습니다.</p>
+    <div th:if="${#lists.isEmpty(dateList)}" class="no_content">데이터가 없습니다.</div>
+
+    <div class="btn_all btn_right">
+        <div class="flex_box gap-08">
+            <button type="button" class="btn btn-dark-gray btn-mini" onclick="downloadExcel()">엑셀</button>
+        </div>
+    </div>
+
+    <div class="pagination-wrap">
+        <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+    </div>
+</div>
+
+<script type="text/javascript" th:inline="javascript">
+/*<![CDATA[*/
+    var ALL_LOCGOVS = /*[[${allLocgovs}]]*/ [];
+    var SEL_LOCGOV = /*[[${wishlistParam.locgovCode}]]*/ '';
+    var ROLE = /*[[${role}]]*/ '';
+
+    $(function () {
+        wdrChange($("#upperLocgovCode").val());
+    });
+
+    /* AS-IS는 /opmanager/give/give-state/options-by-locgovCode ajax - 시군구 전체를 이미 갖고 있어 클라이언트 필터로 대체. */
+    function wdrChange(value) {
+        $("#locgovCode option").remove();
+        if (value && value != "") {
+            $('#locgovCode').append('<option value="">-시,군,구-</option>');
+            for (var i = 0; i < ALL_LOCGOVS.length; i++) {
+                if (ALL_LOCGOVS[i].upperLocgovCode == value) {
+                    $('#locgovCode').append('<option value="' + ALL_LOCGOVS[i].locgovCode + '">' + ALL_LOCGOVS[i].locgovNm + '</option>');
+                }
+            }
+            if (SEL_LOCGOV) { $("#locgovCode").val(SEL_LOCGOV); }
+        } else {
+            $('#locgovCode').append('<option value="">-시,군,구-</option>');
+        }
+    }
+
+    function downloadExcel() {
+        // 조회내역에 개인정보가 없어 사유 팝업 없이 다운로드(AS-IS 주석 그대로)
+        var qs = $('#wishlistParam').serialize();
+        if (ROLE == "mois") {
+            Shop.downloadExcelOrder("/shop-statistics/wish/list/mois/download-excel", qs, false);
+        } else {
+            Shop.downloadExcelOrder("/shop-statistics/wish/list/locgov/download-excel", qs, false);
+        }
+        alert('다운로드가 시작되었습니다.');
+    }
+/*]]>*/
+</script>
+
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
+
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

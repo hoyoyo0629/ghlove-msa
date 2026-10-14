@@ -1,54 +1,228 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
     <title>월별 지자체별 답례품 현황 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
+<!-- AS-IS opmanager/i18n/shop-statistics/sales/month-locgov.jsp 이식.
+
+     ★ 표는 두 절반이다.
+     - 왼쪽(지자체별 답례품 선정/등록 현황, 7칸) : 지자체별 "현재 승인·노출중" 답례품을 6개
+       카테고리(관광서비스/농축산물/수산물/가공식품/생활용품/지역상품권)로 나눈 종류 수 -
+       월 선택과 무관한 카탈로그 스냅샷이다(AS-IS SQL 재확인 완료, 월별 주문 서브쿼리 바깥에서
+       센다). TO-BE gift.Gift.categoryCode(TOUR/AGRI/SEAFOOD/PROCESSED/LIVING/VOUCHER)가
+       AS-IS OP_CATEGORY_GROUP.CODE(tour/farm/aquatic/process/daily/ticket)와 1:1 대응
+       (라벨도 동일 - gift 자체 GIFT_CATEGORY 공통코드 확인 완료).
+     - 오른쪽(지자체별 답례품 구매 현황, 4칸) : 선택한 년/월의 주문건수·금액·최다판매 TOP3
+       (동률 허용, AS-IS DENSE_RANK 재현). 취소 주문은 집계에서 아예 뺀다.
+
+     ★"합계(전체)" 3행 블록은 검색조건(지자체)으로 좁혀진 결과 안에서의 합계 - 항상 표 맨 위에
+     고정으로 나온다(AS-IS list[0].*TotalAll 하드코딩 블록과 같다).
+     ★페이지네이션 없음(AS-IS도 itemsPerPage select가 주석처리돼 꺼져 있다). -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <h3>월별 지자체별 답례품 현황</h3>
-    <p style="color:#666; margin-bottom:16px;">지자체별 당월 판매 TOP3 상품입니다.</p>
 
-    <form method="get" th:action="@{/shop-statistics/sales/month-locgov}" class="field" style="display:flex; gap:8px; align-items:center;">
-        <input type="number" name="year" th:value="${year}" style="width:100px;">
-        <input type="number" name="month" th:value="${month}" min="1" max="12" style="width:80px;">
-        <button type="submit" class="btn">조회</button>
-    </form>
+<h3><span>월별 지자체별 답례품 현황</span></h3>
+<form id="statisticsParam" th:object="${statisticsParam}" method="post" th:action="@{/shop-statistics/sales/month-locgov}">
+    <div class="board_write">
+        <table class="board_write_table" summary="월별 지자체별 답례품 현황">
+            <colgroup>
+                <col style="width:220px;">
+                <col>
+                <col style="width:220px;">
+                <col>
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td class="label">지자체</td>
+                    <td>
+                        <div class="flex_box gap-08">
+                            <select id="upperLocgovCode" name="upperLocgovCode" title="지자체" class="wd-150" onchange="wdrChange(this.value)">
+                                <option value="">-시,도-</option>
+                                <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"
+                                        th:selected="${p.key == statisticsParam.upperLocgovCode}"></option>
+                            </select>
+                            <select id="locgovCode" name="locgovCode" title="지자체" class="wd-150">
+                                <option value="">-시,군,구-</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td class="label">기간</td>
+                    <td>
+                        <div class="flex_box gap-08 item-center">
+                            <select id="searchYear" name="searchYear" title="년도" class="wd-150">
+                                <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${y == statisticsParam.searchYear}"></option>
+                            </select>
+                            년
+                            <select id="searchMonth" name="searchMonth" title="월" class="wd-150">
+                                <option th:each="m : ${#numbers.sequence(1,12)}" th:value="${m}" th:text="${m}"
+                                        th:selected="${m == T(java.lang.Integer).parseInt(statisticsParam.searchMonth)}"></option>
+                            </select>
+                            월
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="btn_all btn_left">
+            <ul class="list-bullet point">
+                <li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li>
+            </ul>
+        </div>
+        <div class="flex_box juc-sbt">
+            <div class="btn_all">
+                <div class="flex_box gap-08">
+                    <button type="button" class="btn btn-dark-gray btn-mini" onclick="excelDownload();">엑셀</button>
+                </div>
+            </div>
+            <div class="btn_all btn_right">
+                <div class="flex_box gap-08">
+                    <button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/shop-statistics/sales/month-locgov';">초기화</button>
+                    <button type="submit" class="btn btn-dark-gray btn-mini">검색</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <div class="count_title mt-40">
+        <h5>총 <span th:text="${#numbers.formatInteger(result.rows().size(), 0, 'COMMA')}" th:remove="tag">0</span>건</h5>
+    </div>
+</form>
+
+<div class="board_list">
     <table class="board_list_table">
+        <caption></caption>
+        <colgroup>
+            <col style="width:120px;"><col style="width:100px;"><col style="width:90px;">
+            <col style="width:90px;"><col style="width:90px;"><col style="width:90px;">
+            <col style="width:90px;"><col style="width:90px;"><col style="width:90px;">
+            <col style="width:120px;"><col style="width:130px;"><col style="width:220px;"><col style="width:110px;">
+        </colgroup>
         <thead>
-        <tr><th>지자체</th><th>주문건수</th><th>주문포인트</th><th>1위</th><th>2위</th><th>3위</th></tr>
+            <tr>
+                <th scope="col" rowspan="2">지역</th>
+                <th scope="col" rowspan="2">지자체명</th>
+                <th scope="col" colspan="7">지자체별 답례품 선정/등록 현황</th>
+                <th scope="col" colspan="4">지자체별 답례품 구매 현황</th>
+            </tr>
+            <tr>
+                <th scope="col">합계</th>
+                <th scope="col">관광<br>서비스</th>
+                <th scope="col">농축산물</th>
+                <th scope="col">수산물</th>
+                <th scope="col">가공식품</th>
+                <th scope="col">생활용품</th>
+                <th scope="col">지역상품권</th>
+                <th scope="col">답례품<br>선택건수</th>
+                <th scope="col">답례품<br>선택금액</th>
+                <th scope="col">가장많이 선택한<br>답례품명</th>
+                <th scope="col">가장많이 선택한<br>답례품 건수</th>
+            </tr>
         </thead>
         <tbody>
-        <tr th:each="row : ${stats}">
-            <td th:text="${row.locgovName()}"></td>
-            <td th:text="${row.orderCount()} + '건'"></td>
-            <td th:text="${#numbers.formatInteger(row.orderAmount(), 0, 'COMMA')} + 'P'"></td>
-            <td th:text="${row.top1()}"></td>
-            <td th:text="${row.top2()}"></td>
-            <td th:text="${row.top3()}"></td>
-        </tr>
+            <!-- 합계(전체) - 항상 고정 3행 -->
+            <tr>
+                <td colspan="2" rowspan="3">합계(전체)</td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(result.grandTotal().categoryCounts().total(), 0, 'COMMA')}">0</td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(result.grandTotal().categoryCounts().tour(), 0, 'COMMA')}">0</td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(result.grandTotal().categoryCounts().agri(), 0, 'COMMA')}">0</td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(result.grandTotal().categoryCounts().seafood(), 0, 'COMMA')}">0</td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(result.grandTotal().categoryCounts().processed(), 0, 'COMMA')}">0</td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(result.grandTotal().categoryCounts().living(), 0, 'COMMA')}">0</td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(result.grandTotal().categoryCounts().voucher(), 0, 'COMMA')}">0</td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(result.grandTotal().orderCount(), 0, 'COMMA')}">0</td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(result.grandTotal().saleAmount(), 0, 'COMMA')}">0</td>
+                <td th:title="${result.grandTotal().top3()[0].name()}" style="height:38px;"
+                    th:text="${@strcut.cut(result.grandTotal().top3()[0].name(), 20)}"></td>
+                <td th:text="${#numbers.formatInteger(result.grandTotal().top3()[0].count(), 0, 'COMMA')}">0</td>
+            </tr>
+            <tr>
+                <td th:title="${result.grandTotal().top3()[1].name()}" style="height:38px;"
+                    th:text="${@strcut.cut(result.grandTotal().top3()[1].name(), 20)}"></td>
+                <td th:text="${#numbers.formatInteger(result.grandTotal().top3()[1].count(), 0, 'COMMA')}">0</td>
+            </tr>
+            <tr>
+                <td th:title="${result.grandTotal().top3()[2].name()}" style="height:38px;"
+                    th:text="${@strcut.cut(result.grandTotal().top3()[2].name(), 20)}"></td>
+                <td th:text="${#numbers.formatInteger(result.grandTotal().top3()[2].count(), 0, 'COMMA')}">0</td>
+            </tr>
+            <th:block th:each="row : ${result.rows()}">
+            <tr>
+                <td rowspan="3" th:text="${row.upperLocgovNm()}"></td>
+                <td rowspan="3" th:text="${row.locgovNm()}"></td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(row.categoryCounts().total(), 0, 'COMMA')}">0</td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(row.categoryCounts().tour(), 0, 'COMMA')}">0</td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(row.categoryCounts().agri(), 0, 'COMMA')}">0</td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(row.categoryCounts().seafood(), 0, 'COMMA')}">0</td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(row.categoryCounts().processed(), 0, 'COMMA')}">0</td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(row.categoryCounts().living(), 0, 'COMMA')}">0</td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(row.categoryCounts().voucher(), 0, 'COMMA')}">0</td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(row.orderCount(), 0, 'COMMA')}">0</td>
+                <td rowspan="3" th:text="${#numbers.formatInteger(row.saleAmount(), 0, 'COMMA')}">0</td>
+                <td th:title="${row.top3()[0].name()}" style="height:38px;"
+                    th:text="${@strcut.cut(row.top3()[0].name(), 20)}"></td>
+                <td th:text="${#numbers.formatInteger(row.top3()[0].count(), 0, 'COMMA')}">0</td>
+            </tr>
+            <tr>
+                <td th:title="${row.top3()[1].name()}" style="height:38px;"
+                    th:text="${@strcut.cut(row.top3()[1].name(), 20)}"></td>
+                <td th:text="${#numbers.formatInteger(row.top3()[1].count(), 0, 'COMMA')}">0</td>
+            </tr>
+            <tr>
+                <td th:title="${row.top3()[2].name()}" style="height:38px;"
+                    th:text="${@strcut.cut(row.top3()[2].name(), 20)}"></td>
+                <td th:text="${#numbers.formatInteger(row.top3()[2].count(), 0, 'COMMA')}">0</td>
+            </tr>
+            </th:block>
         </tbody>
     </table>
-    <p class="empty" th:if="${#lists.isEmpty(stats)}">해당 월 데이터가 없습니다.</p>
+    <div th:if="${#lists.isEmpty(result.rows())}" class="no_content">
+        데이터가 없습니다.
+    </div>
+</div>
+
+<script type="text/javascript" th:inline="javascript">
+/*<![CDATA[*/
+    var ALL_LOCGOVS = /*[[${allLocgovs}]]*/ [];
+
+    $(function () {
+        wdrChange($("#upperLocgovCode").val());
+    });
+
+    function wdrChange(value) {
+        $("#locgovCode option").remove();
+        if (value && value != "") {
+            $('#locgovCode').append('<option value="">-시,군,구-</option>');
+            for (var i = 0; i < ALL_LOCGOVS.length; i++) {
+                if (ALL_LOCGOVS[i].upperLocgovCode == value) {
+                    $('#locgovCode').append('<option value="' + ALL_LOCGOVS[i].locgovCode + '">' + ALL_LOCGOVS[i].locgovNm + '</option>');
+                }
+            }
+        } else {
+            $('#locgovCode').append('<option value="">-시,군,구-</option>');
+        }
+    }
+
+    /* AS-IS excelDownload - Shop.downloadExcelOrder 호출이 주석처리돼 있어 그냥 location.href 이동. */
+    function excelDownload() {
+        var param = $('#statisticsParam').serialize();
+        location.href = '/shop-statistics/sales/month-locgov/excel-download?' + param;
+    }
+/*]]>*/
+</script>
+
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
+
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

@@ -1,66 +1,170 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
     <title>답례품 구매현황 전체 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
+<!-- AS-IS opmanager/i18n/shop-statistics/sales/all.jsp 이식.
+
+     ★ AS-IS 특징
+     - 검색조건은 년도(YYYY 공통코드) select 하나뿐. GET/POST 양쪽에서 조회한다
+       (다른 매출통계 화면들은 GET 에서 조회하지 않는 것과 다르다).
+     - 카드는 "주문"/"취소·반품"/"합계" 3세트, 각각 건수+금액(P) - device_type 축이
+       없어 다른 매출통계 화면과 달리 카드가 한 세트뿐이다(AS-IS 쿼리 자체에 DEVICE_TYPE
+       이 없다).
+     - 취소는 AS-IS가 <b>양수</b>로 담아 "합계 = 주문 - 취소"다(다른 매출통계는 취소가
+       음수라 "합계 = 판매 + 취소") - 여기서만 다른 부호 규칙이다.
+     - 배송비 개념이 없다(상품 결제금액만, "금액(P)"은 saleAmount 다 - payAmount 아님).
+     - 차트 2개(amountBarChart/countBarChart, 월별 1~12 bar, 2계열 주문/취소반품) -
+       ajax POST sales/all/month 로 받는다.
+     - AS-IS h3·location 문구는 "답례품 구매현황"이지만 op.manager.js 가 메뉴명으로
+       덮어쓴다(다른 통계 화면과 같다). -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <h3>답례품 구매현황 전체</h3>
 
-    <form method="get" th:action="@{/shop-statistics/sales/all}" class="field" style="display:flex; gap:8px; align-items:center;">
-        <input type="text" name="year" th:value="${summary.year()}" placeholder="yyyy">
-        <button type="submit" class="btn">조회</button>
-    </form>
+<h3><span>답례품 구매현황</span></h3>
+<form id="statisticsParam" method="post" th:action="@{/shop-statistics/sales/all}">
+    <div class="board_write">
+        <table class="board_write_table mb30">
+            <colgroup>
+                <col style="width:220px;">
+                <col>
+                <col style="width:220px;">
+                <col>
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td class="label">년도</td>
+                    <td>
+                        <div class="flex_box gap-08">
+                            <select id="year" name="year" title="년도" class="wd-150">
+                                <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${y == year}"></option>
+                            </select>
+                            <button type="submit" class="btn btn-dark-gray btn-mini">검색</button>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</form>
 
-    <h4 th:text="${summary.year()} + '년 합계'"></h4>
-    <table class="board_list_table">
-        <thead>
-        <tr><th>결제건수</th><th>결제포인트</th><th>취소건수</th><th>취소포인트</th></tr>
-        </thead>
-        <tbody>
-        <tr>
-            <td th:text="${summary.yearTotal().payCount()} + '건'"></td>
-            <td th:text="${#numbers.formatInteger(summary.yearTotal().payAmount(), 0, 'COMMA')} + 'P'"></td>
-            <td th:text="${summary.yearTotal().cancelCount()} + '건'"></td>
-            <td th:text="${#numbers.formatInteger(summary.yearTotal().cancelAmount(), 0, 'COMMA')} + 'P'"></td>
-        </tr>
-        </tbody>
-    </table>
+<div class="mainArea loc_details mb30">
+    <div class="list_box">
+        <ul class="list goods">
+            <li class="bg01 col-md-4">
+                <p class="txt under mb15">주문</p>
+                <div class="text_wrap flex_box">
+                    <div class="text_col">
+                        <p class="tit">건수</p>
+                        <p class="txt" th:text="${#numbers.formatInteger(card.saleCount, 0, 'COMMA')}">0</p>
+                    </div>
+                    <div class="text_col">
+                        <p class="tit">금액 (p)</p>
+                        <p class="txt" th:text="${#numbers.formatInteger(card.saleAmount, 0, 'COMMA')}">0</p>
+                    </div>
+                </div>
+            </li>
+            <li class="bg01 col-md-4">
+                <p class="txt under mb15">취소/반품</p>
+                <div class="text_wrap flex_box">
+                    <div class="text_col">
+                        <p class="tit">건수</p>
+                        <p class="txt" th:text="${#numbers.formatInteger(card.cancelCount, 0, 'COMMA')}">0</p>
+                    </div>
+                    <div class="text_col">
+                        <p class="tit">금액 (p)</p>
+                        <p class="txt" th:text="${#numbers.formatInteger(card.cancelAmount, 0, 'COMMA')}">0</p>
+                    </div>
+                </div>
+            </li>
+            <li class="bg01 col-md-4">
+                <p class="txt under mb15">합계</p>
+                <div class="text_wrap flex_box">
+                    <div class="text_col">
+                        <p class="tit">건수</p>
+                        <p class="txt" th:text="${#numbers.formatInteger(card.sumCount, 0, 'COMMA')}">0</p>
+                    </div>
+                    <div class="text_col">
+                        <p class="tit">금액 (p)</p>
+                        <p class="txt" th:text="${#numbers.formatInteger(card.sumAmount, 0, 'COMMA')}">0</p>
+                    </div>
+                </div>
+            </li>
+        </ul>
+    </div>
 
-    <h4>월별 현황</h4>
-    <table class="board_list_table">
-        <thead>
-        <tr><th>월</th><th>결제건수</th><th>결제포인트</th><th>취소건수</th><th>취소포인트</th></tr>
-        </thead>
-        <tbody>
-        <tr th:each="row : ${summary.monthly()}">
-            <td th:text="${row.period()}"></td>
-            <td th:text="${row.payCount()} + '건'"></td>
-            <td th:text="${#numbers.formatInteger(row.payAmount(), 0, 'COMMA')} + 'P'"></td>
-            <td th:text="${row.cancelCount()} + '건'"></td>
-            <td th:text="${#numbers.formatInteger(row.cancelAmount(), 0, 'COMMA')} + 'P'"></td>
-        </tr>
-        </tbody>
-    </table>
+    <div class="graph_wrap">
+        <div class="bd_gray mb15">
+            <h4 style="margin-bottom: 20px; font-size: 20px; font-weight: bold; text-align:center;">금액별</h4>
+            <div class="graph">
+                <canvas id="amountBarChart"></canvas>
+            </div>
+        </div>
+        <div class="bd_gray mb15">
+            <h4 style="margin-bottom: 20px; font-size: 20px; font-weight: bold; text-align:center;">건수별</h4>
+            <div class="graph">
+                <canvas id="countBarChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
+
+<script type="text/javascript" th:src="@{/content/modules/chart.min.js}"></script>
+<script type="text/javascript" th:src="@{/content/modules/op.chart.js}"></script>
+<script type="text/javascript">
+    $(function () {
+        statisticsAllByMonth();
+    });
+
+    /* AS-IS statisticsAllByMonth - monthArr 는 1~12 고정, 응답에서 해당 월에만 값을 꽂는다.
+       서버가 이미 1~12 를 채워서 주므로(OrderAdminClient.dateStats 와 같은 보정) 그대로 대입한다. */
+    function statisticsAllByMonth() {
+        var monthArr = [1,2,3,4,5,6,7,8,9,10,11,12];
+        var amountArr = [
+            { label: '주문', data: [], backgroundColor: '#004CCE', borderColor: '#004CCE' },
+            { label: '취소/반품', data: [], backgroundColor: '#9B57D3', borderColor: '#9B57D3' }
+        ];
+        var countArr = [
+            { label: '주문', data: [], backgroundColor: '#004CCE', borderColor: '#004CCE' },
+            { label: '취소/반품', data: [], backgroundColor: '#9B57D3', borderColor: '#9B57D3' }
+        ];
+
+        $.post('/shop-statistics/sales/all/month', $('#statisticsParam').serialize(), function (resp) {
+            if (resp.isSuccess) {
+                resp.data.forEach(function (d) {
+                    var idx = parseInt(d.groupObject.substring(4, 6), 10) - 1;
+                    amountArr[0].data[idx] = d.subSaleAmount;
+                    amountArr[1].data[idx] = d.subCancelAmount;
+                    countArr[0].data[idx] = d.subSaleCount;
+                    countArr[1].data[idx] = d.subCancelCount;
+                });
+
+                ChartCommon.drawChart('amountBarChart', 'bar', {
+                    scales: { x: { stacked: false }, y: { stacked: false } }
+                }, monthArr, amountArr, { x: '월', y: 'P' });
+
+                ChartCommon.drawChart('countBarChart', 'bar', {
+                    scales: { x: { stacked: false }, y: { stacked: false } }
+                }, monthArr, countArr, { x: '월', y: '건' });
+            } else {
+                alert(resp.errorMessage);
+            }
+        });
+    }
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

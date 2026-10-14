@@ -1,60 +1,111 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <title>관심 지자체 - 고향사랑e음 (admin service)</title>
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
-    <title>관심 지자체 통계 상세 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <style>
+    .hourGraph canvas { position: absolute; width: 100%; top: 0; }
+    </style>
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
+<!-- AS-IS opmanager/i18n/statistics/locgov/detail.jsp 이식.
+     요약 카드 2개(총 등록수(현재기준)/년도별 등록수) + Chart.js 월별 등록건수(bar, 1~12월).
+     [목록] 버튼은 지자체담당자(scoped)에게는 안 보인다(AS-IS adminRole != 'LOC'). -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <p><a th:href="@{'/statistics/interest-locgov'(year=${year})}">&larr; 관심 지자체 통계</a></p>
-    <h3 th:text="${(result.upperLocgovNm() != null ? result.upperLocgovNm() + ' ' : '') + result.locgovNm() + ' - 월별 관심지자체 등록 추이'}"></h3>
 
-    <form method="get" th:action="@{/statistics/interest-locgov/{locgovCode}(locgovCode=${result.locgovCode()})}" class="field" style="display:flex; gap:8px; align-items:center;">
-        <select name="year">
-            <option value="">전체 연도</option>
-            <option th:each="y : ${years}" th:value="${y}" th:text="${y} + '년'" th:selected="${y == year}"></option>
-        </select>
-        <button type="submit" class="btn">조회</button>
-    </form>
+<h3><span>관심 지자체</span></h3>
+<div class="btn_all btn_right mb15" th:if="${showListButton}">
+    <div class="flex_box gap-08">
+        <button type="button" class="btn btn-default btn-mini" onclick="location.href='/statistics/interest-locgov'">목록</button>
+    </div>
+</div>
 
-    <p>총 등록건수 <strong th:text="${result.total()} + '건'"></strong></p>
+<form id="searchParam" method="post" th:action="@{'/statistics/interest-locgov/' + ${locgovCode}}">
+    <div class="board_write mb30">
+        <table class="board_write_table" summary="">
+            <colgroup><col style="width:220px;"></colgroup>
+            <tbody>
+                <tr>
+                    <td class="label col-md-2">년도</td>
+                    <td>
+                        <div class="flex_box gap-08 item-center">
+                            <select id="shCntrYear" name="shCntrYear" title="년도" class="wd-150">
+                                <option th:each="y : ${years}" th:value="${y}" th:text="${y}"
+                                        th:selected="${y == searchParam.shCntrYear}"></option>
+                            </select>
+                            <button type="submit" class="btn btn-dark-gray btn-mini">검색</button>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</form>
 
-    <table class="board_list_table">
-        <thead>
-        <tr><th>연월</th><th>등록건수</th></tr>
-        </thead>
-        <tbody>
-        <tr th:each="m : ${result.monthly()}">
-            <td th:text="${m.yearMonth()}"></td>
-            <td th:text="${m.count()} + '건'"></td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(result.monthly())}">데이터가 없습니다.</p>
+<div class="mainArea loc_details mb30">
+    <div class="list_box">
+        <ul class="list">
+            <li class="bg01 col-md-6">
+                <p class="tit">총 등록수 <span class="s-txt">(현재기준)</span></p>
+                <p class="txt" th:text="${#numbers.formatInteger(total.total.total, 0, 'COMMA')}">0</p>
+            </li>
+            <li class="bd02 col-md-6">
+                <p class="tit">년도별 등록수</p>
+                <p class="txt" th:text="${#numbers.formatInteger(total.total.yearTotal, 0, 'COMMA')}">0</p>
+            </li>
+        </ul>
+    </div>
+    <div class="graph_wrap all">
+        <div class="bd_gray mb15">
+            <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;">월별 등록건수</p>
+            <div class="graph">
+                <canvas id="locgovLikeMonthChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
-<script th:inline="none">
-$(function(){
-    // 네비게이션 수정(AS-IS statistics/locgov/detail.jsp) - 메뉴 경로 맨 끝에 "상세"를 덧붙인다.
-    $(".contents_inner").find("div.location a").removeClass("on");
-    $(".contents_inner").find("div.location").append('> <a href="javascript:;" class="on">상세</a>');
-});
+
+<script type="text/javascript" th:src="@{/content/modules/chart.min.js}"></script>
+<script type="text/javascript" th:src="@{/content/modules/op.chart.js}"></script>
+<script type="text/javascript" th:inline="javascript">
+    var LOCGOV_CODE = /*[[${locgovCode}]]*/ '';
+
+    $(function () {
+        init();
+    });
+
+    function init() {
+        statisticsLocgovLikeByMonth();
+    }
+
+    function statisticsLocgovLikeByMonth() {
+        var monthArr = [];
+        var likeArr = [{ label: '건수별', data: [], backgroundColor: '#004CCE', borderColor: '#004CCE' }];
+
+        $.post('/statistics/interest-locgov/' + LOCGOV_CODE + '/' + $('#shCntrYear').val(), {}, function (resp) {
+            if (resp.isSuccess) {
+                resp.data.forEach(function (d) {
+                    monthArr.push(d.month ? d.month : 0);
+                    likeArr[0].data.push(d.count ? d.count : 0);
+                });
+                ChartCommon.drawChart('locgovLikeMonthChart', 'bar', null, monthArr, likeArr, { x: '월', y: '건' });
+            } else {
+                alert(resp.errorMessage);
+            }
+        });
+    }
 </script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>

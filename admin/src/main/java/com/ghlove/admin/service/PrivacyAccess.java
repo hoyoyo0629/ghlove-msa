@@ -81,7 +81,7 @@ public enum PrivacyAccess {
     GIVE_OPERATION_DETAIL(PrivacyTask.EXCEL_DOWNLOAD, PrivacyTask.EXCEL_DOWNLOAD, "/**/give/give-operation/all/download-excel", "기부금 운용현황 목록"),
     GIVE_LOCGOV_OPERATION(PrivacyTask.EXCEL_DOWNLOAD, PrivacyTask.EXCEL_DOWNLOAD, "/**/give/give-operation/list/**/excel", "기부금 지자체 운용현황 목록"),
     GIVE_STATISTICS_OPERATION(PrivacyTask.EXCEL_DOWNLOAD, PrivacyTask.EXCEL_DOWNLOAD, "/**/give/statistics/operate/excel", "기부금 운영현황 목록"),
-    GIVE_STATISTICS_LIKE(PrivacyTask.EXCEL_DOWNLOAD, PrivacyTask.EXCEL_DOWNLOAD, "/**/statistics/locgov/like/excel", "관심지자체 목록"),
+    GIVE_STATISTICS_LIKE(PrivacyTask.EXCEL_DOWNLOAD, PrivacyTask.EXCEL_DOWNLOAD, "/**/statistics/locgov/like/excel", "관심지자체 목록", "/statistics/interest-locgov/excel"),
 
     //통계
     GIVE_STATISTICS_LOCGOV(PrivacyTask.EXCEL_DOWNLOAD, PrivacyTask.EXCEL_DOWNLOAD, "/**/give/statistics/locgov/excel", "기부금 지자체별 목록", "/give-statistics/locgov/excel"),

@@ -34,6 +34,7 @@ public class OrderAdminApiController {
 
     private final OrderAdminService orderAdminService;
     private final com.ghlove.order.service.OrderDateStatsService orderDateStatsService;
+    private final com.ghlove.order.service.OrderLocgovStatsService orderLocgovStatsService;
 
     /**
      * 일자/월/년 매출 통계 - AS-IS opmanager/shop-statistics/sales/{day,month,year}.
@@ -45,6 +46,40 @@ public class OrderAdminApiController {
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
         return orderDateStatsService.dateStats(type, startDate, endDate);
+    }
+
+    /**
+     * 답례품 구매현황 > 지자체별 - AS-IS getDateStatsListGhlove의 LOCGOV/ITEM/USER 분기.
+     * 이름(지자체명·상호명·회원명)은 다른 서비스 소유라 admin이 키로 붙인다.
+     */
+    @GetMapping("/stats/locgov-group")
+    public java.util.List<com.ghlove.order.service.OrderLocgovStatsService.GroupRow> locgovGroupStats(
+            @RequestParam String extra,
+            @RequestParam String startYearMonth,
+            @RequestParam String endYearMonth,
+            @RequestParam(required = false) String locgovCode,
+            @RequestParam(required = false) Long itemId) {
+        return switch (extra) {
+            case "ITEM" -> orderLocgovStatsService.byItem(startYearMonth, endYearMonth, locgovCode);
+            case "ITEM_ALL" -> orderLocgovStatsService.byItemAllLocgovs(startYearMonth, endYearMonth);
+            case "USER" -> orderLocgovStatsService.byUser(startYearMonth, endYearMonth, itemId);
+            default -> orderLocgovStatsService.byLocgov(startYearMonth, endYearMonth);
+        };
+    }
+
+    /** 통계 > 답례품 구매현황 > 카테고리별 - AS-IS getCategoriesStatsList의 주문 통계 절반(지자체×품목). */
+    @GetMapping("/stats/category-item")
+    public java.util.List<com.ghlove.order.service.OrderLocgovStatsService.LocgovItemQtyRow> categoryItemStats(
+            @RequestParam String startDate, @RequestParam String endDate) {
+        return orderLocgovStatsService.locgovItemQuantityStats(startDate, endDate);
+    }
+
+    /** 통계 > 답례품 구매현황 > 농협 사업자 답례품 현황 - AS-IS getNhItemSalesStats의 주문 통계 절반. */
+    @GetMapping("/stats/nh-item")
+    public java.util.List<com.ghlove.order.service.OrderLocgovStatsService.NhItemSaleRow> nhItemSaleStats(
+            @RequestParam String startYearMonth,
+            @RequestParam String endYearMonth) {
+        return orderLocgovStatsService.nhItemSaleStats(startYearMonth, endYearMonth);
     }
 
     @GetMapping

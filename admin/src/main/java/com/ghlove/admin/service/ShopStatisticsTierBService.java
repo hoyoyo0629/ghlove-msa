@@ -143,28 +143,9 @@ public class ShopStatisticsTierBService {
                 .toList();
     }
 
-    // ---- B. 답례품 구매현황 전체 (연+월 결합) ----
-
-    public record AllSalesSummary(String year, PeriodStat yearTotal, List<PeriodStat> monthly) {
-    }
-
-    public AllSalesSummary allSales(String year) {
-        String y = (year != null && !year.isBlank()) ? year : String.valueOf(LocalDate.now().getYear());
-        Map<String, PeriodStat> byMonth = periodStats("month", y + "0101", y + "1231").stream()
-                .collect(Collectors.toMap(PeriodStat::period, p -> p));
-        List<PeriodStat> full = new ArrayList<>();
-        long tPay = 0, tPayAmt = 0, tCancel = 0, tCancelAmt = 0;
-        for (int m = 1; m <= 12; m++) {
-            String key = y + String.format("%02d", m);
-            PeriodStat p = byMonth.getOrDefault(key, new PeriodStat(key, 0, 0, 0, 0));
-            full.add(p);
-            tPay += p.payCount();
-            tPayAmt += p.payAmount();
-            tCancel += p.cancelCount();
-            tCancelAmt += p.cancelAmount();
-        }
-        return new AllSalesSummary(y, new PeriodStat(y, tPay, tPayAmt, tCancel, tCancelAmt), full);
-    }
+    // ---- B. 답례품 구매현황 전체 → ShopStatisticsTierBController 로 옮겼다(AS-IS all.jsp
+    //         사양으로 재구현, OrderAdminClient.dateStats 재사용). 옛 allSales()/AllSalesSummary
+    //         (이 화면 전용, periodStats 기반 발명된 표)는 호출부가 사라져 제거했다.
 
     // ---- C. 결제타입별 매출 통계 - 이 프로젝트는 전액 포인트결제라 단일 유형. ----
 
@@ -321,31 +302,6 @@ public class ShopStatisticsTierBService {
         return toOrderRows(orders, items);
     }
 
-    // ---- H. 카테고리별 통계 (AS-IS /sales/category는 미사용 코드주석 - /sales/categories로 통합) ----
-
-    public record CategoryStat(String categoryCode, long payCount, long payAmount) {
-    }
-
-    public List<CategoryStat> categoryStats() {
-        Map<Long, GiftClient.ItemSnapshot> items = itemsById();
-        Map<String, long[]> byC = new LinkedHashMap<>();
-        for (OrderLedger o : allOrders()) {
-            if (!isPay(o)) {
-                continue;
-            }
-            GiftClient.ItemSnapshot item = items.get(o.getItemId());
-            String cat = item != null && item.categoryCode() != null ? item.categoryCode() : "미분류";
-            long[] b = byC.computeIfAbsent(cat, k -> new long[2]);
-            b[0]++;
-            b[1] += amt(o);
-        }
-        List<CategoryStat> rows = new ArrayList<>();
-        byC.forEach((code, b) -> rows.add(new CategoryStat(code, b[0], b[1])));
-        rows.sort(Comparator.comparingLong(CategoryStat::payAmount).reversed());
-        return rows;
-    }
-
-    // ---- I. 지역별 통계 (답례품 등록 지자체 기준) ----
 
     public record AreaStat(String locgovCode, String locgovName, long payCount, long payAmount) {
     }
@@ -416,117 +372,17 @@ public class ShopStatisticsTierBService {
                 .toList();
     }
 
-    // ---- L. 월별 지자체별 답례품 현황 (지자체별 당월 판매 TOP3 상품) ----
+    // ---- L. 월별 지자체별 답례품 현황 → ShopStatisticsMonthLocgovService로 옮겼다(AS-IS
+    //         getMonthLocgovItemStat 전체 재구현 - 7칸 카테고리 선정/등록 현황·동률 TOP3·엑셀,
+    //         2026-10-14). 옛 monthLocgovTop3/LocgovTop3Row(지자체 TOP3 주문금액 순위만 보여주던
+    //         축소판)는 제거했다.
 
-    public record LocgovTop3Row(String locgovCode, String locgovName, long orderCount, long orderAmount,
-                                 String top1, String top2, String top3) {
-    }
+    // ---- M. 지자체별 구매현황 → ShopStatisticsLocgovService로 옮겼다(AS-IS mois/locgov 역할
+    //         분기·지자체명/상호명/회원명 cross-service enrichment·정렬·엑셀 전체 재구현,
+    //         2026-10-14). 옛 locgovStats/locgovUserStats(연도만 받아 정렬 하나뿐이던 축소판)는
+    //         제거했다 - LocgovStat 레코드도 그 둘만 썼으므로 같이 지웠다(UserStat은 D 섹션이
+    //         아직 쓰므로 남긴다).
 
-    public List<LocgovTop3Row> monthLocgovTop3(int year, int month) {
-        Map<Long, GiftClient.ItemSnapshot> items = itemsById();
-        Map<String, String> names = locgovNameByCode();
-        Map<String, List<OrderLedger>> byLocgov = new LinkedHashMap<>();
-        for (OrderLedger o : allOrders()) {
-            if (!isPay(o) || o.getCreatedDate() == null) {
-                continue;
-            }
-            if (o.getCreatedDate().getYear() != year || o.getCreatedDate().getMonthValue() != month) {
-                continue;
-            }
-            GiftClient.ItemSnapshot item = items.get(o.getItemId());
-            String code = item != null && item.locgovCode() != null ? item.locgovCode() : "미상";
-            byLocgov.computeIfAbsent(code, k -> new ArrayList<>()).add(o);
-        }
-        List<LocgovTop3Row> rows = new ArrayList<>();
-        byLocgov.forEach((code, orders) -> {
-            Map<Long, Long> countByItem = orders.stream()
-                    .collect(Collectors.groupingBy(OrderLedger::getItemId, Collectors.counting()));
-            List<String> top = countByItem.entrySet().stream()
-                    .sorted(Map.Entry.<Long, Long>comparingByValue().reversed())
-                    .limit(3)
-                    .map(e -> Optional.ofNullable(items.get(e.getKey())).map(GiftClient.ItemSnapshot::itemName).orElse("상품#" + e.getKey()))
-                    .toList();
-            long orderCount = orders.size();
-            long orderAmount = orders.stream().mapToLong(this::amt).sum();
-            rows.add(new LocgovTop3Row(code, names.getOrDefault(code, code), orderCount, orderAmount,
-                    top.size() > 0 ? top.get(0) : "-", top.size() > 1 ? top.get(1) : "-", top.size() > 2 ? top.get(2) : "-"));
-        });
-        rows.sort(Comparator.comparingLong(LocgovTop3Row::orderAmount).reversed());
-        return rows;
-    }
-
-    // ---- M. 지자체별 구매현황 ----
-
-    public record LocgovStat(String locgovCode, String locgovName, long payCount, long payAmount) {
-    }
-
-    public List<LocgovStat> locgovStats(int year) {
-        Map<Long, GiftClient.ItemSnapshot> items = itemsById();
-        Map<String, String> names = locgovNameByCode();
-        Map<String, long[]> byL = new LinkedHashMap<>();
-        for (OrderLedger o : allOrders()) {
-            if (!isPay(o) || o.getCreatedDate() == null || o.getCreatedDate().getYear() != year) {
-                continue;
-            }
-            GiftClient.ItemSnapshot item = items.get(o.getItemId());
-            String code = item != null && item.locgovCode() != null ? item.locgovCode() : "미상";
-            long[] b = byL.computeIfAbsent(code, k -> new long[2]);
-            b[0]++;
-            b[1] += amt(o);
-        }
-        List<LocgovStat> rows = new ArrayList<>();
-        byL.forEach((code, b) -> rows.add(new LocgovStat(code, names.getOrDefault(code, code), b[0], b[1])));
-        rows.sort(Comparator.comparingLong(LocgovStat::payAmount).reversed());
-        return rows;
-    }
-
-    public List<UserStat> locgovUserStats(String locgovCode, int year) {
-        Map<Long, GiftClient.ItemSnapshot> items = itemsById();
-        Map<Long, long[]> byUser = new LinkedHashMap<>();
-        for (OrderLedger o : allOrders()) {
-            if (!isPay(o) || o.getCreatedDate() == null || o.getCreatedDate().getYear() != year || o.getUserId() == null) {
-                continue;
-            }
-            GiftClient.ItemSnapshot item = items.get(o.getItemId());
-            String code = item != null ? item.locgovCode() : null;
-            if (!locgovCode.equals(code)) {
-                continue;
-            }
-            long[] b = byUser.computeIfAbsent(o.getUserId(), k -> new long[2]);
-            b[0]++;
-            b[1] += amt(o);
-        }
-        List<UserStat> rows = new ArrayList<>();
-        byUser.forEach((id, b) -> {
-            MemberClient.MemberInfo info = memberClient.fetchOrNull(id);
-            rows.add(new UserStat(id, info != null && info.userName() != null ? info.userName() : ("회원#" + id), b[0], b[1]));
-        });
-        rows.sort(Comparator.comparingLong(UserStat::payAmount).reversed());
-        return rows;
-    }
-
-    // ---- N. 답례품 선호도 (관심답례품/찜) ----
-
-    public record WishStat(Long itemId, String itemName, String locgovCode, String locgovName, long wishCount) {
-    }
-
-    public List<WishStat> wishStats() {
-        Map<Long, GiftClient.ItemSnapshot> items = itemsById();
-        Map<String, String> names = locgovNameByCode();
-        Map<Long, Long> counts = giftClient.wishlistAll().stream()
-                .collect(Collectors.groupingBy(GiftClient.WishlistEntry::itemId, Collectors.counting()));
-        List<WishStat> rows = new ArrayList<>();
-        counts.forEach((itemId, count) -> {
-            GiftClient.ItemSnapshot item = items.get(itemId);
-            String locgov = item != null ? item.locgovCode() : null;
-            rows.add(new WishStat(itemId, item != null ? item.itemName() : ("상품#" + itemId),
-                    locgov, names.getOrDefault(locgov, "미상"), count));
-        });
-        rows.sort(Comparator.comparingLong(WishStat::wishCount).reversed());
-        return rows;
-    }
-
-    // ---- O/P. 일일/월별 현황 대시보드 ----
 
     public record DashboardDay(String date, long payCount, long payAmount, long cancelCount, long newUserCount) {
     }
@@ -562,24 +418,8 @@ public class ShopStatisticsTierBService {
         return new DashboardMonth(ym, daily, totalCount, totalAmount);
     }
 
-    // ---- Q. 농협 사업자 답례품 현황 (은행명에 "농협" 포함된 판매자) ----
-
-    public List<SellerStat> nhItemSales() {
-        Map<Long, GiftClient.SellerDetail> sellers = sellersById();
-        Set<Long> nhSellerIds = sellers.values().stream()
-                .filter(s -> s.bankName() != null && s.bankName().contains("농협"))
-                .map(GiftClient.SellerDetail::sellerId)
-                .collect(Collectors.toSet());
-        return sellerStats().stream().filter(s -> nhSellerIds.contains(s.sellerId())).toList();
-    }
-
-    public int currentYear() {
-        return LocalDate.now().getYear();
-    }
-
-    public int currentMonth() {
-        return LocalDate.now().getMonthValue();
-    }
+    // ---- Q. 농협 사업자 답례품 현황 → ShopStatisticsNhItemSalesService로 옮겼다(AS-IS는
+    //         bankName이 아니라 G_NH_STAT_DATA_TEMP 사업자번호 매칭이었다, 2026-10-14 바로잡음).
 
     // ---- R. 대시보드 텍스트 리포트 (AS-IS opmanager/report - ReportController, part1 3b/B10).
     // 행안부 일일/주간보고용 - 이미 계산된 대시보드 데이터를 클립보드복사에 알맞은 정형 텍스트로

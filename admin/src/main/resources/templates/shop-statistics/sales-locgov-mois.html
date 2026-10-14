@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>답례품 구매현황(지자체별) - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/shop-statistics/sales/locgov-mois.jsp 이식.
+     mois(ROLE_ADMIN_1~4) 역할이고 locgovCode를 아직 안 고른 상태 - 지자체별 집계 목록.
+     지자체 2단 select(WDR→LOCGOV_CODE) + 년/월 select, 정렬가능 6칸(주문/반품환불/합계 ×
+     건수/금액), 지자체명 클릭 시 답례품별 목록(sales-locgov)으로 드릴다운, 좌측 엑셀 버튼
+     (개인정보 없어 사유모달 없음, AS-IS downloadExcelOrder(..., false)). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span>답례품 구매현황</span></h3>
+<form id="statisticsParam" th:object="${statisticsParam}" method="post" th:action="@{/shop-statistics/sales/locgov}">
+    <input type="hidden" id="orderBy" th:field="*{orderBy}">
+    <input type="hidden" id="isDesc" th:field="*{isDesc}">
+    <div class="board_write">
+        <table class="board_write_table">
+            <colgroup>
+                <col style="width:220px;">
+                <col>
+                <col style="width:220px;">
+                <col>
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td class="label">지자체</td>
+                    <td>
+                        <div class="flex_box gap-08">
+                            <select id="upperLocgovCode" name="upperLocgovCode" title="지자체" class="wd-150" onchange="wdrChange(this.value)">
+                                <option value="">-시,도 선택-</option>
+                                <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"
+                                        th:selected="${p.key == statisticsParam.upperLocgovCode}"></option>
+                            </select>
+                            <select id="locgovCode" name="locgovCode" title="지자체" class="wd-150">
+                                <option value="">-시,군,구-</option>
+                            </select>
+                        </div>
+                    </td>
+                    <td class="label">년도</td>
+                    <td>
+                        <div class="flex_box gap-08">
+                            <select id="year" name="year" title="년도" class="wd-150">
+                                <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${y == statisticsParam.year}"></option>
+                            </select>
+                            <select id="locgovSearchMonth" name="locgovSearchMonth" title="월" class="wd-150">
+                                <option value="" th:selected="${statisticsParam.locgovSearchMonth == ''}">전체</option>
+                                <option th:each="m : ${#numbers.sequence(1,12)}" th:value="${m}" th:text="${m} + '월'"
+                                        th:selected="${statisticsParam.locgovSearchMonth == #strings.toString(m)}"></option>
+                            </select>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="btn_all btn_left">
+            <ul class="list-bullet point">
+                <li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li>
+            </ul>
+        </div>
+        <div class="btn_all btn_right">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/shop-statistics/sales/locgov';">초기화</button>
+                <button type="submit" class="btn btn-dark-gray btn-mini">검색</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="count_title mt-40 flex_box juc-sbt item-center">
+        <h5>총 <span th:text="${#numbers.formatInteger(count, 0, 'COMMA')}" th:remove="tag">0</span>건</h5>
+        <div class="flex_box gap-08">
+            <span>
+                <select id="itemsPerPage" name="itemsPerPage" title="화면출력" onchange="$('#statisticsParam').submit();">
+                    <option value="10" th:selected="${statisticsParam.itemsPerPage == 10}">10개 출력</option>
+                    <option value="20" th:selected="${statisticsParam.itemsPerPage == 20}">20개 출력</option>
+                    <option value="50" th:selected="${statisticsParam.itemsPerPage == 50}">50개 출력</option>
+                    <option value="100" th:selected="${statisticsParam.itemsPerPage == 100}">100개 출력</option>
+                </select>
+            </span>
+        </div>
+    </div>
+</form>
+
+<div class="board_list">
+    <table class="board_list_table">
+        <caption></caption>
+        <colgroup>
+            <col style="width:50px;">
+            <col style="width:300px;">
+            <col style="width:200px;">
+            <col style="width:200px;">
+            <col style="width:200px;">
+            <col style="width:200px;">
+        </colgroup>
+        <thead>
+            <tr>
+                <th scope="col" class="col-md-1" rowspan="2">No.</th>
+                <th scope="col" class="col-md-2" rowspan="2">지자체</th>
+                <th scope="col" class="col-md-3" colspan="2">주문</th>
+                <th scope="col" class="col-md-3" colspan="2">반품/환불</th>
+                <th scope="col" class="col-md-3" colspan="2">합계</th>
+            </tr>
+            <tr>
+                <th scope="col" class="col-md-1"><a href="javascript:;" onclick="orderBySelect(event, 'orderCase');">건수 <span id="orderCase"></span></a></th>
+                <th scope="col" class="col-md-1"><a href="javascript:;" onclick="orderBySelect(event, 'orderPoint');">금액(p) <span id="orderPoint"></span></a></th>
+                <th scope="col" class="col-md-1"><a href="javascript:;" onclick="orderBySelect(event, 'claimCase');">건수 <span id="claimCase"></span></a></th>
+                <th scope="col" class="col-md-1"><a href="javascript:;" onclick="orderBySelect(event, 'claimPoint');">금액(p) <span id="claimPoint"></span></a></th>
+                <th scope="col" class="col-md-1"><a href="javascript:;" onclick="orderBySelect(event, 'sumCase');">건수 <span id="sumCase"></span></a></th>
+                <th scope="col" class="col-md-1"><a href="javascript:;" onclick="orderBySelect(event, 'sumPoint');">금액(p) <span id="sumPoint"></span></a></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:if="${#lists.isEmpty(dateList)}">
+                <td colspan="7">조회 정보가 존재하지 않습니다.</td>
+            </tr>
+            <tr th:each="row, i : ${dateList}" style="background:#fff;">
+                <td><div th:text="${pagination.itemNumber - i.count}">0</div></td>
+                <td>
+                    <div>
+                        <a href="javascript:;"
+                           th:attr="onclick=|detail('${row.locgovCode}', '${statisticsParam.year}', '${statisticsParam.locgovSearchMonth}')|"
+                           th:text="${row.displayName}"></a>
+                    </div>
+                </td>
+                <td><div th:text="${#numbers.formatInteger(row.saleCount, 0, 'COMMA')}">0</div></td>
+                <td><div th:text="${#numbers.formatInteger(row.saleAmount, 0, 'COMMA')}">0</div></td>
+                <td><div th:text="${#numbers.formatInteger(row.cancelCount, 0, 'COMMA')}">0</div></td>
+                <td><div th:text="${#numbers.formatInteger(row.cancelAmount, 0, 'COMMA')}">0</div></td>
+                <td><div th:text="${#numbers.formatInteger(row.sumCount, 0, 'COMMA')}">0</div></td>
+                <td><div th:text="${#numbers.formatInteger(row.sumAmount, 0, 'COMMA')}">0</div></td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="btn_all flex_box juc-sbt">
+        <div class="flex_box gap-08">
+            <button type="button" class="btn btn-dark-gray btn-mini" onclick="downloadExcel()">엑셀</button>
+        </div>
+    </div>
+    <div class="pagination-wrap">
+        <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+    </div>
+</div>
+
+<script type="text/javascript" th:inline="javascript">
+/*<![CDATA[*/
+    var ALL_LOCGOVS = /*[[${allLocgovs}]]*/ [];
+    var orderBy = /*[[${statisticsParam.orderBy}]]*/ '';
+    var isDesc = /*[[${statisticsParam.isDesc}]]*/ false;
+
+    $(function () {
+        wdrChange($("#upperLocgovCode").val());
+        initOrderby();
+    });
+
+    function wdrChange(value) {
+        $("#locgovCode option").remove();
+        if (value && value != "") {
+            $('#locgovCode').append('<option value="">-시,군,구-</option>');
+            for (var i = 0; i < ALL_LOCGOVS.length; i++) {
+                if (ALL_LOCGOVS[i].upperLocgovCode == value) {
+                    $('#locgovCode').append('<option value="' + ALL_LOCGOVS[i].locgovCode + '">' + ALL_LOCGOVS[i].locgovNm + '</option>');
+                }
+            }
+        } else {
+            $('#locgovCode').append('<option value="">-시,군,구-</option>');
+        }
+    }
+
+    function downloadExcel() {
+        Shop.downloadExcelOrder("/shop-statistics/sales/locgov/mois/download-excel", $('#statisticsParam').serialize(), false);
+        alert('다운로드가 시작되었습니다.');
+    }
+
+    function initOrderby() {
+        if (orderBy) {
+            if (isDesc) {
+                $("#" + orderBy).addClass("sort_arrow d_down");
+            } else {
+                $("#" + orderBy).addClass("sort_arrow d_up");
+            }
+        }
+    }
+
+    function orderBySelect(event, tagId) {
+        if (event) {
+            event.preventDefault();
+        }
+        let oldTagId = getOrderbyTagId();
+        if (oldTagId == tagId) {
+            isDesc = !isDesc;
+        } else {
+            if (oldTagId) { $("#" + oldTagId).removeClass(); }
+            isDesc = true;
+        }
+        $("#" + tagId).removeClass();
+        if (isDesc) {
+            $("#" + tagId).addClass("sort_arrow d_down");
+        } else {
+            $("#" + tagId).addClass("sort_arrow d_up");
+        }
+        $("#isDesc").val(isDesc);
+        $("#orderBy").val(tagId);
+        $("#statisticsParam").submit();
+    }
+
+    function getOrderbyTagId() {
+        if ($("#orderCase").attr('class')) { return "orderCase"; }
+        if ($("#orderPoint").attr('class')) { return "orderPoint"; }
+        if ($("#claimCase").attr('class')) { return "claimCase"; }
+        if ($("#claimPoint").attr('class')) { return "claimPoint"; }
+        if ($("#sumCase").attr('class')) { return "sumCase"; }
+        if ($("#sumPoint").attr('class')) { return "sumPoint"; }
+        return "";
+    }
+
+    function detail(locgovCode, year, locgovSearchMonth) {
+        let form = document.createElement('form');
+        form.method = 'post';
+        form.action = '/shop-statistics/sales/locgov';
+        form.innerHTML = '<input name="locgovCode" type="hidden" value="' + locgovCode + '">'
+            + '<input name="year" type="hidden" value="' + year + '">'
+            + '<input name="locgovSearchMonth" type="hidden" value="' + locgovSearchMonth + '">';
+        document.body.appendChild(form);
+        form.submit();
+    }
+/*]]>*/
+</script>
+
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

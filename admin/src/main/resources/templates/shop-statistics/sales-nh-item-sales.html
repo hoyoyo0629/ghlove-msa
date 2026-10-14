@@ -1,46 +1,214 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
     <title>농협 사업자 답례품 현황 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
+<!-- AS-IS opmanager/i18n/shop-statistics/sales/nh-item-sales.jsp 이식.
+     ★ "농협 사업자"는 은행명이 아니라 G_NH_STAT_DATA_TEMP(외부에서 받은 농협 사업자번호 목록)
+     와 OP_SELLER.BUSINESS_NUMBER 매칭이다 - 이전 구현(bankName에 "농협" 포함)은 틀린
+     휴리스틱이었다(2026-10-14 바로잡음).
+     품목 목록은 카탈로그 전체(승인·노출 여부 무관, AS-IS 베이스 쿼리에 그 필터가 없다) -
+     주문이 없는 품목도 0으로 한 행 나온다.
+     "하위카테고리"·"상품코드"는 TO-BE 답례품 모델에 대응 필드가 없어 "-"(지자체별 화면의
+     "답례품 코드"와 같은 사정). -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <h3>농협 사업자 답례품 현황</h3>
-    <p style="color:#666; margin-bottom:16px;">계좌 은행명에 "농협"이 포함된 판매자 기준입니다.</p>
-    <table class="board_list_table">
+
+<h3><span>농협 사업자 답례품 현황</span></h3>
+<form id="statisticsParam" th:object="${statisticsParam}" method="post" th:action="@{/shop-statistics/sales/nh-item-sales}">
+    <input type="hidden" id="page" name="page" th:value="${pagination.currentPage}">
+    <div class="board_write">
+        <table class="board_write_table" summary="농협 사업자 답례품 현황">
+            <colgroup>
+                <col style="width:150px;">
+                <col>
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td class="label">지자체</td>
+                    <td>
+                        <div class="flex_box gap-08">
+                            <select id="upperLocgovCode" name="upperLocgovCode" class="wd-150" onchange="wdrChange(this.value)">
+                                <option value="">-시,도-</option>
+                                <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"
+                                        th:selected="${p.key == statisticsParam.upperLocgovCode}"></option>
+                            </select>
+                            <select id="locgovCode" name="locgovCode" class="wd-150">
+                                <option value="">-시,군,구-</option>
+                            </select>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">검색구분</td>
+                    <td>
+                        <div class="flex_box gap-08">
+                            <select id="where" name="where" title="검색구분" class="wd-150">
+                                <option value="" th:selected="${statisticsParam.where == ''}">전체</option>
+                                <option value="BUSINESS_NUMBER" th:selected="${statisticsParam.where == 'BUSINESS_NUMBER'}">사업자번호</option>
+                                <option value="LOGIN_ID" th:selected="${statisticsParam.where == 'LOGIN_ID'}">아이디</option>
+                                <option value="COMPANY_NAME" th:selected="${statisticsParam.where == 'COMPANY_NAME'}">상호명</option>
+                                <option value="ITEM_NAME" th:selected="${statisticsParam.where == 'ITEM_NAME'}">답례품명</option>
+                            </select>
+                            <input type="text" id="query" name="query" class="input_txt wd-500" maxlength="20" th:value="${statisticsParam.query}">
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">년도</td>
+                    <td>
+                        <div class="flex_box gap-08 item-center">
+                            <select id="searchYear" name="searchYear" title="년도" class="wd-150">
+                                <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${y == statisticsParam.searchYear}"></option>
+                            </select>
+                            년
+                            <select id="searchMonth" name="searchMonth" title="월" class="wd-150">
+                                <option th:each="m : ${#numbers.sequence(1,12)}" th:value="${m}" th:text="${m}"
+                                        th:selected="${m == T(java.lang.Integer).parseInt(statisticsParam.searchMonth)}"></option>
+                            </select>
+                            월
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="btn_all btn_left">
+            <ul class="list-bullet point">
+                <li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li>
+            </ul>
+        </div>
+        <div class="btn_all btn_right">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/shop-statistics/sales/nh-item-sales';">초기화</button>
+                <button type="button" class="btn btn-dark-gray btn-mini" onclick="search();">검색</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="count_title mt-40 flex_box juc-sbt item-center">
+        <h5>총 <span th:text="${#numbers.formatInteger(totalCount, 0, 'COMMA')}" th:remove="tag">0</span>건</h5>
+        <div class="flex_box gap-08">
+            <span>
+                <select id="itemsPerPage" name="itemsPerPage" title="화면출력" onchange="$('#page').val(1); $('#statisticsParam').submit();">
+                    <option value="10" th:selected="${pagination.itemsPerPage == 10}">10개 출력</option>
+                    <option value="50" th:selected="${pagination.itemsPerPage == 50}">50개 출력</option>
+                    <option value="100" th:selected="${pagination.itemsPerPage == 100}">100개 출력</option>
+                    <option value="200" th:selected="${pagination.itemsPerPage == 200}">200개 출력</option>
+                    <option value="500" th:selected="${pagination.itemsPerPage == 500}">500개 출력</option>
+                </select>
+            </span>
+        </div>
+    </div>
+</form>
+
+<div class="board_list">
+    <table class="board_list_table" summary="농협 사업자 답례품 현황">
+        <caption>농협 사업자 답례품 현황</caption>
+        <colgroup>
+            <col style="width:70px;"><col style="width:150px;"><col style="width:120px;">
+            <col style="width:180px;"><col style="width:150px;"><col style="width:250px;">
+            <col style="width:120px;"><col style="width:120px;"><col style="width:100px;">
+            <col style="width:90px;"><col style="width:90px;"><col style="width:120px;"><col style="width:120px;">
+        </colgroup>
         <thead>
-        <tr><th>판매자ID</th><th>판매자명</th><th>결제건수</th><th>결제포인트</th><th>취소건수</th></tr>
+            <tr>
+                <th scope="col">No</th>
+                <th scope="col">사업자번호</th>
+                <th scope="col">아이디</th>
+                <th scope="col">상호명</th>
+                <th scope="col">지자체</th>
+                <th scope="col">답례품명</th>
+                <th scope="col">카테고리</th>
+                <th scope="col">하위 카테고리</th>
+                <th scope="col">가격(단가)</th>
+                <th scope="col">주문수</th>
+                <th scope="col">판매개수</th>
+                <th scope="col">총 판매액</th>
+                <th scope="col">상품코드</th>
+            </tr>
         </thead>
         <tbody>
-        <tr th:each="row : ${stats}">
-            <td th:text="${row.sellerId()}"></td>
-            <td th:text="${row.sellerName()}"></td>
-            <td th:text="${row.payCount()} + '건'"></td>
-            <td th:text="${#numbers.formatInteger(row.payAmount(), 0, 'COMMA')} + 'P'"></td>
-            <td th:text="${row.cancelCount()} + '건'"></td>
-        </tr>
+            <tr th:each="item, i : ${list}" style="background:#fff;">
+                <td th:text="${totalCount - (pagination.itemsPerPage * (pagination.currentPage - 1)) - i.index}">0</td>
+                <td th:text="${item.businessNumber()}"></td>
+                <td th:text="${item.loginId()}"></td>
+                <td th:text="${item.companyName()}"></td>
+                <td th:text="${item.upperLocgovNm() + ' ' + item.locgovNm()}"></td>
+                <td th:text="${item.itemName()}"></td>
+                <td th:text="${item.categoryNm()}"></td>
+                <td th:text="${item.categoryDetailNm()}"></td>
+                <td th:text="${#numbers.formatInteger(item.price(), 0, 'COMMA')}">0</td>
+                <td th:text="${#numbers.formatInteger(item.orderCnt(), 0, 'COMMA')}">0</td>
+                <td th:text="${#numbers.formatInteger(item.saleCnt(), 0, 'COMMA')}">0</td>
+                <td th:text="${#numbers.formatInteger(item.totalSalePrice(), 0, 'COMMA')}">0</td>
+                <td th:text="${item.itemUserCode()}"></td>
+            </tr>
         </tbody>
     </table>
-    <p class="empty" th:if="${#lists.isEmpty(stats)}">농협 계좌를 등록한 판매자가 없습니다.</p>
+    <div th:if="${#lists.isEmpty(list)}" class="no_content">
+        데이터가 없습니다.
+    </div>
+
+    <div class="flex_box juc-sbt">
+        <div class="btn_all">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-dark-gray btn-mini" onclick="excelDownload();">엑셀</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="pagination-wrap">
+        <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+    </div>
+</div>
+
+<script type="text/javascript" th:inline="javascript">
+/*<![CDATA[*/
+    var ALL_LOCGOVS = /*[[${allLocgovs}]]*/ [];
+
+    $(function () {
+        wdrChange($("#upperLocgovCode").val());
+    });
+
+    function wdrChange(value) {
+        $("#locgovCode option").remove();
+        if (value && value != "") {
+            $('#locgovCode').append('<option value="">-전체-</option>');
+            for (var i = 0; i < ALL_LOCGOVS.length; i++) {
+                if (ALL_LOCGOVS[i].upperLocgovCode == value) {
+                    $('#locgovCode').append('<option value="' + ALL_LOCGOVS[i].locgovCode + '">' + ALL_LOCGOVS[i].locgovNm + '</option>');
+                }
+            }
+        } else {
+            $('#locgovCode').append('<option value="">-시,군,구-</option>');
+        }
+    }
+
+    function search() {
+        $('#page').val(1);
+        $('#statisticsParam').submit();
+    }
+
+    /* AS-IS Shop.downloadExcelOrder(..., false) - 개인정보 사유 모달 없이 바로 다운로드. */
+    function excelDownload() {
+        Shop.downloadExcelOrder('/shop-statistics/sales/nh-item-sales/excel', $('#statisticsParam').serialize(), false);
+    }
+/*]]>*/
+</script>
+
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
+
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

@@ -1,43 +1,208 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <title>카테고리별 통계현황 - 고향사랑e음 (admin service)</title>
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
-    <title>답례품 구매현황 카테고리별 통계 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <script type="text/javascript" th:src="@{/content/modules/netfunnel.js}"></script>
+    <script type="text/javascript" th:src="@{/content/modules/netfunnel_skin.js}"></script>
+    <style>
+        .scroll-wrap { overflow-y: auto; height: 450px; }
+        .sticky thead { position: sticky; top: -1px; z-index: 10; }
+    </style>
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
+<!-- AS-IS opmanager/i18n/shop-statistics/sales/categories.jsp 이식.
+     지자체(시도→시군구) × 카테고리 6종(수산물/농축산물/지역상품권/생활용품/가공식품/관광서비스)
+     건수·금액 + 총계. GET은 조회하지 않고 POST에서만 집계(AS-IS가 빈 목록 하드코딩).
+     지자체 select 는 지자체담당자(adminRole=LOC)에게는 안 보인다. "전체" 날짜버튼은
+     ROLE_ADMIN_1/5 에게만. 숫자는 AS-IS가 c:out 그대로라 천단위 콤마를 넣지 않는다.
+     "총 N건"은 AS-IS에서 GET엔 totalCount 모델이 없어 빈 값, POST에서 지자체 행수. -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <h3>카테고리별 통계</h3>
-    <table class="board_list_table">
+
+<h3><span>카테고리별 통계현황</span></h3>
+<form id="statisticsParam" method="post" th:action="@{/shop-statistics/sales/categories}">
+    <div class="board_write">
+        <table class="board_write_table" summary="카테고리별 통계현황">
+            <caption></caption>
+            <colgroup>
+                <col style="width:220px;">
+                <col>
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td class="label">기간</td>
+                    <td>
+                        <div>
+                            <span class="datepicker"><input type="text" id="startDate" name="startDate"
+                                    class="term datepicker" title="시작일" maxlength="8"
+                                    th:value="${statisticsParam.startDate}"/></span>
+                            <span class="wave">~</span>
+                            <span class="datepicker"><input type="text" id="endDate" name="endDate"
+                                    class="term datepicker" title="종료일" maxlength="8"
+                                    th:value="${statisticsParam.endDate}"/></span>
+                            <span class="day_btns">
+                                <a href="javascript:;" class="btn_date today">오늘</a>
+                                <a href="javascript:;" class="btn_date week-1">1주일</a>
+                                <a href="javascript:;" class="btn_date month-1">한달</a>
+                                <a href="javascript:;" class="btn_date month-3">3개월</a>
+                                <a href="javascript:;" class="btn_date year-1">1년</a>
+                                <a href="javascript:;" class="btn_date all-1" th:if="${showAllButton}">전체</a>
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+                <tr th:if="${showLocgov}">
+                    <td class="label">지자체</td>
+                    <td>
+                        <div>
+                            <select id="shWdr" name="shWdr" title="지자체" class="wd-150" onchange="wdrChange(this.value)">
+                                <option value="">-시,도 선택-</option>
+                                <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"
+                                        th:selected="${p.key == statisticsParam.shWdr}"></option>
+                            </select>
+                            <select id="shLocgovCode" name="shLocgovCode" title="지자체" class="wd-150">
+                                <option value="">-시,군,구-</option>
+                            </select>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="btn_all btn_left">
+            <ul class="list-bullet point">
+                <li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li>
+            </ul>
+        </div>
+        <div class="btn_all btn_right">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-dark-gray btn-mini"
+                        onclick="location.href='/shop-statistics/sales/categories'">초기화</button>
+                <button type="button" class="btn btn-dark-gray btn-mini" onclick="search_net();">검색</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="count_title mt-40">
+        <h5>총 <span th:text="${#lists.isEmpty(list) ? '' : #numbers.formatInteger(#lists.size(list), 0, 'COMMA')}" th:remove="tag"></span>건</h5>
+    </div>
+</form>
+
+<div class="board_list scroll-wrap sticky" style="height: 822px;">
+    <table class="board_list_table" style="margin-top: 0;">
+        <caption></caption>
+        <colgroup>
+            <col style="width:10px;">
+            <col style="width:150px;">
+            <col th:each="n : ${#numbers.sequence(1, 15)}" style="width:100px;">
+        </colgroup>
         <thead>
-        <tr><th>카테고리코드</th><th>결제건수</th><th>결제포인트</th></tr>
+            <tr style="border-bottom: hidden;">
+                <th scope="col" rowspan="2">No.</th>
+                <th scope="col" rowspan="2">기부지자체광역지역</th>
+                <th scope="col" rowspan="2">기부지자체</th>
+                <th scope="col" colspan="2">수산물</th>
+                <th scope="col" colspan="2">농축산물</th>
+                <th scope="col" colspan="2">지역상품권</th>
+                <th scope="col" colspan="2">생활용품</th>
+                <th scope="col" colspan="2">가공식품</th>
+                <th scope="col" colspan="2">관광서비스</th>
+                <th scope="col" colspan="2"><span style="font-weight: bold;">총계</span></th>
+            </tr>
+            <tr>
+                <th:block th:each="n : ${#numbers.sequence(1, 7)}">
+                    <th scope="col">건수</th>
+                    <th scope="col">금액(원)</th>
+                </th:block>
+            </tr>
         </thead>
         <tbody>
-        <tr th:each="row : ${stats}">
-            <td th:text="${row.categoryCode()}"></td>
-            <td th:text="${row.payCount()} + '건'"></td>
-            <td th:text="${#numbers.formatInteger(row.payAmount(), 0, 'COMMA')} + 'P'"></td>
-        </tr>
+            <tr th:each="row, i : ${list}" style="background:#fff;">
+                <td><div th:text="${i.count}">1</div></td>
+                <td><div th:text="${row.upperLocgovNm()}"></div></td>
+                <td><div th:text="${row.locgovNm()}"></div></td>
+                <th:block th:each="k : ${#numbers.sequence(0, 5)}">
+                    <td><div th:text="${row.cnt(k)}">0</div></td>
+                    <td><div th:text="${row.amt(k)}">0</div></td>
+                </th:block>
+                <td><div th:text="${row.totalCnt()}">0</div></td>
+                <td><div th:text="${row.totalAmt()}">0</div></td>
+            </tr>
         </tbody>
     </table>
-    <p class="empty" th:if="${#lists.isEmpty(stats)}">데이터가 없습니다.</p>
+    <div th:if="${#lists.isEmpty(list)}" class="no_content">데이터가 없습니다.</div>
+</div>
+
+<script type="text/javascript" th:inline="javascript">
+/*<![CDATA[*/
+    var ALL_LOCGOVS = /*[[${allLocgovs}]]*/ [];
+    var SEL_LOCGOV = /*[[${statisticsParam.shLocgovCode}]]*/ '';
+    var changeYn = "N";
+
+    $(function () {
+        Common.AdjustDateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="startDate"]', 'input[name="endDate"]');
+        wdrChange($("#shWdr").val());
+    });
+
+    $("select[name='shWdr']").change(function () { changeYn = "Y"; });
+
+    /* AS-IS는 /opmanager/item/options-by-locgovCode ajax - 시군구 전체를 이미 갖고 있어 클라이언트 필터로 대체. */
+    function wdrChange(value) {
+        $("#shLocgovCode option").remove();
+        if (value && value != "") {
+            for (var i = 0; i < ALL_LOCGOVS.length; i++) {
+                if (ALL_LOCGOVS[i].upperLocgovCode == value) {
+                    $('#shLocgovCode').append('<option value="' + ALL_LOCGOVS[i].locgovCode + '">' + ALL_LOCGOVS[i].locgovNm + '</option>');
+                }
+            }
+            if (SEL_LOCGOV && changeYn == 'N') {
+                $("#shLocgovCode").val(SEL_LOCGOV);
+            } else {
+                $("#shLocgovCode option:eq(0)").attr("selected", "selected");
+            }
+        } else {
+            $('#shLocgovCode').append('<option value="">-시,군,구-</option>');
+        }
+    }
+
+    function search_net() {
+        if (Common.useNetfunnel()) {
+            NetFunnel_Action({ action_id: 'se_login' }, function (ev, ret) { search(); });
+        } else {
+            search();
+        }
+    }
+
+    function search() {
+        var strStartDate = $("#startDate").val();
+        var strEndDate = $("#endDate").val();
+        if (strStartDate && strStartDate.length == 8 && strEndDate && strEndDate.length == 8) {
+            var startDate = Number(strStartDate);
+            var endDate = Number(strEndDate);
+            if (startDate > endDate) {
+                alert("종료일이 시작일보다 빠릅니다.");
+                $("#endDate").focus();
+                return false;
+            }
+            var searchChk = Common.searchDateMonth(startDate, endDate);
+            if (!searchChk) return false;
+        }
+        $("#statisticsParam").submit();
+    }
+/*]]>*/
+</script>
+
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
+
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

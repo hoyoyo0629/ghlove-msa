@@ -344,6 +344,16 @@ public class ShopStatisticsTierBController {
         return (com.ghlove.admin.domain.Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
     }
 
+    /** AS-IS all.jsp 의 년도 select - YYYY 공통코드(give-statistics/all 과 같은 패턴 ·
+     *  [[admin-give-statistics-year-select-source]] 의 함정 - 데이터 있는 연도만 뽑으면 안 된다). */
+    private java.util.List<String> yearCodes() {
+        java.util.List<String> years = new java.util.ArrayList<>(commonCodeService.labelsOf("YYYY").keySet());
+        if (years.isEmpty()) {
+            years.add(String.valueOf(java.time.LocalDate.now().getYear()));
+        }
+        return years;
+    }
+
     /** AS-IS StatisticsParam 중 이 화면이 쓰는 것만 - 기간 + 소계 노출. */
     public static class DayStatsParam {
         private static final java.time.format.DateTimeFormatter YYYYMM =
@@ -636,12 +646,93 @@ public class ShopStatisticsTierBController {
         }
     }
 
-    // ---- B. 답례품 구매현황 전체 ----
+    // ---- B. 답례품 구매현황 전체 (AS-IS shop-statistics/sales/all.jsp) ----
 
+    /**
+     * AS-IS salesAll - 년도(YYYY 공통코드) select 하나뿐. GET 에서도 카드·월별차트를
+     * 바로 그린다(일자별/월별/년도별과 달리 GET 진입에서 조회를 한다 - AS-IS 컨트롤러가
+     * GET/POST 양쪽에서 완전히 같은 로직을 돈다).
+     *
+     * <p>★AS-IS는 device_type 축이 없다(쿼리 자체에 DEVICE_TYPE 이 없음) - 그래서 카드가
+     * 한 세트뿐이다(다른 매출통계 화면들과 달리 "주문방법 -" 같은 빈 축을 만들 필요가 없다).
+     * ★AS-IS는 취소를 <b>양수</b>로 담고 "합계 = 판매 - 취소"다(다른 매출통계는 취소가 음수라
+     * "합계 = 판매 + 취소") - TO-BE {@code DateStatRow} 는 음수로 오므로 화면에 절대값으로 뒤집는다.
+     * ★배송비 개념이 없다(상품 결제금액만) - saleAmount 를 쓰고 payAmount(배송비 포함)는 안 쓴다.
+     */
     @GetMapping("/shop-statistics/sales/all")
-    public String all(@RequestParam(required = false) String year, Model model) {
-        model.addAttribute("summary", service.allSales(year));
+    public String all(@RequestParam(required = false) String year,
+                       jakarta.servlet.http.HttpSession session, Model model) {
+        return salesAll(year, session, model);
+    }
+
+    @org.springframework.web.bind.annotation.PostMapping("/shop-statistics/sales/all")
+    public String searchSalesAll(@RequestParam(required = false) String year,
+                                  jakarta.servlet.http.HttpSession session, Model model) {
+        return salesAll(year, session, model);
+    }
+
+    private String salesAll(String year, jakarta.servlet.http.HttpSession session, Model model) {
+        String y = (year == null || year.isBlank()) ? String.valueOf(java.time.LocalDate.now().getYear()) : year;
+
+        java.util.List<OrderAdminClient.DateStatRow> yearRows =
+                orderAdminClient.dateStats(manager(session), "year", y + "0101", y + "1231");
+        AllSalesCard card = AllSalesCard.of(yearRows.isEmpty() ? null : yearRows.get(0));
+
+        model.addAttribute("years", yearCodes());
+        model.addAttribute("year", y);
+        model.addAttribute("card", card);
         return "shop-statistics/sales-all";
+    }
+
+    /** AS-IS salesAllMonth ajax - 월별 1~12 채워서 {isSuccess,data} 로 돌려준다. */
+    @org.springframework.web.bind.annotation.PostMapping("/shop-statistics/sales/all/month")
+    @org.springframework.web.bind.annotation.ResponseBody
+    public java.util.Map<String, Object> allMonth(@RequestParam(required = false) String year,
+                                         jakarta.servlet.http.HttpSession session) {
+        String y = (year == null || year.isBlank()) ? String.valueOf(java.time.LocalDate.now().getYear()) : year;
+        java.util.List<OrderAdminClient.DateStatRow> rows =
+                orderAdminClient.dateStats(manager(session), "month", y + "0101", y + "1231");
+        java.util.Map<String, OrderAdminClient.DateStatRow> byMonth = new java.util.LinkedHashMap<>();
+        for (OrderAdminClient.DateStatRow r : rows) {
+            // searchDate 가 yyyyMM(6자리) - 월만 키로 쓴다
+            byMonth.put(r.searchDate().substring(4, 6), r);
+        }
+        java.util.List<java.util.Map<String, Object>> data = new java.util.ArrayList<>(12);
+        for (int m = 1; m <= 12; m++) {
+            String mm = String.format("%02d", m);
+            OrderAdminClient.DateStatRow r = byMonth.get(mm);
+            AllSalesCard c = AllSalesCard.of(r);
+            java.util.Map<String, Object> row = new java.util.LinkedHashMap<>();
+            row.put("groupObject", y + mm);
+            row.put("subSaleAmount", c.saleAmount());
+            row.put("subCancelAmount", c.cancelAmount());
+            row.put("subSaleCount", c.saleCount());
+            row.put("subCancelCount", c.cancelCount());
+            data.add(row);
+        }
+        java.util.Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("isSuccess", true);
+        body.put("data", data);
+        return body;
+    }
+
+    /**
+     * AS-IS BaseStats(Ghlove 버전) 한 칸 - saleCount/saleAmount(주문) · cancelCount/cancelAmount
+     * (취소/반품, 둘 다 양수) · sumCount/sumAmount(합계 = 주문 - 취소).
+     */
+    public record AllSalesCard(long saleCount, long saleAmount, long cancelCount, long cancelAmount,
+                                long sumCount, long sumAmount) {
+        static AllSalesCard of(OrderAdminClient.DateStatRow r) {
+            if (r == null) {
+                return new AllSalesCard(0, 0, 0, 0, 0, 0);
+            }
+            long saleCount = r.saleCount();
+            long saleAmount = r.saleAmount();
+            long cancelCount = Math.abs(r.cancelCount());
+            long cancelAmount = Math.abs(r.cancelAmount());
+            return new AllSalesCard(saleCount, saleAmount, cancelCount, cancelAmount,
+                    saleCount - cancelCount, saleAmount - cancelAmount);
+        }
     }
 
     // ---- C. 결제타입별 매출 통계 → 위 A-4 로 옮겼다(AS-IS payment.jsp 사양으로 재구현).
@@ -715,12 +806,6 @@ public class ShopStatisticsTierBController {
         return "redirect:/shop-statistics/sales/categories";
     }
 
-    @GetMapping("/shop-statistics/sales/categories")
-    public String categories(Model model) {
-        model.addAttribute("stats", service.categoryStats());
-        return "shop-statistics/sales-categories";
-    }
-
     // ---- I. 지역별 통계 ----
 
     @GetMapping("/shop-statistics/sales/area")
@@ -752,44 +837,14 @@ public class ShopStatisticsTierBController {
         return "shop-statistics/no-user";
     }
 
-    // ---- L. 월별 지자체별 답례품 현황 ----
+    // ---- L. 월별 지자체별 답례품 현황 → ShopStatisticsMonthLocgovController로 옮겼다(AS-IS
+    //         7칸 카테고리 선정/등록 현황·WDR 2단 select·동률 TOP3·엑셀 전체 재구현, 2026-10-14).
+    //         옛 메서드(연/월만 받아 지자체 TOP3 주문금액 순위만 보여주던 축소판)는 제거했다.
 
-    @GetMapping("/shop-statistics/sales/month-locgov")
-    public String monthLocgov(@RequestParam(required = false) Integer year, @RequestParam(required = false) Integer month, Model model) {
-        int y = year != null ? year : service.currentYear();
-        int m = month != null ? month : service.currentMonth();
-        model.addAttribute("year", y);
-        model.addAttribute("month", m);
-        model.addAttribute("stats", service.monthLocgovTop3(y, m));
-        return "shop-statistics/sales-month-locgov";
-    }
+    // ---- M. 지자체별 구매현황 → ShopStatisticsLocgovController로 옮겼다(AS-IS mois/locgov 역할
+    //         분기·WDR 2단 select·정렬·엑셀 전체 재구현, 2026-10-14). 옛 메서드(연도만 받아
+    //         역할분기·정렬·엑셀 없이 locgovStats/locgovUserStats로 그리던 축소판)는 제거했다.
 
-    // ---- M. 지자체별 구매현황 ----
-
-    @GetMapping("/shop-statistics/sales/locgov")
-    public String locgov(@RequestParam(required = false) Integer year, Model model) {
-        int y = year != null ? year : service.currentYear();
-        model.addAttribute("year", y);
-        model.addAttribute("stats", service.locgovStats(y));
-        return "shop-statistics/sales-locgov";
-    }
-
-    @GetMapping("/shop-statistics/sales/locgov/detail")
-    public String locgovDetail(@RequestParam String locgovCode, @RequestParam(required = false) Integer year, Model model) {
-        int y = year != null ? year : service.currentYear();
-        model.addAttribute("locgovCode", locgovCode);
-        model.addAttribute("year", y);
-        model.addAttribute("stats", service.locgovUserStats(locgovCode, y));
-        return "shop-statistics/sales-locgov-detail";
-    }
-
-    // ---- N. 답례품 선호도 ----
-
-    @GetMapping("/shop-statistics/wish/list")
-    public String wishList(Model model) {
-        model.addAttribute("stats", service.wishStats());
-        return "shop-statistics/wish-list";
-    }
 
     // ---- O/P. 대시보드 ----
 
@@ -820,11 +875,7 @@ public class ShopStatisticsTierBController {
         return service.dashboardMonthReportText(service.dashboardMonth(yearMonth));
     }
 
-    // ---- Q. 농협 사업자 답례품 현황 ----
-
-    @GetMapping("/shop-statistics/sales/nh-item-sales")
-    public String nhItemSales(Model model) {
-        model.addAttribute("stats", service.nhItemSales());
-        return "shop-statistics/sales-nh-item-sales";
-    }
+    // ---- Q. 농협 사업자 답례품 현황 → ShopStatisticsNhItemSalesController로 옮겼다(AS-IS
+    //         G_NH_STAT_DATA_TEMP 사업자번호 매칭·검색구분·페이징·엑셀 전체 재구현, 2026-10-14).
+    //         옛 메서드(bankName에 "농협" 포함 휴리스틱)는 제거했다.
 }

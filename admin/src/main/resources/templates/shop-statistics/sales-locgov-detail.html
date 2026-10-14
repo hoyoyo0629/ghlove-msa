@@ -1,45 +1,63 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <title>상세 내역 - 고향사랑e음 (admin service)</title>
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
-    <title>지자체별 구매현황 상세 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
 </head>
 <body>
-<div th:replace="~{fragments/admin-nav :: header()}"></div>
+<!-- AS-IS opmanager/i18n/shop-statistics/sales/detail.jsp 이식 - 답례품 하나의 회원별 상세
+     팝업(window.open, 700x580). 페이지당 5건(AS-IS Pagination.getInstance(count, 5)),
+     정렬 UI 없음, 엑셀 없음. 합계 칸이 없다(주문/반품환불만) - AS-IS와 같다. -->
+<div class="popup_wrap">
+    <div id="pop_header">
+        <h1 class="popup_title">상세 내역</h1>
+        <a href="javascript:self.close();" class="btn_close"><img src="/content/opmanager/images/btn/btn_close.png" alt="닫기"></a>
+    </div>
 
-<div class="admin_wrap">
-<div id="container">
-    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
-    <div class="contents">
-    <div class="contents_inner">
-        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <p><a th:href="@{'/shop-statistics/sales/locgov'(year=${year})}">&larr; 지자체별 구매현황</a></p>
-    <h3 th:text="${locgovCode} + ' - ' + ${year} + '년 회원별 구매현황'"></h3>
-    <table class="board_list_table">
-        <thead>
-        <tr><th>회원ID</th><th>회원명</th><th>결제건수</th><th>결제포인트</th></tr>
-        </thead>
-        <tbody>
-        <tr th:each="row : ${stats}">
-            <td th:text="${row.userId()}"></td>
-            <td th:text="${row.userName()}"></td>
-            <td th:text="${row.payCount()} + '건'"></td>
-            <td th:text="${#numbers.formatInteger(row.payAmount(), 0, 'COMMA')} + 'P'"></td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(stats)}">데이터가 없습니다.</p>
-    </div><!-- /.contents_inner -->
-    </div><!-- /.contents -->
-</div><!-- /#container -->
-</div><!-- /.admin_wrap -->
-<div th:replace="~{fragments/footer :: admin-footer}"></div>
+    <div class="popup_contents">
+        <h3 class="fs24"><span th:text="${itemName}"></span></h3>
+        <table class="board_list_table">
+            <caption></caption>
+            <colgroup>
+                <col style="width:50px;">
+                <col style="width:100px;">
+                <col style="width:100px;">
+                <col style="width:100px;">
+                <col style="width:100px;">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th scope="col" class="col-md-1" rowspan="2">No.</th>
+                    <th scope="col" class="col-md-2" rowspan="2">회원명</th>
+                    <th scope="col" class="col-md-3" colspan="2">주문</th>
+                    <th scope="col" class="col-md-3" colspan="2">반품/환불</th>
+                </tr>
+                <tr>
+                    <th scope="col" class="col-md-1">건수</th>
+                    <th scope="col" class="col-md-1">금액(p)</th>
+                    <th scope="col" class="col-md-1">건수</th>
+                    <th scope="col" class="col-md-1">금액(p)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:if="${#lists.isEmpty(dateList)}">
+                    <td colspan="5">조회 정보가 존재하지 않습니다.</td>
+                </tr>
+                <tr th:each="row, i : ${dateList}" style="background:#fff;">
+                    <td><div th:text="${pagination.itemNumber - i.count}">0</div></td>
+                    <td><div th:text="${row.displayName}"></div></td>
+                    <td><div th:text="${#numbers.formatInteger(row.saleCount, 0, 'COMMA')}">0</div></td>
+                    <td><div th:text="${#numbers.formatInteger(row.saleAmount, 0, 'COMMA')}">0</div></td>
+                    <td><div th:text="${#numbers.formatInteger(row.cancelCount, 0, 'COMMA')}">0</div></td>
+                    <td><div th:text="${#numbers.formatInteger(row.cancelAmount, 0, 'COMMA')}">0</div></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="pagination-wrap">
+            <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+        </div>
+    </div>
+</div>
 </body>
 </html>

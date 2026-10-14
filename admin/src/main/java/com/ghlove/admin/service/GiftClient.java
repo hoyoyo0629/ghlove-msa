@@ -75,7 +75,7 @@ public class GiftClient {
 
     public record ItemSnapshot(Long itemId, Long sellerId, String categoryCode,
                                 String dataStatusCode, Integer salePrice, String locgovCode,
-                                String itemName, Integer brandId) {
+                                String itemName, Integer brandId, String displayFlag) {
     }
 
     /** 입점업체관리 (AS-IS opmanager/seller) - gift가 소유한 OP_SELLER의 cross-service CRUD. */

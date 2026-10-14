@@ -7,9 +7,12 @@ import org.springframework.web.client.RestClientException;
 
 import java.util.List;
 
-/** 관심 지자체 통계 화면(AS-IS opmanager/statistics - StatisticsLocgovManagerController)용 -
- *  donation 서비스의 G_INTRST_LOCGOV 원본 등록행을 월별/지자체별로 집계한 결과를 읽어온다
- *  (읽기 전용, 실패 시 조용히 빈 값으로 대체 - 다른 Client와 동일 패턴). */
+/**
+ * 관심 지자체 통계 화면(AS-IS opmanager/statistics/locgov - StatisticsLocgovManagerController /
+ * statistics-locgov-mapper.xml)용 - donation 서비스의 G_INTRST_LOCGOV 원본 등록행을
+ * 지자체별/월별로 집계한 결과를 읽어온다(읽기 전용, 실패 시 조용히 빈 값으로 대체 -
+ * 다른 Client와 동일 패턴).
+ */
 @Component
 public class StatisticsLocgovClient {
 
@@ -21,38 +24,46 @@ public class StatisticsLocgovClient {
                 .defaultHeader("X-Internal-Secret", adminSecret).build();
     }
 
-    public List<String> years() {
+    /** AS-IS getLocgovLikeList + getLocgovLikeListTotal. */
+    public ListResult search(String shLocgovCode, int offset, int limit) {
         try {
-            List<String> years = restClient.get().uri("/api/admin/interest-locgov-stats/years")
-                    .retrieve().body(List.class);
-            return years != null ? years : List.of();
-        } catch (RestClientException e) {
-            return List.of();
-        }
-    }
-
-    public ListResult search(String year, String locgovNm) {
-        try {
-            return restClient.get()
+            ListResult r = restClient.get()
                     .uri(uriBuilder -> uriBuilder.path("/api/admin/interest-locgov-stats")
-                            .queryParamIfPresent("year", java.util.Optional.ofNullable(blankToNull(year)))
-                            .queryParamIfPresent("locgovNm", java.util.Optional.ofNullable(blankToNull(locgovNm)))
+                            .queryParamIfPresent("shLocgovCode", java.util.Optional.ofNullable(blankToNull(shLocgovCode)))
+                            .queryParam("offset", offset)
+                            .queryParam("limit", limit)
                             .build())
                     .retrieve().body(ListResult.class);
+            return r != null ? r : new ListResult(0, List.of());
         } catch (RestClientException e) {
-            return new ListResult(0, List.of(), List.of());
+            return new ListResult(0, List.of());
         }
     }
 
-    public DetailResult detail(String locgovCode, String year) {
+    /** AS-IS getLikeCntByLocgov. */
+    public DetailTotal totalOf(String locgovCode, String year) {
         try {
-            return restClient.get()
-                    .uri(uriBuilder -> uriBuilder.path("/api/admin/interest-locgov-stats/{locgovCode}")
+            DetailTotal r = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/interest-locgov-stats/{locgovCode}/total")
                             .queryParamIfPresent("year", java.util.Optional.ofNullable(blankToNull(year)))
                             .build(locgovCode))
-                    .retrieve().body(DetailResult.class);
+                    .retrieve().body(DetailTotal.class);
+            return r != null ? r : DetailTotal.empty(locgovCode);
         } catch (RestClientException e) {
-            return new DetailResult(locgovCode, locgovCode, null, 0, List.of());
+            return DetailTotal.empty(locgovCode);
+        }
+    }
+
+    /** AS-IS statisticsLocgovLikeByMonth(월 1~12 모두 채워서 온다). */
+    public List<MonthRow> monthlyOf(String locgovCode, String year) {
+        try {
+            List<MonthRow> r = restClient.get()
+                    .uri("/api/admin/interest-locgov-stats/{locgovCode}/{year}/month", locgovCode, year)
+                    .retrieve().body(new org.springframework.core.ParameterizedTypeReference<List<MonthRow>>() {
+                    });
+            return r != null ? r : List.of();
+        } catch (RestClientException e) {
+            return List.of();
         }
     }
 
@@ -63,13 +74,19 @@ public class StatisticsLocgovClient {
     public record LocgovRow(String locgovCode, String locgovNm, String upperLocgovNm, long count) {
     }
 
-    public record MonthlyStat(String yearMonth, long count) {
+    public record ListResult(int total, List<LocgovRow> rows) {
     }
 
-    public record ListResult(long total, List<LocgovRow> byLocgov, List<MonthlyStat> monthly) {
+    /** JSON {"total":{"total":n,"yearTotal":n}, "locgovNm":.., "upperLocgovNm":..} 모양 그대로 받는다. */
+    public record DetailTotal(Total total, String locgovNm, String upperLocgovNm) {
+        public record Total(long total, long yearTotal) {
+        }
+
+        static DetailTotal empty(String locgovCode) {
+            return new DetailTotal(new Total(0, 0), locgovCode, null);
+        }
     }
 
-    public record DetailResult(String locgovCode, String locgovNm, String upperLocgovNm, long total,
-                                List<MonthlyStat> monthly) {
+    public record MonthRow(int month, long count) {
     }
 }

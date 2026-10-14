@@ -10,6 +10,8 @@ public interface InterestLocgovRepository extends JpaRepository<InterestLocgov, 
 
     List<InterestLocgov> findByUserId(Long userId);
 
+    List<InterestLocgov> findByLocgovCode(String locgovCode);
+
     void deleteByLocgovCodeAndUserId(String locgovCode, Long userId);
 
     void deleteByLocgovCodeInAndUserId(List<String> locgovCodes, Long userId);

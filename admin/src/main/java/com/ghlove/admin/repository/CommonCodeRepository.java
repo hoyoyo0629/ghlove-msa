@@ -18,10 +18,22 @@ import java.util.List;
  */
 public interface CommonCodeRepository extends JpaRepository<CommonCode, CommonCodeId> {
 
-    @Query("select c from CommonCode c where c.codeType = :codeType order by c.ordering nulls first")
+    /**
+     * ★2026-10-14: {@code ordering} 뒤에 {@code id} 2차 정렬을 추가했다.
+     *
+     * <p>ORDER_PAY_TYPE·CANCEL_REASON 처럼 ordering이 전부 NULL(= 전부 동률)인 코드구분이
+     * 많은데, 2차 정렬 키가 없으면 <b>동률 사이의 순서를 SQL이 보장하지 않는다</b>
+     * (PostgreSQL이 그 순간의 실행계획대로 아무 순서나 돌려줘도 표준 위반이 아니다).
+     * 결제타입별 매출(sales/payment) 화면에서 체크박스(GET 요청)와 표 헤더(POST 요청)가
+     * 서로 다른 SQL 실행이라 각기 다른 순서로 나올 수 있었다 - 사용자가 실제로 겪은 증상.
+     * id 를 2차 키로 고정해 매 호출이 항상 같은 순서를 내도록 한다.
+     */
+    @Query("select c from CommonCode c where c.codeType = :codeType order by c.ordering nulls first, c.id")
     List<CommonCode> findByCodeTypeOrderByOrdering(@Param("codeType") String codeType);
 
-    @Query("select c from CommonCode c order by c.codeType, c.ordering nulls first")
+    /** 위와 같은 이유로 id 2차 정렬 추가 - 공통코드 관리 화면이 새로고침마다 동률 구간
+     *  순서가 바뀌어 보이는 것을 막는다. */
+    @Query("select c from CommonCode c order by c.codeType, c.ordering nulls first, c.id")
     List<CommonCode> findAllByOrderByCodeTypeAscOrderingAsc();
 
     /**

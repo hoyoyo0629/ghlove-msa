@@ -26,7 +26,7 @@
 
     <div class="popup_contents02">
         <div class="count_title">
-            <h5>총 <span th:text="${#lists.size(logs)}">0</span> 건</h5>
+            <h5>총 <span th:text="${#lists.size(logs)}" th:remove="tag">0</span> 건</h5>
         </div>
 
         <div class="board_write">

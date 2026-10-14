@@ -113,13 +113,14 @@ public class GiftApiController {
     public List<ItemSnapshotDto> allForResync() {
         return giftRepository.findAll().stream()
                 .map(g -> new ItemSnapshotDto(g.getItemId(), g.getSellerId(), g.getCategoryCode(),
-                        g.getDataStatusCode(), g.getSalePrice(), g.getLocgovCode(), g.getItemName(), g.getBrandId()))
+                        g.getDataStatusCode(), g.getSalePrice(), g.getLocgovCode(), g.getItemName(), g.getBrandId(),
+                        g.getDisplayFlag()))
                 .toList();
     }
 
     public record ItemSnapshotDto(Long itemId, Long sellerId, String categoryCode,
                                    String dataStatusCode, Integer salePrice, String locgovCode,
-                                   String itemName, Integer brandId) {
+                                   String itemName, Integer brandId, String displayFlag) {
     }
 
     /** shop-statistics "답례품 선호도" 화면용 - 전체 찜(관심답례품) 원본 목록, admin이 상품별로 집계. */

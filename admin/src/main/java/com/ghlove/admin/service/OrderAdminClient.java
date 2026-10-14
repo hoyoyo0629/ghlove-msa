@@ -152,6 +152,90 @@ public class OrderAdminClient {
         }
     }
 
+    /**
+     * 답례품 구매현황 > 지자체별 - AS-IS getDateStatsListGhlove의 LOCGOV/ITEM/USER 분기.
+     * 지자체명·상호명·회원명은 여기 없다(order는 키만 안다) - 호출부가 각자의 클라이언트로 붙인다.
+     */
+    public List<GroupRow> locgovGroupStats(Manager manager, String extra, String startYearMonth,
+                                            String endYearMonth, String locgovCode, Long itemId) {
+        try {
+            List<GroupRow> rows = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/orders/stats/locgov-group")
+                            .queryParam("extra", extra)
+                            .queryParam("startYearMonth", startYearMonth)
+                            .queryParam("endYearMonth", endYearMonth)
+                            .queryParamIfPresent("locgovCode", java.util.Optional.ofNullable(blankToNull(locgovCode)))
+                            .queryParamIfPresent("itemId", java.util.Optional.ofNullable(itemId))
+                            .build())
+                    .headers(h -> applyHeaders(h, manager))
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<GroupRow>>() {
+                    });
+            return rows != null ? rows : List.of();
+        } catch (RestClientResponseException e) {
+            return List.of();
+        }
+    }
+
+    /**
+     * 통계 > 답례품 구매현황 > 농협 사업자 답례품 현황 - AS-IS getNhItemSalesStats의 주문 통계 절반.
+     * 조회 실패는 빈 목록으로 삼킨다(화면이 비는 쪽이 500보다 낫다).
+     */
+    public List<NhItemSaleRow> nhItemSaleStats(Manager manager, String startYearMonth, String endYearMonth) {
+        try {
+            List<NhItemSaleRow> rows = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/orders/stats/nh-item")
+                            .queryParam("startYearMonth", startYearMonth)
+                            .queryParam("endYearMonth", endYearMonth)
+                            .build())
+                    .headers(h -> applyHeaders(h, manager))
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<NhItemSaleRow>>() {
+                    });
+            return rows != null ? rows : List.of();
+        } catch (RestClientResponseException e) {
+            return List.of();
+        }
+    }
+
+    /** 통계 > 답례품 구매현황 > 카테고리별 - 지자체×품목 판매수량·금액(CONFIRMED, 일자 범위). */
+    public List<LocgovItemQtyRow> categoryItemStats(Manager manager, String startDate, String endDate) {
+        try {
+            List<LocgovItemQtyRow> rows = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/orders/stats/category-item")
+                            .queryParam("startDate", startDate)
+                            .queryParam("endDate", endDate)
+                            .build())
+                    .headers(h -> applyHeaders(h, manager))
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<LocgovItemQtyRow>>() {
+                    });
+            return rows != null ? rows : List.of();
+        } catch (RestClientResponseException e) {
+            return List.of();
+        }
+    }
+
+    public record LocgovItemQtyRow(String locgovCode, Long itemId, long quantity, long amount) {
+    }
+
+    /** order의 {@code OrderLocgovStatsService.NhItemSaleRow}와 같은 모양. */
+    public record NhItemSaleRow(Long itemId, long orderCount, long saleQuantity, long saleAmount) {
+    }
+
+    /** order의 {@code OrderLocgovStatsService.GroupRow}와 같은 모양(이름 필드는 admin이 붙인다). */
+    public record GroupRow(String locgovCode, Long itemId, String itemName, Long sellerId, Long userId,
+                            long saleCount, long saleAmount, long cancelCount, long cancelAmount) {
+
+        public long sumCount() {
+            return saleCount - cancelCount;
+        }
+
+        public long sumAmount() {
+            return saleAmount - cancelAmount;
+        }
+    }
+
     public OrderDetail detail(Manager manager, String orderId) {
         try {
             return restClient.get().uri("/api/admin/orders/{id}", orderId)
