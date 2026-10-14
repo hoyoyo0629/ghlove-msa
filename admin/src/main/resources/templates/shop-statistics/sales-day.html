@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>일자별 매출 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/shop-statistics/sales/day.jsp + include/date-list.jsp 이식.
+
+     ★ AS-IS 특징
+     - GET 진입에서는 조회하지 않는다(빈 표). POST(검색)에서만 집계한다.
+     - 검색조건은 기간 하나 + "소계 노출" 라디오 하나뿐이다.
+       (판매자 select 는 AS-IS가 통째로 주석처리해 둔 상태 - 켜지 않는다.)
+     - 날짜 버튼이 6개다: 오늘/1주일/15일/한달/3개월/1년. 다른 화면(5종)과 다르다.
+     - 표는 2단 헤더에 17칸이고, 취소 수치는 음수로 들어와 "합계 = 판매 + 취소"가 순액이 된다.
+     - 엑셀 버튼은 ROLE_EXCEL 권한자에게만 보인다.
+
+     ★ AS-IS와 다른 점(데이터 없음)
+     - "주문방법"(PC/MOBILE/IOS/ANDROID)은 AS-IS가 OP_ORDER_ITEM.DEVICE_TYPE 으로 한 일자를
+       여러 행으로 쪼개는 축인데, TO-BE od_order 에 그 컬럼이 없다. 컬럼은 AS-IS대로 두고
+       값만 "-"로 두기로 했다(2026-10-13 사용자 결정). 그래서 일자당 한 행이다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<div class="statistics_web">
+	<h3><span>일자별 매출</span></h3>
+	<form id="statisticsParam" method="post" th:action="@{/shop-statistics/sales/day}">
+		<div class="board_write">
+			<table class="board_write_table" summary="일자별 매출">
+				<caption>일자별 매출</caption>
+				<colgroup>
+					<col style="width: 140px;">
+					<col style="width: auto;">
+				</colgroup>
+				<tbody>
+					<tr>
+						<td class="label">기간</td>
+						<td>
+					 		<div>
+								<span class="datepicker"><input type="text" id="startDate" name="startDate"
+										class="term datepicker" title="시작일" maxlength="8"
+										th:value="${statisticsParam.startDate}"/></span>
+								<span class="wave">~</span>
+								<span class="datepicker"><input type="text" id="endDate" name="endDate"
+										class="term datepicker" title="종료일" maxlength="8"
+										th:value="${statisticsParam.endDate}"/></span>
+								<span class="day_btns">
+									<a href="javascript:;" class="btn_date today">오늘</a>
+									<a href="javascript:;" class="btn_date week-1">1주일</a>
+									<a href="javascript:;" class="btn_date day-15">15일</a>
+									<a href="javascript:;" class="btn_date month-1">한달</a>
+									<a href="javascript:;" class="btn_date month-3">3개월</a>
+									<a href="javascript:;" class="btn_date year-1">1년</a>
+								</span>
+							</div>
+				 		</td>
+					</tr>
+					<tr>
+						<td class="label">소계 노출</td>
+						<td>
+							<div>
+								<!-- AS-IS는 form:radiobutton 이라 input + 형제 label 로 렌더된다 -->
+								<input type="radio" id="displaySubtotalN" name="displaySubtotal" value="N"
+									   th:checked="${statisticsParam.displaySubtotal != 'Y'}"/>
+								<label for="displaySubtotalN">비노출</label>
+								<input type="radio" id="displaySubtotalY" name="displaySubtotal" value="Y"
+									   th:checked="${statisticsParam.displaySubtotal == 'Y'}"/>
+								<label for="displaySubtotalY">노출</label>
+							</div>
+						</td>
+					</tr>
+					<!-- AS-IS 주석처리: 판매자 select + [검색] 팝업 -->
+				</tbody>
+			</table>
+		</div> <!-- // board_write -->
+
+		<div class="btn_all btn_left">
+			<ul class="list-bullet point">
+				<li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li>
+			</ul>
+		</div>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<button type="submit" class="btn btn-dark-gray btn-sm"><span class="glyphicon glyphicon-search"></span> 검색</button>
+			</div>
+		</div>
+	</form>
+
+	<div th:replace="~{fragments/stats-date-list :: summary(${total})}"></div>
+
+	<div class="board_list">
+
+		<!-- AS-IS include/date-list.jsp - 일자별/월별/년도별이 공유하는 표 -->
+		<div th:replace="~{fragments/stats-date-list :: table(${dateList}, ${total}, ${statisticsParam.displaySubtotal}, 'day')}"></div>
+
+		<div class="no_content" th:if="${#lists.isEmpty(dateList)}">
+			<p>등록된 데이터가 없습니다.</p>
+		</div>
+
+		<!-- AS-IS: sec:authorize hasRole('ROLE_EXCEL') -->
+		<div class="btn_all" th:if="${canExcel}">
+			<div class="right">
+				<a th:href="@{'/shop-statistics/sales/day/excel-download?' + ${queryString != null ? queryString : ''}}"
+				   class="btn btn-success btn-sm"><span class="glyphicon glyphicon-save"></span>엑셀 다운로드</a>
+			</div>
+		</div>
+	</div>
+</div>
+
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<script type="text/javascript">
+	$(function(){
+		// AS-IS와 같은 날짜버튼 셋(오늘/1주일/15일/한달/3개월/1년)
+		Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="startDate"]', 'input[name="endDate"]');
+	});
+</script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

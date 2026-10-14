@@ -24,6 +24,16 @@
      - 제목을 누르면 <b>답변 화면</b>으로 간다(검색조건을 그대로 들고 GET 전송).
      - 빈 목록 문구는 M00473("데이터가 없습니다.")이고 표 밖 .no_content 다.
      - 화면 아래 display:none 블록에 today/week/month1/<b>month3</b>가 있다(다른 화면은 month2).
+     - h3에 <b>span이 없어</b> op.manager.js의 메뉴명 덮어쓰기가 먹지 않는다 → "Q&A"가 그대로 보인다
+       ([[admin-h3-title-overwritten-by-menu-name]]). 다른 화면과 달리 여기선 span을 넣지 말 것.
+     - 등록일 영역에 .search-date 래퍼가 없다(다른 화면은 있다).
+     - 상태 라디오는 .flex_box.gap-12 > .input-form 구조다([[asis-radio-needs-sibling-label]]).
+     - 목록 표는 .board_write 로 감싸고 summary/caption이 M00273이며, colgroup은 8개인데
+       컬럼은 11개다(AS-IS 결함 - 그대로 둔다).
+     - 화면출력 select 자체가 검색폼의 itemsPerPage 필드다(별도 displayCount가 없다).
+
+     ※ 2026-10-12 사용자 요청으로 <b>기간 지정 버튼만</b> TO-BE 자료실과 같은 .btn_date 로 바꿨다
+       (AS-IS는 .table_btn). 동작 클래스와 나머지 마크업은 AS-IS 그대로다.
 
      ★ AS-IS 비활성 그대로: 엑셀 다운로드는 함수(downloadExcel)만 있고 <b>호출하는 버튼이 없다</b>.
        게다가 그 submit 대상 #listForm의 action이 1:1문의 목록(/opmanager/qna/list)을 가리키는
@@ -39,8 +49,8 @@
 <h3>Q&amp;A</h3>
 
 <form id="qna" method="post" th:action="@{/qna-admin}">
+	<!-- itemsPerPage는 아래 화면출력 select가 직접 폼 필드다(AS-IS와 동일) - 여기엔 두지 않는다 -->
 	<input type="hidden" id="page" name="page" th:value="${searchParam.page}"/>
-	<input type="hidden" id="itemsPerPage" name="itemsPerPage" th:value="${searchParam.itemsPerPage}"/>
 
 	<div class="board_write">
 		<table class="board_write_table">
@@ -49,18 +59,18 @@
 				<col style="width:220px;">
 			</colgroup>
 			<tbody>
-				<!-- AS-IS 주석처리: 문의유형 select -->
+				<!-- AS-IS 주석처리: 문의유형 select, 답변상태(answerCount) 라디오 -->
 				<tr>
-					<td class="label" th:text="${msg.get('M00011')}">검색구분</td>
+					<td class="label">검색구분</td>
 					<td>
 						<div class="flex_box gap-08">
-							<select id="where" name="where" class="wd-150">
+							<select id="where" name="where" class="wd-150" th:title="${msg.get('M00468')}">
+								<!-- <option value="USER_NAME">이름</option> -->
 								<!-- <option value="ALL">전체</option> -->
 								<option value="GROUP" th:selected="${searchParam.where == 'GROUP'}">문의유형</option>
 								<option value="LOGIN_ID" th:selected="${searchParam.where == 'LOGIN_ID'}">아이디</option>
 								<option value="SUBJECT" th:selected="${searchParam.where == 'SUBJECT'}">제목</option>
 								<option value="QUESTION" th:selected="${searchParam.where == 'QUESTION'}">내용</option>
-								<!-- <option value="USER_NAME">이름</option> -->
 							</select>
 							<input type="text" id="query" name="query" class="input_txt required _filter half"
 								   th:title="${msg.get('M00021')}" th:value="${searchParam.query}"/>
@@ -68,9 +78,10 @@
 					</td>
 				</tr>
 				<tr>
-					<td class="label">등록일</td>
+					<td class="label" th:text="${msg.get('M00202')}">등록일</td>
 					<td>
-						<div class="search-date">
+						<!-- AS-IS는 이 영역에 .search-date 래퍼가 없다(다른 화면과 다른 점) -->
+						<div>
 							<span class="datepicker">
 								<input type="text" id="searchStartDate" name="searchStartDate" class="datepicker _number"
 									   th:title="${msg.get('M00507')}" th:value="${searchParam.searchStartDate}"/>
@@ -80,67 +91,92 @@
 								<input type="text" id="searchEndDate" name="searchEndDate" class="datepicker _number"
 									   th:title="${msg.get('M00509')}" th:value="${searchParam.searchEndDate}"/>
 							</span>
+							<!-- 기간 지정 버튼 모양은 TO-BE 자료실과 같은 .btn_date 로 맞췄다(2026-10-12 사용자 요청).
+							     AS-IS는 .table_btn 이지만 운영관리 화면 중 그걸 쓰던 건 이 화면과 1:1문의 둘뿐이었다.
+							     동작을 정하는 클래스(today·week-1·month-1·month-3·clear)는 AS-IS 그대로다. -->
 							<span class="day_btns">
-								<a href="javascript:void(0);" class="table_btn today" th:text="${msg.get('M00026')}">오늘</a>
-								<a href="javascript:void(0);" class="table_btn week-1" th:text="${msg.get('M00027')}">1주일</a>
-								<a href="javascript:void(0);" class="table_btn month-1" th:text="${msg.get('M00029')}">한달</a>
-								<a href="javascript:void(0);" class="table_btn month-3" th:text="${msg.get('M00030')}">3개월</a>
+								<a href="javascript:;" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+								<a href="javascript:;" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a>
+								<a href="javascript:;" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>
+								<a href="javascript:;" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+								<a href="javascript:;" class="btn_date clear" th:text="${msg.get('M00039')}">전체</a>
 							</span>
 						</div>
 					</td>
 				</tr>
 				<tr>
-					<td class="label">답변여부</td>
+					<td class="label">상태</td>
 					<td>
-						<div class="flex_box gap-08 item-center">
-							<span class="radio">
+						<div class="flex_box gap-12">
+							<div class="input-form">
 								<input type="radio" id="answerAll" name="qnaOpenAnswerCode" value=""
 									   th:checked="${searchParam.qnaOpenAnswerCode == null or searchParam.qnaOpenAnswerCode == ''}"/>
 								<label for="answerAll">전체</label>
-							</span>
-							<span class="radio">
+							</div>
+							<div class="input-form">
 								<input type="radio" id="answerDone" name="qnaOpenAnswerCode" value="0"
 									   th:checked="${searchParam.qnaOpenAnswerCode == '0'}"/>
 								<label for="answerDone">답변완료</label>
-							</span>
-							<span class="radio">
+							</div>
+							<div class="input-form">
 								<input type="radio" id="answerWait" name="qnaOpenAnswerCode" value="1"
 									   th:checked="${searchParam.qnaOpenAnswerCode == '1'}"/>
 								<label for="answerWait">답변미완료</label>
-							</span>
+							</div>
 						</div>
 					</td>
 				</tr>
 			</tbody>
 		</table>
-		<div class="btn_all btn_right">
-			<div class="flex_box gap-08">
-				<button type="button" class="btn btn-dark-gray btn-mini"
-						onclick="location.href='/qna-admin'" th:text="${msg.get('M00047')}">초기화</button>
-				<button type="button" class="btn btn-dark-gray btn-mini" onclick="search();"
-						th:text="${msg.get('M00048')}">검색</button>
-			</div>
+	</div> <!-- // board_write -->
+
+	<div class="btn_all btn_left">
+		<ul class="list-bullet point">
+			<li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li>
+		</ul>
+	</div>
+	<!-- 버튼시작 -->
+	<div class="btn_all btn_right">
+		<div class="flex_box gap-08">
+			<button type="button" class="btn btn-dark-gray btn-mini"
+					onclick="location.href='/qna-admin'" th:text="${msg.get('M00047')}">초기화</button>
+			<button type="button" class="btn btn-dark-gray btn-mini" onclick="search();"
+					th:text="${msg.get('M00048')}">검색</button>
 		</div>
+	</div>
+	<!-- 버튼 끝-->
+
+	<!-- AS-IS는 화면출력 select 자체가 검색폼의 itemsPerPage 필드다(별도 displayCount가 없다) -->
+	<div class="count_title mt-40">
+		<h5>총 <span th:text="${#numbers.formatInteger(qnaCount, 1, 'COMMA')}" th:remove="tag">0</span>건</h5>
+		<span>
+			<select id="itemsPerPage" name="itemsPerPage" th:title="${msg.get('M00239')}">
+				<option value="10" th:text="${msg.get('M00240')}" th:selected="${searchParam.itemsPerPage == 10}">10개 출력</option>
+				<option value="20" th:text="${msg.get('M00241')}" th:selected="${searchParam.itemsPerPage == 20}">20개 출력</option>
+				<option value="50" th:text="${msg.get('M00242')}" th:selected="${searchParam.itemsPerPage == 50}">50개 출력</option>
+				<option value="100" th:text="${msg.get('M00243')}" th:selected="${searchParam.itemsPerPage == 100}">100개 출력</option>
+			</select>
+		</span>
 	</div>
 </form>
 
-<div class="count_title mt-40">
-	<h5>
-		총 <span th:text="${#numbers.formatInteger(qnaCount, 1, 'COMMA')}" th:remove="tag">0</span> 건
-	</h5>
-	<span>
-		<select name="displayCount" id="displayCount" th:title="${msg.get('M00239')}">
-			<option value="10" th:text="${msg.get('M00240')}">10개 출력</option>
-			<option value="20" th:text="${msg.get('M00241')}">20개 출력</option>
-			<option value="50" th:text="${msg.get('M00242')}">50개 출력</option>
-			<option value="100" th:text="${msg.get('M00243')}">100개 출력</option>
-		</select>
-	</span>
-</div>
-
+<!-- AS-IS는 이 폼의 action이 1:1문의 목록(/opmanager/qna/list)을 가리키는 복사 흔적이고,
+     엑셀 다운로드(downloadExcel)가 이걸 submit 하는데 호출 버튼이 없어 쓰이지 않는다. -->
 <form action="/qna-admin" method="post" id="listForm">
-	<div class="board_list">
-		<table class="board_list_table">
+	<div class="board_write">
+		<table class="board_list_table" th:attr="summary=${msg.get('M00273')}">
+			<caption th:text="${msg.get('M00273')}"></caption>
+			<!-- AS-IS colgroup은 8개뿐인데 컬럼은 11개다(결함) - 그대로 둔다 -->
+			<colgroup>
+				<col style="width:50px;">
+				<col style="width:50px;">
+				<col style="width:150px;">
+				<col style="width:100px;">
+				<col style="width:500px;">
+				<col style="width:200px;">
+				<col style="width:100px;">
+				<col style="width:150px;">
+			</colgroup>
 			<thead>
 				<tr>
 					<th scope="col"><input type="checkbox" id="check_all" th:title="${msg.get('M00169')}"/></th>
@@ -193,9 +229,9 @@
 				</tr>
 			</tbody>
 		</table>
+	</div><!--// board_write E-->
 
-		<div class="no_content" th:if="${#lists.isEmpty(qnaList)}" th:text="${msg.get('M00473')}">데이터가 없습니다.</div>
-	</div>
+	<div class="no_content" th:if="${#lists.isEmpty(qnaList)}" th:text="${msg.get('M00473')}">데이터가 없습니다.</div>
 </form>
 
 <div class="btn_all btn_right">
@@ -214,6 +250,9 @@
 	<span id="month3" th:text="${month3}"></span>
 </div>
 
+<!-- AS-IS에 남아 있는 엑셀 다운로드용 숨은 iframe(호출 버튼은 없다) -->
+<iframe id="downloadFrame" name="downloadFrame" style="display: none;" title="download"></iframe>
+
     </div>
     </div>
 </div>
@@ -227,12 +266,16 @@ $(function() {
 		alert(redirectMessage);
 	}
 
-	Common.DateButtonEvent.set('.day_btns > a[class^=table_btn]', '',
+	Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '',
 			'input[name="searchStartDate"]', 'input[name="searchEndDate"]');
 	EventHandler.calendarStartDateAndEndDateVaild();
 	searchEnterKey();
-	displayChange();
-	displaySelected();
+
+	/* AS-IS: 화면출력 select 자체가 폼 필드라 바뀌면 그대로 다시 검색한다. */
+	$('#itemsPerPage').on('change', function() {
+		$("#page").val(1);
+		$('#qna').submit();
+	});
 
 	$('#check_all').on('click', function() {
 		$("input[name='id']").prop('checked', $(this).is(':checked'));
@@ -242,17 +285,6 @@ $(function() {
 		Common.updateListData("/qna-admin/delete", "정말로 삭제하시겠습니까?");
 	});
 });
-
-function displayChange() {
-	$("#displayCount").on('change', function() {
-		$("#itemsPerPage").val($(this).val());
-		$("#page").val(1);
-		$('#qna').submit();
-	});
-}
-function displaySelected() {
-	$("#displayCount").val($("#itemsPerPage").val());
-}
 
 function search() {
 	var strStartDate = $("#searchStartDate").val();
@@ -284,5 +316,6 @@ function searchEnterKey() {
 	});
 }
 </script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

@@ -1,20 +1,14 @@
 package com.ghlove.admin.web;
 
-import com.ghlove.admin.domain.Manager;
 import com.ghlove.admin.domain.Notice;
 import com.ghlove.admin.domain.Popup;
-import com.ghlove.admin.service.CommonCodeService;
 import com.ghlove.admin.service.CommonMessageService;
 import com.ghlove.admin.service.ContentException;
-import com.ghlove.admin.service.LocgovClient;
-import com.ghlove.admin.service.ManagerException;
-import com.ghlove.admin.service.MenuService;
 import com.ghlove.admin.service.OperationContentService;
 import com.ghlove.admin.service.PopupImageStorageService;
 import com.ghlove.admin.web.support.Pagination;
 import com.ghlove.admin.web.support.PopupSearchParam;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -31,8 +25,6 @@ import java.util.Map;
 public class OperationContentController {
 
     private final OperationContentService operationContentService;
-    private final CommonCodeService commonCodeService;
-    private final LocgovClient locgovClient;
     private final PopupImageStorageService popupImageStorageService;
     private final CommonMessageService commonMessageService;
     private final com.ghlove.admin.web.support.FlashRedirect flashRedirect;
@@ -102,171 +94,10 @@ public class OperationContentController {
                 .toList();
     }
 
-    // ---- 공지사항 관리 (내부 운영 콘솔) ----
-
-    /**
-     * 공지사항 (메뉴 5111) - AS-IS {@code NoticeManagerController}
-     * ({@code /opmanager/notice/list}). <b>전체공지만</b> 본다.
-     *
-     * <p>AS-IS는 검색조건의 지자체코드를 {@code "00000"}으로 <b>고정</b>해서 전체공지만 조회한다.
-     * TO-BE 데이터는 전체공지의 {@code locgov_code}를 비워 두었으므로(실측: 빈 값 14행)
-     * <b>NULL·빈 문자열·'00000'을 모두 전체공지로 본다</b> - 담당자 사용여부 9/2를
-     * ACTIVE/LOCKED로 바꾼 것과 같은 경계에서의 코드체계 번역이다.
-     */
-    @GetMapping("/admin/notices")
-    public String adminNotices(@RequestParam(required = false) String category, HttpSession session, Model model) {
-        return fillNoticeList(category, true, session, model);
-    }
-
-    /**
-     * 지자체공지사항 (메뉴 5110) - AS-IS {@code LocgovNoticeManagerController}
-     * ({@code /opmanager/locgov-notice/list}).
-     *
-     * <p>AS-IS는 <b>지자체 담당자(LOC)일 때만</b> 자기 지자체로 스코프하고, 시스템·행안부는
-     * 지자체 조건을 걸지 않아 <b>전체공지까지 포함해 모든 행</b>을 본다 - 그 느슨한 동작까지 그대로 둔다
-     * (AS-IS {@code getLocgovNoticeList}에 locgov_code 조건이 {@code locgovCode}가 있을 때만 붙는다).
-     *
-     * <p>5111 공지사항과 <b>같은 표({@code op_notice})를 쓰고 조회 범위만 다르다</b> - AS-IS도
-     * 컨트롤러·매퍼만 둘이고 표는 하나다. 그래서 등록·수정·삭제·게시토글은
-     * {@code /admin/notices/...} 한 경로를 공유한다.
-     */
-    @GetMapping("/admin/locgov-notices")
-    public String adminLocgovNotices(@RequestParam(required = false) String category,
-                                      HttpSession session, Model model) {
-        return fillNoticeList(category, false, session, model);
-    }
-
-    private String fillNoticeList(String category, boolean wholeNoticeOnly, HttpSession session,
-                                   Model model) {
-        Manager viewer = manager(session);
-        List<Notice> notices = operationContentService.notices(category);
-        if (wholeNoticeOnly) {
-            notices = notices.stream().filter(OperationContentController::isWholeNotice).toList();
-        } else if (MenuService.isLocgovScoped(viewer)) {
-            notices = notices.stream()
-                    .filter(n -> viewer.getLocgovCode().equals(n.getLocgovCode()))
-                    .toList();
-        }
-        Map<String, String> locgovNames = new LinkedHashMap<>();
-        locgovClient.allLocgovs().forEach(l -> locgovNames.put(l.locgovCode(), l.upperLocgovNm() + " " + l.locgovNm()));
-        model.addAttribute("notices", notices);
-        model.addAttribute("locgovNames", locgovNames);
-        model.addAttribute("categoryLabels", commonCodeService.labelsOf("NOTICE_CATEGORY"));
-        model.addAttribute("selectedCategory", category);
-        model.addAttribute("screenTitle", wholeNoticeOnly ? "공지사항" : "지자체공지사항");
-        model.addAttribute("listUrl", wholeNoticeOnly ? "/admin/notices" : "/admin/locgov-notices");
-        return "content/admin-notice-list";
-    }
-
-    /** AS-IS는 전체공지를 {@code locgov_code='00000'}으로 쓴다 - TO-BE 데이터는 비워 두었다. */
-    private static boolean isWholeNotice(Notice notice) {
-        String locgovCode = notice.getLocgovCode();
-        return locgovCode == null || locgovCode.isBlank() || "00000".equals(locgovCode);
-    }
-
-    @GetMapping("/admin/notices/new")
-    public String noticeForm(Model model) {
-        model.addAttribute("categories", commonCodeService.labelsOf("NOTICE_CATEGORY"));
-        model.addAttribute("provinces", provinces());
-        model.addAttribute("allLocgovs", locgovClient.allLocgovs());
-        return "content/notice-form";
-    }
-
-    @PostMapping("/admin/notices")
-    public String createNotice(@RequestParam String subject, @RequestParam(required = false) String content,
-                                @RequestParam(required = false) String categoryCode,
-                                @RequestParam(required = false) String locgovCode, HttpSession session, Model model) {
-        try {
-            Manager viewer = manager(session);
-            operationContentService.createNotice(subject, content, categoryCode, MenuService.effectiveLocgovCode(viewer, locgovCode));
-            return "redirect:/admin/notices";
-        } catch (ContentException e) {
-            model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute("categories", commonCodeService.labelsOf("NOTICE_CATEGORY"));
-            model.addAttribute("provinces", provinces());
-            model.addAttribute("allLocgovs", locgovClient.allLocgovs());
-            return "content/notice-form";
-        }
-    }
-
-    @GetMapping("/admin/notices/{id}/edit")
-    public String editNoticeForm(@PathVariable Integer id, HttpSession session,
-                                  org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes, Model model) {
-        Notice notice;
-        try {
-            notice = requireOwnLocgovOrThrow(id, session);
-        } catch (ManagerException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-            return "redirect:/admin/notices";
-        }
-        model.addAttribute("notice", notice);
-        model.addAttribute("categories", commonCodeService.labelsOf("NOTICE_CATEGORY"));
-        model.addAttribute("provinces", provinces());
-        model.addAttribute("allLocgovs", locgovClient.allLocgovs());
-        return "content/notice-form";
-    }
-
-    @PostMapping("/admin/notices/{id}/edit")
-    public String updateNotice(@PathVariable Integer id, @RequestParam String subject,
-                                @RequestParam(required = false) String content,
-                                @RequestParam(required = false) String categoryCode,
-                                @RequestParam(required = false) String locgovCode, HttpSession session, Model model) {
-        try {
-            Manager viewer = manager(session);
-            requireOwnLocgovOrThrow(id, session);
-            operationContentService.updateNotice(id, subject, content, categoryCode, MenuService.effectiveLocgovCode(viewer, locgovCode));
-            return "redirect:/admin/notices";
-        } catch (ContentException | ManagerException e) {
-            model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute("notice", operationContentService.notice(id));
-            model.addAttribute("categories", commonCodeService.labelsOf("NOTICE_CATEGORY"));
-            model.addAttribute("provinces", provinces());
-            model.addAttribute("allLocgovs", locgovClient.allLocgovs());
-            return "content/notice-form";
-        }
-    }
-
-    @PostMapping("/admin/notices/{id}/delete")
-    public String deleteNotice(@PathVariable Integer id, HttpSession session,
-                                org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
-        try {
-            requireOwnLocgovOrThrow(id, session);
-        } catch (ManagerException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-            return "redirect:/admin/notices";
-        }
-        operationContentService.deleteNotice(id);
-        return "redirect:/admin/notices";
-    }
-
-    private static Manager manager(HttpSession session) {
-        return (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
-    }
-
-    /** 지자체담당자(ROLE_ADMIN_5/6)는 자기 지자체 공지만 수정/삭제할 수 있다 - AS-IS와 달리
-     * 이 프로젝트는 그동안 이 스코핑이 빠져있어 다른 지자체 공지를 건드릴 수 있는 권한버그였다. */
-    private Notice requireOwnLocgovOrThrow(Integer id, HttpSession session) {
-        Manager viewer = manager(session);
-        Notice notice = operationContentService.notice(id);
-        if (MenuService.isLocgovScoped(viewer) && !viewer.getLocgovCode().equals(notice.getLocgovCode())) {
-            throw new ManagerException("소속 지자체의 공지사항만 처리할 수 있습니다.");
-        }
-        return notice;
-    }
-
-    @PostMapping("/admin/notices/{id}/toggle")
-    public String toggleNotice(@PathVariable Integer id) {
-        operationContentService.toggleNotice(id);
-        return "redirect:/admin/notices";
-    }
-
-    private Map<String, String> provinces() {
-        Map<String, String> map = new LinkedHashMap<>();
-        for (LocgovClient.LocgovInfo l : locgovClient.allLocgovs()) {
-            map.putIfAbsent(l.upperLocgovCode(), l.upperLocgovNm());
-        }
-        return map;
-    }
+    // 공지사항 관리화면(운영 콘솔)은 AS-IS처럼 메뉴별로 분리돼 있다 -
+    // 5111 공지사항(전체공지)은 NoticeAdminController(/admin/notices),
+    // 5110 지자체공지사항은 LocgovNoticeAdminController(/admin/locgov-notices).
+    // 여기 남은 /notices·/notices/{id}·/api/notices 는 공개(비운영자) 조회 경로다.
 
     // ---- 배너 ----
 

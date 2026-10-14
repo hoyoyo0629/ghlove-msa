@@ -28,6 +28,11 @@ public class Notice {
     @Column(name = "NOTICE_CATEGORY_CODE")
     private String categoryCode;
 
+    /** 작성자명 - 공지사항(5111) 목록의 "작성자" 칸. AS-IS는 crypto_enc/crypto_dec로 암·복호화해
+     * 저장하지만 TO-BE는 평문이다(시드 31행은 전부 비어 있다). */
+    @Column(name = "USER_NAME")
+    private String userName;
+
     @Column(name = "CREATED_DATE")
     private String createdDate;
 

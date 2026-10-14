@@ -33,6 +33,19 @@ import java.util.Map;
 public class OrderAdminApiController {
 
     private final OrderAdminService orderAdminService;
+    private final com.ghlove.order.service.OrderDateStatsService orderDateStatsService;
+
+    /**
+     * 일자/월/년 매출 통계 - AS-IS opmanager/shop-statistics/sales/{day,month,year}.
+     * 페이징 없이 조건 전체를 돌려준다(AS-IS도 이 화면엔 페이저가 없다).
+     */
+    @GetMapping("/stats/date")
+    public java.util.List<com.ghlove.order.service.OrderDateStatsService.DateStatRow> dateStats(
+            @RequestParam(defaultValue = "day") String type,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        return orderDateStatsService.dateStats(type, startDate, endDate);
+    }
 
     @GetMapping
     public PageResponse<OrderAdminDto> search(@RequestParam(required = false) String locgovCode,

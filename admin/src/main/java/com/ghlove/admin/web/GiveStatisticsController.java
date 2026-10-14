@@ -37,6 +37,29 @@ public class GiveStatisticsController {
     private final GiveStatClient giveStatClient;
     private final LocgovClient locgovClient;
     private final com.ghlove.admin.service.GiveOperateStatService giveOperateStatService;
+    private final com.ghlove.admin.web.support.ExcelDownloadWriter excelDownloadWriter;
+    private final com.ghlove.admin.service.CommonCodeService commonCodeService;
+
+    /**
+     * AS-IS 통계 화면들의 년도 select - {@code CodeUtils.getCodeList("YYYY")} 공통코드다.
+     *
+     * <p>★ TO-BE는 {@code giveStateService.availableYears()}(기부 데이터에 실제로 있는 연도)를
+     * 쓰고 있었다. 개발DB에 2026년치만 있어 <b>선택지가 2026 하나뿐</b>이라 다른 해를 볼 수
+     * 없었다 - AS-IS는 2022~2031 열 개가 뜬다(op_common_code YYYY 10행, 이미 적재돼 있다).
+     */
+    private List<String> yearCodes() {
+        List<String> years = new java.util.ArrayList<>(commonCodeService.labelsOf("YYYY").keySet());
+        if (years.isEmpty()) {
+            // 코드가 비어 있으면 화면이 통째로 못 쓰게 되므로 데이터 기준으로 물러선다
+            return giveStateService.availableYears();
+        }
+        // AS-IS는 코드 ordering 순서를 그대로 쓴다(최근 연도가 위로 오게 적재돼 있다)
+        return years;
+    }
+
+    /** AS-IS GiveStatisticsExcelView 의 파일명 꼬리 - {@code DateUtils.getToday(Const.DATETIME_FORMAT)}. */
+    private static final java.time.format.DateTimeFormatter EXCEL_FILE_DATETIME =
+            java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     @GetMapping("/give-statistics")
     public String view(@RequestParam(required = false) String cntrYear,
@@ -62,9 +85,10 @@ public class GiveStatisticsController {
 
     @GetMapping("/give-statistics/all")
     public String all(@RequestParam(required = false) String shCntrYear, Model model) {
-        List<String> years = giveStateService.availableYears();
+        List<String> years = yearCodes();
+        // AS-IS: 년도가 비어 오면 올해로 채운다(GET/POST 양쪽 동일)
         String year = (shCntrYear != null && !shCntrYear.isBlank()) ? shCntrYear
-                : (years.isEmpty() ? String.valueOf(java.time.LocalDate.now().getYear()) : years.get(0));
+                : String.valueOf(java.time.LocalDate.now().getYear());
         model.addAttribute("years", years);
         model.addAttribute("shCntrYear", year);
         model.addAttribute("total", giveStatClient.allSummary(year, ""));
@@ -108,13 +132,8 @@ public class GiveStatisticsController {
         List<GiveStatClient.LocgovYearRow> all =
                 new java.util.ArrayList<>(giveStatClient.locgovList(shCntrYear, effLocgov));
         // 정렬(AS-IS itemsOrder): 지정 시 해당 컬럼 내림차순(2차 정렬은 서버 기본순 유지).
-        if ("person".equals(itemsOrder)) {
-            all.sort(java.util.Comparator.comparingLong(GiveStatClient.LocgovYearRow::givePersons).reversed());
-        } else if ("amt".equals(itemsOrder)) {
-            all.sort(java.util.Comparator.comparingLong(GiveStatClient.LocgovYearRow::cntrAmt).reversed());
-        } else if ("cnt".equals(itemsOrder)) {
-            all.sort(java.util.Comparator.comparingLong(GiveStatClient.LocgovYearRow::giveCnt).reversed());
-        }
+        // 엑셀도 같은 정렬이어야 하므로 한 곳에서 처리한다.
+        sortLocgovRows(all, itemsOrder);
 
         int total = all.size();
         int size = itemsPerPage <= 0 ? 10 : itemsPerPage;
@@ -131,13 +150,79 @@ public class GiveStatisticsController {
         model.addAttribute("itemsPerPage", size);
         model.addAttribute("itemsOrder", itemsOrder);
         model.addAttribute("scoped", scoped);
-        model.addAttribute("years", giveStateService.availableYears());
+        // AS-IS locgov/list.jsp 도 같은 YYYY 공통코드를 쓴다
+        model.addAttribute("years", yearCodes());
         model.addAttribute("provinces", provinces());
         model.addAttribute("allLocgovs", locgovClient.allLocgovs());
         model.addAttribute("shWdr", shWdr);
         model.addAttribute("shLocgovCode", shLocgovCode);
         model.addAttribute("shCntrYear", shCntrYear);
         return "give/give-statistics-locgov";
+    }
+
+    /**
+     * AS-IS {@code GET /opmanager/give/statistics/locgov/excel} - 지자체별 통계 엑셀.
+     *
+     * <p>AS-IS는 {@code GiveStatisticsExcelView} 에 {@code type="locgov"} 를 넘겨
+     * 제목 <b>"기부금 모금 현황"</b> + No./년도/지자체/기부인원/기부금액/기부건수 6칸으로 쓴다.
+     * 목록과 달리 <b>페이징 없이 조건에 맞는 전체</b>가 대상이다
+     * ({@code searchParam.setPagination(null)}).
+     *
+     * <p>AS-IS 화면이 {@code Shop.downloadExcelOrder(..., true)} 로 호출하므로
+     * 개인정보 사유 모달을 먼저 거친다 - 다른 엑셀 화면과 같은 흐름이다.
+     */
+    @GetMapping("/give-statistics/locgov/excel")
+    public void locgovExcel(HttpSession session,
+            @RequestParam(required = false, defaultValue = "") String shLocgovCode,
+            @RequestParam(required = false, defaultValue = "") String shCntrYear,
+            @RequestParam(required = false, defaultValue = "") String itemsOrder,
+            jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        Manager manager = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
+        // AS-IS: 지자체 담당자는 조건과 무관하게 자기 지자체로 고정된다(findAdminRoleAndLocgov).
+        String effLocgov = MenuService.isLocgovScoped(manager) ? manager.getLocgovCode() : shLocgovCode;
+
+        List<GiveStatClient.LocgovYearRow> rows =
+                new java.util.ArrayList<>(giveStatClient.locgovList(shCntrYear, effLocgov));
+        sortLocgovRows(rows, itemsOrder);
+
+        org.apache.poi.xssf.streaming.SXSSFWorkbook workbook =
+                new org.apache.poi.xssf.streaming.SXSSFWorkbook();
+        org.apache.poi.ss.usermodel.Sheet sheet = workbook.createSheet("기부금 모금 현황");
+        com.ghlove.admin.web.support.ExcelDownloadWriter.CellStyles styles =
+                excelDownloadWriter.createStyles(workbook);
+
+        // AS-IS GiveStatisticsExcelView 의 HeaderCell 폭 그대로
+        String[] headers = {"No.", "년도", "지자체", "기부인원", "기부금액", "기부건수"};
+        int[] widths = {700, 2500, 3500, 3500, 3500, 3500};
+        int rowIndex = excelDownloadWriter.writeTitleAndHeaderRow(sheet, styles, "기부금 모금 현황", headers, widths);
+
+        // AS-IS는 1부터 증가(목록의 역순 번호와 다르다 - ++index)
+        int no = 0;
+        for (GiveStatClient.LocgovYearRow row : rows) {
+            org.apache.poi.ss.usermodel.Row xlRow = sheet.createRow(rowIndex++);
+            xlRow.setHeight((short) 400);
+            int col = 0;
+            excelDownloadWriter.dataCell(xlRow, col++, styles, String.valueOf(++no));
+            excelDownloadWriter.dataCell(xlRow, col++, styles, String.valueOf(row.cntrYear()));
+            excelDownloadWriter.dataCell(xlRow, col++, styles, row.upperLocgovNm() + " " + row.locgovNm());
+            excelDownloadWriter.dataCell(xlRow, col++, styles, String.format("%,d", row.givePersons()));
+            excelDownloadWriter.dataCell(xlRow, col++, styles, String.format("%,d", row.cntrAmt()));
+            excelDownloadWriter.dataCell(xlRow, col, styles, String.format("%,d", row.giveCnt()));
+        }
+
+        String fileName = "기부금_모금_현황_" + java.time.LocalDateTime.now().format(EXCEL_FILE_DATETIME) + ".xlsx";
+        excelDownloadWriter.write(response, workbook, fileName, manager == null ? null : manager.getLoginId());
+    }
+
+    /** 목록과 엑셀이 같은 정렬을 쓰도록 뽑아 둔다(AS-IS itemsOrder). */
+    private static void sortLocgovRows(List<GiveStatClient.LocgovYearRow> rows, String itemsOrder) {
+        if ("person".equals(itemsOrder)) {
+            rows.sort(java.util.Comparator.comparingLong(GiveStatClient.LocgovYearRow::givePersons).reversed());
+        } else if ("amt".equals(itemsOrder)) {
+            rows.sort(java.util.Comparator.comparingLong(GiveStatClient.LocgovYearRow::cntrAmt).reversed());
+        } else if ("cnt".equals(itemsOrder)) {
+            rows.sort(java.util.Comparator.comparingLong(GiveStatClient.LocgovYearRow::giveCnt).reversed());
+        }
     }
 
     // ---- 운영현황 - AS-IS give/statistics/operate (지자체×용도 지출 피벗 + 지자체별 연도 상세) ----

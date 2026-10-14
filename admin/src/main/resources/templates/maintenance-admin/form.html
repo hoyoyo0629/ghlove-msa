@@ -1,176 +1,342 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <title>운영유지관리 SR게시판 - 고향사랑e음 (admin service)</title>
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
-    <title>운영유지관리 SR 등록/수정 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
+<!-- AS-IS opmanager/i18n/maintenance/form.jsp 이식(메뉴 5113 등록).
+
+     ★ AS-IS는 표 전체(tbody 안)를 role 체크로 감싼다 - ROLE_ADMIN_1·2가 아니면 입력칸이
+       하나도 안 보이고 버튼만 남는다. 컨트롤러가 그 두 권한일 때만 role을 채우기 때문이다.
+     ★ 담당자·조치결과·날짜 입력은 <b>ROLE_ADMIN_1만</b> 쓸 수 있다(그 외는 disabled).
+     ★ KI구분·업무구분·처리구분·완료구분은 공통코드가 아니라 <b>하드코딩 라디오</b>다(AS-IS 그대로).
+       요청경로만 공통코드(MAINTEN_PATH_CODE) select다.
+     ★ SR번호는 화면에 입력칸이 없다 - 저장할 때 서버가 GGSR-{yy}-{번호}로 채번한다.
+     ★ 첨부는 1개만 받는다(input에 multiple이 없고 JS가 중복 선택을 막는다).
+
+     AS-IS 비활성/잔재라 옮기지 않은 것: 내용(bbsCn)을 encodeURIComponent로 감싸 보내고 서버가
+     다시 디코드하는 왕복(TO-BE는 그대로 받는다), 정의가 없는 goToDetail() 호출(목록으로 보낸다),
+     databoardParam hidden(#searchParam이 이 화면에 없어 항상 빈 값). -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <div class="location"><a th:href="@{/admin/maintenance}">운영유지관리 게시판</a></div>
-    <h3><span th:text="${row.bbsId} != null ? 'SR 상세/수정' : 'SR 등록'"></span></h3>
 
-    <div class="board_write">
-        <table class="board_write_table" summary="SR 등록/수정">
-            <colgroup><col style="width:220px;"><col></colgroup>
-            <tbody>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>제목</td>
-                <td><input type="text" name="bbsTtl" th:value="${row.bbsTtl}" required form="rowForm"></td>
-            </tr>
-            <tr>
-                <td class="label">접수일(yyyyMMdd)</td>
-                <td><input type="text" name="reqCrtDate" th:value="${row.reqCrtDate}" form="rowForm"></td>
-            </tr>
-            <tr>
-                <td class="label">KI구분</td>
-                <td>
-                    <select name="kiType" form="rowForm">
-                        <option value="">선택</option>
-                        <option value="1" th:selected="${row.kiType == '1'}">홈페이지</option>
-                        <option value="2" th:selected="${row.kiType == '2'}">관리자시스템</option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <td class="label">요청경로</td>
-                <td>
-                    <select name="reqChannel" form="rowForm">
-                        <option value="">선택</option>
-                        <option th:each="c : ${ {'소통방','회의','이메일','SR게시판','내부메신저','SNS','전화','KLID','사업장','기타'} }"
-                                th:value="${c}" th:text="${c}" th:selected="${row.reqChannel == c}"></option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <td class="label">업무구분</td>
-                <td>
-                    <select name="processType" form="rowForm">
-                        <option value="">선택</option>
-                        <option th:each="c : ${ {'기부','답례품','기타'} }"
-                                th:value="${c}" th:text="${c}" th:selected="${row.processType == c}"></option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <td class="label">요청유형</td>
-                <td><input type="text" name="reqType" th:value="${row.reqType}" form="rowForm"></td>
-            </tr>
-            <tr>
-                <td class="label">요청자 연락처</td>
-                <td><input type="text" name="reqUserPhoneNumber" th:value="${row.reqUserPhoneNumber}" form="rowForm"></td>
-            </tr>
-            <tr>
-                <td class="label">요청자 정보</td>
-                <td><input type="text" name="reqUserInfo" th:value="${row.reqUserInfo}" form="rowForm"></td>
-            </tr>
-            <tr>
-                <td class="label">요청출처</td>
-                <td><input type="text" name="reqSource" th:value="${row.reqSource}" form="rowForm"></td>
-            </tr>
-            <tr>
-                <td class="label">긴급여부</td>
-                <td><input type="checkbox" name="urgentYn" th:checked="${row.urgentYn == 'Y'}" form="rowForm"></td>
-            </tr>
-            <tr>
-                <td class="label">요청 내용</td>
-                <td><textarea name="bbsCn" rows="8" th:text="${row.bbsCn}" form="rowForm"></textarea></td>
-            </tr>
-            <tr>
-                <td class="label">완료구분</td>
-                <td>
-                    <select name="processState" form="rowForm">
-                        <option value="">선택</option>
-                        <option value="접수" th:selected="${row.processState == '접수'}">접수</option>
-                        <option value="처리중" th:selected="${row.processState == '처리중'}">처리중</option>
-                        <option value="처리완료" th:selected="${row.processState == '처리완료'}">처리완료</option>
-                        <option value="제외" th:selected="${row.processState == '제외'}">제외</option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <td class="label">담당자명</td>
-                <td><input type="text" name="processManagerNm" th:value="${row.processManagerNm}" form="rowForm"></td>
-            </tr>
-            <tr>
-                <td class="label">접수일(처리)</td>
-                <td><input type="text" name="processReceiptDate" th:value="${row.processReceiptDate}" placeholder="yyyyMMdd" form="rowForm"></td>
-            </tr>
-            <tr>
-                <td class="label">목표완료일</td>
-                <td><input type="text" name="processTargetEndDate" th:value="${row.processTargetEndDate}" placeholder="yyyyMMdd" form="rowForm"></td>
-            </tr>
-            <tr>
-                <td class="label">처리시작일</td>
-                <td><input type="text" name="processStartDate" th:value="${row.processStartDate}" placeholder="yyyyMMdd" form="rowForm"></td>
-            </tr>
-            <tr>
-                <td class="label">처리완료일</td>
-                <td><input type="text" name="processEndDate" th:value="${row.processEndDate}" placeholder="yyyyMMdd" form="rowForm"></td>
-            </tr>
-            <tr>
-                <td class="label">배포일</td>
-                <td><input type="text" name="deployDate" th:value="${row.deployDate}" placeholder="yyyyMMdd" form="rowForm"></td>
-            </tr>
-            <tr>
-                <td class="label">처리내용</td>
-                <td><textarea name="processCn" rows="6" th:text="${row.processCn}" form="rowForm"></textarea></td>
-            </tr>
-            <tr>
-                <td class="label">비고</td>
-                <td><textarea name="rm" rows="3" th:text="${row.rm}" form="rowForm"></textarea></td>
-            </tr>
-            <tr>
-                <td class="label">첨부파일 추가</td>
-                <td><input type="file" name="file" form="rowForm"></td>
-            </tr>
-            <tr th:if="${row.bbsId} != null">
-                <td class="label">기존 첨부파일</td>
-                <td>
-                    <ul>
-                        <li th:each="f : ${files}">
-                            <a th:href="@{'/admin/maintenance/files/' + ${f.fileId} + '/download'}" th:text="${f.orgnlAtchFileNm}"></a>
-                            <form th:action="@{'/admin/maintenance/' + ${row.bbsId} + '/files/' + ${f.fileId} + '/delete'}"
-                                  method="post" class="inline-form" onsubmit="return confirm('첨부파일을 삭제하시겠습니까?')">
-                                <button type="submit" class="small-btn danger">삭제</button>
-                            </form>
-                        </li>
-                    </ul>
-                    <p th:if="${#lists.isEmpty(files)}">첨부파일 없음</p>
-                </td>
-            </tr>
-            <tr th:if="${row.bbsId} != null">
-                <td class="label">조회수</td>
-                <td th:text="${row.inqCnt}"></td>
-            </tr>
-            </tbody>
-        </table>
+<h3><span></span></h3>
+
+<p th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c00; margin-bottom:12px;"></p>
+
+<form id="maintenanceDto" method="post" enctype="multipart/form-data" th:action="@{/admin/maintenance/form}">
+	<div class="board_write">
+		<table class="board_write_table" th:attr="summary=${msg.get('M00269')}">
+			<colgroup>
+				<col style="width: 220px;">
+			</colgroup>
+			<tbody>
+			<th:block th:if="${role == 'ROLE_ADMIN_1' or role == 'ROLE_ADMIN_2'}">
+				<tr>
+					<td class="label"><span class="required_mark">*</span>KI구분</td>
+					<td colspan="3">
+						<div class="flex_box gap-12">
+							<div class="input-form">
+								<input id="ki_1" name="kiType" type="radio" value="1" checked>
+								<label for="ki_1">홈페이지</label>
+							</div>
+							<div class="input-form">
+								<input id="ki_2" name="kiType" type="radio" value="2">
+								<label for="ki_2">관리자시스템</label>
+							</div>
+							<div class="input-form">
+								<input id="ki_3" name="kiType" type="radio" value="3">
+								<label for="ki_3">기타</label>
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label"><span class="required_mark">*</span>요청경로</td>
+					<td>
+						<div class="flex_box gap-08 item-center">
+							<select id="reqChannel" name="reqChannel" title="요청경로" class="wd-200 required">
+								<option value="">-선택-</option>
+								<option th:each="code : ${maintenPathList}" th:value="${code.key}" th:text="${code.value}"></option>
+							</select>
+						</div>
+					</td>
+					<td class="label"><span class="required_mark">*</span>업무구분</td>
+					<td>
+						<div class="flex_box gap-12">
+							<div class="input-form">
+								<input id="req_1" name="reqType" type="radio" value="1" checked>
+								<label for="req_1">기부</label>
+							</div>
+							<div class="input-form">
+								<input id="req_2" name="reqType" type="radio" value="2">
+								<label for="req_2">답례품</label>
+							</div>
+							<div class="input-form">
+								<input id="req_3" name="reqType" type="radio" value="3">
+								<label for="req_3">기타</label>
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label"><span class="required_mark">*</span>처리구분</td>
+					<td>
+						<div class="flex_box gap-12">
+							<div class="input-form">
+								<input id="proc_1" name="processType" type="radio" value="1" checked>
+								<label for="proc_1">기능신규</label>
+							</div>
+							<div class="input-form">
+								<input id="proc_2" name="processType" type="radio" value="2">
+								<label for="proc_2">기능개선</label>
+							</div>
+							<div class="input-form">
+								<input id="proc_3" name="processType" type="radio" value="3">
+								<label for="proc_3">오류수정</label>
+							</div>
+							<div class="input-form">
+								<input id="proc_4" name="processType" type="radio" value="4">
+								<label for="proc_4">자료추출</label>
+							</div>
+							<div class="input-form">
+								<input id="proc_5" name="processType" type="radio" value="5">
+								<label for="proc_5">데이터수정</label>
+							</div>
+							<div class="input-form">
+								<input id="proc_6" name="processType" type="radio" value="6">
+								<label for="proc_6">기타</label>
+							</div>
+						</div>
+					</td>
+					<td class="label"><span class="required_mark">*</span>완료구분</td>
+					<td>
+						<div class="flex_box gap-12">
+							<div class="input-form">
+								<input id="stat_1" name="processState" type="radio" value="1" checked>
+								<label for="stat_1">접수</label>
+							</div>
+							<div class="input-form">
+								<input id="stat_2" name="processState" type="radio" value="2">
+								<label for="stat_2">처리중</label>
+							</div>
+							<div class="input-form">
+								<input id="stat_3" name="processState" type="radio" value="3">
+								<label for="stat_3">처리완료</label>
+							</div>
+							<div class="input-form">
+								<input id="stat_4" name="processState" type="radio" value="9">
+								<label for="stat_4">제외</label>
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label"><span class="required_mark"></span>고객전화번호</td>
+					<td>
+						<div class="flex_box gap-08 item-center">
+							<input type="hidden" id="reqUserPhoneNumber" name="reqUserPhoneNumber"/>
+							<select id="chargerCttpc1" title="-선택-" class="wd-150">
+								<option value="">-선택-</option>
+								<option th:each="code : ${phoneCodeList}" th:value="${code.key}" th:text="${code.value}"></option>
+								<option th:each="code : ${telCodeList}" th:value="${code.key}" th:text="${code.value}"></option>
+							</select>
+							<span class="wave">-</span>
+							<input id="chargerCttpc2" class="basic wd-150 _number" title="" type="text" maxlength="4" value="">
+							<span class="wave">-</span>
+							<input id="chargerCttpc3" class="basic wd-150 _number" title="" type="text" maxlength="4" value="">
+						</div>
+					</td>
+					<td class="label"><span class="required_mark"></span>고객실명정보(아이디 이메일 등)</td>
+					<td>
+						<div>
+							<input type="text" id="reqUserInfo" name="reqUserInfo" title="고객정보"
+								   class="input_txt _filter full" maxlength="255"/>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label"><span class="required_mark">*</span><span th:text="${msg.get('M00275')}">제목</span></td>
+					<td colspan="3">
+						<div>
+							<input type="text" id="bbsTtl" name="bbsTtl" th:title="${msg.get('M00275')}"
+								   class="input_txt required _filter half" maxlength="255"/>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label"><span class="required_mark">*</span><span th:text="${msg.get('M00006')}">내용</span></td>
+					<td colspan="3">
+						<!-- smart_editor2 area -->
+						<div class="smart_editor2-wrap">
+							<textarea id="bbsCn" name="bbsCn" cols="30" rows="20" maxlength="300"
+									  class="w90 editor-content" th:title="${msg.get('M00006')}"></textarea>
+						</div>
+						<!-- smart_editor2 area -->
+					</td>
+				</tr>
+				<tr>
+					<td class="label" th:text="${msg.get('M01699')}">첨부파일</td>
+					<td colspan="3">
+						<div class="flex_box item-center">
+							<span class="input_file_txt">파일 등록 : </span>
+							<input type="file" name="detailImageFiles" onchange="addFile(this);"/>
+						</div>
+						<div>
+							<p style="color:red;">※ 첨부파일은 1개(50MB 이하) / jp(e)g, png, ppt(x), xlsx, hwp(x), doc(x), pdf,  bmp, gif, zip, 7z만 가능합니다.</p>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label"><span class="required_mark"></span>담당자</td>
+					<td>
+						<div>
+							<input type="text" id="processManagerNm" name="processManagerNm" title="담당자"
+								   class="input_txt _filter half" maxlength="255"
+								   th:disabled="${role != 'ROLE_ADMIN_1'}"/>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label"><span class="required_mark"></span>조치결과</td>
+					<td colspan="3">
+						<div>
+							<span class="placeholder_wrap">
+								<span class="placeholder"></span>
+								<textarea id="processCn" name="processCn" cols="30" rows="10"
+										  class="input_txt _filter full" title="조치결과"
+										  th:disabled="${role != 'ROLE_ADMIN_1'}"></textarea>
+							</span>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label"><span class="required_mark"></span>접수일</td>
+					<td>
+						<div>
+							<span class="datepicker"><input type="text" id="processReceiptDate" name="processReceiptDate"
+								pattern="[0-9]{8}" maxlength="8" class="datepicker" title="접수일"/></span>
+						</div>
+					</td>
+					<td class="label"><span class="required_mark"></span>종료예정일</td>
+					<td>
+						<div>
+							<span class="datepicker"><input type="text" id="processTargetEndDate" name="processTargetEndDate"
+								pattern="[0-9]{8}" maxlength="8" class="datepicker" title="종료예정일"/></span>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label"><span class="required_mark"></span>시작일</td>
+					<td>
+						<div>
+							<span class="datepicker"><input type="text" id="processStartDate" name="processStartDate"
+								pattern="[0-9]{8}" maxlength="8" class="datepicker" title="시작일"/></span>
+						</div>
+					</td>
+					<td class="label"><span class="required_mark"></span>종료일</td>
+					<td>
+						<div>
+							<span class="datepicker"><input type="text" id="processEndDate" name="processEndDate"
+								pattern="[0-9]{8}" maxlength="8" class="datepicker" title="종료일"/></span>
+						</div>
+					</td>
+				</tr>
+			</th:block>
+			</tbody>
+		</table>
+
+		<div class="btn_all btn_center">
+			<div class="flex_box gap-08">
+				<button type="submit" class="btn btn-dark-gray btn-small">
+					<span th:text="${msg.get('M00088')}">등록</span>
+				</button>
+				<button type="button" class="btn btn-defualt btn-small"
+						onclick="location.href='/admin/maintenance'" th:text="${msg.get('M00037')}">취소</button>
+			</div>
+		</div>
+	</div>
+</form>
+
     </div>
-    <form id="rowForm" enctype="multipart/form-data"
-          th:action="${row.bbsId} != null ? @{'/admin/maintenance/' + ${row.bbsId}} : @{/admin/maintenance}" method="post"></form>
-    <div class="btn_all btn_center">
-        <button type="submit" form="rowForm" class="btn btn-dark-gray btn-small">저장</button>
-        <form th:if="${row.bbsId} != null" th:action="@{'/admin/maintenance/' + ${row.bbsId} + '/delete'}"
-              method="post" class="inline-form" onsubmit="return confirm('삭제하시겠습니까?')" style="display:inline;">
-            <button type="submit" class="btn btn-small">삭제</button>
-        </form>
     </div>
-    </div><!-- /.contents_inner -->
-    </div><!-- /.contents -->
-</div><!-- /#container -->
-</div><!-- /.admin_wrap -->
+</div>
+</div>
+
+<div th:replace="~{fragments/smarteditor :: init}"></div>
+<div th:replace="~{fragments/smarteditor :: editor('bbsCn')}"></div>
+
+<script type="text/javascript" th:inline="javascript">
+var isSystemAdmin = /*[[${role == 'ROLE_ADMIN_1'}]]*/ false;
+
+$(function() {
+	try {
+		if (!isSystemAdmin) {
+			$('.datepicker').datepicker('disable');
+		}
+		$('#maintenanceDto').validator(function() {
+			Common.getEditorContent("bbsCn");
+
+			if ($('#bbsCn').val().toLowerCase() == '<p>&nbsp;</p>' || $('#bbsCn').val() == '') {
+				alert($.validator.messages['text'].format($('#bbsCn').attr('title')));
+				return false;
+			}
+		});
+	} catch (e) {
+		alert(e.message);
+	}
+
+	$("#maintenanceDto").on("submit", function(e) {
+		var chargerCttpc = $("#chargerCttpc1").val() + "-" + $("#chargerCttpc2").val() + "-" + $("#chargerCttpc3").val();
+		$("#reqUserPhoneNumber").val(chargerCttpc);
+		if (!confirm("게시글을 등록하시겠습니까?")) {
+			e.preventDefault();
+		}
+	});
+});
+
+/*
+ * 함 수 명 : addFile
+ * 기 능 : 첨부파일 유효성 검사
+ */
+function addFile(obj) {
+	let size = 50 * 1024 * 1024;
+	let fileTypes = ['jpg', 'jpeg', 'gif', 'bmp', 'png', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'pdf', 'tif', 'tiff', 'hwp', 'hwpx', 'zip', '7z'];
+
+	if ($('.file_camera').length > 0) {
+		alert("이미 등록된 파일이이 있습니다.");
+		$("input:file[name='detailImageFiles']").val('');
+		return false;
+	}
+
+	if (obj.files.length > 5) {
+		alert("첨부파일은 최대 5개 까지 첨부 가능합니다.");
+		$("input:file[name='detailImageFiles']").val('');
+		return false;
+	}
+
+	for (const file of obj.files) {
+		let type = file.name.split('.').pop().toLowerCase();
+
+		if (file.size > size) {
+			alert("첨부파일 용량은 최대 50MB 까지 가능합니다.");
+			$("input:file[name='detailImageFiles']").val('');
+			return false;
+		} else if ($.inArray(type, fileTypes) == -1) {
+			alert("등록할 수 없는 첨부파일 입니다.")
+			$("input:file[name='detailImageFiles']").val('');
+			return false;
+		}
+	}
+}
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

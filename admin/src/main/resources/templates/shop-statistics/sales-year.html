@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>연도별 매출 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/shop-statistics/sales/year.jsp 이식.
+     표는 일자별·월별과 같은 조각(include/date-list.jsp)을 쓰고 viewType 만 다르다.
+
+     ★ 월별 화면과 다른 점
+     - 기간이 <b>년도 select 2개뿐</b>이다(월 select 가 없다). 범위는 AS-IS 그대로 2010~올해.
+     - 기간은 {startYear}0101 ~ {endYear}1231 이 된다(AS-IS getStartDate/getEndDate 의 year 분기).
+     - 표의 일자 칸을 누르면 <b>그 해의 월별 화면으로 드릴다운</b>한다
+       (startYear=YYYY&startMonth=01&endYear=YYYY&endMonth=12).
+
+     ★ AS-IS 와 같은 점
+     - GET 진입에서는 조회하지 않는다(빈 표). POST(검색)에서만 집계한다.
+     - 소계 노출 라디오, 안내문구, 검색 버튼, 엑셀 버튼(ROLE_EXCEL) 모두 동일. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<div class="statistics_web">
+	<h3><span>연도별 매출</span></h3>
+	<form id="statisticsParam" method="post" th:action="@{/shop-statistics/sales/year}">
+		<div class="board_write">
+			<table class="board_write_table" summary="연도별 매출">
+				<caption>연도별 매출</caption>
+				<colgroup>
+					<col style="width: 140px;">
+					<col style="width: auto;">
+				</colgroup>
+				<tbody>
+					<tr>
+						<td class="label">기간</td>
+						<td>
+					 		<div>
+								<select id="startYear" name="startYear" title="시작 년도">
+									<option th:each="y : ${years}" th:value="${y}" th:text="${y}"
+											th:selected="${y == statisticsParam.startYear}"></option>
+								</select> 년
+								~
+								<select id="endYear" name="endYear" title="종료 년도">
+									<option th:each="y : ${years}" th:value="${y}" th:text="${y}"
+											th:selected="${y == statisticsParam.endYear}"></option>
+								</select> 년
+							</div>
+				 		</td>
+					</tr>
+
+					<tr>
+						<td class="label">소계 노출</td>
+						<td>
+							<div>
+								<!-- AS-IS는 form:radiobutton 이라 input + 형제 label 로 렌더된다 -->
+								<input type="radio" id="displaySubtotalN" name="displaySubtotal" value="N"
+									   th:checked="${statisticsParam.displaySubtotal != 'Y'}"/>
+								<label for="displaySubtotalN">비노출</label>
+								<input type="radio" id="displaySubtotalY" name="displaySubtotal" value="Y"
+									   th:checked="${statisticsParam.displaySubtotal == 'Y'}"/>
+								<label for="displaySubtotalY">노출</label>
+							</div>
+						</td>
+					</tr>
+					<!-- AS-IS 주석처리: 판매자 select + [검색] 팝업 -->
+				</tbody>
+			</table>
+		</div> <!-- // board_write -->
+
+		<div class="btn_all btn_left">
+			<ul class="list-bullet point">
+				<li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li>
+			</ul>
+		</div>
+		<div class="btn_all btn_right">
+			<!-- AS-IS 주석처리: [초기화] 버튼 -->
+			<div class="flex_box gap-08">
+				<button type="submit" class="btn btn-dark-gray btn-sm"><span class="glyphicon glyphicon-search"></span> 검색</button>
+			</div>
+		</div>
+	</form>
+
+	<div th:replace="~{fragments/stats-date-list :: summary(${total})}"></div>
+
+	<div class="board_list">
+
+		<!-- AS-IS include/date-list.jsp - 일자별/월별/년도별이 공유하는 표 -->
+		<div th:replace="~{fragments/stats-date-list :: table(${dateList}, ${total}, ${statisticsParam.displaySubtotal}, 'year')}"></div>
+
+		<div class="no_content" th:if="${#lists.isEmpty(dateList)}">
+			<p>등록된 데이터가 없습니다.</p>
+		</div>
+
+		<!-- AS-IS: sec:authorize hasRole('ROLE_EXCEL') -->
+		<div class="btn_all" th:if="${canExcel}">
+			<div class="right">
+				<a th:href="@{'/shop-statistics/sales/year/excel-download?' + ${queryString != null ? queryString : ''}}"
+				   class="btn btn-success btn-sm"><span class="glyphicon glyphicon-save"></span>엑셀 다운로드</a>
+			</div>
+		</div>
+	</div>
+</div>
+
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

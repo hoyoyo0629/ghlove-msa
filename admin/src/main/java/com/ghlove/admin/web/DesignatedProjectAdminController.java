@@ -39,6 +39,13 @@ public class DesignatedProjectAdminController {
     private static final java.util.Set<String> CAN_APPROVE = java.util.Set.of(
             "ROLE_ADMIN_1", "ROLE_ADMIN_2", "ROLE_ADMIN_3", "ROLE_ADMIN_4", "ROLE_ADMIN_5");
 
+    /** AS-IS form.jsp 의 [승인] 버튼 권한 - 목록의 일괄 승인처리(1~5)보다 한 단계 좁다. */
+    private static final java.util.Set<String> CAN_APPROVE_ON_FORM = java.util.Set.of(
+            "ROLE_ADMIN_1", "ROLE_ADMIN_2", "ROLE_ADMIN_3", "ROLE_ADMIN_4");
+
+    /** AS-IS 지정기부 담당자(hasDsgncntrManagerRole) - 자기 승인이 금지된 등급. */
+    private static final String ROLE_DSGNCNTR_MANAGER = "ROLE_ADMIN_10";
+
     /** AS-IS checkDsgncntrAuthPartInfo 가드 문구 그대로. */
     private static final String DEPARTMENT_REQUIRED = "부서정보가 없어서 처리가 불가능합니다.";
 
@@ -198,9 +205,14 @@ public class DesignatedProjectAdminController {
         model.addAttribute("departments", designatedProjectClient.departments(
                 MenuService.isLocgovScoped(manager) ? manager.getLocgovCode() : null));
         model.addAttribute("projectId", id);
-        // AS-IS: 승인 버튼은 ROLE_ADMIN_1~5만 볼 수 있다(목록의 일괄 승인처리와 같은 기준)
-        model.addAttribute("canApprove", CAN_APPROVE.contains(
-                manager == null ? "" : String.valueOf(manager.getAuthority())));
+        // ★ AS-IS form.jsp 의 승인 버튼은 목록의 일괄 승인처리와 권한 범위가 다르다.
+        //    목록(list.jsp:338) = ROLE_ADMIN_1~5, 폼(form.jsp 버튼 영역) = ROLE_ADMIN_1~4.
+        //    여기서는 폼 기준(1~4)을 쓴다 - 합치지 말 것.
+        String authority = manager == null ? "" : String.valueOf(manager.getAuthority());
+        model.addAttribute("canApprove", CAN_APPROVE_ON_FORM.contains(authority));
+        // AS-IS: 지정기부 담당자(ROLE_ADMIN_10)는 사업부서를 바꿀 수 없고(unableChangePart),
+        //        상태를 "진행중(승인)"으로 고르면 "대기 상태로 저장됩니다" 확인을 받는다.
+        model.addAttribute("isDsgncntrManager", ROLE_DSGNCNTR_MANAGER.equals(authority));
         // AS-IS 수정화면만 보여주는 읽기전용 세 칸(남은 일수/모금 된 금액/달성률).
         // 저장 실패로 폼을 다시 그릴 때도 필요하므로 여기서 한 번에 넣는다.
         if (id != null) {
@@ -209,6 +221,9 @@ public class DesignatedProjectAdminController {
         // AS-IS prjImages - 올라간 이미지 썸네일(순번 + x 삭제). 등록 화면에서는 아직 없다.
         model.addAttribute("projectImages",
                 id != null ? designatedProjectClient.imagesOf(id) : java.util.List.of());
+        // AS-IS prjImageExplain - 상세설명 이미지의 접근성 설명(수정 모드에서만 기존 값이 있다).
+        model.addAttribute("imgExplns",
+                id != null ? designatedProjectClient.imgExplnsOf(id) : java.util.List.of());
     }
 
     /**
@@ -338,10 +353,11 @@ public class DesignatedProjectAdminController {
     public String create(@ModelAttribute DesignatedProjectClient.ProjectForm form,
                           @RequestParam(required = false) MultipartFile image,
                           @RequestParam(required = false) List<MultipartFile> images,
+                          @RequestParam(required = false) List<String> imgExplns,
                           HttpSession session, Model model) {
         Manager manager = manager(session);
         try {
-            designatedProjectClient.create(toYmd(forceOwnLocgov(form, manager)), image, images, canSelfApprove(manager), manager.getUserId());
+            designatedProjectClient.create(toYmd(forceOwnLocgov(form, manager)), image, images, imgExplns, canSelfApprove(manager), manager.getUserId());
             return "redirect:/designated-projects";
         } catch (ManagerException e) {
             model.addAttribute("errorMessage", e.getMessage());
@@ -355,6 +371,7 @@ public class DesignatedProjectAdminController {
     public String update(@PathVariable Long id, @ModelAttribute DesignatedProjectClient.ProjectForm form,
                           @RequestParam(required = false) MultipartFile image,
                           @RequestParam(required = false) List<MultipartFile> images,
+                          @RequestParam(required = false) List<String> imgExplns,
                           HttpSession session, Model model) {
         Manager manager = manager(session);
         if (MenuService.isLocgovScoped(manager)) {
@@ -367,7 +384,7 @@ public class DesignatedProjectAdminController {
             }
         }
         try {
-            designatedProjectClient.update(id, toYmd(forceOwnLocgov(form, manager)), image, images, canSelfApprove(manager), manager.getUserId());
+            designatedProjectClient.update(id, toYmd(forceOwnLocgov(form, manager)), image, images, imgExplns, canSelfApprove(manager), manager.getUserId());
             return "redirect:/designated-projects/" + id;
         } catch (ManagerException e) {
             model.addAttribute("errorMessage", e.getMessage());

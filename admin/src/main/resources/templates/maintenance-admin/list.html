@@ -1,73 +1,372 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <title>운영유지관리 SR게시판 - 고향사랑e음 (admin service)</title>
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
-    <title>운영유지관리 게시판 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
+    <link rel="stylesheet" type="text/css" th:href="@{/content/css/community.css}">
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
+<!-- AS-IS opmanager/i18n/maintenance/list.jsp 이식(메뉴 5113 운영유지관리 SR게시판).
+
+     ★ 이 화면만의 AS-IS 특징:
+     - 목록이 <b>GET 진입에서도 조회된다</b>(공지·자료실·Q&A는 검색해야 나온다).
+     - 제목 위에 빨간 안내문구가 있다.
+     - 정렬이 <b>긴급(URGENT_YN) 우선 + 최신순</b>이다.
+     - 완료구분이 체크박스 <b>다중선택</b>이고 진입 시 '전체'가 눌린 상태다.
+     - 날짜버튼 span에 클래스가 둘이다(day_btns <b>day_btn1</b>) - JS 셀렉터도 .day_btn1을 쓴다.
+     - 컬럼이 15개이고 체크박스 컬럼이 없다(선택삭제가 없다).
+     - 첨부가 있으면 제목 옆에 아이콘이 붙는다.
+     - 빈 목록 문구가 M00170("등록된 내용이 없습니다.")다.
+     - 하단에 [등록]과 [엑셀] 버튼이 있다.
+     - community.css를 따로 불러온다.
+
+     ★ AS-IS 결함/잔재 그대로: 검색폼 안내문구의 <ul>이 닫히지 않았고(브라우저가 보정),
+       목록 표 summary/caption이 빈 문자열이며, 제목 클릭은 상세가 아니라 수정화면으로 간다
+       (detail 호출이 JS에서 주석처리돼 있다 - detail.jsp 자체가 없다).
+     ※ AS-IS 엑셀은 Apache POI로 .xlsx를 만드는데 admin 모듈에 POI가 없어 CSV로 내려준다. -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <h3>운영유지관리 게시판</h3>
 
-    <form method="get" th:action="@{/admin/maintenance}" class="search_form">
-        <label>접수일 시작 <input type="text" name="startDate" th:value="${startDate}" placeholder="yyyyMMdd"></label>
-        <label>접수일 종료 <input type="text" name="endDate" th:value="${endDate}" placeholder="yyyyMMdd"></label>
-        <label>완료구분
-            <select name="processState">
-                <option value="">전체</option>
-                <option value="접수" th:selected="${processState == '접수'}">접수</option>
-                <option value="처리중" th:selected="${processState == '처리중'}">처리중</option>
-                <option value="처리완료" th:selected="${processState == '처리완료'}">처리완료</option>
-                <option value="제외" th:selected="${processState == '제외'}">제외</option>
-            </select>
-        </label>
-        <label>제목검색 <input type="text" name="keyword" th:value="${keyword}"></label>
-        <button type="submit" class="btn">검색</button>
-    </form>
+<div>
+	<h3><span></span></h3>
+	<p style="margin-top:10px; margin-bottom:50px; text-align:center; font-size: 20px; font-weight: 400; color:red;">개선하고 싶은 기능에 대한 건의 및 시스템 오류 사항에 대해 작성 부탁드립니다.</p>
+</div>
 
-    <p>
-        <a class="btn" th:href="@{/admin/maintenance/new}">+ SR 등록</a>
-        <!-- AS-IS PrivacyAccess.MAINTENANCE_EXCEL_DOWNLOAD("운영관리 SR게시판") - 개인정보 포함
-             다운로드라 사유 모달을 먼저 띄워 접근로그를 남긴다 -->
-        <a class="btn" href="javascript:;"
-           th:attr="data-download-url=@{/admin/maintenance/export(startDate=${startDate},endDate=${endDate},processState=${processState},keyword=${keyword})}"
-           onclick="openPrivacyModal(this.getAttribute('data-download-url'));">CSV 다운로드</a>
-    </p>
-    <div th:replace="~{fragments/privacy-access :: modal}"></div>
+<form id="searchParam" method="post" th:action="@{/admin/maintenance}">
+	<input type="hidden" id="page" name="page" th:value="${searchParam.page}"/>
+	<input type="hidden" id="itemsPerPage" name="itemsPerPage" th:value="${searchParam.itemsPerPage}"/>
 
-    <table class="board_list_table">
-        <thead>
-        <tr><th>접수일</th><th>제목</th><th>요청경로</th><th>업무구분</th><th>완료구분</th><th>담당자</th><th>긴급</th><th>조회수</th></tr>
-        </thead>
-        <tbody>
-        <tr th:each="r : ${rows}">
-            <td th:text="${r.reqCrtDate}"></td>
-            <td><a th:href="@{'/admin/maintenance/' + ${r.bbsId} + '/edit'}" th:text="${r.bbsTtl}"></a></td>
-            <td th:text="${r.reqChannel}"></td>
-            <td th:text="${r.processType}"></td>
-            <td th:text="${r.processState}"></td>
-            <td th:text="${r.processManagerNm}"></td>
-            <td th:text="${r.urgentYn == 'Y' ? '긴급' : ''}"></td>
-            <td th:text="${r.inqCnt}"></td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(rows)}">등록된 SR이 없습니다.</p>
-    </div><!-- /.contents_inner -->
-    </div><!-- /.contents -->
-</div><!-- /#container -->
-</div><!-- /.admin_wrap -->
+	<div class="board_write">
+		<table class="board_write_table" summary="운영관리 SR게시판">
+			<colgroup>
+				<col style="width: 220px;">
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="label">검색구분</td>
+					<td colspan="3">
+						<div class="flex_box gap-08">
+							<!-- AS-IS 주석처리: 작성자(USERNAME) 옵션 -->
+							<select id="where" name="where" class="wd-150" title="검색구분">
+								<option value="ALL" th:selected="${searchParam.where == 'ALL'}">전체</option>
+								<option value="CSRNO" th:selected="${searchParam.where == 'CSRNO'}">CSR번호</option>
+								<option value="SUBJECT" th:selected="${searchParam.where == 'SUBJECT'}">제목</option>
+								<option value="CN" th:selected="${searchParam.where == 'CN'}">내용</option>
+							</select>
+							<input type="text" id="query" name="query" class="input_txt required _filter half"
+								   th:title="${msg.get('M00021')}" th:value="${searchParam.query}"/>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">완료구분</td>
+					<td colspan="3">
+						<div class="flex_box gap-12">
+							<div class="input-form">
+								<input type="checkbox" id="shProcessState_all" name="shArrProcessState" value="ALL"
+									   th:checked="${searchParam.allChecked}"/>
+								<label for="shProcessState_all">전체</label>
+							</div>
+							<div class="input-form" th:each="stateCd, i : ${procsStateCds}">
+								<input type="checkbox" th:id="'shProcessState_' + ${i.index + 1}"
+									   name="shArrProcessState" th:value="${stateCd.key}"
+									   th:checked="${searchParam.isChecked(stateCd.key)}"/>
+								<label th:for="'shProcessState_' + ${i.index + 1}" th:text="${stateCd.value}"></label>
+							</div>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">등록일자</td>
+					<td colspan="3">
+						<div class="search-date">
+							<span class="datepicker">
+								<input type="text" id="startDt" name="startDt" class="datepicker optional"
+									   th:title="${msg.get('M00507')}" th:value="${searchParam.startDt}"/>
+							</span>
+							<span class="wave">~</span>
+							<span class="datepicker">
+								<input type="text" id="endDt" name="endDt" class="datepicker optional"
+									   th:title="${msg.get('M00509')}" th:value="${searchParam.endDt}"/>
+							</span>
+							<span class="day_btns day_btn1">
+								<a href="javascript:void(0);" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+								<a href="javascript:void(0);" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a>
+								<a href="javascript:void(0);" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>
+								<a href="javascript:void(0);" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+								<a href="javascript:void(0);" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a>
+								<a href="javascript:void(0);" class="btn_date all-1" th:text="${msg.get('M00039')}">전체</a>
+							</span>
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<div class="btn_all btn_left">
+			<ul class="list-bullet point">
+				<li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li>
+			</ul>
+		</div>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-default btn-mini"
+						onclick="location.href='/admin/maintenance'" th:text="${msg.get('M00047')}">초기화</button>
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="search();"
+						th:text="${msg.get('M00048')}">검색</button>
+			</div>
+		</div>
+	</div>
+</form>
+
+<div class="count_title mt-40">
+	<h5>총 <span th:text="${#numbers.formatInteger(pagination.totalItems, 1, 'COMMA')}" th:remove="tag">0</span>건</h5>
+	<span>
+		<select name="displayCount" id="displayCount" th:title="${msg.get('M00239')}">
+			<option value="10" th:text="${msg.get('M00240')}">10개 출력</option>
+			<option value="20" th:text="${msg.get('M00241')}">20개 출력</option>
+			<option value="50" th:text="${msg.get('M00242')}">50개 출력</option>
+			<option value="100" th:text="${msg.get('M00243')}">100개 출력</option>
+		</select>
+	</span>
+</div>
+
+<div class="board_list">
+	<table class="board_list_table" summary="">
+		<caption></caption>
+		<colgroup>
+			<col style="width: 50px;">
+			<col style="width: 70px;">
+			<col style="width: 80px;">
+			<col style="width: 120px;">
+			<col style="width: 80px;">
+			<col style="width: 200px;">
+			<col style="width: *;">
+			<col style="width: 100px;">
+			<col style="width: 70px;">
+			<col style="width: 200px">
+			<col style="width: 70px;">
+			<col style="width: 100px;">
+			<col style="width: 100px;">
+			<col style="width: 100px;">
+			<col style="width: 100px;">
+		</colgroup>
+		<thead>
+			<tr>
+				<th scope="col">No.</th>
+				<th scope="col">작성자</th>
+				<th scope="col">업무구분</th>
+				<th scope="col">CSR번호</th>
+				<th scope="col">처리구분</th>
+				<th scope="col">제목</th>
+				<th scope="col">내용</th>
+				<th scope="col">요청경로</th>
+				<th scope="col">담당자</th>
+				<th scope="col">답변</th>
+				<th scope="col">완료구분</th>
+				<th scope="col">등록일시</th>
+				<th scope="col">수정일시</th>
+				<th scope="col">처리시작일</th>
+				<th scope="col">처리종료일</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr th:each="community, i : ${list}">
+				<td th:text="${pagination.itemNumber - i.count}">0</td>
+				<td th:text="${community.reqManagerNm}"></td>
+				<td th:text="${community.reqTypeNm}"></td>
+				<td th:text="${community.srNo}"></td>
+				<td th:text="${community.processTypeNm}"></td>
+				<td>
+					<div style="align-items: center; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+						<a class="communityId" th:href="|javascript:maintenanceDetail(${community.bbsId});|"
+						   style="max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block;"
+						   th:text="${community.bbsTtl}"></a>
+						<img class="databoard-icon" th:if="${community.attachedFileCnt > 0}"
+							 th:src="@{/content/images/icon/cli-icon_file-list.png}" alt="첨부자료 있음"/>
+					</div>
+				</td>
+				<td th:text="${community.bbsCn}"></td>
+				<td th:text="${community.reqChannelNm}"></td>
+				<td th:text="${community.processManagerNm}"></td>
+				<td th:text="${community.processCn}"></td>
+				<td th:text="${community.processStateNm}"></td>
+				<td th:text="${@opDate.ymdHms(community.frstCrtDt)}"></td>
+				<td th:text="${@opDate.ymdHms(community.lastMdfcnDt)}"></td>
+				<td th:text="${community.processStartDate}"></td>
+				<td th:text="${community.processEndDate}"></td>
+			</tr>
+		</tbody>
+	</table>
+
+	<div class="no_content" th:if="${#lists.isEmpty(list)}" th:text="${msg.get('M00170')}">등록된 내용이 없습니다.</div>
+
+	<div class="btn_all btn_right">
+		<div class="flex_box gap-08">
+			<a href="/admin/maintenance/form" class="btn btn-dark-gray btn-mini">등록</a>
+			<button type="button" class="btn btn-dark-gray btn-mini btn_left" onclick="javascript:excelDownload();">엑셀</button>
+		</div>
+	</div>
+	<div class="pagination-wrap">
+		<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+	</div>
+</div>
+
+<div style="display: none;">
+	<span id="today" th:text="${today}"></span>
+	<span id="week" th:text="${week}"></span>
+	<span id="month1" th:text="${month1}"></span>
+	<span id="month2" th:text="${month2}"></span>
+</div>
+
+    </div>
+    </div>
+</div>
+</div>
+
+<script type="text/javascript" th:inline="javascript">
+var redirectMessage = /*[[${redirectMessage}]]*/ null;
+
+$(function() {
+	if (redirectMessage) {
+		alert(redirectMessage);
+	}
+
+	searchEnterKey();
+	displayChange();
+	datepickerChange();
+	displaySelected();
+
+	// 완료구분 검색 체크박스 이벤트 (체크&해제)
+	checkedEventSet("shProcessState_", "shProcessState_all");
+
+	Common.DateButtonEvent.set('.day_btn1 > a[class^=btn_date]', '', 'input[name="startDt"]', 'input[name="endDt"]');
+	EventHandler.calendarStartDateAndEndDateVaild();
+});
+
+function displayChange() {
+	$("#displayCount").on('change', function() {
+		$("#itemsPerPage").val($(this).val());
+		$("#page").val(1);
+		$('#searchParam').submit();
+	});
+}
+function displaySelected() {
+	$("#displayCount").val($("#itemsPerPage").val());
+}
+
+/**
+ *	함 수 명 : datepickerChange
+ *	기	능  : 날짜 변경 이벤트
+ */
+function datepickerChange() {
+	if ($("input.datepicker").length) {
+		$("input.datepicker").keyup(function(e) {
+			if (e && e.target && e.target.value) {
+				var value = e.target.value.replace(/[^0-9]/g, "");
+				if (value.length > 8) {
+					value = value.slice(0, 8);
+				}
+				e.target.value = value;
+			}
+		});
+	}
+}
+
+/**
+ *	함 수 명 : search
+ *	기	능  : 검색
+ */
+function search() {
+	var strStartDate = $("#startDt").val();
+	var strEndDate = $("#endDt").val();
+
+	if (strStartDate && strStartDate.length == 8 && strEndDate && strEndDate.length == 8) {
+		var startDate = new Date(strStartDate.substr(0, 4), strStartDate.substr(4, 2), strStartDate.substr(6, 2));
+		var endDate = new Date(strEndDate.substr(0, 4), strEndDate.substr(4, 2), strEndDate.substr(6, 2));
+		if (startDate > endDate) {
+			alert("종료일이 시작일보다 빠릅니다.");
+			$("#endDt").focus();
+			return false;
+		}
+		var searchChk = Common.searchDateMonth(startDate, endDate);
+		if (!searchChk) return false;
+	}
+	if (0 == $("input[id^='shProcessState_']:checked").not("[id='shProcessState_all']").length) {
+		$("#shProcessState_all").prop("checked", true);
+	}
+
+	$("#page").val(1);
+	$("#searchParam").submit();
+}
+
+/**
+ *	함 수 명 : checkedEvent
+ *	기	능  : 체크&해제 이벤트 셋팅
+ */
+function checkedEventSet(groupId, groupHeaderId) {
+	var childObjs = $("input[id^='"+groupId+"']").not("[id='"+groupHeaderId+"']");
+
+	// 체크박스 '전체' 체크&해지
+	$("#"+groupHeaderId).click(function(){
+		$(childObjs).prop("checked", $(this).is(":checked"));
+	});
+
+	// '개별' 체크박스에 따른 '전체' 체크박스 체크&해지
+	$(childObjs).click(function() {
+		if($(childObjs).length == $("input[id^='"+groupId+"']:checked").not("[id='"+groupHeaderId+"']").length) {
+			$("#"+groupHeaderId).prop("checked", true);
+		} else {
+			$("#"+groupHeaderId).prop("checked", false);
+		}
+	});
+}
+
+/* AS-IS: detail 화면 대신 edit 화면으로 보낸다(detail 호출은 주석처리). */
+function maintenanceDetail(id) {
+	location.href = '/admin/maintenance/edit/' + id;
+}
+
+/**
+ *	함 수 명 : searchEnterKey
+ *	기	능  : 검색 엔터키 이벤트
+ */
+function searchEnterKey() {
+	$("#query").on('keydown', function(e) {
+		if (e.keyCode == '13') {
+			$("#page").val(1);
+			$("#searchParam").submit();
+		}
+	});
+}
+
+/**
+ * 함 수 명 : excelDownload
+ * 기  능  : 엑셀 다운로드
+ */
+function excelDownload() {
+	let startDate = document.getElementById('startDt').value;
+	let endDate = document.getElementById('endDt').value;
+	let isDate = false;
+
+	if (Common.validateDate(startDate) && Common.validateDate(endDate)) {
+		if (Number(startDate) <= Number(endDate)) {
+			isDate = true;
+		}
+	}
+	if (!isDate) {
+		alert('등록일자를 확인해주세요.');
+		return;
+	}
+	let param = $('#searchParam').serialize();
+	location.href = '/admin/maintenance/list/mainten-excel-download?' + param;
+}
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

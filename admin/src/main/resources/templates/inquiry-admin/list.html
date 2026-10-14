@@ -83,12 +83,16 @@
 								<input type="text" id="searchEndDate" name="searchEndDate" class="datepicker _number"
 									   th:title="${msg.get('M00509')}" th:value="${searchParam.searchEndDate}"/>
 							</span>
+							<!-- 기간 지정 버튼 모양은 자료실 등 다른 31개 화면과 같은 .btn_date 로 맞췄다
+							     (2026-10-12 사용자 요청). AS-IS qna/list.jsp는 .table_btn 이지만
+							     운영관리 화면 중 .table_btn 은 이 화면과 Q&A(5112) 둘뿐이라 튀었다.
+							     동작을 정하는 클래스(today·week-1·month-1·month-3·clear)는 그대로다. -->
 							<span class="day_btns">
-								<a href="javascript:;" class="table_btn today" th:text="${msg.get('M00026')}">오늘</a>
-								<a href="javascript:;" class="table_btn week-1" th:text="${msg.get('M00027')}">1주일</a>
-								<a href="javascript:;" class="table_btn month-1" th:text="${msg.get('M00029')}">한달</a>
-								<a href="javascript:;" class="table_btn month-3" th:text="${msg.get('M00030')}">3개월</a>
-								<a href="javascript:;" class="table_btn clear" th:text="${msg.get('M00039')}">전체</a>
+								<a href="javascript:;" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+								<a href="javascript:;" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a>
+								<a href="javascript:;" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>
+								<a href="javascript:;" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+								<a href="javascript:;" class="btn_date clear" th:text="${msg.get('M00039')}">전체</a>
 							</span>
 						</div>
 					</td>
@@ -246,7 +250,7 @@ $(function() {
 		$('#qna').submit();
 	});
 
-	Common.DateButtonEvent.set('.day_btns > a[class^=table_btn]', '', 'input[name="searchStartDate"]' , 'input[name="searchEndDate"]');
+	Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="searchStartDate"]' , 'input[name="searchEndDate"]');
 	EventHandler.calendarStartDateAndEndDateVaild();
 	searchEnterKey();
 });
@@ -283,5 +287,6 @@ function searchEnterKey() {
 	});
 }
 </script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

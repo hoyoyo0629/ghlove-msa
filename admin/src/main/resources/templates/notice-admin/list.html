@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>공지사항 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/notice/list.jsp 이식(메뉴 5111 공지사항).
+     지자체공지사항(5110)과 같은 OP_NOTICE를 보되 지자체코드를 '00000'(전체공지)으로 고정해
+     조회한다 - AS-IS도 컨트롤러·화면이 별도고 표만 같다.
+
+     ★ 5110과 다른 점(전부 AS-IS 그대로):
+     - 등록일 검색조건을 <b>오늘로 채우지 않는다</b>(5110만 컨트롤러가 오늘로 채운다) →
+       날짜칸이 빈 채로 뜨고, 비워 두면 기간 조건 없이 전체가 조회된다.
+     - 작성자 칸이 지자체명이 아니라 <b>사람 이름</b>(USER_NAME)이다.
+       (TO-BE 시드 31행은 USER_NAME이 전부 비어 있어 기존 글은 빈칸으로 보인다 -
+        이 화면에서 새로 등록하는 글부터 로그인 운영자명이 들어간다.)
+     - 등록·선택삭제 버튼에 <b>역할 조건이 없다</b>(5110은 role=='LOC'일 때만 보인다).
+     - 삭제 버튼이 btn-default다(5110은 btn-dark-gray).
+     - search()가 날짜를 문자열로만 비교한다(5110은 Date 객체 + Common.searchDateMonth 호출).
+     - 목록 표가 .board_write 안에 들어간다(5110은 .board_list).
+
+     ★ h3의 문구는 op.manager.js:46 이 3단 메뉴명으로 덮어쓴다(.custom 클래스가 붙은 h3만 예외) -
+       여기 적어 둔 M00269는 JS가 돌기 전/못 찾을 때의 기본값이다.
+     ★ AS-IS GET 진입은 조회하지 않는다(count=0, 빈 목록) - POST 검색에서만 실제 조회한다.
+     ★ AS-IS 주석처리 유지: 상단공지 라디오 검색조건, 노출위치(mall.type==2) 라디오 검색조건. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span th:text="${msg.get('M00269')}">공지사항</span></h3>
+
+<div class="board_write">
+    <form id="searchParam" method="post" th:action="@{/admin/notices}">
+        <input type="hidden" id="page" name="page" th:value="${searchParam.page}"/>
+        <input type="hidden" id="itemsPerPage" name="itemsPerPage" th:value="${searchParam.itemsPerPage}"/>
+
+        <table class="board_write_table" th:attr="summary=${msg.get('M00269')}">
+            <caption th:text="${msg.get('M00269')}"></caption>
+            <colgroup>
+                <col style="width:220px;" />
+            </colgroup>
+            <tbody>
+            <tr>
+                <td class="label">검색구분</td>
+                <td>
+                    <div class="flex_box gap-08">
+                        <select id="where" name="where" class="wd-150" title="검색구분">
+                            <option value="SUBJECT" th:selected="${searchParam.where == 'SUBJECT'}">제목</option>
+                            <option value="CONTENT" th:selected="${searchParam.where == 'CONTENT'}">내용</option>
+                        </select>
+                        <input type="text" id="query" name="query" class="input_txt required _filter full"
+                               th:title="${msg.get('M00021')}" th:value="${searchParam.query}"/>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label" th:text="${msg.get('M00202')}">등록일</td>
+                <td>
+                    <div class="search-date">
+                        <span class="datepicker">
+                            <input type="text" id="startCreateDate" name="startCreateDate" class="datepicker optional"
+                                   th:title="${msg.get('M00507')}" th:value="${searchParam.startCreateDate}"/>
+                        </span>
+                        <span class="wave">~</span>
+                        <span class="datepicker">
+                            <input type="text" id="endCreateDate" name="endCreateDate" class="datepicker optional"
+                                   th:title="${msg.get('M00509')}" th:value="${searchParam.endCreateDate}"/>
+                        </span>
+                        <span class="day_btns">
+                            <a href="javascript:void(0);" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+                            <a href="javascript:void(0);" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a>
+                            <a href="javascript:void(0);" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>
+                            <a href="javascript:void(0);" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+                            <a href="javascript:void(0);" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a>
+                            <a href="javascript:;" class="btn_date all-1" th:text="${msg.get('M00039')}">전체</a>
+                        </span>
+                    </div>
+                </td>
+            </tr>
+            <!-- AS-IS 주석처리: 상단공지 라디오(전체/사용/사용안함) -->
+            <!-- AS-IS 주석처리: 노출위치 라디오(구분없음/전체/사용자/판매자, mall.type=='2'일 때만) -->
+            </tbody>
+        </table>
+
+        <div class="btn_all btn_left">
+            <ul class="list-bullet point">
+                <li>검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.</li>
+            </ul>
+        </div>
+        <div class="btn_all btn_right">
+            <div class="flex_box gap-08">
+                <button type="button" class="btn btn-default btn-mini" onclick="location.href='/admin/notices'"
+                        th:text="${msg.get('M00047')}">초기화</button>
+                <button type="button" class="btn btn-dark-gray btn-mini" onclick="search();"
+                        th:text="${msg.get('M00048')}">검색</button>
+            </div>
+        </div>
+    </form>
+</div> <!-- // board_write -->
+
+<div class="count_title mt-40">
+    <h5>총 <span th:text="${#numbers.formatInteger(pagination.totalItems, 1, 'COMMA')}" th:remove="tag">0</span>건</h5>
+    <span>
+        <select name="displayCount" id="displayCount" th:title="${msg.get('M00239')}">
+            <option value="10" th:text="${msg.get('M00240')}">10개 출력</option>
+            <option value="20" th:text="${msg.get('M00241')}">20개 출력</option>
+            <option value="50" th:text="${msg.get('M00242')}">50개 출력</option>
+            <option value="100" th:text="${msg.get('M00243')}">100개 출력</option>
+        </select>
+    </span>
+</div>
+
+<div class="board_write">
+    <table class="board_list_table" th:attr="summary=${msg.get('M00273')}">
+        <caption th:text="${msg.get('M00273')}"></caption>
+        <colgroup>
+            <col style="width:50px;">
+            <col style="width:50px;">
+            <col style="width:500px;">
+            <col style="width:100px;">
+            <col style="width:100px;">
+            <col style="width:150px;">
+            <col style="width:100px;">
+        </colgroup>
+        <thead>
+        <tr>
+            <th scope="col"><input type="checkbox" id="check_all"></th>
+            <th scope="col">No.</th>
+            <th scope="col">제목</th>
+            <th scope="col">작성자</th>
+            <th scope="col">조회수</th>
+            <th scope="col">등록일</th>
+            <th scope="col">게시여부</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="notice, i : ${list}">
+            <td><input type="checkbox" th:value="${notice.noticeId}" th:id="'check_' + ${notice.noticeId}"></td>
+            <td th:text="${pagination.itemNumber - i.count}">0</td>
+            <td>
+                <div class="tex_l">
+                    <span class="label_notice" th:if="${notice.noticeFlag == 'Y'}">공지</span>
+                    <a th:href="|javascript:noticeDetail(${notice.noticeId});|" th:text="${notice.subject}"></a>
+                </div>
+            </td>
+            <td th:text="${notice.userName}"></td>
+            <td th:text="${notice.hits}"></td>
+            <td th:text="${@opDate.ymd(notice.createdDate)}"></td>
+            <td th:text="${notice.useYn == 'Y'} ? '-' : '중지'"></td>
+        </tr>
+        </tbody>
+    </table>
+    <div class="no_content" th:if="${#lists.isEmpty(list)}" th:text="${msg.get('M00277')}">데이터가 없습니다.</div>
+</div><!--// board_write E-->
+
+<div class="btn_all btn_right">
+    <div class="flex_box gap-08">
+        <a href="/admin/notices/create" class="btn btn-dark-gray btn-mini" th:text="${msg.get('M00088')}">등록</a>
+        <a href="javascript:deleteCheckNotice();" class="btn btn-default btn-mini" th:text="${msg.get('M00074')}">삭제</a>
+    </div>
+</div>
+<div class="pagination-wrap">
+    <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+</div>
+
+<div style="display:none;">
+    <span id="today" th:text="${today}"></span>
+    <span id="week" th:text="${week}"></span>
+    <span id="month1" th:text="${month1}"></span>
+    <span id="month2" th:text="${month2}"></span>
+</div>
+
+    </div>
+    </div>
+</div>
+</div>
+
+<script type="text/javascript" th:inline="javascript">
+var redirectMessage = /*[[${redirectMessage}]]*/ null;
+
+$(function(){
+    if (redirectMessage) {
+        alert(redirectMessage);
+    }
+
+    displayChange();
+    displaySelected();
+
+    // 체크박스 이벤트 (체크&해제)
+    checkedEventSet();
+
+    Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="startCreateDate"]', 'input[name="endCreateDate"]');
+    EventHandler.calendarStartDateAndEndDateVaild();
+});
+
+function displayChange() {
+    $("#displayCount").on('change', function(){
+        $("#itemsPerPage").val($(this).val());
+        $('#searchParam').submit();
+    });
+}
+function displaySelected(){
+    $("#displayCount").val($("#itemsPerPage").val());
+}
+
+function noticeDetail(noticeId) {
+    location.href = '/admin/notices/edit/' + noticeId;
+}
+
+function deleteCheckNotice() {
+    var noticeList = new Array;
+
+    $("input[id^='check_']:checked").not("[id='check_all']").map(function(index, item) {
+        noticeList.push($(item).val());
+    });
+
+    if (noticeList.length == 0) {
+        alert("삭제할 게시물을 선택해주세요.");
+        return false;
+    }
+
+    if (confirm("삭제하시겠습니까?")) {
+        $.post('/admin/notices/deleteNotice', {"noticeList": noticeList}, function(response) {
+            if (response.isSuccess && response.data) {
+                if (response.data == "SUCC") {
+                    alert("삭제되었습니다.");
+                    location.reload();
+                } else {
+                    alert("오류가 발생했습니다.");
+                }
+            }
+        });
+    }
+}
+
+/**
+ *	함 수 명 : checkedEvent
+ *	기	능  : 체크&해제 이벤트 셋팅
+ */
+function checkedEventSet() {
+    var childObjs = $("input[id^='check_']").not("[id='check_all']");
+
+    $("#check_all").click(function(){
+        $(childObjs).prop("checked", $(this).is(":checked"));
+    });
+
+    $(childObjs).click(function() {
+        if ($(childObjs).length == $("input[id^='check_']:checked").not("[id='check_all']").length) {
+            $("#check_all").prop("checked", true);
+        } else {
+            $("#check_all").prop("checked", false);
+        }
+    });
+}
+
+/* AS-IS: 5110과 달리 날짜를 문자열로만 비교한다(Common.searchDateMonth 호출 없음). */
+function search() {
+    var strStartDate = $("#startCreateDate").val();
+    var strEndDate = $("#endCreateDate").val();
+
+    if (strStartDate && strStartDate.length == 8 && strEndDate && strEndDate.length == 8) {
+        if (strStartDate > strEndDate) {
+            alert("종료일이 시작일보다 빠릅니다.");
+            $("#endCreateDate").focus();
+            return false;
+        }
+    }
+
+    $("#searchParam").submit();
+}
+</script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

@@ -6,6 +6,7 @@ import com.ghlove.donation.domain.DesignatedNotice;
 import com.ghlove.donation.domain.DesignatedNoticeFile;
 import com.ghlove.donation.domain.DesignatedNoticeImgExpln;
 import com.ghlove.donation.domain.DesignatedProjectImage;
+import com.ghlove.donation.domain.DesignatedProjectImgExpln;
 import com.ghlove.donation.domain.Donation;
 import com.ghlove.donation.domain.DsgnAprvLog;
 import com.ghlove.donation.domain.Locgov;
@@ -84,6 +85,7 @@ public class DesignatedAdminService {
     /** 대민 공지 첨부의 저장 파일명 토큰(AS-IS pCrypto "normal" 자리) - 직인 이미지와 같은 AES-GCM 대체 모듈. */
     private final SealCipher sealCipher;
     private final com.ghlove.donation.repository.DesignatedProjectImageRepository designatedProjectImageRepository;
+    private final com.ghlove.donation.repository.DesignatedProjectImgExplnRepository designatedProjectImgExplnRepository;
 
     public List<DesignatedProject> listAll() {
         return designatedProjectRepository.findAll().stream()
@@ -111,6 +113,12 @@ public class DesignatedAdminService {
     @Transactional
     public DesignatedProject create(DesignatedProject form, MultipartFile image, List<MultipartFile> images,
                                     boolean canSelfApprove, Long managerId) {
+        return create(form, image, images, null, canSelfApprove, managerId);
+    }
+
+    @Transactional
+    public DesignatedProject create(DesignatedProject form, MultipartFile image, List<MultipartFile> images,
+                                    List<String> imgExplns, boolean canSelfApprove, Long managerId) {
         validate(form);
         if (STATUS_OPEN.equals(form.getDsgnDntnBizSttsCd()) && !canSelfApprove) {
             form.setDsgnDntnBizSttsCd(STATUS_PENDING);
@@ -124,6 +132,7 @@ public class DesignatedAdminService {
         form.setLastRegDt(LocalDateTime.now());
         DesignatedProject saved = designatedProjectRepository.save(form);
         storeImages(saved, images, managerId);
+        replaceProjectImgExplns(saved.getDsgnDntnBizId(), imgExplns, managerId);
         writeApprovalLog(saved.getDsgnDntnBizId(), null, saved.getDsgnDntnBizSttsCd(), managerId);
         return saved;
     }
@@ -131,6 +140,12 @@ public class DesignatedAdminService {
     @Transactional
     public DesignatedProject update(Long id, DesignatedProject form, MultipartFile image, List<MultipartFile> images,
                                     boolean canSelfApprove, Long managerId) {
+        return update(id, form, image, images, null, canSelfApprove, managerId);
+    }
+
+    @Transactional
+    public DesignatedProject update(Long id, DesignatedProject form, MultipartFile image, List<MultipartFile> images,
+                                    List<String> imgExplns, boolean canSelfApprove, Long managerId) {
         validate(form);
         DesignatedProject entity = findOrThrow(id);
         String beforeStatus = entity.getDsgnDntnBizSttsCd();
@@ -160,10 +175,40 @@ public class DesignatedAdminService {
 
         DesignatedProject saved = designatedProjectRepository.save(entity);
         storeImages(saved, images, managerId);
+        replaceProjectImgExplns(id, imgExplns, managerId);
         if (!beforeStatus.equals(saved.getDsgnDntnBizSttsCd())) {
             writeApprovalLog(id, beforeStatus, saved.getDsgnDntnBizSttsCd(), managerId);
         }
         return saved;
+    }
+
+    /** AS-IS form.jsp 의 "이미지 설명" 표(G_DSGN_DNTN_BIZ_CN_IMG_EXPLN).
+     *
+     *  <p>AS-IS saveDesignatedDonationInfo 와 같은 규칙이다 - 넘어온 목록이 있으면
+     *  <b>전부 지우고 다시 넣고</b>, 비어 있으면 <b>전부 지운다</b>. 공백만 든 줄은
+     *  AS-IS가 화면에서 미리 걷어내므로(not null 컬럼) 여기서도 건너뛴다. */
+    private void replaceProjectImgExplns(Long dsgnDntnBizId, List<String> imgExplns, Long managerId) {
+        if (imgExplns == null) {
+            return;
+        }
+        designatedProjectImgExplnRepository.deleteByDsgnDntnBizId(dsgnDntnBizId);
+        designatedProjectImgExplnRepository.flush();
+        int seq = 0;
+        for (String expln : imgExplns) {
+            if (expln == null || expln.isBlank()) {
+                continue;
+            }
+            designatedProjectImgExplnRepository.save(
+                    new DesignatedProjectImgExpln(dsgnDntnBizId, ++seq, expln, managerId));
+        }
+    }
+
+    /** 수정 화면이 기존 설명을 다시 그릴 때 쓴다(순번 오름차순). */
+    public List<String> imgExplnsOf(Long dsgnDntnBizId) {
+        return designatedProjectImgExplnRepository.findByDsgnDntnBizIdOrderByImgSeqAsc(dsgnDntnBizId)
+                .stream()
+                .map(DesignatedProjectImgExpln::getImgExpln)
+                .toList();
     }
 
 
@@ -940,7 +985,31 @@ public class DesignatedAdminService {
 
         long goalAmt = project.getGoalAmt() == null ? 0L : project.getGoalAmt();
         return new ProjectStat(sumAmt, cntrCnt, achievementRate(sumAmt, goalAmt),
-                leftDays(project.getDsgnDntnBizEndYmd(), today));
+                leftDays(project.getDsgnDntnBizEndYmd(), today),
+                leftDayStr(project.getDsgnDntnBizEndYmd(), today));
+    }
+
+    /**
+     * AS-IS {@code DesignatedDonation.getLeftDayStr()} 그대로.
+     *
+     * <p>AS-IS의 {@code leftDay} 는 매퍼의 {@code DATEDIFF(NOW(), 종료일)} 이라
+     * <b>오늘 - 종료일</b>(부호 있는 값)이다. 그래서 종료일이 남았으면 음수가 되어
+     * {@code "D" + (-87)} = <b>D-87</b> 로 찍히고, 지났으면 {@code D+5} 가 된다.
+     */
+    static String leftDayStr(String endYmd, String today) {
+        if (endYmd == null || endYmd.length() != 8) {
+            return "D-Day";
+        }
+        try {
+            long leftDay = LocalDate.parse(today, YMD).toEpochDay()
+                    - LocalDate.parse(endYmd, YMD).toEpochDay();
+            if (leftDay == 0) {
+                return "D-Day";
+            }
+            return leftDay > 0 ? "D+" + leftDay : "D" + leftDay;
+        } catch (DateTimeParseException e) {
+            return "D-Day";
+        }
     }
 
     /** AS-IS leftDayStr - 종료일까지 남은 일수(지났으면 0). */
@@ -958,7 +1027,14 @@ public class DesignatedAdminService {
     }
 
     /** AS-IS 수정화면의 읽기전용 세 칸 + 기부건수. */
-    public record ProjectStat(long sumAmt, long cntrCnt, BigDecimal rateAmt, long leftDays) {
+    /**
+     * AS-IS 수정화면의 읽기전용 세 칸.
+     *
+     * @param leftDays   종료일까지 남은 일수(지났으면 0) - 숫자로 쓰는 쪽을 위해 유지한다
+     * @param leftDayStr AS-IS {@code DesignatedDonation.getLeftDayStr()} 와 같은 표기
+     *                   ({@code D-Day} / {@code D-87} / 지났으면 {@code D+5})
+     */
+    public record ProjectStat(long sumAmt, long cntrCnt, BigDecimal rateAmt, long leftDays, String leftDayStr) {
     }
 
     /**

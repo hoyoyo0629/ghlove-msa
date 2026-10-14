@@ -98,9 +98,10 @@ public class DesignatedAdminApiController {
     @PostMapping(value = "/api/designated-projects/admin", consumes = "multipart/form-data")
     public ResponseEntity<?> create(@ModelAttribute ProjectForm form, @RequestParam(required = false) MultipartFile image,
                                      @RequestParam(required = false) java.util.List<MultipartFile> images,
+                                     @RequestParam(required = false) java.util.List<String> imgExplns,
                                      @RequestParam boolean canSelfApprove, @RequestParam Long managerId) {
         try {
-            DesignatedProject saved = designatedAdminService.create(form.toEntity(), image, images, canSelfApprove, managerId);
+            DesignatedProject saved = designatedAdminService.create(form.toEntity(), image, images, imgExplns, canSelfApprove, managerId);
             return ResponseEntity.ok(ProjectDto.of(saved));
         } catch (DonationException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -111,13 +112,23 @@ public class DesignatedAdminApiController {
     public ResponseEntity<?> update(@PathVariable Long id, @ModelAttribute ProjectForm form,
                                      @RequestParam(required = false) MultipartFile image,
                                      @RequestParam(required = false) java.util.List<MultipartFile> images,
+                                     @RequestParam(required = false) java.util.List<String> imgExplns,
                                      @RequestParam boolean canSelfApprove, @RequestParam Long managerId) {
         try {
-            DesignatedProject saved = designatedAdminService.update(id, form.toEntity(), image, images, canSelfApprove, managerId);
+            DesignatedProject saved = designatedAdminService.update(id, form.toEntity(), image, images, imgExplns, canSelfApprove, managerId);
             return ResponseEntity.ok(ProjectDto.of(saved));
         } catch (DonationException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
+    }
+
+    /**
+     * 상세설명 이미지의 접근성 설명 목록 - admin 수정화면의 "이미지 설명" 표를 다시 그릴 때 쓴다.
+     * AS-IS selectImgDescListByPrjId 와 같이 순번 오름차순이다.
+     */
+    @GetMapping("/api/designated-projects/admin/{id}/img-explns")
+    public ResponseEntity<?> imgExplns(@PathVariable Long id) {
+        return ResponseEntity.ok(designatedAdminService.imgExplnsOf(id));
     }
 
     /**

@@ -30,7 +30,15 @@ public class DataBoardFileStorageService {
 
     private static final long MAX_SIZE = 50L * 1024 * 1024; // AS-IS 50MB
 
-    /** @return 저장된 파일명 (UUID 기반, DB에는 이 값만 기록) */
+    /** AS-IS {@code Const.DATENANO_FORMAT} - 초 뒤 4자리까지 붙인다. */
+    private static final java.time.format.DateTimeFormatter DATENANO =
+            java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSSS");
+
+    /**
+     * @return 저장된 파일명. AS-IS와 같은 {@code yyyyMMddHHmmssSSSS_원본명}이다
+     *         (예전엔 UUID였는데 AS-IS 규칙으로 되돌렸다 - 운영에서 디스크 파일만 봐도
+     *         언제 올린 무슨 파일인지 알 수 있어야 한다).
+     */
     public String store(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("빈 파일은 업로드할 수 없습니다.");
@@ -47,7 +55,9 @@ public class DataBoardFileStorageService {
         if (file.getSize() > MAX_SIZE) {
             throw new IllegalArgumentException("업로드 가능한 최대 용량 : 50MB 입니다");
         }
-        String storedName = java.util.UUID.randomUUID() + (ext.isEmpty() ? "" : "." + ext);
+        // 경로조작 방지 - 원본명에서 디렉터리 구분자를 떼고 파일명만 쓴다(AS-IS엔 없는 보강).
+        String baseName = original == null ? "" : java.nio.file.Paths.get(original).getFileName().toString();
+        String storedName = java.time.LocalDateTime.now().format(DATENANO) + "_" + baseName;
 
         try {
             Path dir = Paths.get(uploadDir, "data-board");
@@ -69,5 +79,10 @@ public class DataBoardFileStorageService {
         } catch (IOException e) {
             log.warn("Failed to delete data-board file {}", fileName, e);
         }
+    }
+
+    /** 운영자 화면의 첨부 다운로드가 읽을 실제 경로. */
+    public Path resolve(String fileName) {
+        return Paths.get(uploadDir, "data-board", fileName);
     }
 }

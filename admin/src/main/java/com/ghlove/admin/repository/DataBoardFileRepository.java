@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
-public interface DataBoardFileRepository extends JpaRepository<DataBoardFile, String> {
+public interface DataBoardFileRepository extends JpaRepository<DataBoardFile, Integer> {
     List<DataBoardFile> findByDataIdOrderByOrdering(Integer dataId);
 }

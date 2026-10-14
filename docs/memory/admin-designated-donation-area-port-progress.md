@@ -246,6 +246,117 @@ admin·donation `bootJar` EXIT=0.
 부서 검색 전체/지자체/사용유무/부서명(UTF-8) 정상 · `{id}/stat`·`departments/{id}` 정상.
 admin·donation `bootJar` EXIT=0, 임시 인스턴스는 모두 내렸다.
 
+### ③ 재검수 (2026-10-13) - 등록/수정 폼 AS-IS 전수대조, 큰 누락 2건
+
+사용자가 "ASIS와 동일하게, css도 버튼도 틀어지지 않게" 재지시. **③에서 완료로 적었지만
+AS-IS form.jsp 928줄을 다시 전수 대조하니 통째로 빠진 블록이 2개 있었다** - 그때는 표(정보
+입력칸) 위주로만 맞췄고 그 아래 영역을 못 봤다.
+
+**누락 ① 스마트에디터 자체가 없었다** - AS-IS `<module:smarteditor id="prjCn"/>` 미이식이라
+상세 설명이 맨 textarea 로 떠 있었다. `fragments/smarteditor :: init/editor('dsgnDntnBizCn')` 추가.
+
+**누락 ② "이미지 설명"(접근성) 블록 전체** - AS-IS `item-option-table2`(순번/이미지 설명/삭제
++ [+ 추가])가 화면·백엔드 **양쪽 다** 없었다. 표 `G_DSGN_DNTN_BIZ_CN_IMG_EXPLN` 은 DDL에
+이미 있었는데(개발DB에도 실재) 엔티티·리포지토리·API가 없었다. 공지쪽
+`DesignatedNoticeImgExpln` 과 달리 **복합키가 아니라 자체 PK(시퀀스)** 다.
+- donation: `DesignatedProjectImgExpln` + 리포지토리 신규, `DesignatedAdminService`
+  create/update에 `imgExplns` 오버로드 + `replaceProjectImgExplns`(AS-IS처럼 전삭제 후 재삽입)
+  + `imgExplnsOf`, API `GET .../{id}/img-explns` 신규
+- admin: 클라이언트 multipart에 `imgExplns` 반복 필드(공지와 같은 방식), 컨트롤러 통과
+
+**그 외 AS-IS와 어긋나 고친 것**
+- **버튼 영역**: `btn_all btn_center` → AS-IS `id="buttons" btn_all btn_right`,
+  **[목록] 버튼 누락** 추가, `scrollButtons()`(바닥 170px 밖이면 `fixed_button`) 이식
+- **★승인 버튼 조건이 둘 다 틀렸다**: AS-IS는 `prjId>0 && prjStatus=='1'(대기) && ROLE_ADMIN_1~4`.
+  TO-BE는 상태 조건이 아예 없었고 권한도 1~5였다. **목록(list.jsp:338)의 일괄 승인처리가
+  1~5라서 그걸 그대로 가져다 쓴 것** - 두 화면은 권한 범위가 다르다, 합치지 말 것.
+  `CAN_APPROVE_ON_FORM`(1~4) 상수 분리.
+- **AS-IS 유효성 검사 전부 이식**(그동안 HTML5 required 뿐이었다): 사업구분·사업부문·기간 입력·
+  종료<시작·`Common.searchDateMonth`·날짜 정합성(윤년)·3년 제한·목표금액·상태·공개여부·
+  이미지 최소1/최대10·확장자(jpg,gif,png,pdf,jpeg)·**파일당 500KB**·이미지 설명 공백행 제거·
+  **에디터 이미지 수 == 설명 수**(다르면 저장 차단, alt 주입)·본문 빈값. 문구 전부 verbatim.
+- 사업부문 select 에 `required` 클래스 누락분 추가, 목표금액은 콤마 제거 후 판정
+- **지자체 2단 select 잠금**(AS-IS는 값이 있으면 mousedown 차단) · **ROLE_ADMIN_10 사업부서
+  잠금**(`unableChangePart`) · ROLE_ADMIN_10이 "진행중" 고르면 "대기 상태로 저장됩니다" 확인
+- 이미지 삭제: "최소 1개" 가드 + 확인 문구 AS-IS 그대로
+- AS-IS에 있는 hidden 블록도 그대로 복원(`copy_button hidden`, `add_detail_image_file`
+  + `#multiple_files`) - [[as-is-parity-includes-disabled-state]]
+- 기타 사항 textarea 의 인라인 `width:99%` 제거(AS-IS는 없다, opmanager.css 가 100% 준다)
+- **★발명된 링크 제거**: `<div class="location">지정기부 관리</div>` 가 breadcrumb 조각과
+  **같은 자리에 겹쳐** 있었다(목록 화면은 조각 하나뿐). [[admin-invented-backlink-per-screen-cleanup]]
+
+**일부러 안 옮긴 것**: AS-IS가 prjCn 을 `encodeURIComponent` 로 싸서 보내고 서버가 푸는 것
+(AS-IS 쪽 인코딩 회피용, TO-BE donation 은 그대로 받는다).
+
+**검증**(여분 포트 donation 8093 / admin 8099, Playwright):
+등록폼 col 4칸·라벨 8개 / 수정폼 col 6칸·라벨 11개(남은 일수·모금 된 금액·달성률) ·
+버튼 `btn_all btn_right` [등록][목록] / 수정은 [승인][수정][목록](**PENDING 일 때만 승인 노출** 확인) ·
+에디터 iframe 생성 · 이미지 설명 추가/삭제 시 순번 재계산(1,2 → 삭제 후 1) ·
+**등록 왕복 실측**: 설명 2건이 `img_seq` 1,2 로 저장되고 수정화면에 다시 그려짐 ·
+콘솔 에러 0 · 검증용 사업 2건(1107,1108)은 관련 4개 표에서 삭제 완료.
+admin·donation `test`+`bootJar` EXIT=0.
+
+**★주의(내가 겪은 함정)**: admin 의 donation 주소 프로퍼티는 `ghlove.donation-service.base-url`
+이다(`services.*` 아님). 틀린 키로 override 하면 **조용히 기존 8082 를 호출**해서
+"코드는 맞는데 저장이 안 되는" 것처럼 보인다 - 1차 검증이 그래서 0건으로 나왔다.
+
+**남은 것**: 목록 화면 썸네일이 `/uploads/donation/...` 를 admin 에서 찾아 404 (donation 이
+가진 파일이라 admin 정적 경로엔 없다). 이번 폼 작업과 무관한 **기존 문제**이고 목록·상세
+전반에 걸리므로 별도 처리 필요.
+
+### 공지 등록폼(notice) 제출 검증 이식 (2026-10-13, 사용자 지적)
+
+사용자가 AS-IS 화면 캡처와 함께 "내용에 사진을 2개 이상 올리면 그 갯수만큼 설명을 입력해야
+등록된다"고 지적. **TO-BE `designated/notice-form.html` 에는 제출 검증이 통째로 없었다** -
+이미지 설명 표는 있는데 검사하는 쪽이 없어 사진만 넣고 설명 없이 등록이 됐다.
+AS-IS `notice/form.jsp` validator 를 그대로 이식:
+공개여부 미선택 · 첨부 10개 초과 · 공백 설명행 제거 · `optionSize==0 && imageSize>0` ·
+**`optionSize != imageSize`** · alt 주입 · 에디터 빈 본문. 문구 verbatim.
+`scrollButtons()` 도 같이 넣었다(AS-IS에 있는데 빠져 있었다).
+**AS-IS가 주석처리한 500KB 검사는 켜지 않았다**([[as-is-parity-includes-disabled-state]]).
+
+**★함정 - 제출을 막으면 로딩막이 화면을 덮는다**: `op.common.js:1683` 이
+`$('form').not('.without-loading').on("submit", Common.loading.show)` 라서, submit 이벤트에서
+`preventDefault()` 로 막으면 **반투명 막(`#loading-dimmed`)이 남아 클릭이 전부 먹힌다**.
+AS-IS는 jQuery `.validator()` 를 쓰고 따로 `Common.loading.hide()` 를 부르는 자리도 있다.
+→ **검증 실패 분기마다 `Common.loading.hide()` 를 반드시 부른다**. 사업 폼·공지 폼 둘 다 적용.
+Playwright 에서 "element intercepts pointer events" 로 먼저 드러났다.
+
+**검증**: 사진 2 + 설명 0 → "시각 장애인을 위한 이미지 설명을 입력 부탁드립니다." ·
+사진 2 + 설명 1 → "…이미지 설명 갯수: 1 , …이미지 갯수: 2"(사용자 캡처와 동일) · 둘 다 URL 유지 ·
+사진 2 + 설명 2 → 저장되고 **본문에 alt 2개 주입 확인**, `img_seq` 1·2 저장 확인.
+검증용 공지 1건 삭제 완료. admin `test`+`bootJar` EXIT=0.
+
+**남긴 차이 1건**: TO-BE 입력칸은 HTML5 `required` 속성을 쓰고 AS-IS는 jQuery `.validator()`
+의 `.required` 클래스를 쓴다. 비어 있을 때 **브라우저 기본 툴팁 vs AS-IS alert** 으로 안내
+모양이 다르다(막는 동작 자체는 같다). `.validator()` 전환은
+[[playwright-smarteditor-submit-quirk]] 위험이 있어 건드리지 않았다.
+
+### 수정화면 남은 일수 D-Day 표기 (2026-10-13, 사용자 지적)
+
+목록에서 사업명을 누르면 가는 곳은 **수정 화면**(`/designated-donation/form/{prjId}`)이다.
+거기 "남은 일수"가 TO-BE는 숫자(`87 일`)였는데 **AS-IS는 D-Day 표기**다.
+
+**AS-IS `DesignatedDonation.getLeftDayStr()`**: `leftDay == 0 → "D-Day"` ·
+`> 0 → "D+" + n` · `< 0 → "D" + n`. 여기서 `leftDay` 는 매퍼의
+**`DATEDIFF(NOW(), DSGN_DNTN_BIZ_END_YMD)` = 오늘 − 종료일**(부호 있음)이라,
+종료일이 남아 있으면 음수 → `"D" + (-79)` = **D-79** 로 찍힌다. 지났으면 **D+408**.
+화면 출력은 `${leftDayStr} 일` 이라 **"D-79 일"** 이 된다(뒤의 "일"도 AS-IS 그대로).
+
+- donation `ProjectStat` 에 `leftDayStr` 추가(`leftDays` 숫자는 쓰는 곳이 있어 유지)
+- 세 분기 + 깨진 날짜까지 단위테스트로 고정: `DesignatedAdminServiceLeftDayStrTest`
+- **실측**: 1106(종료 20261231) → `D-79 일` · 204(종료 20250831, 지남) → `D+408 일`
+
+**★AS-IS 결함(옮기지 않음)**: `preview.jsp` 는 `D-${leftDay}` 로 **접두사를 직접 붙인다**.
+leftDay 가 음수라 AS-IS 미리보기는 **`D--79`** 로 찍힌다. TO-BE `preview.html` 은
+`'D-' + stat.leftDays`(0으로 clamp된 양수)라 우연히 정상으로 보인다 - 사용자가 지적한 건
+수정화면이고 미리보기는 지금이 더 맞게 나오므로 **건드리지 않았다**.
+
+**"상세설명이 아래에 미리보기로 보인다"는 지적**: form.jsp 에 별도 미리보기 블록은 없다(검색 0건).
+**스마트에디터가 저장된 본문을 렌더링해 보여주는 것**이고, TO-BE는 그 에디터 자체가 빠져 있어
+원문 HTML이 맨 textarea 로 보였던 것 - 위 ③ 재검수에서 이미 해소됐다(에디터 iframe 안에
+본문·이미지가 그려지는 것까지 실측 확인).
+
 ### 다음: ⑥ 권한요청(request, 1,174줄) → ⑦ 미리보기(632줄) → ⑧ 통계 2화면 잔여
 **재기동 대기**: donation은 2026-10-06 09시 현재 **내려가 있다**(위 기동 실패 후). admin은 떠 있지만
 팝업 수정분이 안 들어간 옛 jar다. 사용자가 재기동한 뒤 눈으로 볼 목록 -

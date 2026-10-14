@@ -92,7 +92,7 @@ public class DataBoardController {
     }
 
     @GetMapping("/data-board/file-download/{fileId}")
-    public ResponseEntity<Resource> download(@PathVariable String fileId) throws IOException {
+    public ResponseEntity<Resource> download(@PathVariable Integer fileId) throws IOException {
         DataBoardFile file = dataBoardService.fileOrThrow(fileId);
         Path target = Paths.get(uploadDir, "data-board", file.getFileName());
         Resource resource = new UrlResource(target.toUri());

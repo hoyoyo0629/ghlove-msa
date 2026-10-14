@@ -55,7 +55,7 @@ public class DataBoardApiController {
         return new DataBoardListResponse(rows, all.size(), currentPage, Math.max(totalPages, 1));
     }
 
-    public record DataBoardFileDto(String dataFileId, String orgFileName) {
+    public record DataBoardFileDto(Integer dataFileId, String orgFileName) {
     }
 
     public record DataBoardDetailDto(Integer dataId, String subject, String content, String displayDate,

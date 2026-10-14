@@ -38,87 +38,58 @@ public class WebConfig implements WebMvcConfigurer {
                 .addResourceLocations(location);
     }
 
-    /** 운영관리 콘솔 경로만 게이트한다 - 고객센터 공개 콘텐츠(/notices, /data-board, /events,
-     *  /faqs, /qna, /api/**)와 지자체 담당자용 /auth/cert-login*은 대상이 아니다.
-     *  /admin/manager-requests/new(회원 로그인만 필요, 관리자 아닌 사람이 신청하는 화면)와
-     *  /admin/manager-requests/complete는 의도적으로 제외 - 같은 /admin/manager-requests
-     *  경로라도 승인관리 목록(GET, 관리자 전용)과 approve/reject만 게이트한다. */
+    /**
+     * 로그인 게이트 - <b>기본 전부 보호(/**), 공개 경로만 제외</b>한다.
+     *
+     * <p>2026-10-13 이전에는 반대였다(보호할 경로를 하나씩 적는 화이트리스트). 그러면
+     * <b>새 운영자 화면을 추가하면서 목록에 안 넣으면 그 화면이 로그인 없이 열린다</b> -
+     * 실제로 13개 화면이 그렇게 열려 있었고({@code /point-history} 는 표 69행이 그대로 떴다),
+     * 세션 없이 들어온 요청이 컨트롤러까지 가서 {@code manager == null} NPE 500을 내기도 했다.
+     * 뒤집으면 실패 방향이 "빠뜨리면 열린다"에서 "빠뜨리면 막힌다"로 바뀐다 - 조용한
+     * 정보노출보다 눈에 띄는 차단이 낫다.
+     *
+     * <p>아래 제외 목록은 2026-10-13에 <b>347개 경로를 세션 없이 전부 호출해 실측</b>한
+     * 결과다(공개로 응답하던 것만 추렸다). 공개 화면을 새로 만들면 여기에 추가해야 한다.
+     */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(adminAuthInterceptor)
-                .addPathPatterns("/codes", "/codes/**", "/banners", "/banners/**", "/popups", "/popups/**",
-                        "/admin/notices", "/admin/notices/**",
-                        // 지자체공지사항(메뉴 5110) - 공지사항(5111)과 같은 표를 쓰고 조회범위만 다르다
-                        "/admin/locgov-notices", "/stats", "/stats/**",
-                        "/settlements", "/settlements/**", "/delivery-tracking", "/batch/**",
-                        "/admin/manager-requests", "/admin/manager-requests/*/*/approve", "/admin/manager-requests/*/*/reject",
-                        "/admin/manager-requests/popup/**",
-                        "/give-state", "/give-state/**", "/give-operation", "/give-operation/**",
-                        "/give-point", "/give-point/**", "/give-reqmng", "/give-reqmng/**",
-                        "/give-statistics", "/designated-projects", "/designated-projects/**",
-                        "/offgive", "/offgive/**", "/qna-admin", "/qna-admin/**",
-                        // 고객센터 FAQ 관리(메뉴 5104) - 공개 /faqs와 같은 표를 쓰지만 이쪽은 운영자만
-                        "/faq-admin", "/faq-admin/**",
-                        "/reconciliation/**", "/shop-statistics/**", "/access", "/access/**",
-                        "/log/**", "/privacy-log/**", "/admin/my-cert", "/admin/my-cert/**",
-                        "/mail-config", "/mail-config/**", "/isms-config", "/isms-config/**",
-                        "/email", "/email/**", "/batch-job", "/batch-job/**",
-                        "/message", "/message/**", "/batch-log", "/batch-log/**",
-                        // 개인정보 엑셀 다운로드 사유 기록 - 로그인한 운영자만 (공개 /common/message는 제외)
-                        "/common/opmanager/privacy-access-log", "/common/opmanager/privacy-access-log-update",
-                        "/site-config", "/site-config/**", "/policy", "/policy/**", "/community/**",
-                        "/seller", "/seller/**", "/brand", "/brand/**",
-                        "/coupon", "/coupon/**", "/coupon-regular", "/coupon-regular/**",
-                        "/admin/orders", "/admin/orders/**", "/admin/claims", "/admin/claims/**",
-                        "/admin/locgovs", "/admin/locgovs/**",
-                        // 도로명주소 검색 팝업 - 운영자만 쓰는 공통 팝업이라 같이 게이트한다
-                        "/admin/juso-popup",
-                        "/admin/data-board", "/admin/data-board/**", "/admin/menus", "/admin/menus/**",
-                        "/admin/search-keywords", "/admin/search-keywords/**", "/admin/seo", "/admin/seo/**",
-                        "/admin/managers", "/admin/managers/**", "/admin/members", "/admin/members/**",
-                        "/admin/secede-users", "/admin/secede-users/**", "/admin/sleep-users", "/admin/sleep-users/**",
-                        "/admin/gift-categories", "/admin/gift-categories/**", "/admin/gift-items", "/admin/gift-items/**",
-                        "/admin/gift-inquiries", "/admin/gift-inquiries/**",
-                        "/admin/main-banners", "/admin/main-banners/**", "/admin",
-                        "/admin/style-books", "/admin/style-books/**",
-                        "/admin/main-display",
-                        "/admin/person-in-charge", "/admin/person-in-charge/**",
-                        "/admin/off-person-in-charge", "/admin/off-person-in-charge/**",
-                        "/admin/roles", "/admin/roles/**",
-                        "/admin/user-levels", "/admin/user-levels/**",
-                        "/admin/welfare-centers", "/admin/welfare-centers/**",
-                        "/admin/send-mail-logs", "/admin/send-mail-logs/**", "/admin/send-sms-logs",
-                        "/admin/ums", "/admin/ums/**",
-                        // 1:1 문의(메뉴 5102) - 공개 Q&A(5112)와 같은 OP_QNA를 QNA_TYPE으로 갈라 본다.
-                        // 옛 /admin/shop-inquiries는 AS-IS 입점문의를 잘못 올려 둔 화면이라 제거했다.
-                        "/admin/inquiries", "/admin/inquiries/**",
-                        "/admin/maintenance", "/admin/maintenance/**",
-                        "/admin/manuals", "/admin/manuals/**",
-                        "/admin/seller-notices", "/admin/seller-notices/**",
-                        "/admin/surveys", "/admin/surveys/**",
-                        "/admin/honor-users", "/admin/honor-users/**",
-                        "/admin/featured", "/admin/featured/**",
-                        "/admin/mobile-category-edit", "/admin/mobile-category-edit/**",
-                        "/admin/excel-download-logs", "/admin/excel-download-logs/**",
-                        "/admin/order-agency", "/admin/order-agency/**",
-                        "/admin/pay-info", "/admin/pay-info/**",
-                        "/admin/gift-reviews", "/admin/gift-reviews/**",
-                        "/admin/category-teams", "/admin/category-teams/**",
-                        "/admin/nts-receipt-logs", "/admin/nts-receipt-logs/**",
-                        // 스마트에디터 사진·동영상·CTP 팝업(AS-IS SmartEditorController). 운영자 화면에서만
-                        // 열리고 파일을 디스크에 쓰므로 로그인 게이트 안에 둔다 - AS-IS는 프론트 공용 URL이라
-                        // 열려 있었지만, TO-BE admin은 운영자 전용 서비스라 공개할 이유가 없다(의도적 편차).
-                        "/smarteditor/**")
-                .excludePathPatterns("/admin/login", "/admin/logout",
+                .addPathPatterns("/**")
+                .excludePathPatterns(
+                        // --- 정적 자원 (인터셉터는 리소스 핸들러 요청에도 걸린다) ---
+                        "/content/**", "/css/**", "/images/**", "/fonts/**", "/favicon.ico",
+                        // 업로드 파일 - /uploads 는 admin 자기 화면용, /admin/uploads 는 storefront 용
+                        "/uploads/**", "/admin/uploads/**",
+                        // 스프링 기본 오류 페이지. 막으면 오류가 로그인 리다이렉트로 둔갑한다
+                        "/error",
+
+                        // --- 로그인·진입 경로 ---
+                        "/admin/login", "/admin/login/**", "/admin/logout", "/admin/access-denied",
+                        // 지자체 담당자 인증 로그인
+                        "/auth/cert-login", "/auth/cert-login/**", "/auth-swap",
+                        // 관리자 신청(회원 로그인만 필요 - 아직 관리자가 아닌 사람이 쓰는 화면).
+                        // 같은 /admin/manager-requests 라도 승인 목록·approve/reject 는 보호된다.
                         "/admin/manager-requests/new", "/admin/manager-requests/complete",
-                        // 실명인증 결과수신(사이렌24 → ok_url) - AS-IS OpmanagerHandlerInterceptor.isManagerPage도
-                        // /opmanager/offgive/sci-result를 관리자 페이지에서 뺀다(세션 없이 들어오는 벤더 콜백).
+                        "/admin/manager-requests/confirm",
+                        // 보안 로그아웃 콜백
+                        "/op_security_logout",
+
+                        // --- 고객센터 공개 콘텐츠(스토어프론트가 읽는다) ---
+                        "/notices", "/notices/**", "/data-board", "/data-board/**",
+                        "/events", "/events/**", "/faqs", "/faqs/**", "/qna", "/qna/**",
+                        "/policies/**", "/surveys/**",
+
+                        // --- AS-IS OpmanagerHandlerInterceptor.isManagerPage 예외 ---
+                        // 실명인증 결과수신(사이렌24 → ok_url) - 세션 없이 들어오는 벤더 콜백.
                         "/offgive/sci-result",
-                        // 시도→시군구 셀렉트 조회 - AS-IS isManagerPage 예외(/give/give-state/options-by-locgovCode).
-                        // 기탁서 등록(15102) 등 기부금관리(14101) 메뉴권한이 없는 롤도 부르는 공통 조회라, 권한검사를
-                        // 태우면 오프라인 담당자에게 권한없음 화면(HTML)이 돌아가 시군구가 전부 undefined가 된다.
+                        // 시도→시군구 셀렉트 조회(AS-IS /give/give-state/options-by-locgovCode). 기탁서 등록(15102) 등
+                        // 기부금관리(14101) 메뉴권한이 없는 롤도 부르는 공통 조회라, 권한검사를 태우면 오프라인 담당자에게
+                        // 권한없음 화면(HTML)이 돌아가 시군구가 전부 undefined가 된다.
                         "/give-state/options-by-locgovCode",
-                        // 개인정보 암호화 솔루션 설치 확인 페이지 - AS-IS isManagerPage 예외(/offgive/pdbtest).
-                        "/offgive/pdbtest");
+                        // 개인정보 암호화 솔루션 설치 확인 페이지(AS-IS /offgive/pdbtest).
+                        "/offgive/pdbtest",
+
+                        // --- 공개 API ---
+                        "/api/**", "/common/message", "/common/messages");
     }
 }

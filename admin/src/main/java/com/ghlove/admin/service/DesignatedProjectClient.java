@@ -127,11 +127,11 @@ public class DesignatedProjectClient {
     }
 
     public Project create(ProjectForm form, MultipartFile image, List<MultipartFile> images,
-                          boolean canSelfApprove, Long managerId) {
+                          List<String> imgExplns, boolean canSelfApprove, Long managerId) {
         try {
             return restClient.post().uri("/api/designated-projects/admin")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(toMultipart(form, image, images, canSelfApprove, managerId))
+                    .body(toMultipart(form, image, images, imgExplns, canSelfApprove, managerId))
                     .retrieve().body(Project.class);
         } catch (RestClientResponseException e) {
             throw new ManagerException(extractMessage(e, "지정기부사업 등록에 실패했습니다."));
@@ -139,14 +139,27 @@ public class DesignatedProjectClient {
     }
 
     public Project update(Long id, ProjectForm form, MultipartFile image, List<MultipartFile> images,
-                          boolean canSelfApprove, Long managerId) {
+                          List<String> imgExplns, boolean canSelfApprove, Long managerId) {
         try {
             return restClient.post().uri("/api/designated-projects/admin/{id}", id)
                     .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(toMultipart(form, image, images, canSelfApprove, managerId))
+                    .body(toMultipart(form, image, images, imgExplns, canSelfApprove, managerId))
                     .retrieve().body(Project.class);
         } catch (RestClientResponseException e) {
             throw new ManagerException(extractMessage(e, "지정기부사업 수정에 실패했습니다."));
+        }
+    }
+
+    /** AS-IS 수정화면의 "이미지 설명" 표를 다시 그릴 때 쓴다(순번 오름차순).
+     *  조회 실패는 빈 목록으로 삼킨다 - 이 표가 비어 보이는 쪽이 화면 500보다 낫다. */
+    public List<String> imgExplnsOf(Long id) {
+        try {
+            String[] list = restClient.get()
+                    .uri("/api/designated-projects/admin/{id}/img-explns", id)
+                    .retrieve().body(String[].class);
+            return list != null ? List.of(list) : List.of();
+        } catch (RestClientException e) {
+            return List.of();
         }
     }
 
@@ -164,10 +177,11 @@ public class DesignatedProjectClient {
         }
     }
 
-    /** AS-IS 수정화면의 읽기전용 세 칸. */
-    public record ProjectStat(long sumAmt, long cntrCnt, java.math.BigDecimal rateAmt, long leftDays) {
+    /** AS-IS 수정화면의 읽기전용 세 칸. {@code leftDayStr} 은 AS-IS 표기(D-Day / D-87 / D+5). */
+    public record ProjectStat(long sumAmt, long cntrCnt, java.math.BigDecimal rateAmt, long leftDays,
+                               String leftDayStr) {
         static ProjectStat empty() {
-            return new ProjectStat(0L, 0L, java.math.BigDecimal.ZERO, 0L);
+            return new ProjectStat(0L, 0L, java.math.BigDecimal.ZERO, 0L, "D-Day");
         }
     }
 
@@ -603,7 +617,7 @@ public class DesignatedProjectClient {
     }
 
     private static MultiValueMap<String, Object> toMultipart(ProjectForm form, MultipartFile image,
-                                                               List<MultipartFile> images,
+                                                               List<MultipartFile> images, List<String> imgExplns,
                                                                boolean canSelfApprove, Long managerId) {
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("dsgnDntnBizTtl", form.dsgnDntnBizTtl());
@@ -635,6 +649,16 @@ public class DesignatedProjectClient {
             for (MultipartFile file : images) {
                 if (file != null && !file.isEmpty()) {
                     body.add("images", toResource(file));
+                }
+            }
+        }
+        // AS-IS prjImageExplain[i].prjsValues - 상세설명 이미지의 접근성 설명.
+        // 공지(notice)와 같은 방식으로 같은 이름을 반복해 넣는다. 빈 줄은 화면에서
+        // 이미 걷어내지만(not null 컬럼) 여기서도 한 번 더 막는다.
+        if (imgExplns != null) {
+            for (String expln : imgExplns) {
+                if (expln != null && !expln.isBlank()) {
+                    body.add("imgExplns", expln);
                 }
             }
         }
