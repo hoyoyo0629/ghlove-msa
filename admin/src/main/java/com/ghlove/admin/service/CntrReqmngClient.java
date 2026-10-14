@@ -107,6 +107,27 @@ public class CntrReqmngClient {
         }
     }
 
+    /** 기탁서 상세의 "기부취소"(AS-IS offgiveCancel → giveReqmngInsert, 화면 입력 검증 없음). */
+    public void submitOffgiveCancel(String cntrSn, String sttemntPayDe, String discription, Long managerId) {
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("cntrSn", cntrSn);
+        if (sttemntPayDe != null) {
+            body.add("sttemntPayDe", sttemntPayDe);
+        }
+        if (discription != null) {
+            body.add("discription", discription);
+        }
+        body.add("managerId", String.valueOf(managerId));
+        try {
+            restClient.post().uri("/api/cntr-reqmng/offgive-cancel")
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(body)
+                    .retrieve().toBodilessEntity();
+        } catch (RestClientResponseException e) {
+            throw new ManagerException(extractMessage(e, "기부취소 요청에 실패했습니다."));
+        }
+    }
+
     public void approve(Long reqId, Long managerId) {
         try {
             restClient.post().uri("/api/cntr-reqmng/{reqId}/approve?managerId={managerId}", reqId, managerId)

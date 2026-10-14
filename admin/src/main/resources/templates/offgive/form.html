@@ -3,168 +3,1676 @@
 <head>
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
-    <title>오프라인기부 현장접수 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <title>기탁서 등록 - 고향사랑e음 (admin service)</title>
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<!-- AS-IS opmanager/offgive/form.jsp("기탁서 등록") 재현 - 은행창구/행정복지센터 접수
-     담당자가 현장에서 기부를 등록한다. 기존회원 아이디를 입력하면 그 계정으로, 비워두면
-     방문 시민을 즉석가입시킨다(OffgiveService.register 참고, AS-IS의 "계좌 없으면 즉석생성"
-     로직). 실명인증은 담당자가 신분증을 직접 확인하는 것으로 대체(원격 SMS 인증이 필요없는
-     대면 접수라 의도적으로 단순화 - 온라인 실명인증 모듈은 이번 스코프 밖). 주민등록번호/
-     답례품 선택+배송정보/약관동의는 이 프로젝트 도메인에 없어 생략(답례품은 기부와 분리된
-     별도 order/gift 흐름). board_write_table(td.label) 레이아웃으로 재현. -->
+<!--/* AS-IS opmanager/offgive/form.jsp(기탁서 등록, 메뉴 15102) verbatim 이식(2026-10-13 전면 재이식).
+     마크업·문구·클래스는 JSP 그대로, JS도 원문 그대로이고 바뀐 건 경로뿐이다
+     (/opmanager/offgive/* → /offgive/*, /opmanager/give/give-state/* → /give-state/*,
+     /opmanager/juso-popup → /admin/juso-popup, 등록 후 상세 /offgive/detail/{접수번호}).
+     JSP EL로 박히던 값(접수은행·지점명·로그인ID·M00159 문구)은 아래 th:inline 블록에서 넘긴다.
+     AS-IS의 nextSave()→goContry()→getAddLink()/goContryDonation()은 호출처가 없는 죽은 코드라
+     (호출 0건, 그 끝의 /getCdonationCharge는 컨트롤러에 매핑도 없다) 옮기지 않았다.
+     <inpit id="rcvFlag"> 오타는 같은 동작을 하는 <input type="hidden">으로 둔다. */-->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
-        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <div class="location"><a th:href="@{/offgive}">오프라인기부 접수 관리</a></div>
-    <h3><span>기탁서 등록</span></h3>
 
-    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+  <!-- 개발 영역 -->
+<div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <div class="board_write">
-        <table class="board_write_table" summary="기탁서 등록">
-            <colgroup><col style="width:220px;"><col></colgroup>
-            <tbody>
-            <tr>
-                <td class="label">기존 회원번호</td>
-                <td>
-                    <input type="number" id="userId" name="userId" form="offgiveForm">
-                    <p style="font-size:12px; color:#666; margin-top:4px;">있으면 입력, 없으면 비워두고 아래 방문자 정보를 입력하세요.</p>
-                </td>
-            </tr>
-            <tr><td class="label">이름</td><td><input type="text" id="walkInName" name="walkInName" maxlength="50" form="offgiveForm"></td></tr>
-            <tr><td class="label">휴대폰</td><td><input type="text" id="walkInPhone" name="walkInPhone" maxlength="20" placeholder="01012345678" form="offgiveForm"></td></tr>
-            <tr><td class="label">생년월일</td><td><input type="date" id="walkInBirthday" name="walkInBirthday" form="offgiveForm"></td></tr>
-            <tr>
-                <td class="label">주소</td>
-                <td>
-                    <input type="text" id="walkInAddress" name="walkInAddress" maxlength="255" form="offgiveForm">
-                    <p style="font-size:12px; color:#666; margin-top:4px;">※ 신분증을 확인해 본인 여부를 직접 확인해 주세요. 회원번호가 없으면 위 정보로 계정이 즉시 발급됩니다.</p>
-                </td>
-            </tr>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>기부 지자체</td>
-                <td>
-                    <div class="flex_box gap-08">
-                        <select id="upperLocgovCode" onchange="filterLocgov()">
-                            <option value="">시·도 선택</option>
-                            <option th:each="p : ${provinces}" th:value="${p.key}" th:text="${p.value}"></option>
-                        </select>
-                        <select id="locgovCode" name="locgovCode" required form="offgiveForm">
-                            <option value="">시·군·구 선택</option>
-                            <option th:each="l : ${allLocgovs}" th:value="${l.locgovCode}" th:text="${l.locgovNm}"
-                                    th:attr="data-upper=${l.upperLocgovCode}"></option>
-                        </select>
-                    </div>
-                </td>
-            </tr>
-            <tr>
-                <td class="label"><span class="required_mark">*</span>기부금액</td>
-                <td><input type="number" id="amount" name="amount" required min="1" form="offgiveForm"> 원</td>
-            </tr>
-            <tr><td class="label">접수은행/지점</td><td><input type="text" id="rceptBankNm" name="rceptBankNm" maxlength="100" placeholder="예: 농협은행 순천지점" form="offgiveForm"></td></tr>
-            <tr>
-                <td class="label">서명</td>
-                <td>
-                    <!-- AS-IS MagicLineController(매직라인 태블릿 전자서명 연계, signedFormR)를
-                         대체하는 순수 프론트 canvas 서명패드 - 외부 하드웨어/연계 없이 방문자가
-                         마우스/터치로 직접 서명하면 PNG로 캡처해 서버에 저장한다(선택 항목). -->
-                    <canvas id="signaturePad" width="400" height="150"
-                            style="border:1px solid #ccc; background:#fff; touch-action:none; cursor:crosshair;"></canvas>
-                    <div class="flex_box gap-08" style="margin-top:6px;">
-                        <button type="button" class="small-btn ghost" onclick="clearSignature()">지우기</button>
-                    </div>
-                    <input type="hidden" id="signatureImage" name="signatureImage" form="offgiveForm">
-                    <p style="font-size:12px; color:#666; margin-top:4px;">방문자가 직접 서명해 주세요 (선택 항목).</p>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+<h3><span>기탁서 등록</span></h3>
+
+<div class="btn_all btn_right mb15">
+    <div class="flex_box gap-08">
+    	<!-- <button type="button" class="btn btn-dark-gray btn-small" onclick="" id="testBtn" style="display:none;" disabled="disabled">테스트</button> -->
+    	<!-- <button type="button" class="btn btn-dark-gray btn-small" onclick="javascript:location.href = '/opmanager/manual/manager/file-download/15102'">지정기부목록 다운로드(임시)</button> -->
+    	<button type="button" class="btn btn-dark-gray btn-small" onclick="prjListExcelDownload();">지정기부목록 다운로드</button>
+        <!-- <button type="button" class="btn btn-dark-gray btn-small" onclick="window.open('/upload/editor/offgive/offgive2.pdf','_blank');">기탁서 양식 및 약관 출력</button> -->
+		<a href="/upload/editor/offgive/offgive2.pdf" download="기탁서양식.pdf">
+			<button type="button" class="btn btn-dark-gray btn-small">기탁서 양식 및 약관 출력</button>
+		</a>
     </div>
-    <form id="offgiveForm" th:action="@{/offgive}" method="post"></form>
-    <div class="btn_all btn_center">
-        <div class="flex_box gap-08">
-            <button type="submit" form="offgiveForm" class="btn btn-dark-gray btn-small">현장접수 등록</button>
-            <a th:href="@{/offgive}" class="btn btn-dark-default btn-small">취소</a>
-        </div>
-    </div>
+</div>
+
+<form id="offgive" method="post" action="/offgive/create">
+	<input type="hidden" id="mberCi" name="mberCi" value="" />
+	<input type="hidden" id="mberDi" name="mberDi" value="" />
+	<input type="hidden" id="gender" name="gender" value="" />
+	<input type="hidden" id="birthday" name="birthday" value="" />
+	<input type="hidden" id="userId" name="userId" value="" />
+	<input type="hidden" id="cntrAmtMax" name="cntrAmtMax" value="" />
+	<input type="hidden" id="juso" name="juso" value="" />
+	<input type="hidden" id="elctrnPayNo" name="elctrnPayNo" value="" />
+	<input type="hidden" id="linkMngKey" name="linkMngKey" value="" />
+	<input type="hidden" id="serviceResult" name="serviceResult" value="1" />
+	<input type="hidden" id="tempUserName" name="tempUserName" value="" />
+
+	<input type="hidden" id="infoAgreAt_1_psitnLocgovUpperCodeTmp" name="infoAgreAt_1_psitnLocgovUpperCodeTmp" value="" />
+	<input type="hidden" id="infoAgreAt_1_psitnLocgovCodeTmp" name="infoAgreAt_1_psitnLocgovCodeTmp" value="" />
+	<input type="hidden" id="infoAgreAt_1_psitnLocgovNameTmp" name="infoAgreAt_1_psitnLocgovNameTmp" value="시,구,군" />
+	<input type="hidden" id="infoAgreAt_2_psitnLocgovUpperCodeTmp" name="infoAgreAt_2_psitnLocgovUpperCodeTmp" value="" />
+	<input type="hidden" id="infoAgreAt_2_psitnLocgovCodeTmp" name="infoAgreAt_2_psitnLocgovCodeTmp" value="" />
+	<input type="hidden" id="infoAgreAt_2_psitnLocgovNameTmp" name="infoAgreAt_2_psitnLocgovNameTmp" value="시,구,군" />
+
+	<input type="hidden" id="addrRnMgtSn" name="addrRnMgtSn" value="" />
+	<input type="hidden" id="addrUdrtYn" name="addrUdrtYn" value="" />
+	<input type="hidden" id="addrBuldMnnm" name="addrBuldMnnm" value="" />
+	<input type="hidden" id="addrBuldSlno" name="addrBuldSlno" value="" />
+	<input type="hidden" id="addrZipNo" name="addrZipNo" value="" />
+	<input type="hidden" id="addrAdmCd" name="addrAdmCd" value="" />
+	<input type="hidden" id="addrBdMgtSn" name="addrBdMgtSn" value="" />
+	<input type="hidden" id="addrBoadAddr" name="addrBoadAddr" value="" />
+
+	<input type="hidden" id="loginLocGovCode" name="loginLocGovCode" value="" />
+	<input type="hidden" id="phoneNumber" name="phoneNumber" value="" />
+	<input type="hidden" id="orderItems" name="orderItems" value="" />
+	<div class="board_write">
+	    <table class="board_write_table" summary="">
+	        <colgroup>
+	            <col style="width:110px;">
+	            <col style="width:110px;">
+	            <col style="*">
+	        </colgroup>
+	        <tbody>
+	            <tr>
+	                <td colspan="2" class="label"><span class="required_mark">*</span>이름</td>
+	                <td>
+	                    <div class="flex_box gap-08 item-center">
+	                        <input id="userName" name="userName" title="이름" class="input_txt required _filter wd-150" type="text" autocomplete="off" value="" maxlength="50">
+	                    </div>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td colspan="2" class="label"><span class="required_mark">*</span>주민등록번호</td>
+	                <td>
+	                    <div class="flex_box gap-08 item-center">
+	                        <input id="jumin1" name="jumin1" title="주민등록번호 앞자리" class="input_txt required _filter wd-150 _number" type="text" autocomplete="off" value="" maxlength="6" >
+	                        <span class="wave">-</span>
+	                        <input id="jumin2" name="jumin2" title="주민등록번호 뒷자리" class="input_txt required _filter wd-150 _number" type="password" autocomplete="new-password" value="" maxlength="7" >
+
+	                        <button type="button" class="btn btn-default btn-mini" id="btnSciCall" onClick="sciCallClick()"><span>실명인증</span></button>
+	                    </div>
+	                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="wave tip">* 실명 등록 이 필요한 경우 아래 URL 을 이용하시기 바랍니다.<br></span>
+	                    &nbsp;&nbsp;&nbsp;&nbsp;바로가기 ▶ <a href="https://www.siren24.com/mysiren/customer/sir_g0201_01.jsp" target="_blank">https://www.siren24.com/mysiren/customer/sir_g0201_01.jsp</a>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td colspan="2" class="label"><span class="required_mark">*</span>휴대폰</td>
+	                <td>
+	                    <div class="flex_box gap-08 item-center">
+	                        <select id="phoneNumber1" name="phoneNumber1" title="선택" class="wd-100 _number">
+	                        	<option th:each="p : ${phone}" th:value="${p.key}" th:attr="label=${p.value}"></option>
+	                        </select>
+	                        <span class="wave">-</span>
+	                        <input id="phoneNumber2" name="phoneNumber2" title="휴대폰중간번호" class="input_txt required _filter wd-100 _number" type="text" autocomplete="off" maxlength="4">
+	                        <span class="wave">-</span>
+	                        <input id="phoneNumber3" name="phoneNumber3" title="휴대폰마지막번호" class="input_txt required _filter wd-100 _number" type="text" autocomplete="off" maxlength="4">
+
+	                        <button type="button" class="btn btn-default btn-mini" id="btnUpdatePhoneNumber" onClick="setPhoneNumber()" style="display:none"><span>휴대폰번호 수정하기</span></button>
+	                    </div>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td colspan="2" class="label">거주지 주소</td>
+	                <td>
+	                    <div class="flex_box gap-08">
+	                        <input id="post" name="post" title="" class="input_txt required _filter wd-150" type="text" disabled>
+	                        <button type="button" class="btn btn-default btn-mini" id="btn_address" onClick="jusoPopup('post')">주소찾기</button>
+	                    </div>
+	                    <div class="flex_box gap-08">
+	                        <input id="address" name="address" title="" class="input_txt required _filter half" type="text" disabled>
+	                        <input id="addressDetail" name="addressDetail" title="" class="input_txt required _filter half" type="text">
+	                    </div>
+	                    <!-- <div class="flex_box" style="padding-top: 0;">
+                    		<span class="wave tip">※ 답례품 제공지는 거주지 주소와 동일합니다.</span>
+	                    </div> -->
+	                </td>
+	            </tr>
+	            <tr>
+	                <td colspan="2" class="label"><span class="required_mark">*</span>기부자 행정지 주소</td>
+	                <td>
+	                    <div class="flex_box gap-08 item-center">
+	                        <select id="psitnLocgovUpperCode" name="psitnLocgovUpperCode" title="시도선택" class="wd-150" onChange="psitnLocgovUpperCodeChange(this.value)" disabled>
+	                            <option value="">시도선택</option>
+	                            <option th:each="w : ${wdr}" th:value="${w.key}" th:attr="label=${w.value}"></option>
+	                        </select>
+	                        <select id="psitnLocgovCode" name="psitnLocgovCode" title="시,구,군" class="wd-150" disabled>
+	                            <option value="">시,구,군</option>
+	                        </select>
+	                        <!-- 이미 스크립트가 들어가 있는 상황이라 checked 로 display none 처리 했음. -->
+	                        <input id="rdo2-1" name="infoAgreAt" type="radio" value="1" checked="checked" style="display:none">
+	                        <button type="button" class="btn btn-default btn-mini" id="btn_infoAgreAt" onClick="mopas()">행정주소검색</button>
+	                        <span id="locUserSpan" style="display:none">주민등록상 성함 : <input id="locUserName" name="locUserName" title="행정주소 검색에 필요한 이름" class="input_txt wd-150 " type="text" maxlength="10" ><span class="wave tip">※ 실명인증 성함과 등본 성함이 다를 수 있습니다. (ex. 유>류, 열>렬 기타 등등)</span></span>
+	                    </div>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td colspan="2" class="label"><span class="required_mark">*</span>기부 지자체</td>
+	                <td>
+	                    <div class="flex_box gap-08 item-center">
+	                        <select id="locgovUpperCode" name="locgovUpperCode" title="시도선택" class="wd-150" onChange="locgovUpperCodeChange(this.value)">
+	                            <option value="">시도선택</option>
+	                            <option th:each="w : ${wdr}" th:value="${w.key}" th:attr="label=${w.value}"></option>
+	                        </select>
+	                        <select id="locgovCode" name="locgovCode" title="시,구,군" class="wd-150" onChange="locgovCodeChange(this.value)">
+	                            <option value="">시,구,군</option>
+	                        </select>
+	                        <div class="checkbox" style="margin-left: 10px;">
+	                            <input type="checkbox" id="prjChk" name="prjChk" onchange="javascript:changePrjChk(this.checked);">
+	                            <label for="prjChk">특정사업에 기부하기</label>
+	                        </div>
+	                        <select id="prjId" name="prjId" title="특정사업에 기부하기 선택" class="wd-300" style="display:none;">
+	                            <option value="0">자치단체에 기부하기</option>
+	                        </select>
+	                    </div>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td colspan="2" class="label"><span class="required_mark">*</span>기부금액</td>
+	                <td>
+	                    <div class="flex_box gap-08 item-center">
+	                        <input autocomplete="off" id="cntrAmt" name="cntrAmt" title="" class="input_txt required _filter wd-150 _number_comma" type="text" maxlength="8" disabled>
+	                        <span class="wave">원</span>
+
+                            <span class="wave tip wd-120 flex_box juc-sbt"><span class="mr-auto">(한도&nbsp;:&nbsp;</span><span id="cntrAmtMaxText">0</span>원)</span>
+
+
+	                        <button type="button" class="btn btn-default btn-mini" id="btnMaxCheck" onClick="maxCheck()" disabled>한도체크</button>
+	                        <span class="wave tip">※ 일년에 최대 <th:block th:text="${limitAmtString}"></th:block>원까지 기부가 가능합니다.</span>
+	                    </div>
+	                    <div>예상 발생 포인트: <span id="generatePoint">0</span>P</div>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td colspan="2" class="label"><span class="required_mark">*</span>답례품(포인트 또는 대표 답례품)<br>제공 여부 선택</td>
+	                <td>
+	                	<!-- 20221215 수정 -->
+                        <div class="flex_box gap-12 item-center">
+                            <div class="input-form">
+                                <input id="rdo1-1" name="rtnpsntReqstCode" type="radio" value="100" checked="checked">
+                                <label for="rdo1-1">답례품을 제공 받음</label>
+                            </div>
+                            <div class="input-form">
+                                <input id="rdo1-2" name="rtnpsntReqstCode" type="radio" value="300">
+                                <label for="rdo1-2">답례품을 제공 받지 않음</label>
+                            </div>
+
+                        </div>
+                        &nbsp;&nbsp;&nbsp;<span class="wave tip">※ '답례품 제공받지 않음'</span> 선택 시 <font color="blue">포인트</font>가 <span class="wave tip"><font size="3" style="font-weight:bold">미지급</font></span> 됩니다.&nbsp;&nbsp;&nbsp;<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[주의] '답례품을 제공받지 않음' 선택 시 변경이 불가능 합니다.
+	                </td>
+	            </tr>
+	            <tr name="checkReward" id="mainItem">
+	                <td colspan="2" class="label">대표 답례품<br>(선택하지 않는 경우<br>포인트로 지급)</td>
+	                <td id="selectLoc" style="display: flex;">
+	                	<div class="gap-12 item-center">
+	              			<span class="wave tip">※ 기부 지자체 시,구,군을 선택하시면 그 지자체에 대표답례품이 보입니다.</span>
+	              			<br/>
+	              			<span class="wave tip">※ 재고가 10개 이상인 경우에 노출됩니다.</span>
+	              		</div>
+	                </td>
+	            </tr>
+				<tr name="checkReward">
+	            	<td class="label" rowspan="3">대표 답례품<br>배송 정보</td>
+	            	<td class="label">받으시는 분</td>
+	                <td>
+	                    <div class="flex_box gap-08 item-center" style="margin-right: 10px;">
+	                    <!-- <div class="checkbox" style="margin-left: 10px;"> -->
+	                        <input id="rcvUserName" name="rcvUserName" title="수취인 이름" class="input_txt required _filter wd-150" type="text" autocomplete="off" value="" maxlength="50">
+	                        <input type="checkbox" id="chkCopy" name="chkCopy"><label for="chkCopy">기부자 정보와 동일</label>
+	                    </div>
+	                </td>
+	            </tr>
+				<tr name="checkReward">
+	            	<td class="label">휴대폰 번호</td>
+	                <td>
+	                    <div class="flex_box gap-08 item-center">
+	                        <select id="rcvPhoneNumber1" name="rcvPhoneNumber1" title="선택" class="wd-100 _number">
+	                        	<option th:each="p : ${phone}" th:value="${p.key}" th:attr="label=${p.value}"></option>
+	                        </select>
+	                        <span class="wave">-</span>
+	                        <input id="rcvPhoneNumber2" name="rcvPhoneNumber2" title="휴대폰중간번호" class="input_txt required _filter wd-100 _number" type="text" autocomplete="off" maxlength="4">
+	                        <span class="wave">-</span>
+	                        <input id="rcvPhoneNumber3" name="rcvPhoneNumber3" title="휴대폰마지막번호" class="input_txt required _filter wd-100 _number" type="text" autocomplete="off" maxlength="4">
+	                    </div>
+	                </td>
+	            </tr>
+				<tr name="checkReward">
+	            	<td class="label">배송지 주소</td>
+	                <td>
+	                    <div class="flex_box gap-08">
+	                        <input id="rcvPost" name="rcvPost" title="" class="input_txt required _filter wd-150" type="text" disabled>
+	                        <button type="button" class="btn btn-default btn-mini" id="btn_rcv_address" onClick="jusoPopup('rcvPost')">주소찾기</button>
+	                    </div>
+	                    <div class="flex_box gap-08">
+	                        <input id="rcvAddress" name="rcvAddress" title="" class="input_txt required _filter half" type="text" disabled>
+	                        <input id="rcvAddressDetail" name="rcvAddressDetail" title="" class="input_txt required _filter half" type="text">
+	                    </div>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td colspan="2" class="label">
+						오프라인 기부 접수 지점
+	                </td>
+	                <td>
+	                    <div>
+	                        <th:block th:text="${offBankLabel}"></th:block>&nbsp;<th:block th:text="${psitnNm}"></th:block>
+	                    </div>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td colspan="2" class="label"><span class="required_mark">*</span>약관 동의</td>
+	                <td>
+	                    <div class="flex_box gap-12">
+	                        <div class="checkbox">
+	                            <input type="checkbox" id="chk" name="chk">
+	                            <label for="chk">동의함</label>
+	                        </div>
+	                    </div>
+	                </td>
+	            </tr>
+	        </tbody>
+	    </table>
+	</div>
+	<div class="btn_all btn_center">
+	    <div class="flex_box gap-08">
+	        <button type="button" class="btn btn-dark-gray btn-small" onClick="save()">등록</button>
+	        <button type="button" class="btn btn-defualt btn-small" onClick="location.href='/offgive/new'">초기화</button>
+	    </div>
+	</div>
+
+</form>
+
+<!-- 실명인증 form -->
+<form id="sciCall" name="sciCall" method="post" action="/offgive/sci-call" target="sciCallIframe">
+	<input type="hidden" id="sci_jumin1" name="sci_jumin1" value="" />
+	<input type="hidden" id="sci_jumin2" name="sci_jumin2" value="" />
+	<input type="hidden" id="sci_name" name="sci_name" value="" />
+</form>
+<iframe name="sciCallIframe" style="display:none;" width="500px" height="500px"></iframe>
+
+<form name="AKCFrm" id="AKCFrm" method="post">
+    <input type="hidden" name="confmKey" value="U01TX0FVVEgyMDIyMTEyNTE0MTUzMTExMzI1OTc=" />
+    <input type="hidden" name="encodingType"   value=""   />
+    <input type="hidden" name="cssUrl" value="" />
+    <input type="hidden" name="resultType" value="4" />
+    <input type="hidden" name="currentPage" id="currentPage" value="1" />
+    <input type="hidden" name="countPerPage" value="1" />
+    <input type="hidden" name="keyword" id="keyword" value="" />
+</form>
+<input type="hidden" id="itemTotalPrice" />
+<input type="hidden" id="rcvFlag"/>
+<!-- 암호화 모듈 -->
+<script type="text/javascript" th:src="@{/content/modules/jsencrypt.min.js}"></script>
+<script type="text/javascript" th:src="@{/content/popup/popup.js}"></script>
+<style>
+.quantity-control {
+	margin-top: 1rem;
+	display: inline-flex;
+	border: 1px solid #999;
+	overflow: hidden;
+}
+.counter-box {
+	width: 30px;
+	height: 36px;
+	font-size: 16px;
+	border: none;
+	background-color: #f0f0f0;
+	cursor: ponter;
+}
+.counter-input {
+	width: 42px;
+	height: 30px;
+	text-align: center;
+	border: none;
+	background-color: #fff;
+	font-size: 16px;
+}
+</style>
+<script type="text/javascript" th:inline="javascript">
+/*<![CDATA[*/
+// AS-IS JSP EL 값: ${requestContext.user.userId} / ${offBank.label} / ${psitnNm} / ${op:hasRole('ROLE_ADMIN_11')} / ${op:message('M00159')}
+var OFFGIVE_LOGIN_USER_ID = /*[[${loginUserId}]]*/ 0;
+var OFFGIVE_OFF_BANK_LABEL = /*[[${offBankLabel}]]*/ "";
+var OFFGIVE_PSITN_NM = /*[[${psitnNm}]]*/ "";
+var OFFGIVE_HAS_ROLE_ADMIN_11 = "false";
+var OFFGIVE_MSG_M00159 = /*[[${msg.get('M00159')}]]*/ "";
+/*]]>*/
+</script>
+<script type="text/javascript" th:inline="none">
+let txprSp;			// 지방 세외 내국인(01), 외국인(05) 등 납부자구분
+let orderItemValue = []; // 오프라인 답례품 정보 - item_id, count, option_id
+$(function() {
+	// 초기값
+	$("#phoneNumber1").val("010");
+	$("#psitnLocgovUpperCode").prop("disabled", true);
+	$("#psitnLocgovCode").prop("disabled", true);
+	pop.openNotice('N');
+
+	// 행정정보 공동이용 동의 활성/비활성화
+	$("input[name='infoAgreAt']").click(function() {
+    	$("#btn_infoAgreAt").prop("disabled", this.value == 1 ? false : true);
+
+
+		if( this.value == 1) {	// 동의
+			$("#psitnLocgovUpperCode").val($("#infoAgreAt_1_psitnLocgovUpperCodeTmp").val());
+			$("#psitnLocgovCode option").val($("#infoAgreAt_1_psitnLocgovCodeTmp").val());
+			$("#psitnLocgovCode option").text($("#infoAgreAt_1_psitnLocgovNameTmp").val());
+		} else {	// 비동의
+			$("#psitnLocgovUpperCode").val($("#infoAgreAt_2_psitnLocgovUpperCodeTmp").val());
+			$("#psitnLocgovCode option").val($("#infoAgreAt_2_psitnLocgovCodeTmp").val());
+			$("#psitnLocgovCode option").text($("#infoAgreAt_2_psitnLocgovNameTmp").val());
+		}
+	});
+
+	// 답례품을 제공 받지 않음 선택 시 메시지 띄움
+	$('input:radio[name=rtnpsntReqstCode]').change(function(){
+		if (this.value != "100") {
+			alert("답례품 제공받지 않음 선택 시 포인트가 미지급 됩니다.");
+			$('tr[name="checkReward"]').hide();
+		} else {
+			$('tr[name="checkReward"]').show();
+		}
+	});
+
+	getUserInfo();
+
+});
+
+//로그인 지자체코드 정보 조회
+function getUserInfo () {
+	var userId = OFFGIVE_LOGIN_USER_ID;
+	//var userId = $("#userId").val();
+	$.get(url("/offgive/locgov/"+userId), {}, function(response) {
+		if(response.isSuccess && response.data){
+			$("#loginLocGovCode").val(response.data);
+		}
+	});
+}
+
+
+// 기부자 행정지 주소 변경
+function psitnLocgovUpperCodeChange(value) {
+	Common.loading.display = false;
+
+	$("#psitnLocgovCode option").remove();
+	if (value != "") {
+		$.post(url("/give-state/options-by-locgovCode"), {'code' : value}, function(response) {
+
+			for (var i = 0; i < response.length; i++) {
+	            var options = '<option value="' + response[i].LOCGOV_CODE + '">' + response[i].LOCGOV_NM + '</option>';
+	            $('#psitnLocgovCode').append(options);
+	        }
+
+
+	    });
+	} else {
+        $('#psitnLocgovCode').append('<option value="">시,구,군</option>');
+	}
+}
+
+// 기부 지자체 변경
+function locgovUpperCodeChange(value) {
+	Common.loading.display = false;
+
+	$("#locgovCode option").remove();
+	if (value != "") {
+		$.post(url("/give-state/options-by-locgovCode"), {'code' : value}, function(response) {
+
+			for (var i = 0; i < response.length; i++) {
+	            var options = '<option value="' + response[i].LOCGOV_CODE + '">' + response[i].LOCGOV_NM + '</option>';
+	            $('#locgovCode').append(options);
+	        }
+
+			getLocGovLmtt(response[0].LOCGOV_CODE);
+
+	    });
+	} else {
+        $('#locgovCode').append('<option value="">시,구,군</option>');
+	}
+
+	getDesignatedDonationInfo(value);
+}
+
+function getLocGovLmtt(locgovCode) {
+	Common.loading.display = false;
+
+	$.ajax({
+		url : '/offgive/getLocGovLmtt',
+		type : 'post',
+		data : {cityCode : locgovCode},
+		async : true,
+		success : function (response) {
+			if (response.isSuccess && response.data) {
+				alert("선택하신 지자체는\n" + response.data.violtResnCn + "으로\n" + response.data.lmttBgnDe + "부터 " + response.data.lmttEndDe + "일까지 \n기부가 불가능합니다.");
+				$("#locgovCode").focus();
+				return false;
+			} else {
+				return true;
+			}
+		}
+	});
+}
+
+//기부 지자체 변경 (하위)
+function locgovCodeChange(locgovCode) {
+	getLocGovLmtt(locgovCode); // 기부제한 조회
+	getDesignatedDonationInfo(locgovCode); // 지정사업 조회
+}
+
+// 실명인증
+function sciCallClick() {
+	Common.loading.display = false;
+
+	if(validation("userName", "이름")) return false;
+	if(validation("jumin1", "주민등록번호")) return false;
+	if(validation("jumin2", "주민등록번호")) return false;
+
+	if ($("#offgive #jumin1").val().length + $("#offgive #jumin2").val().length != 13) {
+		alert("주민번호는 13자리로 입력하셔야 합니다.")
+		return;
+	}
+
+	$("#sciCall #sci_jumin1").val($("#offgive #jumin1").val());
+	$("#sciCall #sci_jumin2").val($("#offgive #jumin2").val());
+	$("#sciCall #sci_name").val($("#offgive #userName").val());
+
+	$("#sciCall").submit();
+}
+
+// 실명인증 callbak
+function sciResponse(sciUser) {
+
+	if (sciUser.result == 1) {	// 성공
+		$("#mberCi").val(sciUser.ci);
+		$("#mberDi").val(sciUser.di);
+
+		// 우리쪽 회원 유무 확인
+		$.post(url("/offgive/user-check"), {'mberCi' : sciUser.ci}, function(response) {
+			var userId = "";
+			var post = "";
+			var address = "";
+			var addressDetail = "";
+			var phoneNumber1 = "010";
+			var phoneNumber2 = "";
+			var phoneNumber3 = "";
+			var upper_locgov_mapng_code = "";
+			var locgov_mapng_code = "";
+			var locgov_nm = "시,구,군";
+
+			var disabled = false;
+
+			if(response.isSuccess){
+				if (response.data != null) {
+					disabled = true;
+
+					userId = response.data.user.userId;
+					post = response.data.user.userDetail.post;
+					address = response.data.user.userDetail.address;
+					addressDetail = response.data.user.userDetail.addressDetail;
+
+					//휴대폰번호정보입력
+					phoneNumberSet(response.data.user.phoneNumber);
+					if(response.data.user.phoneNumber != null) {
+						$("#phoneNumber").val(response.data.user.phoneNumber);
+						$("#btnUpdatePhoneNumber").show();
+					}
+				}
+
+				$("#userId").val(userId);
+				$("#post").val(post);
+				$("#address").val(address);
+				$("#addressDetail").val(addressDetail);
+
+				$("#addressDetail").prop("disabled", disabled);
+
+				// 실명인증 시 공통 적으로 초기화 (무조건 disabled true false)
+				$("#btnSciCall").prop("disabled", true);
+				$("#userName").val($("#userName").val().replace(/ /gi, ''));	// 공백제거
+				$("#userName").prop("disabled", true);
+				$("#jumin1").prop("disabled", true);
+				$("#jumin2").prop("disabled", true);
+				$("#btnMaxCheck").prop("disabled", false);
+				$("#cntrAmt").prop("disabled", false);
+				$("#cntrAmt").val("");	// 기부금액
+
+				alert("실명인증 되었습니다. \n다른 정보의 실명인증이 필요하시면 페이지를 초기화해 주세요.");
+			} else {
+				alert(response.errorMessage);
+			}
+
+	    });
+	} else if (sciUser.result == 3) {	// 없음
+		alert("실명이 확인되지 않았습니다.\n실명 등록이 필요 합니다. \n실명등록 후 이용하시기 바랍니다.");
+		window.open("https://www.siren24.com/mysiren/customer/sir_g0201_01.jsp", "siren24");
+	} else {
+		alert("실명인증에 실패하셨습니다. [" + sciUser.message + "]");
+	}
+
+	// 로딩바 display none
+	$("#loading-dimmed").css("display","none");
+	$("#loading").css("display","none");
+
+}
+
+/**
+ *	함 수 명 : jusoPopup
+ *	기	능  : 주소팝업 호출
+ */
+function jusoPopup(flag) {
+	if(flag === 'post') $("#rcvFlag").val(0); // 거주지 주소찾기
+	if(flag === 'rcvPost') $("#rcvFlag").val(1); // 배송정보 주소찾기
+	Common.popup("/admin/juso-popup", "/admin/juso-popup", 600, 420 ,1, 0, 0);
+}
+
+/**
+ *	함 수 명 : jusoCallBack
+ *	기	능  : 주소팝업 콜백 함수
+ */
+function jusoCallBack(roadFullAddr,roadAddrPart1,addrDetail,roadAddrPart2,engAddr, jibunAddr, zipNo, admCd, rnMgtSn, bdMgtSn
+		, detBdNmList, bdNm, bdKdcd, siNm, sggNm, emdNm, liNm, rn, udrtYn, buldMnnm, buldSlno, mtYn, lnbrMnnm, lnbrSlno, emdNo){
+
+	if($("#rcvFlag").val() === '1') { // 배송정보 주소찾기
+		$("#rcvPost").val(zipNo);
+		$("#rcvAddress").val(roadAddrPart1+" "+roadAddrPart2);
+		$("#rcvAddressDetail").val(addrDetail);
+	} else { // 거주지 주소찾기
+		$("#post").val(zipNo);
+		$("#address").val(roadAddrPart1+" "+roadAddrPart2);
+		$("#addressDetail").val(addrDetail);
+
+		// 기부자 행정지 주소 셋팅 (tmp 에도 저장)
+		$.post(url("/offgive/getLocgovMapngCode"), {'locgovCode' : admCd.substring(0,5)}, function(response) {
+			//console.log('response', response);
+
+			if(response.isSuccess && response.data) {
+				if ($("input:radio[name='infoAgreAt']:checked").val() == '0') {
+					$("#psitnLocgovUpperCode").val(response.data.upper_locgov_mapng_code);
+					$("#psitnLocgovCode option").val(response.data.locgov_mapng_code);
+					$("#psitnLocgovCode option").text(response.data.locgov_nm);
+				}
+
+				$("#infoAgreAt_2_psitnLocgovUpperCodeTmp").val(response.data.upper_locgov_mapng_code);
+				$("#infoAgreAt_2_psitnLocgovCodeTmp").val(response.data.locgov_mapng_code);
+				$("#infoAgreAt_2_psitnLocgovNameTmp").val(response.data.locgov_nm);
+			}
+		});
+	}
+}
+
+
+
+// 한도체크
+function maxCheck() {
+	Common.loading.display = false;
+
+	if(validation("mberCi", "실명인증")) return false;
+
+	$.post(url("/offgive/maxCheck"), {'userId' : $("#userId").val(), 'mberCi' : $("#mberCi").val()}, function(response) {
+		//console.log('response', response);
+
+		if(response.isSuccess) {
+// 			$("#cntrAmt").val(response.data.toLocaleString());
+			$("#cntrAmtMax").val(response.data);
+			$("#cntrAmtMaxText").text(response.data.toLocaleString());
+		}
+    });
+	$("#cntrAmt").prop("disabled", false);
+	$("#cntrAmt").focus();
+}
+
+function save() {
+	if(!updateComplete){
+		if(!confirm("변경된 휴대전화번호가 저장되지 않았습니다. 이대로 진행하시겠습니까?")) return;
+	}
+
+	if ($("#mberCi").val() == "") {
+		alert("실명인증을 진행해 주십시오!\n기부자의 실명인증이 되지 않으면 기부가 불가능합니다.");
+		$("#jumin2").focus()
+		return;
+	}
+
+	if (!txprSp) {
+		alert('행정주소검색을 진행해주세요.');
+		return;
+	}
+
+	if(validation("userName", "이름")) return false;
+	if(validation("jumin1", "주민등록번호")) return false;
+	if(validation("jumin2", "주민등록번호")) return false;
+	if(validation("phoneNumber1", "휴대폰")) return false;
+	if(validation("phoneNumber2", "휴대폰")) return false;
+	if(validation("phoneNumber3", "휴대폰")) return false;
+	//if(validation("post", "주소")) return false;
+	//if(validation("address", "주소")) return false;
+	//if(validation("addressDetail", "주소")) return false;
+	if(validation("psitnLocgovCode", "기부자 행정지 주소")) return false;
+	if(validation("locgovCode", "기부 지자체")) return false;
+	if(validation("cntrAmt", "기부금액")) return false;
+
+	// 최대한도 체크
+	// 한도체크는 무조건 한번은 해야한다.
+	if(validation("cntrAmtMax", "한도체크")) return false;
+	if (Number($("#cntrAmt").val().replace(/,/g, "")) > Number($("#cntrAmtMax").val())) {
+		alert("기 신고한 기부정보(기부한도 사용)가 있어 추가 등록할 수 없습니다.");
+		return;
+	}
+	// 기부 최소금액 체크
+	if (Number($("#cntrAmt").val().replace(/,/g, "")) < 100) {
+		alert("기부 최소 금액은 100원 입니다.");
+		$("#cntrAmt").val("100");
+		return;
+	}
+	// 기부금액 100원단위 절사
+	if (!Number.isInteger(Number($("#cntrAmt").val().replace(/,/g, "")) / 100)) {
+		alert("기부 금액 단위는 100원 단위입니다.");
+		$("#cntrAmt").val(Math.floor(Number($("#cntrAmt").val().replace(/,/g, "")) / 100) * 100);
+		return;
+	}
+
+	// 행정지 주소와 지자체 주소 동일 시 체크 (같으면 안되고, 본청도 안됨.)
+	if ($("#psitnLocgovCode").val() == $("#locgovCode").val()) {
+		alert("행정지 주소와 같은 지자체에는 기부 할 수 없습니다.");
+		return;
+	}
+
+	if ($("#psitnLocgovUpperCode").val() == $("#locgovUpperCode").val() && $("#locgovCode").val() == (JSON.stringify($("#psitnLocgovUpperCode").val()).slice(1, 3) + "000")) {
+		alert("행정지 주소와 같은 지자체에는 기부 할 수 없습니다.");
+		return;
+    }
+
+	//접수은행 정보가 없으면 오프라인 담당자가 아니기 때문에 등록 할수 없다.
+	if ((OFFGIVE_OFF_BANK_LABEL == "" || OFFGIVE_PSITN_NM == "") && OFFGIVE_HAS_ROLE_ADMIN_11 == "false") {
+		alert("오프라인 담당자만 등록 하실 수 있습니다.");
+		return;
+	}
+
+	var confirmMessage = "";
+	if ($("input:radio[name='rtnpsntReqstCode']:checked").val() == '300') {
+		configmMessage = "답례품을 제공받지 않음을 선택하셨습니다. \n선택된 정보로 등록 하시겠습니까?";
+	} else {
+		configmMessage = OFFGIVE_MSG_M00159;
+	}
+
+
+	// 전자납부번호 가져오기
+	Common.confirm(configmMessage, function() {
+// 		$("#elctrnPayNo").val("123123123123");	// 전자납부번호
+// 		goSave();
+		if($("#serviceResult").val() === '3') {
+			$("#tempUserName").val($("#userName").val());
+			$("#userName").val($("#locUserName").val());
+		}
+
+		if($("#locgovUpperCode").val() == "11000"){ // 서울시
+           goSeoul();
+       	}else{ // 서울시 제외 나머지 시군구
+           goContry2();
+       	}
+
+	});
+
+}
+
+function validation(id, text) {
+	if($("#"+id).val() == "") {
+		alert(text+" 정보를 확인해 주세요.");
+		$("#"+id).focus();
+		return true;
+	}
+	return false;
+}
+
+function getDateOfBirth(jumin1, jumin2) {
+	var divisionCode = jumin2.substring(0, 1);
+	var dateOfBirth = "";
+
+	if(divisionCode == "1" || divisionCode == "2" || divisionCode == "5" || divisionCode == "6"){
+		// 한국인 1900~, 외국인 1900~
+		dateOfBirth = "19"+jumin1;
+	}else if(divisionCode == "3" || divisionCode == "4" || divisionCode == "7" || divisionCode == "8"){
+		// 한국인 2000~, 외국인 2000~
+		dateOfBirth = "20"+jumin1;
+	}else if(divisionCode == 9 || divisionCode == 0){
+		// 한국인 1800~
+		dateOfBirth = "18"+jumin1;
+	}
+	return dateOfBirth;
+}
+
+function getGender(jumin2){
+	var genderCode = jumin2.substring(0, 1);
+	var gender = "";
+	if(genderCode % 2 > 0){
+		gender = "0";
+	}else if(genderCode % 2 == 0){
+		gender = "1";
+	}
+
+	// 성별 (0;남, 1;여)
+	return gender;
+}
+
+// 행공센 주소검색
+function mopas() {
+	Common.loading.display = false;
+
+	if(validation("userName", "이름")) return false;
+	if(validation("jumin1", "주민등록번호")) return false;
+	if(validation("jumin2", "주민등록번호")) return false;
+
+	if ($("#offgive #jumin1").val().length + $("#offgive #jumin2").val().length != 13) {
+		alert("주민번호는 13자리로 입력하셔야 합니다.")
+		return;
+	}
+
+	if(validation("mberCi", "실명인증")) return false;
+
+	if($("#serviceResult").val() === "3" && $.trim($("#locUserName").val()) === "") {
+		alert("행정주소 검색을 위해 주민등록등본 상 이름을 입력하십시오.");
+		return;
+	}
+
+	var param = {
+		'juminNo' : $("#offgive #jumin1").val() + $("#offgive #jumin2").val()
+		,'userName' : $("#offgive #userName").val()
+	};
+
+	if($("#serviceResult").val() === "3") {
+		param.userName = $("#locUserName").val();
+	}
+
+	txprSp = "";
+	if (isForeign($("#offgive #jumin2").val())) {
+		$.post("/offgive/getPublicKey", {}, function(response) {
+			Common.responseHandler(response, function(){
+				try {
+	                if (response.isSuccess && response.data.publicKey) {
+	                    let crypt = new JSEncrypt();
+	                    crypt.setPrivateKey(response.data.publicKey);
+
+	                    let encryptParam = {
+	                   		'juminNo' : crypt.encrypt($("#offgive #jumin1").val() + $("#offgive #jumin2").val())
+	                   		, 'userName' : $("#offgive #userName").val()
+	                   		, 'locgovCode' : ""
+	                    };
+
+	                    if($("#serviceResult").val() === "3") {
+	                    	encryptParam.userName = $("#locUserName").val();
+	                	}
+
+	                    getUserAddressInfoForeign(encryptParam);
+	                } else {
+	                	alert("데이터 암/복호화에 실패했습니다.");
+	                }
+	            } catch(e) {
+	            	console.log = () => {};
+	            }
+			});
+		});
+	} else {
+		$.post(url("/offgive/getUserAddressInfo"), param, function(response) {
+
+			if(response.isSuccess && response.data) {
+				if(response.data.serviceResult === '1') {
+					txprSp = "01";		// 내국인
+					alert("행정주소 검색이 성공하였습니다.");
+					if ($("input:radio[name='infoAgreAt']:checked").val() == '1') {	// 1 : 동의 , 0 : 비동의
+						$("#psitnLocgovUpperCode").val(response.data.upper_locgov_mapng_code);
+						$("#psitnLocgovCode option").val(response.data.locgov_mapng_code);
+						$("#psitnLocgovCode option").text(response.data.locgov_nm);
+					}
+
+					$("#infoAgreAt_1_psitnLocgovUpperCodeTmp").val(response.data.upper_locgov_mapng_code);
+					$("#infoAgreAt_1_psitnLocgovCodeTmp").val(response.data.locgov_mapng_code);
+					$("#infoAgreAt_1_psitnLocgovCodeTmp").val(response.data.locgov_mapng_code);
+
+					$("#juso").val(response.data.juso);
+				} else if(response.data.serviceResult === '3') {
+					$("#serviceResult").val("3");
+					alert(response.data.serviceResultMsg);
+					$("#locUserSpan").show();
+				} else {
+					alert(response.data.serviceResultMsg);
+				}
+			} else {
+				alert(response.errorMessage);
+			}
+		});
+	}
+}
+
+//주소정보 못 얻어올 시 실명 인증 시 넘어오는 지자체 코드로 지자체 주소 정보 가져와서 세팅
+function getAddLink2 () {
+	//var addrChk = false;
+
+	var lgCode = $("#infoAgreAt_1_psitnLocgovCodeTmp").val();
+	if(lgCode == "") logGovCode = $("#infoAgreAt_2_psitnLocgovCodeTmp").val();
+
+ 	if(lgCode == ""){
+ 		//로그인 지자체코드 정보로 조회
+ 		lgCode = $("#loginLocGovCode").val();
+ 	}
+
+ 	//지차체 정보
+	$.ajaxSetup({
+		async: false
+	});
+	$.get("/offgive/view/"+lgCode, {}, function(response) {
+		if(response.isSuccess && response.data) {
+			$("#juso").val(response.data.bassAdres);
+		} else {
+			alert("해당 지자체 정보를 확인 할 수 없습니다.");
+			return false;
+		}
+	});
+
+
+    var frm = document.AKCFrm;
+    var jusoVal = $("#juso").val().split(',');
+    frm.keyword.value = jusoVal[0];
+
+	$.ajax({
+        url :"https://business.juso.go.kr/addrlink/addrLinkApiJsonp.do"  //인터넷망
+        ,type:"post"
+        ,data:$("#AKCFrm").serialize()
+        ,dataType:"jsonp"
+        ,crossDomain:true
+        ,async: false
+        ,success:function(xmlStr){
+        	//console.log("xmlStr", xmlStr);
+
+            var xmlData = xmlStr.returnXml;
+            var totCnt = $(xmlData).find("totalCount").text();	// 결과 건 수
+            var rnMgtSn = $(xmlData).find("rnMgtSn").text();    // 도로명 코드
+            var udrtYn = $(xmlData).find("udrtYn").text();      // 지하여부
+            var buldMnnm = $(xmlData).find("buldMnnm").text();  // 건물본번
+            var buldSlno = $(xmlData).find("buldSlno").text();    // 건물부번
+            var zipNo = $(xmlData).find("zipNo").text();      // 우편번호
+            var admCd = $(xmlData).find("admCd").text();    // 행정동코드
+            var bdMgtSn = $(xmlData).find("bdMgtSn").text();    // 건물관리번호
+            var roadAddr = $(xmlData).find("roadAddrPart2").text();    // 상세주소
+
+            $("#addrRnMgtSn").val(rnMgtSn);
+       		$("#addrUdrtYn").val(udrtYn);
+       		$("#addrBuldMnnm").val(buldMnnm);
+       		$("#addrBuldSlno").val(buldSlno);
+       		$("#addrZipNo").val(zipNo);
+       		$("#addrAdmCd").val(admCd);
+    		$("#addrBdMgtSn").val(bdMgtSn);
+      		$("#addrBoadAddr").val(roadAddr);
+
+      		if(totCnt == "0"){
+      			alert("해당 지자체 정보를 확인 할 수 없습니다. 관리자에게 문의해 주세요.");
+      	    	return false;
+      		}else{
+      			//addrChk = true;
+      			nextBugaRequest();
+      		}
+      		//if(addrChk) goContryDonation();
+        }
+	});
+}
+
+//표준 세외(현세대) 부과정보 웹서비스 호출 & 위택스 결재창 open
+function goContry2 (){
+
+	var frm = document.AKCFrm;
+
+  var jusoVal = $("#juso").val().split(',');
+
+  frm.keyword.value = jusoVal[0];
+  //var addrChk = false;
+//frm.keyword.value = $("#juso").val().replace(/\,/g,''); // 기존(버그있어서 수정))
+  $.ajax({
+      url :"https://business.juso.go.kr/addrlink/addrLinkApiJsonp.do"  //인터넷망
+      ,type:"post"
+      ,data:$("#AKCFrm").serialize()
+      ,dataType:"jsonp"
+      ,crossDomain:true
+      ,async: false
+      ,success:function(xmlStr){
+      	//console.log("xmlStr", xmlStr);
+
+          var xmlData = xmlStr.returnXml;
+          var totCnt = $(xmlData).find("totalCount").text();	// 결과 건 수
+          var rnMgtSn = $(xmlData).find("rnMgtSn").text();    // 도로명 코드
+          var udrtYn = $(xmlData).find("udrtYn").text();      // 지하여부
+          var buldMnnm = $(xmlData).find("buldMnnm").text();  // 건물본번
+          var buldSlno = $(xmlData).find("buldSlno").text();    // 건물부번
+          var zipNo = $(xmlData).find("zipNo").text();      // 우편번호
+          var admCd = $(xmlData).find("admCd").text();    // 행정동코드
+          var bdMgtSn = $(xmlData).find("bdMgtSn").text();    // 건물관리번호
+          var roadAddr = $(xmlData).find("roadAddrPart2").text();    // 상세주소
+
+          $("#addrRnMgtSn").val(rnMgtSn);
+			$("#addrUdrtYn").val(udrtYn);
+     		$("#addrBuldMnnm").val(buldMnnm);
+     		$("#addrBuldSlno").val(buldSlno);
+     		$("#addrZipNo").val(zipNo);
+     		$("#addrAdmCd").val(admCd);
+  		$("#addrBdMgtSn").val(bdMgtSn);
+    		$("#addrBoadAddr").val(roadAddr);
+
+          if(totCnt == "0" || totCnt == undefined){
+          	getAddLink2();
+          }else{
+          	//addrChk = true;
+          	nextBugaRequest();
+          }
+
+          //if(addrChk) goContryDonation();
+      },error: function(xhr,status, error){
+          //alert("에러발생");
+          alert("검색에 실패하였습니다 \n 다시 검색하시기 바랍니다.");
+      }
+  });
+
+}
+
+function nextBugaRequest() {
+
+    var params2 = {
+        'frstPctAmt' : $("#cntrAmt").val().replace(/[^\d]+/g, ''),   // 기부금액
+        'pyrNo' : $("#jumin1").val()+$("#jumin2").val(), // 납부자번호
+        'pyrNm' : $("#userName").val(), // 납부자 성명
+        'roadNmCd' : $("#addrRnMgtSn").val(),    // 도로명 코드
+        'bmno' : $("#addrBuldMnnm").val(), // 건물본번
+        'bsno' : $("#addrBuldSlno").val(),  // 건물부번
+        'zip' : $("#addrZipNo").val(),       // 우편번호
+        'dongCd' : $("#addrAdmCd").val(),    // 행정동코드
+        'roadNmDaddr' : $("#addrBoadAddr").val(),  // 상세주소
+        'glNm' : "고향사랑기부금",     // 물건지명
+        'selectedRegionCd' : $("#locgovCode").val(),
+        'cntrLocgovCode': $("#locgovCode").val(),
+        'userRegionCd'  : $("#addrAdmCd").val().substring(0,5),	// 행정구역코드
+        'presentType' : $("input:radio[name='rtnpsntReqstCode']:checked").val(),
+        'prjId' : $("#prjId").val()	// 지정기부 초기값
+    }
+
+    $.post(url("/offgive/nextBugaRequest"), params2, function(res) {
+    	//console.log('nextBugaRequest', res);
+		if (res.errorMessage) {
+			alert(res.errorMessage);
+		} else if(res.data.linkRstCd === undefined || res.data.linkRstCd === 'undefined')
+    	{
+    		alert("지방세외 시스템 연결에 실패하였습니다.");
+    	}
+    	else if(res.data.linkRstCd === '000' && res.data.epayNo)
+    	{
+    		$("#elctrnPayNo").val(res.data.epayNo);	// 전자납부번호
+    		$("#linkMngKey").val(res.data.linkMngKey);	// linkMngKey
+
+    		goSave();
+    	}
+    	else
+    	{
+    		alert("기부 부과등록에 실패하였습니다.");
+    	}
+    });
+
+
+}
+
+function goSave() {
+		$("#psitnLocgovUpperCode").prop("disabled", false);
+		$("#psitnLocgovCode").prop("disabled", false);
+		$("#post").prop("disabled", false);
+		$("#address").prop("disabled", false);
+		$("#addressDetail").prop("disabled", false);
+		$("#userName").prop("disabled", false);
+
+		$("#birthday").val(getDateOfBirth($("#offgive #jumin1").val(), $("#offgive #jumin2").val()));	// 성별
+		$("#gender").val(getGender($("#offgive #jumin2").val()));									// 생년월일
+		$("#cntrAmt").val($("#cntrAmt").val().replace(/,/g, ""));									// 금액 , 제거
+
+		$("#phoneNumber").val($("#phoneNumber1").val() + '-' + $("#phoneNumber2").val() + '-' + $("#phoneNumber3").val()) //휴대전화번호
+
+		// 구매할 대표답례품 데이터
+		let tmp = '';
+		let countCheck = 0;
+		const filterItem = orderItemValue.filter(data => data.count !== 0);
+		for(let i = 0; i < filterItem.length; i++) {
+			if(filterItem[i].count > 0) {
+
+				countCheck += 1;
+				tmp += filterItem[i].itemId + '||' + filterItem[i].count + '||' + filterItem[i].optionId + '```';
+				if(i !== filterItem.length - 1) tmp += '@'
+			}
+		}
+
+		$("#orderItems").val(tmp);
+
+		// 답례품(포인트) 제공 여부
+		// 100: 답례품 제공받음
+		// 300: 답례품 제공받지않음
+		const reward = $("input:radio[name='rtnpsntReqstCode']:checked").val();
+
+		if(reward !== '100') {
+			$("#orderItems").val('');
+		}
+
+		// 대표답례품 선택 했고, 답례품 제공받음 선택시 배송정보 유효성체크
+		if(reward === '100' && countCheck > 0) {
+			if(validation("rcvUserName", "받으시는 분")) return false;
+			if(validation("rcvPhoneNumber1", "배송정보 휴대폰")) return false;
+			if(validation("rcvPhoneNumber2", "배송정보 휴대폰")) return false;
+			if(validation("rcvPhoneNumber3", "배송정보 휴대폰")) return false;
+			if(validation("rcvPost", "주소")) return false;
+			if(validation("rcvAddress", "주소")) return false;
+			if(validation("rcvAddressDetail", "주소")) return false;
+		};
+		if (!$("#chk").is(":checked")) {
+			alert("약관 동의 정보를 확인해 주세요.");
+			return false;
+		}
+
+		// 배송지 정보 disabled false
+		$("#rcvUserName").prop("disabled", false);
+		$("#rcvPhoneNumber1").prop("disabled", false);
+		$("#rcvPhoneNumber2").prop("disabled", false);
+		$("#rcvPhoneNumber3").prop("disabled", false);
+		$("#rcvPost").prop("disabled", false);
+		$("#rcvAddress").prop("disabled", false);
+		$("#rcvAddressDetail").prop("disabled", false);
+
+		// 대표답례품 미선택, 답례품 제공받음 선택시 포인트만 지급
+		if(reward === '100' && countCheck === 0) {
+			Common.confirm('대표 답례품을 선택하지 않으셨습니다. 포인트만 지급됩니다.', function() {
+				finalSave();
+			});
+		} else {
+			finalSave();
+		}
+
+
+}
+
+function finalSave () {
+	$.post(url("/offgive/create"), $('#offgive').serialize(), function(response) {
+		if(response.isSuccess) {
+			location.href = "/offgive/detail/" + response.data
+		} else {
+			alert(response.errorMessage);
+
+			// 등록 실패시 다시 disabled true
+	 		$("#psitnLocgovUpperCode").prop("disabled", true);
+	 		$("#psitnLocgovCode").prop("disabled", true);
+	 		$("#post").prop("disabled", true);
+	 		$("#address").prop("disabled", true);
+	 		$("#addressDetail").prop("disabled", true);
+	 		$("#userName").prop("disabled", true);
+		}
+    });
+}
+
+//서울시 세외 부과정보 웹서비스 호출 & 이택스 결재창 open
+function goSeoul() {
+
+    var semokCd = "";
+    if($("#locgovCode").val() == "11000"){
+        semokCd = "11228802";
+    }else{
+        semokCd = "51228802";
+    }
+    var js_date = new Date();
+    var year = js_date.getFullYear();
+    var month = js_date.getMonth() + 1;
+    var params = {
+        'systemCd': "01",               // 인터페이스 구분코드
+        'jijacheCd': $("#locgovCode").val(),   // 기부지자체 코드
+        'siguCd': "6110000",
+        'semokCd': semokCd,
+        'taxYm': year+month,
+        'taxGubun': "3",
+        'sidoCd' : "11",
+        'napId' : $("#jumin1").val()+$("#jumin2").val(),
+        'napNm' : $("#userName").val(),
+        'napGubun' : "10",
+        'taxAmt' : $("#cntrAmt").val().replace(/[^\d]+/g, ''),
+        'sise' : $("#cntrAmt").val().replace(/[^\d]+/g, ''),
+        'resideStatus' : "10",
+        'mulGubun' : '03',
+        'mulNm' : "고향사랑기부금", // $("#juso").val()
+        'bookNo' : "", // api 에서 채번 => 수정 필요
+        'sysGubun' : "LVHT",
+        'selectedRegionCd' : $("#locgovCode").val(),
+        'userRegionCd'  : $("#psitnLocgovCode").val(),
+        'enapbuNo'  : '',
+        'presentType' : $("input:radio[name='rtnpsntReqstCode']:checked").val()
+    }
+
+    // 서울시 세외 수입시스템 부과정보 등록 서비스 호출
+    $.post(url("/offgive/getSdonationCharge"), params, function(response) {
+		//console.log('response', response);
+
+		if(response.isSuccess && response.data) {
+			$("#elctrnPayNo").val(response.data.elctPayNo);	// 전자납부번호
+
+			goSave();
+		} else {
+			alert(response.errorMessage);
+		}
+	});
+
+}
+
+
+function isForeign(value) {
+	try {
+		let firstChar = value.substring(0, 1);
+		switch (firstChar) {
+			case "5" :
+			case "6" :
+			case "7" :
+			case "8" :
+				return true;
+			default :
+				return false;
+		}
+	} catch (e) {
+		return false;
+	}
+}
+
+function getUserAddressInfoForeign(encryptParam) {
+	setTimeout(function () {
+		Common.loading.show();
+	}, 1);
+    $.post("/offgive/getUserAddressInfoForeign", encryptParam, function (rsp) {
+    	Common.loading.hide();
+		Common.responseHandler(rsp, function(){
+	    	if (!rsp.isSuccess) {
+	    		alert(rsp.errorMessage);
+	    	} else if (rsp.data.errCode) {
+	            alert('외국인 거소정보 조회에 실패했습니다.');
+	            //console.log('n에러코드 : ' + rsp.data.errCode + '\n에러메시지 : ' + rsp.data.errMsg);
+	        } else if (rsp.data.rst == 'SUCCESS') {       // 기부 가능
+	        	txprSp = "05";		// 외국인
+	            alert("행정주소 검색이 성공하였습니다.");
+	            if (rsp.data.isTodayMsg) {
+	                //alert(rsp.data.isTodayMsg,"postBtn");
+	            }
+
+				if ($("input:radio[name='infoAgreAt']:checked").val() == '1') {	// 1 : 동의 , 0 : 비동의
+					$("#psitnLocgovUpperCode").val(rsp.data.upper_locgov_mapng_code);
+					$("#psitnLocgovCode option").val(rsp.data.locgov_mapng_code);
+					$("#psitnLocgovCode option").text(rsp.data.locgov_nm);
+				}
+
+				$("#infoAgreAt_1_psitnLocgovUpperCodeTmp").val(rsp.data.upper_locgov_mapng_code);
+				$("#infoAgreAt_1_psitnLocgovCodeTmp").val(rsp.data.locgov_mapng_code);
+				$("#infoAgreAt_1_psitnLocgovCodeTmp").val(rsp.data.locgov_mapng_code);
+
+				$("#juso").val(rsp.data.juso);
+	        } else if (rsp.data.rst == 'IN_LOCGOV') {
+	            alert("자신의 거소지 지자체에는 기부를 하실 수 없습니다.");
+				if ($("input:radio[name='infoAgreAt']:checked").val() == '1') {	// 1 : 동의 , 0 : 비동의
+					$("#psitnLocgovUpperCode").val(rsp.data.upper_locgov_mapng_code);
+					$("#psitnLocgovCode option").val(rsp.data.locgov_mapng_code);
+					$("#psitnLocgovCode option").text(rsp.data.locgov_nm);
+				}
+				/*
+				$("#infoAgreAt_1_psitnLocgovUpperCodeTmp").val(rsp.data.upper_locgov_mapng_code);
+				$("#infoAgreAt_1_psitnLocgovCodeTmp").val(rsp.data.locgov_mapng_code);
+				$("#infoAgreAt_1_psitnLocgovCodeTmp").val(rsp.data.locgov_mapng_code);
+
+				$("#juso").val(rsp.data.juso);*/
+	        } else if (rsp.data.rst == 'EXPIRED') {
+	            alert("체류만료일이 지나 기부가 불가능합니다.");
+	        } else {
+	            alert("외국인 거소정보 조회에 실패했습니다.");
+	        }
+		});
+    });
+}
+
+const sameInfo = document.getElementById("chkCopy");
+sameInfo.addEventListener("change", (e) => {
+	if(e.target.checked) {
+		$("#rcvUserName").val($("#userName").val());
+		$("#rcvUserName").prop("disabled", true);
+		$("#rcvPhoneNumber1").val($("#phoneNumber1").val());
+		$("#rcvPhoneNumber1").prop("disabled", true);
+		$("#rcvPhoneNumber2").val($("#phoneNumber2").val());
+		$("#rcvPhoneNumber2").prop("disabled", true);
+		$("#rcvPhoneNumber3").val($("#phoneNumber3").val());
+		$("#rcvPhoneNumber3").prop("disabled", true);
+		$("#rcvPost").val($("#post").val());
+		$("#rcvPost").prop("disabled", true);
+		$("#rcvAddress").val($("#address").val());
+		$("#rcvAddress").prop("disabled", true);
+		$("#rcvAddressDetail").val($("#addressDetail").val());
+		$("#rcvAddressDetail").prop("disabled", true);
+	} else {
+		$("#rcvUserName").val('');
+		$("#rcvUserName").prop("disabled", false);
+		$("#rcvPhoneNumber1").val('010');
+		$("#rcvPhoneNumber1").prop("disabled", false);
+		$("#rcvPhoneNumber2").val('');
+		$("#rcvPhoneNumber2").prop("disabled", false);
+		$("#rcvPhoneNumber3").val('');
+		$("#rcvPhoneNumber3").prop("disabled", false);
+		$("#rcvPost").val('');
+		$("#rcvAddress").val('');
+		$("#rcvAddressDetail").val('');
+		$("#rcvAddressDetail").prop("disabled", false);
+	}
+});
+
+
+let orderItemObject = {};
+function getDesignatedDonationInfo(locgovCode) {
+
+	$("#prjId option").remove();
+	$("#prjId").append('<option value="0">자치단체 기부</option>');
+	$("#prjId").val("0");
+
+	$("#prjChk").attr("checked", false);
+	changePrjChk(false);
+
+	if (!locgovCode) {
+		return;
+	}
+	//Common.loading.display = true;
+	//setTimeout(function () {
+	//	Common.loading.show();
+	//}, 1);
+
+	orderItemValue = [];
+	orderItemObject = {};
+	$("#itemTotalPrice").val(0);
+    $.post(
+    	"/offgive/getDesignatedDonationList"
+    	, {'locgovCode' : locgovCode}
+    	, function (rsp) {
+	    	Common.loading.display = false;
+			Common.responseHandler(rsp, function(){
+		    	if (rsp.isSuccess) {
+
+		    		if(rsp.data) {
+						if(rsp.data.length > 0){
+							let options = '';
+							for(let i = 0 ; i < rsp.data.length; i++) {
+					            options += '<option value="' + rsp.data[i].prjId + '">' + rsp.data[i].prjSubject + '</option>';
+			    			}
+							$('#prjId').append(options)
+			    		}
+		    		}
+
+		    		$.post(
+	    				"/offgive/offRprs",
+	    				{'lclgv_cd' : locgovCode},
+	    				function (res) {
+	    					if(res.isSuccess) {
+	    						if(res.data) {
+	    							// let changedOptionCount 			= 0;	// 오프라인 답레품 옵션 재 설정 필요 item 개수
+	    							// let pendingApprovalItemCount 	= 0;	// 승인대기 답례품
+	    							let offgiveItemCount 			= 0;	// 오프라인 답레품 개수(옵션 재설정 item 제외)
+	    							let innerHtml = '<td style="display:flex;" id="selectLoc">';
+		    						for(let i = 0; i < res.data.length; i++) {
+		    							if (res.data[i].changed_option === "Y") {
+		    								continue;
+		    							} else if (res.data[i].data_status_code !== "1") {
+		    								continue;
+		    							} else {
+		    								offgiveItemCount++;
+		    								orderItemObject = {};
+			    							orderItemObject.itemId = res.data[i].gds_id;
+			    							if(res.data[i].item_option_id !== undefined && res.data[i].item_option_id !== '') {
+			    								orderItemObject.optionId = res.data[i].item_option_id;
+			    							} else {
+			    								orderItemObject.optionId = '';
+			    							}
+											orderItemObject.count = 0;
+
+											orderItemValue.push(orderItemObject);
+
+			    							innerHtml += '<div class="flex_box gap-12 item-center">';
+			    							innerHtml += '<div class="item-card" style="width:300px">';
+			    							innerHtml += '<img src="'+res.data[i].load_image+'" alt="상품이미지" class="item-image" width="250px" height="300px" style="padding:12px;"/>';
+			    							innerHtml += '<div class="item-info">';
+			    							innerHtml += '<div class="info-box" style="background-color:#f0f0f0;padding:12px;border-radius:10px;font-size:14px;color:#333;">';
+			    							innerHtml += '<p>[' + res.data[i].item_code + ']<span style="color: red;"> ['+ res.data[i].total_price +'] </span></p>';
+			    							innerHtml += '<p>' + res.data[i].item_name + '</p>';
+
+			    							if(res.data[i].options != ''){
+			    								const splitOption = res.data[i].options.split("||");
+
+			    								if(splitOption.length == 4) {
+			    									innerHtml += '<p>(' + splitOption[1] + ', ' + splitOption[2] + ')</p>';
+			    								}
+
+			    								if(splitOption.length == 8) {
+			    									innerHtml += '<p>('+ splitOption[1] + ': ' + splitOption[2] + ', ' + splitOption[3] + ': ' + splitOption[4] + ', ' + splitOption[5] + ': ' + splitOption[6] + ')</p>';
+			    								}
+			    							}
+
+			    							innerHtml += '</div>';
+			    							innerHtml += '</div>';
+			    							innerHtml += '<div class="quantity-control">';
+			    							innerHtml += '<button type="button" onclick="decrease('+ i + ', '+ res.data[i].total_price + ')" class="counter-box">-</button>';
+			    							innerHtml += '<input autocomplete="off" style="padding: 0;" type="text" id="counter_'+ i +'" value="0" class="counter-input" style="border-radius: 0px !important;" onChange="inputCountChange(this.value, ' +  res.data[i].total_price + ', '+ i +')"/>';
+			    							innerHtml += '<button type="button" onclick="increase('+ i + ', '+ res.data[i].total_price + ')" class="counter-box">+</button>';
+			    							innerHtml += '</div>';
+			    							if(res.data[i].item_option_flag === 'N') {
+
+			    								if(res.data[i].stock_quantity === -1) {
+			    									innerHtml += '<div style="margin-top: 1rem; color: red;">최대주문수량 <span id="maxQuantity_' + i + '">999</span>개</div>';
+			    								} else {
+			    									innerHtml += '<div style="margin-top: 1rem; color: red;">최대주문수량 <span id="maxQuantity_' + i + '">' + res.data[i].stock_quantity + '</span>개</div>';
+			    								}
+			    							} else {
+			    								if(res.data[i].option_stock_flag === 'N') {
+			    									innerHtml += '<div style="margin-top: 1rem; color: red;">최대주문수량 <span id="maxQuantity_' + i + '">999</span>개</div>';
+			    								} else {
+			    									innerHtml += '<div style="margin-top: 1rem; color: red;">최대주문수량 <span id="maxQuantity_' + i + '">' + res.data[i].option_stock_quantity + '</span>개</div>';
+			    								}
+			    							}
+			    							innerHtml += '<div style="color:blue; font-weight: bold; margin-top: 1rem;">금액: <span id="item_price_'+ i +'">0</span>P</div>';
+			    							innerHtml += '</div>';
+			    							innerHtml += '</div>';
+		    							}
+	    							};
+
+	    							innerHtml += '</td>';
+
+	    							$("#selectLoc").remove();
+	    							$("#mainItem").append(innerHtml);
+	    							/*
+	    							if (changedOptionCount > 0 || pendingApprovalItemCount > 0) {
+		    							alert(
+	    									"※ 오프라인답례품 등록 설정을 확인해주세요. (" + changedOptionCount + " 건)\n※ 승인대기중인 답례품을 확인해주세요. (" + pendingApprovalItemCount + "건)"
+    									);
+	    							}
+	    							*/
+	    							if (offgiveItemCount < 1) {
+		    							let innerHtml = '<td style="display:flex;" id="selectLoc"><div class="flex_box gap-12 item-center"><span class="wave tip">※ 선택하신 지자체에 대표 답례품이 없습니다.</span></div></td>';
+		    							$("#selectLoc").remove();
+		    							$("#mainItem").append(innerHtml);
+	    							}
+	    						} else {
+	    							let innerHtml = '<td style="display:flex;" id="selectLoc"><div class="flex_box gap-12 item-center"><span class="wave tip">※ 선택하신 지자체에 대표 답례품이 없습니다.</span></div></td>';
+	    							$("#selectLoc").remove();
+	    							$("#mainItem").append(innerHtml);
+	    						}
+	    					}
+    					}
+    				);
+		    	}
+			});
+    	}
+    );
+}
+
+//기부금액에 따른 발생 포인트
+const cntrAmtPoint = document.getElementById("cntrAmt");
+
+cntrAmtPoint.addEventListener("change", function(e) {
+
+	const vide = Number(e.target.value) / 100 * 30;
+	$("#generatePoint").text(vide);
+});
+
+function inputCountChange (value, price, index) {
+	const counter = document.getElementById("counter_" + index);// 개수 input Element
+	const maxQuantity = Number($("#maxQuantity_"+index).text());// 그 상품에 최대 주문수량
+	const itemTotalPrice = Number($("#itemTotalPrice").val());// 상품 전체의 계산이된 총금액
+	const point = Number($("#generatePoint").text());// 예상 발생 포인트
+	const sumValue = Number(value) * price // 개수 x 금액 값
+	const examValue = itemTotalPrice + sumValue // 예상 합계금액
+
+	// TBD: 현재는 2개의 대표 답례품만 보여주기때문에 하드코딩 형태로 진행 추후 여러개 답례품으로 보일때 for문으로 돌려서 처리해야함.
+	let sumItemPrice = 0;
+	const itemPrice0 = Number($("#item_price_0").text());
+	const itemPrice1 = Number($("#item_price_1").text());
+	if(index === 0) {
+		sumItemPrice = itemPrice1 + sumValue;
+	}
+
+	if(index === 1) {
+		sumItemPrice = itemPrice0 + sumValue;
+	}
+
+	if(Number($("#cntrAmt").val().replace(/,/g, "")) === 0) {
+		alert("기부금액을 입력해주세요.");
+		$("#cntrAmt").focus();
+		counter.value = 0;
+		return false;
+	}
+
+	if(sumValue > point) { // 수량 올릴때 포인트 체크
+		alert('사용할 포인트가 부족합니다');
+		counter.value = 0;
+		$("#item_price_" + index).text(0);
+		return false;
+	}
+
+	if(sumItemPrice > point) { // 두상품의 가격을 체크
+		alert('사용할 포인가 부족합니다.');
+		counter.value = 0;
+		$("#item_price_" + index).text(0);
+		return false;
+	}
+
+	if(value > maxQuantity - 1) {
+		alert('최대 ' + maxQuantity + '개 까지만 선택하실 수 있습니다.');
+		counter.value = 0;
+		return false;
+	}
+
+	orderItemValue[index].count = value;
+	$("#item_price_" + index).text(price * value);
+	$("#itemTotalPrice").val(sumItemPrice);
+
+}
+
+function increase (index, price) {
+	const counter = document.getElementById("counter_" + index);// 개수 input Element
+	const maxQuantity = Number($("#maxQuantity_"+index).text());// 그 상품에 최대 주문수량
+	const itemTotalPrice = Number($("#itemTotalPrice").val());// 상품 전체의 계산이된 총금액
+	const point = Number($("#generatePoint").text());// 예상 발생 포인트
+	const counterValue = Number(counter.value);// 현재 개수
+	const countDoneValue = counterValue + 1; // 증가된 개수
+	const sumValue = price * countDoneValue; // 개수 x 금액 값
+	const examValue = itemTotalPrice + price; // 예상 합계금액
+
+
+	if(Number($("#cntrAmt").val().replace(/,/g, "")) === 0) {
+		alert("기부금액을 입력해주세요.");
+		$("#cntrAmt").focus();
+		return false;
+	}
+
+	if(sumValue > point) { // 수량 올릴때 포인트 체크
+
+		alert('사용할 포인트가 부족합니다');
+		return false;
+	}
+
+	if(examValue > point) { // 다른 상품에서 수량올릴때 이중체크
+
+		alert('사용할 포인가 부족합니다.');
+		return false;
+	}
+
+	if(counterValue > maxQuantity - 1) {
+		alert('최대 ' + maxQuantity + '개 까지만 선택하실 수 있습니다.');
+		return false;
+	}
+
+	orderItemValue[index].count = countDoneValue;
+
+	counter.value = countDoneValue;
+	$("#item_price_" + index).text(price * counter.value);
+	$("#itemTotalPrice").val(Number(itemTotalPrice) + Number(price));
+
+}
+
+function decrease (index, price) {
+	const counter = document.getElementById("counter_" + index);
+	const maxQuantity = Number($("#maxQuantity_"+index).text());
+	const itemTotalPrice = Number($("#itemTotalPrice").val());
+	const point = Number($("#generatePoint").text());
+	const counterValue = Number(counter.value);
+	const countDoneValue = counterValue - 1;
+
+	if(Number($("#cntrAmt").val().replace(/,/g, "")) === 0) {
+		alert("기부금액을 입력해주세요.");
+		$("#cntrAmt").focus();
+		return false;
+	}
+
+	orderItemValue[index].count = countDoneValue;
+
+	if(counterValue > 0) {
+		counter.value = countDoneValue;
+		$("#item_price_" + index).text(price * counter.value);
+		$("#itemTotalPrice").val(Number(itemTotalPrice) - Number(price));
+	}
+}
+
+function changePrjChk(isChecked) {
+	if (isChecked) {
+		let upperLocgovCode = $("#locgovUpperCode").val();
+		let locgovCode = $("#locgovCode").val();
+		if (!upperLocgovCode || !locgovCode) {
+			alert("기부 지자체를 먼저 선택해주세요.");
+			$("#prjChk").attr("checked", false);
+			return;
+		}
+	}
+
+	if (isChecked) {
+		$("#prjId").attr('style', 'display:block;');
+	} else {
+		$("#prjId").attr('style', 'display:none;');
+		$("#prjId").val('0');
+	}
+}
+
+function prjListExcelDownload(){
+	// 개인정보 없어서 팝업 없이 다운로드 되는 함수 호출
+	Shop.downloadExcelOrder("/offgive/list/prj/download-excel", '', false);
+	//location.href = "opmanager/offgive/list/prj/download-excel";
+}
+
+function phoneNumberSet(phoneNumber){
+	let phoneNumber1 = "";
+	let phoneNumber2 = "";
+	let phoneNumber3 = "";
+
+	//널체크
+	const isNull = value => (value === null || value === '' || value === undefined);
+
+	//휴대폰번호체크
+	const phoneRegex = /^(01[0179]-?\d{3,4}-?\d{4})$/;
+
+	if(isNull(phoneNumber) || !phoneRegex.test(phoneNumber)){
+		$("#phoneNumber1").prop("disabled", false);
+		$("#phoneNumber2").prop("disabled", false);
+		$("#phoneNumber3").prop("disabled", false);
+		return false;
+	}
+
+	if(phoneNumber.indexOf('-') < 0){
+		//'-'하이픈 없는 경우
+		// 11자리일 경우 , 3-4-4
+		// 10자리일 경우 , 3-3-4
+		if(phoneNumber.length == 11){
+			phoneNumber1 = phoneNumber.substr(0,3);
+			phoneNumber2 = phoneNumber.substr(3,4);
+			phoneNumber3 = phoneNumber.substr(7,4);
+		}
+		else{
+			phoneNumber1 = phoneNumber.substr(0,3);
+			phoneNumber2 = phoneNumber.substr(3,3);
+			phoneNumber3 = phoneNumber.substr(6,4);
+		}
+	}else{
+		// 하이픈 있을 경우 '-'로 자르기
+		phoneNumber1 = phoneNumber.split("-")[0];
+		phoneNumber2 = phoneNumber.split("-")[1];
+		phoneNumber3 = phoneNumber.split("-")[2];
+	}
+
+	$("#phoneNumber1").prop("disabled", true);
+	$("#phoneNumber2").prop("disabled", true);
+	$("#phoneNumber3").prop("disabled", true);
+
+	$("#phoneNumber1").val(phoneNumber1);
+	$("#phoneNumber2").val(phoneNumber2);
+	$("#phoneNumber3").val(phoneNumber3);
+
+	return true;
+}
+
+var tempPhoneNumber1;
+var tempPhoneNumber2;
+var tempPhoneNumber3;
+var updateComplete = true;
+
+function setPhoneNumber(){
+	updateComplete = false;
+
+	tempPhoneNumber1 = $("#phoneNumber1").val();
+	tempPhoneNumber2 = $("#phoneNumber2").val();
+	tempPhoneNumber3 = $("#phoneNumber3").val();
+
+	$("#phoneNumber1").prop("disabled", false);
+	$("#phoneNumber2").prop("disabled", false);
+	$("#phoneNumber3").prop("disabled", false);
+
+	$("#btnUpdatePhoneNumber").text("저장")
+	$("#btnUpdatePhoneNumber").removeAttr("onClick")
+	$("#btnUpdatePhoneNumber").off("click", setPhoneNumber)
+	$("#btnUpdatePhoneNumber").on("click", updatePhoneNumber)
+}
+
+function updatePhoneNumber(){
+	var phoneNumber = $("#phoneNumber1").val() + '-' + $("#phoneNumber2").val() + '-' + $("#phoneNumber3").val()
+	var userId = $("#userId").val()
+
+	if(confirm("휴대폰 번호를 저장하시겠습니까?")){
+		if(!phoneNumberSet(phoneNumber)){
+			alert("휴대전화번호를 확인해주세요")
+			return;
+		}
+	}else{
+		return;
+	}
+
+	$.ajax({
+		url : '/offgive/updatePhoneNumber',
+		type : 'post',
+		data : {phoneNumber : phoneNumber, userId : userId},
+		async : true,
+		success : function (response) {
+			if (response.isSuccess) {
+				alert("전화번호 저장에 성공하였습니다.");
+
+				$("#btnUpdatePhoneNumber").text("휴대폰번호 수정하기")
+				$("#btnUpdatePhoneNumber").off("click", updatePhoneNumber)
+				$("#btnUpdatePhoneNumber").on("click", setPhoneNumber)
+				updateComplete = true;
+			} else {
+				alert("전화번호 저장에 실패하였습니다.");
+			}
+		}
+	});
+}
+
+</script>
+
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
-
-<script th:inline="none">
-function filterLocgov() {
-    var upper = document.getElementById('upperLocgovCode').value;
-    var select = document.getElementById('locgovCode');
-    Array.prototype.forEach.call(select.options, function (opt) {
-        if (!opt.value) { return; }
-        opt.hidden = upper !== '' && opt.dataset.upper !== upper;
-    });
-}
-filterLocgov();
-
-// 서명패드 - 마우스/터치 드래그로 canvas에 직접 그린다. 서버연계 없이 순수 프론트 캡처.
-(function () {
-    var canvas = document.getElementById('signaturePad');
-    var ctx = canvas.getContext('2d');
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#222';
-    var drawing = false;
-    var hasSignature = false;
-
-    function pos(evt) {
-        var rect = canvas.getBoundingClientRect();
-        var point = evt.touches ? evt.touches[0] : evt;
-        return { x: point.clientX - rect.left, y: point.clientY - rect.top };
-    }
-    function start(evt) {
-        drawing = true;
-        hasSignature = true;
-        var p = pos(evt);
-        ctx.beginPath();
-        ctx.moveTo(p.x, p.y);
-        evt.preventDefault();
-    }
-    function move(evt) {
-        if (!drawing) { return; }
-        var p = pos(evt);
-        ctx.lineTo(p.x, p.y);
-        ctx.stroke();
-        evt.preventDefault();
-    }
-    function end() { drawing = false; }
-
-    canvas.addEventListener('mousedown', start);
-    canvas.addEventListener('mousemove', move);
-    window.addEventListener('mouseup', end);
-    canvas.addEventListener('touchstart', start);
-    canvas.addEventListener('touchmove', move);
-    canvas.addEventListener('touchend', end);
-
-    window.clearSignature = function () {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        hasSignature = false;
-        document.getElementById('signatureImage').value = '';
-    };
-
-    document.getElementById('offgiveForm').addEventListener('submit', function () {
-        document.getElementById('signatureImage').value = hasSignature ? canvas.toDataURL('image/png') : '';
-    });
-})();
-</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

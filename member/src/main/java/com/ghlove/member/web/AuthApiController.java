@@ -60,10 +60,13 @@ public class AuthApiController {
         body.put("userId", user.getUserId());
         body.put("loginId", user.getLoginId());
         body.put("userName", user.getUserName());
-        body.put("userTypeLabel", memberService.codesOf("USER_TYPE").get(user.getSbscrbSeCode()));
+        // AS-IS 회원구분 표시는 화면 상수 디폴트등급(["일반회원"]) - 가입구분 코드(SBSCRB_SE 100/200)와 무관하다.
+        body.put("userTypeLabel", MemberService.MEMBER_LEVEL_LABEL);
         body.put("roles", memberService.rolesOf(user.getUserId()));
         body.put("donationSummary", donationClient.mySummary(user.getUserId()));
         body.put("pointBalance", pointClient.balanceOf(user.getUserId()));
+        // AS-IS 회원정보·답례품 목록·주문서 API의 adultYn("성인 여부 체크") - 성인 답례품 담기/구매 제한에 쓴다.
+        body.put("adultYn", memberService.isAdult(user.getUserId()) ? "Y" : "N");
         return body;
     }
 

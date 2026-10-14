@@ -57,9 +57,11 @@ public class OrderSagaPublisher {
                 .map(i -> new ShipmentCreatedEvent.Line(i.getOrderItemId(), i.getItemId(), i.getItemOptionId(),
                         i.getQuantity(), i.getPointAmount() != null ? i.getPointAmount() : 0L))
                 .toList();
+        String cntrSn = items.stream().map(OrderItem::getCntrSn)
+                .filter(s -> s != null && !s.isBlank()).findFirst().orElse(null);
         ShipmentCreatedEvent event = new ShipmentCreatedEvent(shipment.getShipmentId(), shipment.getOrderId(),
                 userId, shipment.getLocgovCode(),
-                shipment.getPointAmount() != null ? shipment.getPointAmount() : 0L, lines, LocalDateTime.now());
+                shipment.getPointAmount() != null ? shipment.getPointAmount() : 0L, lines, cntrSn, LocalDateTime.now());
         send(shipment.getOrderId(), event, "SHIPMENT_CREATED");
     }
 
@@ -75,6 +77,16 @@ public class OrderSagaPublisher {
         ItemCancelledEvent event = new ItemCancelledEvent(item.getOrderItemId(), item.getShipmentId(),
                 item.getOrderId(), item.getItemId(), reason, LocalDateTime.now());
         send(item.getOrderId(), event, "ITEM_CANCELLED");
+    }
+
+    /** 답례품 주문 결제완료(온라인·기탁서 공통) - admin이 국민비서 답례품 주문 문자를 적재한다(gift/point는 무시). key=orderId. */
+    public void publishPresentOrderPaid(Order order, List<OrderItem> items) {
+        List<PresentOrderPaidEvent.Line> lines = items.stream()
+                .map(i -> new PresentOrderPaidEvent.Line(i.getItemId(), i.getSellerId(), i.getItemName(),
+                        i.getOptionName()))
+                .toList();
+        send(order.getOrderId(), new PresentOrderPaidEvent(order.getOrderId(), order.getUserId(), lines,
+                LocalDateTime.now()), "PRESENT_ORDER_PAID");
     }
 
     public void publishConfirmed(Order order) {

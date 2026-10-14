@@ -84,8 +84,9 @@
             <table class="opt-grid" id="opt-grid">
                 <thead>
                     <tr>
-                        <th class="c1">옵션값1</th>
-                        <th class="c2" style="display:none">옵션값2</th>
+                        <!-- 선택형(S)은 AS-IS처럼 옵션 제목(name1)·옵션 내용(name2), 조합형은 옵션값1~3 -->
+                        <th class="c1">옵션 제목</th>
+                        <th class="c2">옵션 내용</th>
                         <th class="c3" style="display:none">옵션값3</th>
                         <th>추가금액</th>
                         <th>재고연동</th>
@@ -151,11 +152,14 @@
     }
     function selType() { return document.querySelector('input[name=optType]:checked').value; }
 
-    // 형태에 따라 옵션값2/3 컬럼 노출
+    // 형태에 따라 컬럼 노출 - 선택형(S)은 옵션 제목·옵션 내용(AS-IS itemOptionTitle '옵션 제목'/'옵션 내용'),
+    // 조합형(S2·S3)은 옵션값1~3, 텍스트형(T)은 1개
     function applyTypeColumns() {
         const t = selType();
-        const show2 = (t === 'S2' || t === 'S3');
+        const show2 = (t === 'S' || t === 'S2' || t === 'S3');
         const show3 = (t === 'S3');
+        document.querySelector('#opt-grid th.c1').textContent = t === 'S' ? '옵션 제목' : '옵션값1';
+        document.querySelector('#opt-grid th.c2').textContent = t === 'S' ? '옵션 내용' : '옵션값2';
         document.querySelectorAll('.opt-grid .c2').forEach(e => e.style.display = show2 ? '' : 'none');
         document.querySelectorAll('.opt-grid .c3').forEach(e => e.style.display = show3 ? '' : 'none');
         document.querySelectorAll('#opt-rows tr').forEach(tr => {
@@ -189,7 +193,7 @@
             if (!v1) return;
             rows.push({
                 optionName1: v1,
-                optionName2: (t === 'S2' || t === 'S3') ? tr.querySelector('.v2 input').value.trim() : null,
+                optionName2: (t === 'S' || t === 'S2' || t === 'S3') ? tr.querySelector('.v2 input').value.trim() : null,
                 optionName3: (t === 'S3') ? tr.querySelector('.v3 input').value.trim() : null,
                 optionPrice: parseInt(tr.querySelector('.price').value || '0', 10),
                 stockTracked: tr.querySelector('.strack').checked,

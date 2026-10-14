@@ -128,6 +128,35 @@ public class CntrReqmngService {
         return cntrReqmngRepository.save(reqmng);
     }
 
+    /**
+     * 기탁서 상세(15102 등록 후 화면)의 "기부취소" - AS-IS {@code OffgiveManagerController.offgiveCancel} →
+     * {@code GiveStateServiceImpl.giveReqmngInsert}. 변경신청 화면과 달리 화면 입력 검증 없이 요청분류 100(기부취소)
+     * 신청 한 건을 넣는다(포인트 사용 여부는 AS-IS처럼 화면이 먼저 막는다). 사유는 화면이 만든
+     * "(사용포인트 : N p)", 수납일자 칸에는 화면이 신청일(yyyyMMdd)을 넣는다.
+     *
+     * <p>AS-IS는 신청 전에 {@code cancelTemPointSet}(G_CNTR 포인트를 임시칸으로 옮겨 0)을 하는데, TO-BE 포인트는
+     * point 원장에 있어 g_cntr 포인트 칸이 쓰이지 않는다 - 변경신청 화면({@link #submit})과 같이 그 단계는 없다.
+     */
+    @Transactional
+    public CntrReqmng submitOffgiveCancel(String cntrSn, String sttemntPayDe, String discription, Long managerId) {
+        Donation donation = donationOf(cntrSn);
+        MemberInfo member = memberClient.fetchOrNull(donation.getUserId());
+
+        CntrReqmng reqmng = new CntrReqmng();
+        reqmng.setCntrSn(cntrSn);
+        reqmng.setLocgovCode(donation.getCntrLocgovCode());
+        reqmng.setCntrAmt(donation.getCntrAmt());
+        reqmng.setLoginId(member != null ? member.loginId() : null);
+        reqmng.setUserName(member != null ? member.userName() : null);
+        reqmng.setSttemntPayDe(truncate8(sttemntPayDe));
+        reqmng.setCntrReqmngCode(TYPE_CANCEL);
+        reqmng.setDiscription(discription);
+        reqmng.setFrstRegisterId(managerId);
+        reqmng.setFrstRegistPnttm(LocalDateTime.now());
+        reqmng.setReqStatusCode(STATUS_REQUESTED);
+        return cntrReqmngRepository.save(reqmng);
+    }
+
     @Transactional
     public CntrReqmng approve(Long reqId, Long managerId) {
         CntrReqmng reqmng = findOrThrow(reqId);
@@ -139,7 +168,12 @@ public class CntrReqmngService {
         }
 
         if (TYPE_CANCEL.equals(reqmng.getCntrReqmngCode())) {
-            donationService.cancelDonation(reqmng.getCntrSn());
+            Donation cancelled = donationService.cancelDonation(reqmng.getCntrSn());
+            // AS-IS giveCancelProcess는 상태(300 과오납)와 함께 STTEMNT_PAY_DE=NULL, DELETE_AT='Y'도 넣는다 - 삭제여부·
+            // 수납일만 보는 조회(미수납 삭제 배치·집계 등)에서도 빠지도록 같이 맞춘다.
+            cancelled.setSttemntPayDe(null);
+            cancelled.setDeleteAt("Y");
+            donationRepository.save(cancelled);
         } else if (TYPE_POINT_CREATE.equals(reqmng.getCntrReqmngCode())) {
             Donation donation = donationOf(reqmng.getCntrSn());
             // 포인트 적립은 point로 직접 동기 호출하지 않고, 정상 완료 경로와 동일하게

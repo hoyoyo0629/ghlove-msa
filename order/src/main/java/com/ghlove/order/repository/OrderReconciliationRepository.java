@@ -23,7 +23,8 @@ import java.util.List;
  * {@code created_date}·{@code locgov_code}가 없다). 그래서 금액은 포인트 결제액
  * {@code od_order.point_amount}로, 취소금액은 주문상태 {@code CANCELLED}로 대응시켰다
  * (TO-BE는 결제수단이 포인트뿐이라 결제금액 = 사용포인트가 정합의 기준이다).
- * 입금대기금액은 TO-BE에 '입금대기' 상태가 없어 늘 0이다.
+ * 입금대기금액은 주문상태 {@code WAITING_DEPOSIT}(AS-IS '0', 기탁서 등록 답례품이 수납 전까지 머무는
+ * 상태)로 대응시켰다 - 아래 'AB%' 필터 때문에 관리자 수기주문(바로 CONFIRMED)만 보므로 실제로는 0이다.
  * 정산금액·미정주문건수는 AS-IS와 같은 표({@code op_remittance_detail},
  * {@code op_order_item_hold})에서 그대로 읽는다 - 지금은 두 표에 쌓이는 것이 없어 0이다.
  *
@@ -53,7 +54,8 @@ public class OrderReconciliationRepository {
                      , sum(coalesce(o.point_amount, 0))                                  as order_amt
                      , sum(case when o.order_status = 'CANCELLED'
                                 then coalesce(o.point_amount, 0) else 0 end)             as order_amt_cancel
-                     , 0                                                                 as order_amt_0
+                     , sum(case when o.order_status = 'WAITING_DEPOSIT'
+                                then coalesce(o.point_amount, 0) else 0 end)             as order_amt_0
                      , coalesce((select sum(cast(rd.sale_price * rd.quantity + rd.etc_amt as bigint))
                                    from ord.op_remittance_detail rd
                                   where rd.order_code = o.order_id), 0)                  as remittance_amt

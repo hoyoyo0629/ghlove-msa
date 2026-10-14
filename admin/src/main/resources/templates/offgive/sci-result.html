@@ -1,0 +1,46 @@
+<!--/* AS-IS opmanager/offgive/sci-result.jsp(실명확인 결과 수신 Sample JSP) - 사이렌24가 ok_url로 돌려준 retInfo를
+     SciClient.result()가 복호화·위변조 검증한 값을 부모 화면 콜백으로 넘긴다.
+     - 위변조(msgChk N): AS-IS alert("비정상적인 접근입니다.!!N") 후 끝.
+     - 예외(결과 없음): AS-IS처럼 아무것도 쓰지 않는다(로그만). */-->
+<th:block xmlns:th="http://www.thymeleaf.org">
+<th:block th:if="${msgChk == 'N'}">
+		    <script language=javascript>
+            alert("비정상적인 접근입니다.!!N");
+		    </script>
+</th:block>
+<th:block th:if="${msgChk == 'Y'}">
+            <script type="text/javascript" th:inline="javascript">
+
+//     		1	일치	요청한 주민등록 번호와 실명확인 DB가 일치
+//     		2	불일치	요청한 주민등록 번호와 설명이 실명확인 DB와 불일치
+//     				식별이름이 한글이 아닌 경우 (예: 영문, 숫자, 특수문자등)
+//     		3	없음	DB 미등록
+//     		4	오류 	주민등록 번호조합이 맞지 않는 경우
+//     				주민등록번호가 13자리가 아닌 경우
+//     				주민등록번호가 숫자가 아닌 경우
+//     		5	에러	SYSTEM 장애가 발생한 경우
+//     		7	명의도용방지	개인의 siren명의도용방지 유료서비스가 설정된 경우
+//     		9	인증시도초과	10번이상 인증했을 경우
+
+			var result = /*[[${sciResult}]]*/ "";
+			var message = "";
+			if (result == "2") message = "불일치";
+			if (result == "3") message = "없음";
+			if (result == "4") message = "오류";
+			if (result == "5") message = "에러";
+			if (result == "7") message = "명의도용방지";
+			if (result == "9") message = "인증시도초과";
+
+            var sciUser = {
+                "result" : result,	// 1: 성공
+                "message" : message,
+                "ci" : /*[[${sciCi}]]*/ "",
+                "di" : /*[[${sciDi}]]*/ ""
+            };
+
+            parent.sciResponse(sciUser);
+//             parent.opener.sciResponse(sciUser);
+//             self.close();
+			</script>
+</th:block>
+</th:block>

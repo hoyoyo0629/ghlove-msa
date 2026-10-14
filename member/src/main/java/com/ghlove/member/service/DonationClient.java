@@ -78,6 +78,31 @@ public class DonationClient {
         }
     }
 
+    /**
+     * 회원 지자체코드 매핑 - AS-IS {@code (SELECT locgov_mapng_code FROM G_INSTT_CODE WHERE locgov_code = #{locgovCode})}
+     * (join-mapper updateUserInfo / user-mapper updateUserEtcInfo). G_INSTT_CODE는 donation 소유라 같은 조회
+     * ({@code /api/offgive/locgov-mapng-code}, offgive getLocgovMapngCode와 같은 표·같은 키)를 부른다.
+     * 입력이 비거나 매핑이 없으면 null(AS-IS 서브쿼리 결과 NULL). AS-IS는 한 DB라 실패할 일이 없는데, 여기서 조회가
+     * 실패했을 때 null로 삼키면 저장된 값을 조용히 지우게 되므로 예외로 막는다.
+     */
+    public String locgovMapngCode(String locgovCode) {
+        if (locgovCode == null || locgovCode.isBlank()) {
+            return null;
+        }
+        try {
+            java.util.Map<String, Object> body = restClient.get()
+                    .uri("/api/offgive/locgov-mapng-code?locgovCode={locgovCode}", locgovCode)
+                    .retrieve()
+                    .body(new org.springframework.core.ParameterizedTypeReference<java.util.Map<String, Object>>() {
+                    });
+            Object code = body != null ? body.get("locgov_mapng_code") : null;
+            return code != null ? code.toString() : null;
+        } catch (RestClientException e) {
+            log.warn("Failed to map locgov code {} via donation service", locgovCode, e);
+            throw new MemberException("회원 지자체 정보를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.");
+        }
+    }
+
     /** "회원 정보 수정" 화면의 관심지자체 칩 목록용. */
     public List<InterestLocgovInfo> interestLocgovsOf(Long userId) {
         try {

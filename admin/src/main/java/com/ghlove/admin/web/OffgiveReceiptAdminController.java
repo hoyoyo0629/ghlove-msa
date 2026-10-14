@@ -4,12 +4,15 @@ import com.ghlove.admin.domain.Manager;
 import com.ghlove.admin.service.CommonCodeService;
 import com.ghlove.admin.service.MemberAdminClient;
 import com.ghlove.admin.service.OffgiveClient;
+import com.ghlove.admin.web.support.ExcelDownloadWriter;
 import com.ghlove.admin.web.support.OffgiveSearchParam;
 import com.ghlove.admin.web.support.Pagination;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,10 +49,13 @@ import java.util.Map;
  * <p>AS-IS 동작 그대로: <b>진입(GET)에서는 조회하지 않는다</b>(검색해야 조회). 신청일 범위는
  * 비면 오늘로 채운다. 이름은 <b>마스킹</b>해서 보여준다(첫 글자 + ' * ' + 세 번째 글자부터).
  *
- * <p><b>미이식(사용자 결정 필요)</b>: AS-IS {@code ROLE_ADMIN_11}({@code OFF_CENTER}, 오프라인
- * 센터)은 TO-BE OP_ROLE에 없다(실측 ROLE_ADMIN_1~8까지만). 권한을 새로 만드는 일이라
- * 분기만 자리로 남기고 역할 자체는 추가하지 않았다 - 같은 메뉴의 기탁서 등록(15102)과 함께
- * 결정이 필요하다.
+ * <p><b>ROLE_ADMIN_11 미추가 - 확정(2026-10-12)</b>: AS-IS {@code OffgiveServiceImpl} 등
+ * 코드에는 {@code ROLE_ADMIN_11}({@code OFF_CENTER}, 복지센터) 분기가 있지만, AS-IS
+ * 분석문서(`05_기반계층_설계/README.md` §4.2)에 "ROLE_ADMIN_11 | (WCM) | DB에 없음. 코드만
+ * 참조"라고 명시돼 있다 - 즉 <b>AS-IS 실제 운영 OP_ROLE 테이블에도 이 역할이 없어서, AS-IS
+ * 자신도 이 분기를 한 번도 실행한 적이 없는 죽은 코드</b>다. "AS-IS에 코드가 있다고 실제로
+ * 쓰인다는 뜻은 아니다" 원칙의 권한(Role) 버전 - TO-BE도 이 역할을 추가하지 않고 분기만
+ * 자리로 남긴다(AS-IS가 꺼 둔 상태를 그대로 유지, [[as-is-parity-includes-disabled-state]]).
  */
 @Controller
 @RequestMapping("/offgive/list")
@@ -64,6 +70,7 @@ public class OffgiveReceiptAdminController {
     private final OffgiveClient offgiveClient;
     private final MemberAdminClient memberAdminClient;
     private final CommonCodeService commonCodeService;
+    private final ExcelDownloadWriter excelDownloadWriter;
 
     /** AS-IS 목록 한 행 - 코드라벨·마스킹까지 적용한 상태. */
     public record Row(int no, String cntrSn, String cntrSttusNm, String elctrnPayNo, String sttemntPayDe,
@@ -106,7 +113,7 @@ public class OffgiveReceiptAdminController {
         searchParam.applyDefaults();
         applyScope(searchParam, viewer, role);
 
-        List<Row> all = load(searchParam);
+        List<Row> all = load(searchParam, role);
         Pagination pagination = Pagination.of(all.size(), searchParam.getPage(), searchParam.getItemsPerPage())
                 .withLinkFrom(request);
 
@@ -115,7 +122,13 @@ public class OffgiveReceiptAdminController {
         return "offgive/list";
     }
 
-    /** AS-IS GET /list/download-excel - 파일명 "오프라인기부금접수현황목록_{일시}". TO-BE는 CSV. */
+    /**
+     * AS-IS GET /list/download-excel - {@code OffgiveManagerController.downloadExcelProcessByLocgovListPrj} →
+     * {@code OffgiveServiceImpl.streamOffgiveList}(살아있는 코드) → {@code ExcelDownloadView}(로그인ID 암호화) 그대로.
+     * 시트 "OFFGIVE_DATA", 제목 "오프라인 기부금 접수 관리 목록", 11컬럼·컬럼폭 AS-IS 값, No는 전체건수에서 역순(천단위 콤마).
+     * 화면과 달리 <b>이름은 마스킹하지 않고</b>, 수납일·신고일·금액도 가공하지 않은 값이며, 기부지자체·지점/센터명은
+     * Java 문자열 더하기라 값이 없으면 "null"이 찍힌다(AS-IS 그대로). 화면 JS가 신청일 범위가 비면 막는다.
+     */
     @GetMapping("/download-excel")
     public void downloadExcel(@ModelAttribute("searchParam") OffgiveSearchParam searchParam,
                               HttpSession session, HttpServletResponse response) throws IOException {
@@ -128,44 +141,77 @@ public class OffgiveReceiptAdminController {
         searchParam.applyDefaults();
         applyScope(searchParam, viewer, role);
 
-        StringBuilder csv = new StringBuilder("﻿");
-        csv.append("No.,접수번호(지자체),기부상태,전자납부번호,수납일,기부 지자체,이름,기부 금액,지점/센터명,신고일,특정사업에 기부하기 사업명\n");
-        for (Row row : load(searchParam)) {
-            csv.append(row.no()).append(',')
-                    .append(csvEscape(row.cntrSn())).append(',')
-                    .append(csvEscape(row.cntrSttusNm())).append(',')
-                    .append(csvEscape(row.elctrnPayNo())).append(',')
-                    .append(csvEscape(row.sttemntPayDe())).append(',')
-                    .append(csvEscape(row.locgovText())).append(',')
-                    .append(csvEscape(row.maskedUserName())).append(',')
-                    .append(row.cntrAmt() == null ? "" : row.cntrAmt().toPlainString()).append(',')
-                    .append(csvEscape(row.bankText())).append(',')
-                    .append(csvEscape(row.frstRegistPnttm())).append(',')
-                    .append(csvEscape(row.prjSubject())).append('\n');
+        List<OffgiveClient.AdminRow> rows = search(searchParam, role);
+        Map<Long, String> names = namesOf(rows);
+        Map<String, String> bankLabels = commonCodeService.labelsOf(CODE_TYPE_OFF_BANK);
+
+        // SXSSF window 100, 임시파일 압축 - AS-IS streamOffgiveList 그대로
+        SXSSFWorkbook workbook = new SXSSFWorkbook(100);
+        workbook.setCompressTempFiles(true);
+        Sheet sheet = workbook.createSheet("OFFGIVE_DATA");
+        ExcelDownloadWriter.CellStyles styles = excelDownloadWriter.createStyles(workbook);
+        String[] headers = {"No", "접수번호(지자체)", "기부상태", "전자납부번호", "수납일", "기부 지자체", "이름",
+                "기부 금액", "지점/센터명", "신고일", "특정사업에 기부하기 사업명"};
+        int[] widths = {2000, 7500, 3000, 7500, 5000, 7500, 5000, 5000, 7500, 7500, 7500};
+        int rowIndex = excelDownloadWriter.writeTitleAndHeaderRow(sheet, styles, "오프라인 기부금 접수 관리 목록",
+                headers, widths);
+
+        int totalCount = rows.size();
+        for (OffgiveClient.AdminRow r : rows) {
+            org.apache.poi.ss.usermodel.Row xlRow = sheet.createRow(rowIndex++);
+            xlRow.setHeight((short) 400);
+            excelDownloadWriter.dataCell(xlRow, 0, styles, String.format("%,d", totalCount--));
+            excelDownloadWriter.dataCell(xlRow, 1, styles, r.cntrSn());
+            excelDownloadWriter.dataCell(xlRow, 2, styles, statusName(r.cntrSttusCode()));
+            excelDownloadWriter.dataCell(xlRow, 3, styles, r.elctrnPayNo());
+            excelDownloadWriter.dataCell(xlRow, 4, styles, r.sttemntPayDe());
+            excelDownloadWriter.dataCell(xlRow, 5, styles, r.upperLocgovNm() + " " + r.locgovNm());
+            excelDownloadWriter.dataCell(xlRow, 6, styles, names.get(r.userId()));
+            excelDownloadWriter.dataCell(xlRow, 7, styles, r.cntrAmt() == null ? null : r.cntrAmt().toPlainString());
+            excelDownloadWriter.dataCell(xlRow, 8, styles, bankLabels.get(r.rceptBankCode()) + " " + r.rceptBankNm());
+            excelDownloadWriter.dataCell(xlRow, 9, styles, asIsDatetimeString(r.frstRegistPnttm()));
+            excelDownloadWriter.dataCell(xlRow, 10, styles, r.prjSubject());
         }
 
+        // 오프라인기부금접수현황목록_20260115142019.xlsx (AS-IS Const.DATETIME_FORMAT)
         String fileName = "오프라인기부금접수현황목록_"
-                + java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) + ".csv";
-        response.setContentType("text/csv; charset=UTF-8");
-        response.setHeader("Content-Disposition", "attachment; filename=\"offgive-receipts.csv\"; filename*=UTF-8''"
-                + java.net.URLEncoder.encode(fileName, StandardCharsets.UTF_8));
-        response.getOutputStream().write(csv.toString().getBytes(StandardCharsets.UTF_8));
+                + java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) + ".xlsx";
+        excelDownloadWriter.write(response, workbook, fileName, viewer.getLoginId());
     }
 
     /* ==================== 내부 ==================== */
 
-    /** 검색 + 이름 채우기 + 번호 매기기. */
-    private List<Row> load(OffgiveSearchParam searchParam) {
-        List<OffgiveClient.AdminRow> rows = offgiveClient.adminSearch(
+    private List<OffgiveClient.AdminRow> search(OffgiveSearchParam searchParam, String role) {
+        return offgiveClient.adminSearch(
                 searchParam.getShKeyword(), searchParam.getShText(),
                 searchParam.getShFrstRegistPnttmStart(), searchParam.getShFrstRegistPnttmEnd(),
                 searchParam.getShCntrAmtStart(), searchParam.getShCntrAmtEnd(),
                 searchParam.getShCntrSttusCode(), searchParam.getShRceptBankCode(),
-                searchParam.getShRceptBankNm());
+                searchParam.getShRceptBankNm(), role);
+    }
 
+    private Map<Long, String> namesOf(List<OffgiveClient.AdminRow> rows) {
         List<Long> userIds = rows.stream().map(OffgiveClient.AdminRow::userId)
                 .filter(java.util.Objects::nonNull).distinct().toList();
-        Map<Long, String> names = memberAdminClient.userNames(userIds);
+        return memberAdminClient.userNames(userIds);
+    }
+
+    /**
+     * AS-IS 엑셀 신고일 - CUBRID DATETIME을 MyBatis가 문자열로 받은 값(java.sql.Timestamp 문자열, 예
+     * "2026-08-14 10:18:56.0")을 그대로 쓴다. TO-BE는 yyyyMMddHHmmss(밀리초 없음)로 저장해 ".0"으로 끝난다.
+     */
+    private static String asIsDatetimeString(String raw) {
+        if (raw == null || raw.length() < 14 || raw.charAt(4) == '-') {
+            return raw;
+        }
+        return java.sql.Timestamp.valueOf(java.time.LocalDateTime.parse(raw.substring(0, 14),
+                DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))).toString();
+    }
+
+    /** 검색 + 이름 채우기 + 번호 매기기. */
+    private List<Row> load(OffgiveSearchParam searchParam, String role) {
+        List<OffgiveClient.AdminRow> rows = search(searchParam, role);
+        Map<Long, String> names = namesOf(rows);
         Map<String, String> bankLabels = commonCodeService.labelsOf(CODE_TYPE_OFF_BANK);
 
         List<Row> result = new java.util.ArrayList<>();
@@ -181,7 +227,8 @@ public class OffgiveReceiptAdminController {
     }
 
     /**
-     * AS-IS 권한 role 판정. ROLE_ADMIN_11(OFF_CENTER)은 TO-BE OP_ROLE에 없어 분기만 남겼다.
+     * AS-IS 권한 role 판정. {@code ROLE_ADMIN_11}(OFF_CENTER) 분기는 AS-IS 자신도 OP_ROLE에
+     * 없어 실행된 적 없는 죽은 코드라 TO-BE도 추가하지 않는다(클래스 주석 참고) - 자리만 유지.
      *
      * @return SYSTEM / OFF_MAIN / OFF_SUB / OFF_CENTER / LOC, 권한이 없으면 null
      */
@@ -194,7 +241,7 @@ public class OffgiveReceiptAdminController {
             case "ROLE_ADMIN_1", "ROLE_ADMIN_2", "ROLE_ADMIN_3", "ROLE_ADMIN_4" -> "SYSTEM";
             case "ROLE_ADMIN_7" -> "OFF_MAIN";
             case "ROLE_ADMIN_8" -> "OFF_SUB";
-            // AS-IS ROLE_ADMIN_11 - TO-BE에는 아직 없는 권한(오프라인 센터)
+            // AS-IS에도 할당 불가능한 죽은 분기(클래스 주석) - 자리만 유지, OP_ROLE에 추가 안 함
             case "ROLE_ADMIN_11" -> "OFF_CENTER";
             default -> "LOC";
         };
@@ -296,15 +343,6 @@ public class OffgiveReceiptAdminController {
                     + ":" + raw.substring(12, 14);
         }
         return raw.length() > 19 ? raw.substring(0, 19) : raw;
-    }
-
-    private static String csvEscape(String value) {
-        if (value == null) {
-            return "";
-        }
-        String escaped = value.replace("\"", "\"\"");
-        return escaped.contains(",") || escaped.contains("\n") || escaped.contains("\"")
-                ? "\"" + escaped + "\"" : escaped;
     }
 
     private static Manager manager(HttpSession session) {

@@ -34,6 +34,15 @@
             <tr><td class="label">사업자번호</td><td><input type="text" id="businessNumber" name="businessNumber" th:value="${seller.businessNumber()}" form="sellerForm"></td></tr>
             <tr><td class="label">사업장소재지</td><td><input type="text" id="businessLocation" name="businessLocation" th:value="${seller.businessLocation()}" form="sellerForm"></td></tr>
             <tr><td class="label">마을기업</td><td><input type="checkbox" name="communityBusinessYn" value="Y" th:checked="${seller.communityBusinessYn() == 'Y'}" form="sellerForm"></td></tr>
+            <!-- AS-IS seller/form.jsp는 이 체크박스를 '업종' 칸 입력란 옆에 둔다(form:checkbox label="성인답례품 등록권한" +
+                 hidden "!adultItemYn"=N). TO-BE 입점업체 폼에는 업태/업종 행 자체가 아직 없어(폼 전체 재이식은 서비스로직
+                 전수조사 답례품관리 단계) 임시로 별도 행에 둔다. 체크 안 하면 컨트롤러가 'N'으로 저장한다. -->
+            <tr><td class="label">성인답례품 등록권한</td><td>
+                <div class="checkbox">
+                    <input type="checkbox" id="adultItemYn1" name="adultItemYn" value="Y" th:checked="${seller.adultItemYn() == 'Y'}" form="sellerForm">
+                    <label for="adultItemYn1">성인답례품 등록권한</label>
+                </div>
+            </td></tr>
             </tbody>
         </table>
     </div>

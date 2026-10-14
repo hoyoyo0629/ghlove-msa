@@ -69,6 +69,25 @@ public class OrderClient {
                                   long remittanceAmt, long holdCnt, LocalDateTime createdDate) {
     }
 
+    /**
+     * 기탁서 상세(AS-IS getOffgive)의 선택 답례품(옵션 표시문자열을 {@code <br/>}로 이은 HTML)·배송지.
+     * 답례품 주문이 없으면 null(화면이 두 행을 숨긴다 - AS-IS {@code not empty offgive.options}).
+     */
+    public OffgiveOrderSummary offgiveOrderSummary(String cntrSn) {
+        try {
+            return restClient.get()
+                    .uri("/api/admin/offgive-orders/summary?cntrSn={cntrSn}", cntrSn)
+                    .header(HEADER_SECRET, adminSecret)
+                    .retrieve()
+                    .body(OffgiveOrderSummary.class);
+        } catch (RestClientException e) {
+            return null;
+        }
+    }
+
+    public record OffgiveOrderSummary(String options, String rcvPost, String rcvAddress, String rcvAddressDetail) {
+    }
+
     private static String blankToNull(String value) {
         return (value == null || value.isBlank()) ? null : value;
     }

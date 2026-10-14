@@ -439,6 +439,12 @@ public class DonationService {
         logRelay(RELAY_TYPE_SUNAP, donation, RELAY_RESULT_SUCCESS);
 
         donation.setCntrSttusCode(STATUS_COMPLETED);
+        // AS-IS 수납완료 UPDATE(ngdonation sunapResultSuccess / externalapi sunapSuccess)는 같은 문장에서
+        // STTEMNT_PAY_DE = IFNULL(수납일, 오늘), DELETE_AT = 'N'도 넣는다 - 미납 삭제 배치가 지운 건이 나중에 수납되면
+        // 되살아난다. (포인트·만료일 칸은 TO-BE에선 point 원장이 맡는다.)
+        donation.setSttemntPayDe(sunap.sunapDate() != null
+                ? DE_FORMAT.format(sunap.sunapDate()) : DE_FORMAT.format(LocalDateTime.now()));
+        donation.setDeleteAt("N");
         Donation saved = donationRepository.save(donation);
         upsertHonorTier(saved, locgov);
         designatedAdminService.autoCloseIfGoalReached(saved.getDsgnDntnBizId());
@@ -760,14 +766,23 @@ public class DonationService {
 
     private Donation saveRequested(Long userId, String locgovCode, BigDecimal amount, Long dsgnDntnBizId,
                                     String pathCode, String rceptBankCode, String rceptBankNm) {
+        return saveRequested(null, userId, locgovCode, amount, dsgnDntnBizId, pathCode, rceptBankCode, rceptBankNm);
+    }
+
+    /** @param cntrSn 정해진 기부일련번호(기탁서: AS-IS 연계관리키) - 비면 기존 규칙으로 만든다. */
+    private Donation saveRequested(String cntrSn, Long userId, String locgovCode, BigDecimal amount,
+                                    Long dsgnDntnBizId, String pathCode, String rceptBankCode, String rceptBankNm) {
         LocalDateTime now = LocalDateTime.now();
         Donation donation = new Donation();
-        donation.setCntrSn(generateCntrSn());
+        donation.setCntrSn(cntrSn != null && !cntrSn.isBlank() ? cntrSn : generateCntrSn());
         donation.setCntrDe(DE_FORMAT.format(now));
         donation.setUserId(userId);
         donation.setCntrLocgovCode(locgovCode);
         donation.setCntrAmt(amount);
         donation.setCntrSttusCode(STATUS_REQUESTED);
+        // DELETE_AT은 NOT NULL DEFAULT 'N'(AS-IS insert는 이 컬럼을 빼서 기본값을 탄다) - 매핑된 뒤로는
+        // JPA가 NULL을 명시해 기본값이 안 먹으므로 같은 값을 직접 넣는다.
+        donation.setDeleteAt("N");
         donation.setCntrPathCode(pathCode);
         donation.setFrstRegistPnttm(PNTTM_FORMAT.format(now));
         donation.setDsgnDntnBizId(dsgnDntnBizId);
@@ -798,15 +813,57 @@ public class DonationService {
      */
     @Transactional
     public Donation registerOfflineDonation(Long userId, String locgovCode, BigDecimal amount,
-                                             String rceptBankCode, String rceptBankNm) {
+                                             String rceptBankCode, String rceptBankNm, Long dsgnDntnBizId,
+                                             String psitnLocgovCode, String presentType) {
+        return registerOfflineDonation(null, userId, locgovCode, amount, rceptBankCode, rceptBankNm, dsgnDntnBizId,
+                psitnLocgovCode, presentType);
+    }
+
+    /**
+     * @param cntrSn 기부일련번호 - AS-IS 기탁서 등록은 세외수입 부과요청에 쓴 연계관리키(서울은 등록 시 새로
+     *               채번한 연계관리키)를 그대로 G_CNTR.CNTR_SN으로 쓴다({@code OffgiveServiceImpl.insertOffgive}).
+     *               비면 기존 규칙으로 만든다.
+     */
+    @Transactional
+    public Donation registerOfflineDonation(String cntrSn, Long userId, String locgovCode, BigDecimal amount,
+                                             String rceptBankCode, String rceptBankNm, Long dsgnDntnBizId,
+                                             String psitnLocgovCode, String presentType) {
         requireUser(userId);
         requireAmount(amount);
         Locgov locgov = locgovRepository.findById(locgovCode)
                 .filter(l -> "Y".equals(l.getUseAt()))
                 .orElseThrow(() -> new DonationException("선택한 지자체를 찾을 수 없습니다."));
 
+        // AS-IS form.jsp save() - 행정지 주소와 같은 지자체(또는 같은 광역이면서 기부대상이
+        // 그 광역 본청·코드 끝 000)에는 기부할 수 없다.
+        if (psitnLocgovCode != null && !psitnLocgovCode.isBlank()) {
+            if (psitnLocgovCode.equals(locgov.getLocgovCode())) {
+                throw new DonationException("행정지 주소와 같은 지자체에는 기부 할 수 없습니다.");
+            }
+            Locgov psitnLocgov = locgovRepository.findById(psitnLocgovCode).orElse(null);
+            if (psitnLocgov != null && psitnLocgov.getUpperLocgovCode() != null
+                    && psitnLocgov.getUpperLocgovCode().equals(locgov.getUpperLocgovCode())
+                    && locgov.getLocgovCode().endsWith("000")) {
+                throw new DonationException("행정지 주소와 같은 지자체에는 기부 할 수 없습니다.");
+            }
+        }
+
         validateAnnualLimit(userId, locgov.getLocgovCode(), amount);
-        return saveRequested(userId, locgov.getLocgovCode(), amount, null, PATH_OFFLINE, rceptBankCode, rceptBankNm);
+        Donation donation = saveRequested(cntrSn, userId, locgov.getLocgovCode(), amount, dsgnDntnBizId, PATH_OFFLINE,
+                rceptBankCode, rceptBankNm);
+        if (psitnLocgovCode != null && !psitnLocgovCode.isBlank()) {
+            donation.setPsitnLocgovCode(psitnLocgovCode);
+        }
+        donation.setRtnpsntReqstCode(presentType);
+        donation.setInfoAgreAt("Y");
+        return donationRepository.save(donation);
+    }
+
+    /** 지정기부·행정지주소·답례품여부 없이 등록하던 예전 호출부 하위호환. */
+    @Transactional
+    public Donation registerOfflineDonation(Long userId, String locgovCode, BigDecimal amount,
+                                             String rceptBankCode, String rceptBankNm) {
+        return registerOfflineDonation(userId, locgovCode, amount, rceptBankCode, rceptBankNm, null, null, null);
     }
 
     /**

@@ -59,7 +59,7 @@ public class ItemAdminController {
         populateFormModel(model);
         model.addAttribute("item", new ItemAdminClient.ItemDto(null, null, null, null, null, null, null,
                 null, null, null, null, null, null, "ALWAYS", null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null));
+                null, null, null, null, null, null, null, null));
         return "gift-items/form";
     }
 
@@ -108,15 +108,17 @@ public class ItemAdminController {
         return "redirect:/admin/gift-items/" + id + "/edit";
     }
 
-    /** 답례품 옵션 관리 (SFR-005 재검토 라운드 - 원래 코드가 전혀 없던 gap). */
+    /** 답례품 옵션 관리 (SFR-005 재검토 라운드 - 원래 코드가 전혀 없던 gap). 선택형(S) 한 줄 -
+     *  AS-IS 저장규칙대로 optionTitle(옵션 제목)=name1, optionName(옵션 내용)=name2. */
     @PostMapping("/{id}/options")
-    public String registerOption(@PathVariable Long id, @RequestParam String optionName,
+    public String registerOption(@PathVariable Long id, @RequestParam(required = false) String optionTitle,
+                                  @RequestParam String optionName,
                                   @RequestParam(required = false) Integer optionPrice,
                                   @RequestParam(required = false, defaultValue = "false") boolean stockTracked,
                                   @RequestParam(required = false) Integer stockQuantity,
                                   RedirectAttributes redirect) {
         try {
-            itemOptionClient.register(id, optionName, optionPrice, stockTracked, stockQuantity);
+            itemOptionClient.register(id, optionTitle, optionName, optionPrice, stockTracked, stockQuantity);
         } catch (ManagerException e) {
             redirect.addFlashAttribute("errorMessage", e.getMessage());
         }
@@ -124,13 +126,14 @@ public class ItemAdminController {
     }
 
     @PostMapping("/{id}/options/{optionId}")
-    public String editOption(@PathVariable Long id, @PathVariable Long optionId, @RequestParam String optionName,
+    public String editOption(@PathVariable Long id, @PathVariable Long optionId,
+                              @RequestParam(required = false) String optionTitle, @RequestParam String optionName,
                               @RequestParam(required = false) Integer optionPrice,
                               @RequestParam(required = false, defaultValue = "false") boolean stockTracked,
                               @RequestParam(required = false) Integer stockQuantity,
                               RedirectAttributes redirect) {
         try {
-            itemOptionClient.edit(id, optionId, optionName, optionPrice, stockTracked, stockQuantity);
+            itemOptionClient.edit(id, optionId, optionTitle, optionName, optionPrice, stockTracked, stockQuantity);
         } catch (ManagerException e) {
             redirect.addFlashAttribute("errorMessage", e.getMessage());
         }
@@ -170,18 +173,19 @@ public class ItemAdminController {
                           @RequestParam(required = false) Integer minDonationAmount,
                           @RequestParam(required = false) Integer brandId,
                           @RequestParam(required = false) List<MultipartFile> images,
+                          @RequestParam(required = false) String adultItemYn,
                           Model model) {
         try {
             itemClient.create(sellerId, itemName, itemSummary, detailContent, categoryCode, locgovCode,
                     salePrice, stockQuantity, displayType, displayStartDate, displayEndDate,
-                    minDonationAmount, brandId, images);
+                    minDonationAmount, brandId, images, adultItemYn);
             return "redirect:/admin/gift-items";
         } catch (ManagerException e) {
             populateFormModel(model);
             model.addAttribute("item", new ItemAdminClient.ItemDto(null, sellerId, itemName, itemSummary, detailContent,
                     categoryCode, locgovCode, salePrice, stockQuantity, null, null, null, null,
                     displayType, displayStartDate, displayEndDate, minDonationAmount, null, brandId, null, null,
-                    null, null, null, null, null, null, null));
+                    null, null, null, null, null, null, null, null));
             model.addAttribute("errorMessage", e.getMessage());
             return "gift-items/form";
         }
@@ -198,17 +202,18 @@ public class ItemAdminController {
                           @RequestParam(required = false) String displayEndDate,
                           @RequestParam(required = false) Integer minDonationAmount,
                           @RequestParam(required = false) Integer brandId,
+                          @RequestParam(required = false) String adultItemYn,
                           Model model) {
         try {
             itemClient.update(id, sellerId, itemName, itemSummary, detailContent, categoryCode, salePrice,
-                    stockQuantity, displayType, displayStartDate, displayEndDate, minDonationAmount, brandId);
+                    stockQuantity, displayType, displayStartDate, displayEndDate, minDonationAmount, brandId, adultItemYn);
             return "redirect:/admin/gift-items";
         } catch (ManagerException e) {
             populateFormModel(model);
             model.addAttribute("item", new ItemAdminClient.ItemDto(id, sellerId, itemName, itemSummary, detailContent,
                     categoryCode, null, salePrice, stockQuantity, null, null, null, null, displayType,
                     displayStartDate, displayEndDate, minDonationAmount, null, brandId, null, null,
-                    null, null, null, null, null, null, null));
+                    null, null, null, null, null, null, null, null));
             model.addAttribute("options", itemOptionClient.list(id));
             model.addAttribute("errorMessage", e.getMessage());
             return "gift-items/form";

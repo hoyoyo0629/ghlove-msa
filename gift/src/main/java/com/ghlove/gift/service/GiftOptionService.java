@@ -47,7 +47,10 @@ public class GiftOptionService {
     private final GiftAdditionRepository giftAdditionRepository;
     private final GiftService giftService;
 
-    /** 조합형/텍스트형 옵션 한 줄. name2/3는 형태에 따라 null 가능. */
+    /**
+     * 옵션 한 줄 - AS-IS OP_ITEM_OPTION 저장규칙 그대로: 선택형(S)은 name1=옵션 제목(예: 색상)·
+     * name2=옵션 내용(예: 빨강), 조합형(S2·S3)은 name1~3=단계별 옵션값, 텍스트형(T)은 name1만.
+     */
     public record OptionRow(String optionName1, String optionName2, String optionName3,
                             Integer optionPrice, boolean stockTracked, Integer stockQuantity,
                             boolean hidden) {
@@ -98,23 +101,20 @@ public class GiftOptionService {
         return result;
     }
 
+    /** 선택형(S) 옵션 한 줄 추가 - AS-IS 저장규칙대로 optionTitle(옵션 제목)은 name1, optionName(옵션 내용)은 name2. */
     @Transactional
-    public GiftOption register(Long itemId, String optionName, Integer optionPrice, boolean stockTracked,
-                                Integer stockQuantity) {
+    public GiftOption register(Long itemId, String optionTitle, String optionName, Integer optionPrice,
+                                boolean stockTracked, Integer stockQuantity) {
         if (!giftRepository.existsById(itemId)) {
             throw new GiftException("답례품을 찾을 수 없습니다.");
         }
-        if (optionName == null || optionName.isBlank()) {
-            throw new GiftException("옵션명을 입력해 주세요.");
-        }
-        if (optionPrice != null && optionPrice < 0) {
-            throw new GiftException("추가금액은 0원 이상이어야 합니다.");
-        }
+        validateSingle(optionTitle, optionName, optionPrice);
 
         GiftOption option = new GiftOption();
         option.setItemId(itemId);
         option.setOptionType(OPTION_TYPE_SINGLE);
-        option.setOptionName1(optionName);
+        option.setOptionName1(optionTitle.trim());
+        option.setOptionName2(optionName.trim());
         option.setOptionPrice(optionPrice != null ? optionPrice : 0);
         applyStock(option, stockTracked, stockQuantity);
         option.setOptionDisplayFlag(DISPLAY_ON);
@@ -124,16 +124,12 @@ public class GiftOptionService {
     }
 
     @Transactional
-    public GiftOption edit(Long itemOptionId, String optionName, Integer optionPrice, boolean stockTracked,
-                            Integer stockQuantity) {
+    public GiftOption edit(Long itemOptionId, String optionTitle, String optionName, Integer optionPrice,
+                            boolean stockTracked, Integer stockQuantity) {
         GiftOption option = getOrThrow(itemOptionId);
-        if (optionName == null || optionName.isBlank()) {
-            throw new GiftException("옵션명을 입력해 주세요.");
-        }
-        if (optionPrice != null && optionPrice < 0) {
-            throw new GiftException("추가금액은 0원 이상이어야 합니다.");
-        }
-        option.setOptionName1(optionName);
+        validateSingle(optionTitle, optionName, optionPrice);
+        option.setOptionName1(optionTitle.trim());
+        option.setOptionName2(optionName.trim());
         option.setOptionPrice(optionPrice != null ? optionPrice : 0);
         applyStock(option, stockTracked, stockQuantity);
         return giftOptionRepository.save(option);
@@ -180,8 +176,7 @@ public class GiftOptionService {
             option.setItemId(itemId);
             option.setOptionType(optionType);
             option.setOptionName1(trimToEmpty(row.optionName1()));
-            option.setOptionName2(OPTION_TYPE_SINGLE.equals(optionType) || OPTION_TYPE_TEXT.equals(optionType)
-                    ? null : trimToNull(row.optionName2()));
+            option.setOptionName2(OPTION_TYPE_TEXT.equals(optionType) ? null : trimToNull(row.optionName2()));
             option.setOptionName3(OPTION_TYPE_COMBO3.equals(optionType) ? trimToNull(row.optionName3()) : null);
             option.setOptionPrice(nonNegative(row.optionPrice()));
             applyStock(option, row.stockTracked(), row.stockQuantity());
@@ -260,6 +255,10 @@ public class GiftOptionService {
     }
 
     private void validateRow(String optionType, OptionRow row) {
+        if (OPTION_TYPE_SINGLE.equals(optionType)) {
+            validateSingle(row.optionName1(), row.optionName2(), row.optionPrice());
+            return;
+        }
         if (row.optionName1() == null || row.optionName1().isBlank()) {
             throw new GiftException("옵션값을 입력해 주세요.");
         }
@@ -272,6 +271,19 @@ public class GiftOptionService {
             throw new GiftException("3조합형 3단계 옵션값을 입력해 주세요.");
         }
         if (row.optionPrice() != null && row.optionPrice() < 0) {
+            throw new GiftException("추가금액은 0원 이상이어야 합니다.");
+        }
+    }
+
+    /** 선택형(S) 한 줄 - AS-IS 입력 도우미 검증(title="옵션명"/"옵션값" + "을 입력해 주세요."). */
+    private void validateSingle(String optionTitle, String optionName, Integer optionPrice) {
+        if (optionTitle == null || optionTitle.isBlank()) {
+            throw new GiftException("옵션명을 입력해 주세요.");
+        }
+        if (optionName == null || optionName.isBlank()) {
+            throw new GiftException("옵션값을 입력해 주세요.");
+        }
+        if (optionPrice != null && optionPrice < 0) {
             throw new GiftException("추가금액은 0원 이상이어야 합니다.");
         }
     }

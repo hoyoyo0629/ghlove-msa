@@ -172,7 +172,8 @@ public class ExternalLoginService {
         user.setUserName(identity.name() != null ? identity.name() : identity.provider() + " 회원");
         user.setEmail(identity.email());
         user.setStatusCode(STATUS_ACTIVE);
-        user.setSbscrbSeCode("GENERAL");
+        // AS-IS 간편가입도 joinMapper.updateUserInfo를 타서 가입구분 100(온라인). 주소검색이 없어 LOCGOV_CODE는 NULL.
+        user.setSbscrbSeCode(MemberService.SBSCRB_SE_ONLINE);
         user.setLoginPathCode(LOGIN_PATH_BY_PROVIDER.getOrDefault(identity.provider(), identity.provider()));
         user.setLoginCount(0);
         user.setLoginFailCount(0);

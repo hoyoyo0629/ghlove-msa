@@ -53,8 +53,10 @@ public class OrderSagaListener {
                 ShipmentCreatedEvent event = objectMapper.readValue(payload, ShipmentCreatedEvent.class);
                 log.info("Received ShipmentCreatedEvent: {}", event);
                 long amount = event.groupPointAmount() != null ? event.groupPointAmount() : 0L;
+                // 기탁서 등록 답례품은 AS-IS procOffOrder처럼 포인트가 모자라도 남은 만큼만 차감하고 진행한다.
+                boolean offgive = event.cntrSn() != null && !event.cntrSn().isBlank();
                 boolean deducted = pointService.deductForShipment(event.shipmentId(), event.orderId(),
-                        event.userId(), amount, event.locgovCode(), event.lines());
+                        event.userId(), amount, event.locgovCode(), event.lines(), offgive);
                 if (deducted) {
                     orderSagaPublisher.publishShipmentPointDeducted(event.shipmentId(), event.orderId());
                 } else {

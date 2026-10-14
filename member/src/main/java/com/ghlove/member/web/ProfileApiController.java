@@ -54,7 +54,8 @@ public class ProfileApiController {
 
         return ResponseEntity.ok(new ProfileResponse(
                 user.getUserId(), user.getLoginId(), user.getUserName(),
-                memberService.codesOf("USER_TYPE").get(user.getSbscrbSeCode()),
+                // AS-IS modify.html 회원구분 = 화면 상수 디폴트등급(["일반회원"]) - 가입구분 코드와 무관하다.
+                MemberService.MEMBER_LEVEL_LABEL,
                 "Y".equals(user.getMfaEnabled()),
                 user.getEmail(), profile.getPhoneNumber(), profile.getBirthday(),
                 profile.getPost(), profile.getAddress(), profile.getAddressDetail(),
@@ -63,7 +64,9 @@ public class ProfileApiController {
                 "Y".equals(profile.getReceiveKakao()),
                 donationClient.interestLocgovsOf(user.getUserId()),
                 locgovs, provinces,
-                loginPathCode, userKeyYN, kakaoUserKeyYN));
+                loginPathCode, userKeyYN, kakaoUserKeyYN,
+                // AS-IS modify.html getUserInfo → param.locgovCode(저장된 회원 지자체코드). 세션 User는 낡을 수 있어 새로 읽는다.
+                memberService.locgovCodeOf(user.getUserId())));
     }
 
     public record ProfileResponse(Long userId, String loginId, String userName, String userTypeLabel,
@@ -73,12 +76,14 @@ public class ProfileApiController {
                                    java.util.List<DonationClient.InterestLocgovInfo> interestLocgovs,
                                    java.util.List<DonationClient.LocgovInfo> allLocgovs,
                                    Map<String, String> provinces,
-                                   String loginPathCode, String userKeyYN, String kakaoUserKeyYN) {
+                                   String loginPathCode, String userKeyYN, String kakaoUserKeyYN,
+                                   String locgovCode) {
     }
 
+    /** locgovCode - AS-IS modify.html param.locgovCode(저장된 회원 지자체코드, 주소 재검색 시 admCd 앞 5자리). */
     public record ProfileUpdateRequest(String phoneNumber, String email, String post, String address,
                                         String addressDetail, boolean receivePbanc, boolean receiveEmail,
-                                        boolean receiveSms, boolean receiveKakao) {
+                                        boolean receiveSms, boolean receiveKakao, String locgovCode) {
     }
 
     @PutMapping("/api/profile")
@@ -91,7 +96,7 @@ public class ProfileApiController {
         try {
             memberService.updateProfile(user.getUserId(), req.phoneNumber(), req.email(), req.post(),
                     req.address(), req.addressDetail(), req.receivePbanc(), req.receiveEmail(), req.receiveSms(), req.receiveKakao(),
-                    request.getRemoteAddr());
+                    request.getRemoteAddr(), req.locgovCode());
             return ResponseEntity.ok(Map.of("status", "OK"));
         } catch (MemberException e) {
             return ResponseEntity.badRequest().body(Map.of("status", "ERROR", "message", e.getMessage()));

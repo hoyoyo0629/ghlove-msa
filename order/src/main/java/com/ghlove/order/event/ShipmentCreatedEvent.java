@@ -11,6 +11,9 @@ import java.util.List;
  *
  * <p>gift는 {@code lines}의 품목별 재고를 <b>전부</b> 예약해야 출고 성공(하나라도 부족하면
  * 출고 전체 실패)이고, point는 {@code groupPointAmount}(그 지자체 소계)를 출고 단위로 차감한다.
+ *
+ * <p>{@code cntrSn}은 기탁서 등록 답례품(AS-IS FILLER9)일 때만 있다. point는 이때 AS-IS procOffOrder처럼
+ * 포인트가 모자라도 실패시키지 않고 남은 만큼만 차감한다.
  */
 public record ShipmentCreatedEvent(
         Long shipmentId,
@@ -19,6 +22,7 @@ public record ShipmentCreatedEvent(
         String locgovCode,
         long groupPointAmount,
         List<Line> lines,
+        String cntrSn,
         LocalDateTime occurredAt
 ) {
     /** 출고 내 품목 한 줄 - 재고 예약 단위. itemOptionId(옵션행)가 있으면 gift가 옵션단위 재고를 본다. */

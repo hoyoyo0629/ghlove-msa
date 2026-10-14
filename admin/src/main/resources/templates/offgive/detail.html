@@ -3,70 +3,304 @@
 <head>
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <meta charset="UTF-8">
-    <title>오프라인기부 접수 상세 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <title>기탁서 - 고향사랑e음 (admin service)</title>
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
-<!-- AS-IS opmanager/offgive/detail.jsp("기탁서") 재현. 취소/변경신청은 이미 있는
-     give-reqmng으로 그대로 연결한다(offgive 전용 취소 로직을 새로 만들지 않음 - 포인트
-     사용이력 체크 등 기존 워크플로가 이미 완전히 검증되어 있음). 생년월일/연락처/주소는
-     admin의 MemberClient.MemberInfo에 이미 있던 필드라 템플릿만 고치면 됐다("답례품 선택"/
-     "배송지주소"는 이 프로젝트에서 답례품이 별도 order/gift 서비스 흐름이라 접수 시점엔
-     해당 없음, "약관동의"/"전자납부번호"/"금년도 누적 기부액"은 대응 데이터 자체가 없어 생략). -->
+<!--/* AS-IS opmanager/offgive/detail.jsp("기탁서", GET /detail/{id}) verbatim 이식(2026-10-14 재이식).
+     마크업·문구·클래스·스크립트는 JSP 그대로이고 바뀐 건 경로(/opmanager 제거)와 값 표기뿐이다.
+     - 신청일: AS-IS FRST_REGIST_PNTTM은 DATETIME이라 fn:substring(0,19)가 "yyyy-MM-dd HH:mm:ss"였다. TO-BE는
+       yyyyMMddHHmmss 문자열이라 @opDate.ymdHms로 같은 모양을 만들고, 스크립트도 그 값을 받는다.
+     - 오늘 신청건 판정(today == 신청일 앞 10자리에서 '-' 제거)도 같은 모양의 값으로 한다.
+     - 기부상태는 스크립트가 AS-IS 숫자코드(100/200)로 가르므로 컨트롤러가 그 코드로 바꿔 준다.
+     - 선택 답례품은 AS-IS처럼 escapeXml=false(품목 사이 <br/>) - 품목명은 order가 이스케이프해서 준다. */-->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
-        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <div class="location"><a th:href="@{/offgive}">오프라인기부 접수 관리</a></div>
-    <h3><span>기탁서</span></h3>
 
-    <p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+  <!-- 개발 영역 -->
+<div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
 
-    <div class="board_write" th:if="${donation != null}">
-        <table class="board_write_table" summary="기탁서">
-            <colgroup><col style="width:180px;"><col></colgroup>
-            <tbody>
-            <tr><td class="label">접수번호</td><td th:text="${donation.cntrSn()}"></td></tr>
-            <tr><td class="label">신청일</td><td th:text="${donation.cntrDe()}"></td></tr>
-            <tr><td class="label">아이디</td><td th:text="${member != null ? member.loginId() : '-'}"></td></tr>
-            <tr><td class="label">기부자명</td><td th:text="${member != null ? member.userName() : '-'}"></td></tr>
-            <tr><td class="label">생년월일</td><td th:text="${member != null ? member.birthday() : '-'}"></td></tr>
-            <tr><td class="label">연락처</td><td th:text="${member != null ? member.phoneNumber() : '-'}"></td></tr>
-            <tr><td class="label">주소</td><td th:text="${member != null ? member.address() : '-'}"></td></tr>
-            <tr><td class="label">기부 지자체</td><td th:text="${donation.cntrLocgovCode()}"></td></tr>
-            <tr><td class="label">기부금액</td><td th:text="${#numbers.formatInteger(donation.cntrAmt(), 0, 'COMMA')} + '원'"></td></tr>
-            <tr><td class="label">접수은행</td><td th:text="${donation.rceptBankNm()}"></td></tr>
-            <tr><td class="label">상태</td><td th:text="${donation.cntrSttusCode()}"></td></tr>
-            <tr><td class="label">접수경로</td><td th:text="${donation.cntrPathCode() == '100' ? '온라인' : (donation.cntrPathCode() == '200' ? '오프라인' : donation.cntrPathCode())}"></td></tr>
-            <tr>
-                <td class="label">서명</td>
-                <td>
-                    <img th:if="${donation.signatureFileNm() != null}"
-                         th:src="@{'http://localhost:8082/uploads/donation/offgive-signature/' + ${donation.signatureFileNm()}}"
-                         alt="서명" style="max-height:120px; border:1px solid #ddd; background:#fff;">
-                    <span th:if="${donation.signatureFileNm() == null}">-</span>
-                </td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
+<h3><span>기탁서</span></h3>
 
-    <div class="btn_all btn_center" style="margin-top:20px;" th:if="${donation != null}">
-        <a th:href="@{/give-reqmng/new(cntrSn=${donation.cntrSn()})}" class="btn btn-dark-gray btn-small">변경신청(취소/포인트생성)</a>
-    </div>
+<p class="error" th:if="${errorMessage}" th:text="${errorMessage}" style="color:#c0392b; margin-bottom:12px;"></p>
+
+<form id="offgive" method="post" action="/offgive/create" th:if="${offgive != null}">
+	<div class="board_write">
+	    <table class="board_write_table" summary="">
+	        <colgroup>
+	            <col style="width:220px;">
+	            <col>
+	            <col style="width:220px;">
+	            <col>
+	        </colgroup>
+	        <tbody>
+	            <tr>
+	                <td class="label">접수번호</td>
+	                <td colspan="3">
+	                    <div th:text="${offgive.cntrSn}"></div>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td class="label">신청일</td>
+	                <td colspan="3">
+	                    <div th:text="${@opDate.ymdHms(offgive.frstRegistPnttm)}"></div>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td class="label">아이디</td>
+	                <td colspan="3">
+	                    <div th:text="${offgive.loginId}"></div>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td class="label">기부자명</td>
+	                <td colspan="3">
+	                    <div th:text="${offgive.userName}"></div>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td class="label">생년월일</td>
+	                <td colspan="3">
+	                    <div th:text="${@opDate.ymd(offgive.birthday)}"></div>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td class="label">연락처</td>
+	                <td colspan="3">
+	                    <div th:text="${offgive.phoneNumber}"></div>
+	                </td>
+	            </tr>
+<!-- 	            <tr> -->
+<!-- 	                <td class="label">행정정보 공동이용 동의</td> -->
+<!-- 	                <td colspan="3"> -->
+<!--/* 	                    <div><c:out value="${offgive.infoAgreAt == 1 ? '동의' : '비동의'}"/></div> */-->
+<!-- 	                </td> -->
+<!-- 	            </tr> -->
+	            <tr>
+	                <td class="label" rowspan="2">주소</td>
+	                <td colspan="3">
+	                    <div th:text="${offgive.post}"></div>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td colspan="3">
+	                    <div>[[${offgive.address}]] [[${offgive.addressDetail}]]</div>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td class="label">기부 지자체</td>
+	                <td colspan="3">
+	                    <div>[[${offgive.upperLocgovNm}]] [[${offgive.locgovNm}]] ([[${offgive.prjSubject}]])</div>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td class="label">기부금액</td>
+	                <td>
+	                    <div>[[${#numbers.formatInteger(offgive.cntrAmt, 1, 'COMMA')}]]원</div>
+	                </td>
+	                <td class="label">금년도 누적 기부액</td>
+	                <td>
+	                    <div>[[${#numbers.formatInteger(offgive.cntrAmtYearTotal, 1, 'COMMA')}]]원</div>
+	                </td>
+	            </tr>
+	            <th:block th:if="${not #strings.isEmpty(offgive.options)}">
+	            <tr>
+	                <td class="label">선택 답례품</td>
+	                <td colspan="3">
+	                    <div th:utext="${offgive.options}"></div>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td class="label" rowspan="2">배송지 주소</td>
+	                <td colspan="3">
+	                    <div th:text="${offgive.rcvPost}"></div>
+	                </td>
+	            </tr>
+	            <tr>
+	                <td colspan="3">
+	                    <div>[[${offgive.rcvAddress}]] [[${offgive.rcvAddressDetail}]]</div>
+	                </td>
+	            </tr>
+	            </th:block>
+	            <tr>
+	                <td class="label">접수은행</td>
+	                <td colspan="3">
+	                    <div>[[${offgive.rceptBankCodeNm}]] [[${offgive.rceptBankNm}]]</div>
+	                </td>
+	            </tr>
+	             <tr>
+	                 <td class="label">약관 동의</td>
+	                 <td colspan="3">
+	                     <div>동의함</div>
+	                 </td>
+	             </tr>
+	            <tr>
+	                <td class="label">전자납부번호</td>
+	                <td colspan="3">
+	                    <div class="tip" th:text="${offgive.elctrnPayNo}"></div>
+	                </td>
+	            </tr>
+	        </tbody>
+	    </table>
+
+	    <div class="btn_all btn_center">
+	        <div class="flex_box gap-08">
+<!--/* 	        	<c:if test="${today == fn:replace(fn:substring(offgive.frstRegistPnttm, 0, 10), '-','')}"> */-->
+<!-- 	            	<button type="button" class="btn btn-dark-gray btn-small" onClick="cancel()">등록 취소</button> -->
+<!--/* 	            </c:if> */-->
+	            <button type="button" class="btn btn-dark-default btn-small" onClick="goList()">확인</button>
+	            <button type="button" class="btn btn-dark-gray btn-small" th:attr="onclick=|window.open('/offgive/popup/form-apply/${offgive.cntrSn}','pop','width=900,height=1200');|">납부신청서 출력</button>
+	            <th:block th:if="${today == #strings.substring(offgive.frstRegistPnttm, 0, 8)}">
+	            	<button type="button" class="btn btn-dark-default btn-small" id="btnReq" onClick="offgiveCancel()" style="background-color: #fb502e; color:white ">기부취소</button>
+	            	<div class="tip" id="reqTipText" style="display:none; margin-top: 8px;">※ 해당 납부처리된 기부건을 취소하실경우 기부취소 신청을 요청하십시오.</div>
+	            <!--/* 	<button type="button" class="btn btn-dark-gray btn-small" id="btnReqCancel" onClick='cancelReq("${offgive.reqId}")' style="background-color: #0d2d4f;">신청취소</button> */-->
+	            </th:block>
+	        </div>
+	    </div>
+	</div>
+
+</form>
+
+<!--/* ★TO-BE 임시(AS-IS 화면에 없음): AS-IS 세외수입 수납확인 배치(NgDonationBatchServiceImpl.cntrSunapBatch)를
+     대신하는 관리자 수동 트리거. 그 배치가 아직 미이식이라 기능확인(수납완료 → 포인트 적립 → 답례품 결제)용으로만 둔다
+     (2026-10-14 사용자 결정). 누락된 배치 job들을 일괄 이식할 때 이 버튼·안내문과 POST /offgive/{cntrSn}/confirm을 함께 제거한다. */-->
+<div class="btn_all btn_center" style="margin-top:20px;" th:if="${canConfirm}">
+    <div class="tip" style="margin-bottom: 8px;">※ [개발 확인용] AS-IS에서는 세외수입시스템 수납내역 배치가 수납완료로 처리합니다. 배치 이식 전까지 기능확인을 위해 임시로 두는 버튼이며, 배치 이식 시 제거됩니다.</div>
+    <form th:action="@{'/offgive/' + ${offgive.cntrSn} + '/confirm'}" method="post" style="display:inline;">
+        <button type="submit" class="btn btn-dark-gray btn-small"
+                onclick="return confirm('수납처리(세외수입 수납확인) 하시겠습니까?');">수납처리</button>
+    </form>
+</div>
+
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
+
+<script type="text/javascript" th:inline="javascript" th:if="${offgive != null}">
+var OFFGIVE = {
+	cntrSn : /*[[${offgive.cntrSn}]]*/ "",
+	cntrSttusCode : /*[[${offgive.cntrSttusCode}]]*/ "",
+	reqId : /*[[${offgive.reqId == null ? '' : offgive.reqId}]]*/ "",
+	cntrBlcePoint : /*[[${offgive.cntrBlcePoint}]]*/ "",
+	cntrPoint : /*[[${offgive.cntrPoint}]]*/ "",
+	cntrUsePoint : /*[[${offgive.cntrUsePoint}]]*/ "",
+	frstRegistPnttm : /*[[${@opDate.ymdHms(offgive.frstRegistPnttm)}]]*/ "",
+	loginId : /*[[${offgive.loginId}]]*/ "",
+	userName : /*[[${offgive.userName}]]*/ "",
+	locgovCode : /*[[${offgive.locgovCode}]]*/ "",
+	cntrAmt : /*[[${offgive.cntrAmt}]]*/ "",
+	msgM01700 : /*[[${msg.get('M01700')}]]*/ ""
+};
+
+$(function() {
+	if(String(OFFGIVE.cntrSttusCode) === "100"){
+		$("#btnReq").hide();
+		$("#btnReqCancel").hide();
+	}else if(String(OFFGIVE.cntrSttusCode) === "200"){
+		$("#reqTipText").show();
+		if(String(OFFGIVE.reqId) != 0 ){
+			$("#btnReq").hide();
+			$("#btnReqCancel").hide();
+			$("#reqTipText").hide();
+		}else{
+			$("#btnReqCancel").hide();
+		}
+	}
+
+});
+
+// 등록 취소
+function cancel() {
+	Common.confirm(OFFGIVE.msgM01700, function() {
+		$.post(url("/offgive/delete/" + OFFGIVE.cntrSn), {}, function(response) {
+			if(response.isSuccess) {
+				goList();
+			} else {
+				alert(response.errorMessage);
+			}
+	    });
+	});
+}
+
+function goList() {
+	/*
+	if (document.referrer.indexOf("create") != -1) {
+		location.href = "/offgive/list"
+	} else {
+		history.back()
+	}
+	*/
+	location.href = "/offgive/list";
+}
+
+function offgiveCancel(){
+
+	if(String(OFFGIVE.cntrBlcePoint) != String(OFFGIVE.cntrPoint)){
+		alert("기부포인트 사용이 확인되어 취소가 불가합니다.");
+		return false;
+	}
+	if(String(OFFGIVE.cntrUsePoint) > 0){
+		alert("기부포인트 사용이 확인되어 취소가 불가합니다.");
+		return false;
+	}
+		var discription =  "(사용포인트 : "+ String(OFFGIVE.cntrUsePoint) + " p)";
+		var str = OFFGIVE.frstRegistPnttm;
+		var sttemntPayDe = str.substr(0, 10).replaceAll("-","");
+
+		if(confirm("해당 기부 건을 취소를 요청하시겠습니까?")){
+			var param = {
+					"cntrSn" : OFFGIVE.cntrSn,
+					"cntrReqmngCode": "100",
+					"loginId": OFFGIVE.loginId,
+					"userName": OFFGIVE.userName,
+					"locgovCode": OFFGIVE.locgovCode,
+					"sttemntPayDe": sttemntPayDe,
+					"cntrAmt": String(OFFGIVE.cntrAmt),
+					"discription": discription
+				};
+			$.post("/offgive/offgiveCancel", param, function(response) {
+						if(response.isSuccess == true) {
+							alert("요청되었습니다.");
+							location.reload();
+						} else {
+							alert("오류가 발생했습니다.");
+						}
+				});
+ 	}else{
+		 alert("요청이 취소 되었습니다.");
+	}
+
+}
+
+/**
+ *	함 수 명 : cancelReq
+ *	기	능  : 변경신청 취소
+ */
+function cancelReq(reqId){
+
+	if(confirm("요청된 기부취소신청을 취소하시겠습니까?")){
+		var param = {
+				"cntrReqmngCode": "100",
+				cntrSn : OFFGIVE.cntrSn,
+				reqId : reqId
+		};
+	 	$.post('offgive/offgiveCancelReq',param, function(response) {
+	 		if(response.isSuccess == true) {
+				alert("신청내역이 취소완료되었습니다.")
+	 			location.reload();
+	 		}else{
+	 			alert("취소 중 오류가 발생하였습니다.")
+	 		}
+	 	});
+	}
+}
+
+</script>
 </body>
 </html>

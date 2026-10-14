@@ -31,7 +31,7 @@
             <td class="label">주문번호</td>
             <td th:text="${order.orderId()}"></td>
             <td class="label">주문상태</td>
-            <td th:text="${order.orderStatus() == 'PENDING'} ? '처리중' : (${order.orderStatus() == 'CONFIRMED'} ? '주문확정' : (${order.orderStatus() == 'CLAIM_REQUESTED'} ? '반품/교환신청중' : '취소'))"></td>
+            <td th:text="${order.orderStatus() == 'WAITING_DEPOSIT'} ? '입금대기' : (${order.orderStatus() == 'PENDING'} ? '처리중' : (${order.orderStatus() == 'CONFIRMED'} ? '주문확정' : (${order.orderStatus() == 'CLAIM_REQUESTED'} ? '반품/교환신청중' : '취소')))"></td>
         </tr>
         <tr>
             <td class="label">주문자ID</td>

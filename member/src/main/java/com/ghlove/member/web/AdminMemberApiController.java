@@ -105,6 +105,12 @@ public class AdminMemberApiController {
         return receiver == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(receiver);
     }
 
+    /** 성인 여부(AS-IS UserUtils.isAdult) - order 체크아웃의 성인 답례품 주문 제한이 쓴다. */
+    @GetMapping("/members/{userId}/adult")
+    public Map<String, String> adult(@PathVariable Long userId) {
+        return Map.of("adultYn", memberService.isAdult(userId) ? "Y" : "N");
+    }
+
     /** 일반회원관리(4101) 상세 > 배송지 관리 팝업. */
     @GetMapping("/members/{userId}/deliveries")
     public List<AdminMemberService.UserDeliveryRowDto> deliveries(@PathVariable Long userId) {

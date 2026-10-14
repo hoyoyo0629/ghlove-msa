@@ -62,7 +62,7 @@ public class ItemAdminClient {
     public ItemDto create(Long sellerId, String itemName, String itemSummary, String detailContent,
                            String categoryCode, String locgovCode, Integer salePrice, Integer stockQuantity,
                            String displayType, String displayStartDate, String displayEndDate,
-                           Integer minDonationAmount, Integer brandId, List<MultipartFile> images) {
+                           Integer minDonationAmount, Integer brandId, List<MultipartFile> images, String adultItemYn) {
         try {
             var multipart = new org.springframework.util.LinkedMultiValueMap<String, Object>();
             addIfPresent(multipart, "sellerId", sellerId);
@@ -78,6 +78,7 @@ public class ItemAdminClient {
             addIfPresent(multipart, "displayEndDate", displayEndDate);
             addIfPresent(multipart, "minDonationAmount", minDonationAmount);
             addIfPresent(multipart, "brandId", brandId);
+            addIfPresent(multipart, "adultItemYn", adultItemYn);
             if (images != null) {
                 for (MultipartFile f : images) {
                     if (f != null && !f.isEmpty()) {
@@ -96,7 +97,7 @@ public class ItemAdminClient {
 
     public ItemDto update(Long id, Long sellerId, String itemName, String itemSummary, String detailContent,
                            String categoryCode, Integer salePrice, Integer stockQuantity, String displayType,
-                           String displayStartDate, String displayEndDate, Integer minDonationAmount, Integer brandId) {
+                           String displayStartDate, String displayEndDate, Integer minDonationAmount, Integer brandId, String adultItemYn) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("sellerId", String.valueOf(sellerId));
         body.add("itemName", itemName);
@@ -114,6 +115,7 @@ public class ItemAdminClient {
         if (brandId != null) {
             body.add("brandId", String.valueOf(brandId));
         }
+        addIfPresent(body, "adultItemYn", adultItemYn);
         try {
             return restClient.put().uri("/api/admin/gift-items/{id}", id)
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
@@ -358,7 +360,7 @@ public class ItemAdminClient {
                            Integer minDonationAmount, String representativeItemYn, Integer brandId,
                            String itemLabel, Integer adminOrdering, String deliveryCompanyName, String shippingType,
                            Integer shipping, Integer shippingFreeAmount, Integer shippingExtraCharge1,
-                           Integer shippingExtraCharge2, String itemReturnFlag) {
+                           Integer shippingExtraCharge2, String itemReturnFlag, String adultItemYn) {
     }
 
     /** 배송비/택배사 설정 (SFR-005 재검토 라운드). */

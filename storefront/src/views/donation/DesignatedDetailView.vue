@@ -67,6 +67,17 @@ function switchTab(tab, event) {
 function toggleNotice(id) {
   openNoticeId.value = openNoticeId.value === id ? null : id
 }
+// AS-IS details.html fileDownload - 공지 첨부를 원본 파일명으로 내려받는다(fileName은 서버가 준 암호화 토큰).
+// AS-IS는 CDN_DOMAIN + /opmanager/fileDownload/... 였고, TO-BE는 admin 서비스의 같은 경로다.
+function fileDownload(e, file) {
+  e.preventDefault()
+  e.stopPropagation()
+  location.href = api.assetUrl('admin', '/fileDownload/downloadByProgramData')
+    + '?programName=PRJ_NOTICE'
+    + '&programId=' + file.prjNoticeId
+    + '&fileName=' + encodeURIComponent(file.fileName)
+    + '&orgFileName=' + encodeURIComponent(file.orgFileName)
+}
 function goDonate() {
   router.push({ path: '/donate', query: { locgovCode: project.value.lclgvCd, prjId: String(project.value.dsgnDntnBizId) } })
 }
@@ -273,6 +284,19 @@ function imgUrl() {
                     <div class="notice-wrap">
                       <div class="header-faq">
                         <div class="faq_txt" style="padding: 0 20px" v-html="n.prjNoticeCn"></div>
+                      </div>
+                    </div>
+                    <!-- AS-IS details.html 공지 첨부파일(- 첨부파일 / 1. 원본파일명 …) -->
+                    <br />
+                    <br />
+                    <div class="header-faq" v-if="n.prjFiles && n.prjFiles.length > 0">
+                      <div class="faq_txt" style="padding: 0px 20px">- 첨부파일</div>
+                    </div>
+                    <div v-for="(file, index) in n.prjFiles" :key="'file_' + index" style="padding-top: 5px">
+                      <div class="header-faq">
+                        <div class="faq_txt" style="padding: 0px 20px">
+                          <a @click="fileDownload($event, file)" :title="file.orgFileName + ' 파일 다운로드'" style="cursor: pointer">{{ index + 1 }}. {{ file.orgFileName }}</a>
+                        </div>
                       </div>
                     </div>
                   </div>

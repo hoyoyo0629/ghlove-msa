@@ -12,12 +12,20 @@ import java.util.Base64;
 import java.util.List;
 
 /**
- * 오프라인기부(기탁서) 접수 (AS-IS opmanager/offgive). 접수 담당자가 은행 창구/행정복지
- * 센터에서 현장 접수한 기부를 등록한다 - 실제 도메인효과(원장 기록, 세외수입/포인트
- * 연계)는 이미 있는 DonationService.registerOfflineDonation()/completeDonation()을 그대로
- * 재사용한다(offgive 전용 로직은 방문 시민 즉석가입뿐). AS-IS는 등록 즉시 반영되고 별도
- * 승인단계가 없다(OffgiveServiceImpl.insertOffgive 확인) - 취소/변경은 이미 있는
- * give-reqmng 워크플로를 그대로 쓴다(CntrReqmngService, 새로 만들지 않음).
+ * 오프라인기부(기탁서) 접수 (AS-IS opmanager/offgive, form.jsp 1,995줄). 담당자가 은행 창구/
+ * 행정복지센터에서 현장 접수한 기부를 등록한다 - 실제 도메인효과(원장 기록)는 이미 있는
+ * {@link DonationService#registerOfflineDonation}을 재사용한다.
+ *
+ * <p><b>2단계 상태(2026-10-12 전환)</b>: AS-IS는 등록 시 {@code cntrSttusCode='100'}(신고)로만
+ * 저장하고, 실제 {@code '200'}(수납완료) 전환은 세외수입시스템 수납이력을 폴링하는 별도
+ * 배치({@code NgDonationBatchServiceImpl.cntrSunapBatch}등)가 비동기로 처리한다 - 등록
+ * 즉시완료가 아니다. 이 배치가 없는 TO-BE는 관리자의 수동 "수납처리" 트리거({@link #confirm})로
+ * 대체한다. 취소/변경은 이미 있는 give-reqmng 워크플로를 그대로 쓴다(CntrReqmngService).
+ *
+ * <p><b>전자납부번호(elctrnPayNo)</b>는 AS-IS form.jsp가 등록 제출 <b>전에</b> 먼저
+ * {@code nextBugaRequest}/{@code getSdonationCharge}(세외수입 부과요청)로 받아와 hidden
+ * field에 채운 뒤 최종 POST에 실어 보낸다 - 이 서비스는 그 값을 그대로 받아 저장할 뿐,
+ * 자체적으로 부과요청을 하지 않는다(그 호출은 admin 쪽 LevyRelayClient가 등록 전에 한다).
  */
 @Service
 @RequiredArgsConstructor
@@ -28,6 +36,8 @@ public class OffgiveService {
     private final DonationRepository donationRepository;
     private final MemberClient memberClient;
     private final FileStorageService fileStorageService;
+    private final OrderClient orderClient;
+    private final com.ghlove.donation.repository.LevyLinkLogWriteRepository levyLinkLogWriteRepository;
 
     private static final String SIGNATURE_SUBDIR = "offgive-signature";
 
@@ -56,37 +66,112 @@ public class OffgiveService {
         return donation;
     }
 
+    /** 등록 시 받는 전체 필드 - AS-IS form.jsp가 {@code #offgive}로 직렬화해 POST하는 값들. */
+    public record RegisterRequest(
+            Long userId, String userName, String jumin1, String jumin2, String mberCi, String mberDi,
+            String phoneNumber, String address, String addressDetail,
+            String psitnLocgovCode, String locgovCode, BigDecimal amount, Long dsgnDntnBizId,
+            String rtnpsntReqstCode, String rcvUserName, String rcvPhoneNumber,
+            String rcvAddress, String rcvAddressDetail, List<GiftLine> giftOrders,
+            String rceptBankCode, String rceptBankNm, String rcepterNm,
+            String elctrnPayNo, String signatureImage, String birthday, String rcvPost,
+            String locgovUpperCode, String linkMngKey,
+            // AS-IS insertOffgive 즉석가입 USER_DETAIL.POST·GENDER
+            String post, String gender) {
+    }
+
+    /** AS-IS 서울시 시도코드 - 기탁서 등록 시 서울(세외수입 서울시) 분기 기준. */
+    private static final String SEOUL_UPPER_CODE = "11000";
+    private static final java.time.format.DateTimeFormatter YMD = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd");
+
+    public record GiftLine(Long itemId, Long itemOptionId, Integer quantity) {
+    }
+
     /**
-     * 방문 시민 접수 - userId가 없으면 즉석 가입시킨 뒤(walkIn* 파라미터) 그 계정으로
-     * 등록한다. 현장에서 이미 현금/계좌이체로 접수받은 것이므로 등록과 동시에 완료
-     * 처리한다(REQUESTED를 거치지 않음 - AS-IS도 등록 즉시 반영).
+     * 방문 시민 접수 - userId가 없으면 CI(mberCi)로 기존회원을 먼저 찾고(실명인증은 admin이
+     * 이미 끝낸 상태), 그래도 없으면 즉석 가입시킨다(walkIn* 파라미터, AS-IS sciResponse의
+     * user-check가 실패했을 때와 동일). 생년월일은 주민등록번호 앞 7자리에서 역산한다
+     * (AS-IS {@code getDateOfBirth}).
      */
     @Transactional
-    public Result register(Long userId, String walkInName, String walkInPhone, String walkInBirthday,
-                            String walkInAddress, String locgovCode, BigDecimal amount,
-                            String rceptBankCode, String rceptBankNm, String signatureImage) {
+    public Result register(RegisterRequest req) {
         MemberClient.WalkInResult walkIn = null;
-        Long targetUserId = userId;
+        Long targetUserId = req.userId();
         if (targetUserId == null) {
-            walkIn = memberClient.registerWalkIn(walkInName, walkInPhone, walkInBirthday, walkInAddress);
+            // AS-IS goSave()가 주민번호로 계산해 hidden #birthday에 넣어 보낸다(주민번호 칸은 disabled라 안 넘어옴).
+            String birthday = req.birthday() != null && !req.birthday().isBlank()
+                    ? req.birthday() : birthdayOf(req.jumin1(), req.jumin2());
+            walkIn = memberClient.registerWalkIn(req.userName(), req.phoneNumber(), birthday, req.address(),
+                    req.mberCi(), req.mberDi(), req.post(), req.addressDetail(), req.gender(), req.psitnLocgovCode());
             targetUserId = walkIn.userId();
         }
 
-        Donation donation = donationService.registerOfflineDonation(targetUserId, locgovCode, amount, rceptBankCode, rceptBankNm);
-        Donation completed = donationService.completeDonation(donation.getCntrSn());
+        // AS-IS insertOffgive - 서울(시도 11000)은 연계관리키를 지금 새로 채번해 기부일련번호로 쓰고(서울대상 Y,
+        // 납부유효일 오늘+1), 그 외는 화면이 부과요청 응답에서 받아 온 연계관리키(#linkMngKey)를 그대로 쓴다
+        // (서울대상 N, 납부유효일 오늘). 수납 확인·미납 삭제 배치가 이 키로 기부와 부과건을 맞춘다.
+        // AS-IS는 서울 외인데 연계관리키가 비면 빈 문자열을 기부일련번호로 넣는다(두 번째부터 PK 충돌) -
+        // 그때는 같은 규칙으로 새로 채번한다.
+        boolean seoul = SEOUL_UPPER_CODE.equals(req.locgovUpperCode());
+        String cntrSn = seoul || req.linkMngKey() == null || req.linkMngKey().isBlank()
+                ? levyLinkLogWriteRepository.nextLinkMngKey() : req.linkMngKey();
+        java.time.LocalDate today = java.time.LocalDate.now();
 
-        String signatureFileNm = storeSignature(signatureImage);
+        Donation donation = donationService.registerOfflineDonation(cntrSn, targetUserId, req.locgovCode(),
+                req.amount(), req.rceptBankCode(), req.rceptBankNm(), req.dsgnDntnBizId(), req.psitnLocgovCode(),
+                req.rtnpsntReqstCode());
+        donation.setSeoulTrgetAt(seoul ? "Y" : "N");
+        donation.setPayValidDe((seoul ? today.plusDays(1) : today).format(YMD));
+        donation.setElctrnPayNo(req.elctrnPayNo());
+        donation.setRcepterNm(req.rcepterNm());
+
+        String signatureFileNm = storeSignature(req.signatureImage());
         if (signatureFileNm != null) {
-            completed.setSignatureFileNm(signatureFileNm);
-            completed = donationRepository.save(completed);
+            donation.setSignatureFileNm(signatureFileNm);
         }
-        return new Result(completed, walkIn);
+        donation = donationRepository.save(donation);
+
+        // AS-IS insertOffgive - orderItems가 있으면 saveOffGiveOrder(답례품 '제공받지않음'이면 form.jsp
+        // goSave()가 orderItems를 비워 보낸다). 주문은 '입금대기'로 만들어지고 수납완료 뒤 결제처리된다.
+        if (req.giftOrders() != null && !req.giftOrders().isEmpty()) {
+            try {
+                orderClient.createOffgiveOrder(targetUserId, donation.getCntrSn(), req.giftOrders(),
+                        req.rcvUserName(), req.rcvPhoneNumber(), req.rcvAddress(), req.rcvAddressDetail(),
+                        req.rcvPost());
+            } catch (RuntimeException e) {
+                // AS-IS도 saveOffGiveOrder 예외를 로그만 남기고 삼킨다(insertOffgive error2) - 기부 등록은 유지.
+                log.warn("Offgive gift order failed for cntrSn={} - donation registration still succeeds",
+                        donation.getCntrSn(), e);
+            }
+        }
+
+        return new Result(donation, walkIn);
     }
 
-    /** AS-IS MagicLineController(매직라인 전자서명 연계)를 대체하는 순수 프론트 canvas 서명패드
-     *  캡처본 - "data:image/png;base64,...." 형태의 data URL로 받아 PNG 바이트만 디코드해
-     *  저장한다. 서명은 법적 필수 요소가 아니므로(단순 UX 증빙) 실패해도 접수 자체는 막지
-     *  않고 경고만 남긴다. */
+    /** 수납처리(AS-IS 수납확인 배치를 대체하는 관리자 수동 트리거) - REQUESTED→COMPLETED. */
+    @Transactional
+    public Donation confirm(String cntrSn) {
+        Donation donation = findOrThrow(cntrSn);
+        return donationService.completeDonation(donation.getCntrSn());
+    }
+
+    /** AS-IS getDateOfBirth - 주민번호 뒷자리 첫 숫자로 세기(18/19/20) 판정. */
+    private static String birthdayOf(String jumin1, String jumin2) {
+        if (jumin1 == null || jumin1.length() < 6 || jumin2 == null || jumin2.isEmpty()) {
+            return null;
+        }
+        char division = jumin2.charAt(0);
+        String century = switch (division) {
+            case '1', '2', '5', '6' -> "19";
+            case '3', '4', '7', '8' -> "20";
+            default -> "18";
+        };
+        return century + jumin1;
+    }
+
+    /** AS-IS MagicLineController(매직라인 전자서명 연계, signedFormR)를 대체하는 순수 프론트
+     *  canvas 서명패드 캡처본 - "data:image/png;base64,...." 형태의 data URL로 받아 PNG 바이트만
+     *  디코드해 저장한다. 서명은 법적 필수 요소가 아니므로(단순 UX 증빙) 실패해도 접수 자체는
+     *  막지 않고 경고만 남긴다. */
     private String storeSignature(String signatureImage) {
         if (signatureImage == null || signatureImage.isBlank()) {
             return null;

@@ -58,6 +58,7 @@ public class CartService {
     private final ShipmentRepository shipmentRepository;
     private final OrderItemRepository orderItemRepository;
     private final OrderSagaPublisher orderSagaPublisher;
+    private final MemberClient memberClient;
 
     @Value("${ghlove.gift-service.base-url}")
     private String giftServiceBaseUrl;
@@ -310,7 +311,8 @@ public class CartService {
                 lines.add(new CartLine(r.cartItem().getCartItemId(), r.gift().itemId(), r.gift().itemName(), thumbnailUrl,
                         r.cartItem().getQuantity(), r.gift().salePrice(), r.lineTotal(), deliveryFee, r.lineTotal() + deliveryFee,
                         r.cartItem().getOptionName(), r.optionPrice(),
-                        r.cartItem().getTextOption() == null || r.cartItem().getTextOption().isBlank() ? null : r.cartItem().getTextOption()));
+                        r.cartItem().getTextOption() == null || r.cartItem().getTextOption().isBlank() ? null : r.cartItem().getTextOption(),
+                        r.gift().adultItemYn()));
             }
             long groupTotal = lines.stream().mapToLong(CartLine::lineTotal).sum();
             long groupDeliveryFee = lines.stream().mapToLong(CartLine::deliveryFee).sum();
@@ -557,6 +559,31 @@ public class CartService {
             }
         }
 
+        // 성인 답례품 - AS-IS saveGiveOrderTempAndPay: 성인 답례품(ADULT_ITEM_YN='Y')이 있는데 성인이 아니면 막는다.
+        if (priced.stream().anyMatch(l -> "Y".equalsIgnoreCase(l.gift().adultItemYn()))
+                && !memberClient.isAdult(userId)) {
+            throw new OrderException("19세 이상 로그인 사용자만 주문 가능합니다.");
+        }
+
+        // 배송지 검증 - AS-IS saveGiveOrderTempAndPay "체크로직 추가" 5종. 모바일 상품이 하나라도 있으면
+        // 우편번호·주소·상세주소는 보지 않는다(existMobileItem).
+        boolean existMobileItem = priced.stream().anyMatch(l -> "Y".equalsIgnoreCase(l.gift().mobileItemYn()));
+        if (deliveryInfo == null || isBlank(deliveryInfo.receiverName())) {
+            throw new OrderException("받으시는분 이름을 입력해주세요.");
+        }
+        if (isBlank(deliveryInfo.receiverPhone())) {
+            throw new OrderException("배송지 휴대폰번호를 입력해주세요.");
+        }
+        if (isBlank(deliveryInfo.zipcode()) && !existMobileItem) {
+            throw new OrderException("배송지 우편번호를 입력해주세요.");
+        }
+        if (isBlank(deliveryInfo.address()) && !existMobileItem) {
+            throw new OrderException("배송지 주소를 입력해주세요.");
+        }
+        if (isBlank(deliveryInfo.addressDetail()) && !existMobileItem) {
+            throw new OrderException("배송지 상세주소를 입력해주세요.");
+        }
+
         LocalDateTime now = LocalDateTime.now();
         String orderId = orderService.generateOrderId();
 
@@ -585,6 +612,7 @@ public class CartService {
             header.setReceiverPhone(deliveryInfo.receiverPhone());
             header.setDeliveryAddress(deliveryInfo.address());
             header.setDeliveryAddressDetail(deliveryInfo.addressDetail());
+            header.setDeliveryZipcode(deliveryInfo.zipcode());
             header.setRequestNote(deliveryInfo.requestNote());
         }
         orderRepository.save(header);
@@ -592,6 +620,10 @@ public class CartService {
         // 출고(지자체) + 품목 저장. 발행은 전량 저장 후(트랜잭션 커밋 뒤 실제 send).
         List<Shipment> shipments = new ArrayList<>();
         Map<Long, List<OrderItem>> itemsByShipment = new LinkedHashMap<>();
+        // 모바일 상품 분할 복제분 - AS-IS saveGiveOrderTempAndPay "모바일 상품 존재할 경우 분할 작업 처리":
+        // 수량 N인 모바일 답례품은 수량 1로 바꾸고, 수량 1짜리 복제 N-1개를 주문 품목 목록 맨 뒤에 붙인다
+        // (buyItems.addAll(mobileCopyItems)). 품목 순서(orderItemId)도 AS-IS와 같도록 원본을 다 저장한 뒤 저장한다.
+        List<OrderItem> mobileCopies = new ArrayList<>();
         for (Map.Entry<String, List<PricedLine>> entry : byLocgov.entrySet()) {
             String locgovCode = entry.getKey();
             List<PricedLine> lines = entry.getValue();
@@ -618,6 +650,12 @@ public class CartService {
                 long payable = pl.lineTotal() - discount + pl.deliveryFee();
                 shipmentPoint += payable;
 
+                int quantity = pl.cartItem().getQuantity();
+                boolean mobile = "Y".equalsIgnoreCase(pl.gift().mobileItemYn());
+                // 분할 시 한 개 값 = 판매가+옵션가. 배송비(분할 전 수량으로 이미 계산)·쿠폰할인은 첫 품목에 남겨
+                // 출고 합계(payable)가 분할 전과 같게 한다.
+                long unitPoint = mobile && quantity > 1 ? pl.lineTotal() / quantity : 0;
+
                 OrderItem item = new OrderItem();
                 item.setShipmentId(shipment.getShipmentId());
                 item.setOrderId(orderId);
@@ -628,9 +666,9 @@ public class CartService {
                 item.setOptionName(pl.cartItem().getOptionName());
                 item.setOptionPrice(pl.cartItem().getOptionPrice() != null ? pl.cartItem().getOptionPrice() : 0);
                 item.setTextOption(pl.cartItem().getTextOption());
-                item.setQuantity(pl.cartItem().getQuantity());
+                item.setQuantity(mobile && quantity > 1 ? 1 : quantity);
                 item.setUnitPrice(pl.gift().salePrice());
-                item.setPointAmount(payable);
+                item.setPointAmount(mobile && quantity > 1 ? payable - unitPoint * (quantity - 1) : payable);
                 item.setItemStatus(ShipmentSagaService.Status.PENDING);
                 item.setCouponIssueId(pl.couponIssueId());
                 item.setDiscountAmount(discount);
@@ -638,12 +676,39 @@ public class CartService {
                 item.setUpdatedDate(now);
                 orderItemRepository.save(item);
                 items.add(item);
+
+                if (mobile) {
+                    for (int i = 1; i < quantity; i++) {
+                        OrderItem copy = new OrderItem();
+                        copy.setShipmentId(shipment.getShipmentId());
+                        copy.setOrderId(orderId);
+                        copy.setItemId(item.getItemId());
+                        copy.setItemOptionId(item.getItemOptionId());
+                        copy.setSellerId(item.getSellerId());
+                        copy.setItemName(item.getItemName());
+                        copy.setOptionName(item.getOptionName());
+                        copy.setOptionPrice(item.getOptionPrice());
+                        copy.setTextOption(item.getTextOption());
+                        copy.setQuantity(1);
+                        copy.setUnitPrice(item.getUnitPrice());
+                        copy.setPointAmount(unitPoint);
+                        copy.setItemStatus(ShipmentSagaService.Status.PENDING);
+                        copy.setDiscountAmount(0L);
+                        copy.setCreatedDate(now);
+                        copy.setUpdatedDate(now);
+                        mobileCopies.add(copy);
+                    }
+                }
             }
             shipment.setPointAmount(shipmentPoint);
             shipmentRepository.save(shipment);
 
             shipments.add(shipment);
             itemsByShipment.put(shipment.getShipmentId(), items);
+        }
+        for (OrderItem copy : mobileCopies) {
+            orderItemRepository.save(copy);
+            itemsByShipment.get(copy.getShipmentId()).add(copy);
         }
 
         remove(userId, selectedCartItemIds);
@@ -652,5 +717,9 @@ public class CartService {
             orderSagaPublisher.publishShipmentCreated(shipment, userId, itemsByShipment.get(shipment.getShipmentId()));
         }
         return orderId;
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

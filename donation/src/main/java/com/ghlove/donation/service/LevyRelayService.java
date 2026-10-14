@@ -3,6 +3,7 @@ package com.ghlove.donation.service;
 import com.ghlove.donation.domain.Locgov;
 import com.ghlove.donation.repository.LevyLinkLogWriteRepository;
 import com.ghlove.donation.repository.LocgovRepository;
+import com.ghlove.donation.repository.OffgiveFormRepository;
 import com.ghlove.donation.service.integration.LocalTaxClient;
 import com.ghlove.donation.service.integration.NextBugaRequest;
 import com.ghlove.donation.service.integration.SeoulBugaRequest;
@@ -10,10 +11,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -31,11 +34,10 @@ import java.util.Map;
  *   <li>서울 시구코드는 지자체의 행정기관코드를 그대로 쓴다(AS-IS {@code getSiguCdSeoul})</li>
  * </ul>
  *
- * <p><b>연계가 꺼져 있을 때(기본값)</b>는 AS-IS가 LOCAL에서 하던 것과 <b>같은 모양의 가짜
- * 응답</b>을 만든다 - AS-IS는 {@code ServiceType.LOCAL}이면 전자납부번호를
- * {@code "99" + yyyyMMddHHmmssSSS}로 만들고 {@code linkRstCd="000"},
- * {@code linkRstMsg="LOCAL FAKE : {전자납부번호}"}로 응답한다. 그 분기를 그대로 옮겼다.
- * 모크일 때는 요청/응답을 연계로그 표에도 적재해 admin 1413·1415 화면에서 흐름을 확인할 수 있게 한다
+ * <p><b>local 프로파일(AS-IS {@code ServiceType.LOCAL})일 때만</b> AS-IS가 LOCAL에서 하던 것과 <b>같은
+ * 모양의 가짜 응답</b>을 만든다 - 전자납부번호 {@code "99" + yyyyMMddHHmmssSSS}, {@code linkRstCd="000"},
+ * {@code linkRstMsg="LOCAL FAKE : {전자납부번호}"}. 그 밖의 프로파일은 AS-IS 연계 주소로 실제 호출한다.
+ * 가짜 응답일 때는 요청/응답을 연계로그 표에도 적재해 admin 1413·1415 화면에서 흐름을 확인할 수 있게 한다
  * (실연계에서는 상대 시스템이 적재하므로 쓰지 않는다 - {@link LevyLinkLogWriteRepository} 주석 참고).
  *
  * <p><b>AS-IS 결함 1건 - 안전하게 고쳤다</b>: AS-IS는 응답 전자납부번호를
@@ -69,6 +71,7 @@ public class LevyRelayService {
     private final LocgovRepository locgovRepository;
     private final LevyLinkLogWriteRepository levyLinkLogWriteRepository;
     private final LocalTaxClient localTaxClient;
+    private final OffgiveFormRepository offgiveFormRepository;
 
     /** 부과요청 결과 - AS-IS는 Map으로 돌려주고 화면이 epayNo/linkRstCd를 본다. */
     public record BugaResult(String epayNo, String linkRstCd, String linkRstMsg) {
@@ -79,61 +82,107 @@ public class LevyRelayService {
     }
 
     /**
-     * 지방세외수입 차세대 부과요청 (AS-IS nextBugaRequest).
-     *
-     * @param cntrPathCode 100 온라인 / 200 오프라인. AS-IS는 <b>온라인일 때만</b> 성공 후
-     *                     G_CNTR을 적재하는데, TO-BE는 기부 생성이 이미 별도 흐름이라
-     *                     여기서는 적재하지 않고 전자납부번호만 돌려준다.
+     * 기탁서 등록 화면(form.jsp {@code nextBugaRequest()})이 보내는 값 그대로 - AS-IS {@code NextBugaRequestDto}에
+     * 바인딩되는 것들(selectedRegionCd·userRegionCd는 DTO에 없어 AS-IS도 버린다).
      */
-    public BugaResult requestNextBuga(String locgovCode, Long userId, String pyrNo, String pyrNm,
-                                       BigDecimal amount, String prjId, String cntrPathCode,
-                                       String zip, String roadNmDaddr) {
-        Locgov locgov = locgovRepository.findById(locgovCode)
-                .orElseThrow(() -> new DonationException("존재하지 않는 지자체입니다: " + locgovCode));
+    public record NextBugaForm(String frstPctAmt, String pyrNo, String pyrNm, String roadNmCd, String bmno,
+                               String bsno, String zip, String dongCd, String roadNmDaddr, String glNm,
+                               String cntrLocgovCode, String presentType, String prjId, String cntrPathCode) {
+    }
 
-        String fisSp = effectiveFisSp(locgov);
-        String spclFisBizCd = ("51".equals(fisSp) || "61".equals(fisSp))
-                ? SPCL_FIS_BIZ_CD_SPECIAL : SPCL_FIS_BIZ_CD_DEFAULT;
-        String today = LocalDate.now().format(YMD);
+    /**
+     * 지방세외수입 차세대 부과요청 (AS-IS {@code NgDonationRelayServiceImpl.nextBugaRequest}).
+     *
+     * <ol>
+     *   <li>prjId가 0보다 크면 그 특정사업이 지금 기부 가능한지 본다 - 없으면(기간 밖 포함)
+     *       "현재 기부 가능한 특정사업에 기부하기 사업이 아닙니다."(호출부가 errorMessage로 내림),
+     *       SUCCESS가 아니면 {@code {resultCode}}만 돌려준다.</li>
+     *   <li>서버 고정값·파생값을 채운 전문(DTO 전체 필드)을 보내고, 응답 키 전부 + {@code epayNo}를 돌려준다.</li>
+     *   <li>그 밖의 오류(prjId 숫자 아님, 지자체 없음, 통신 실패 등)는 AS-IS처럼 로그만 남기고 빈 결과
+     *       - 화면은 "지방세외 시스템 연결에 실패하였습니다."를 띄운다.</li>
+     * </ol>
+     * AS-IS는 <b>온라인(100)일 때만</b> 성공 후 G_CNTR을 적재한다 - 오프라인(200)은 적재하지 않는다(같다).
+     */
+    public Map<String, Object> requestNextBuga(NextBugaForm form) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            long prjId = Long.parseLong(form.prjId());
+            if (prjId > 0) {
+                String resultCode = offgiveFormRepository.designatedDonationResultCode(prjId);
+                if (resultCode == null) {
+                    throw new DonationException("현재 기부 가능한 특정사업에 기부하기 사업이 아닙니다.");
+                }
+                if (!"SUCCESS".equals(resultCode)) {
+                    result.put("resultCode", resultCode);
+                    return result;
+                }
+            }
 
-        NextBugaRequest request = new NextBugaRequest(
-                levyLinkLogWriteRepository.nextLinkMngKey(),
-                locgov.getAdministInsttCode(),
-                localTaxClient.linkTrgtCd(),
-                stripDeptCodeTail(locgov.getProcessDeptCode()),
-                spclFisBizCd,
-                LocalDate.now().format(YEAR),
-                fisSp,
-                RPRS_TXM_CD,
-                OPER_ITEM_CD,
-                today,
-                amount == null ? "0" : amount.toBigInteger().toString(),
-                today,
-                PYR_SE_CD,
-                pyrNo == null ? "" : pyrNo,
-                pyrNm == null ? "" : pyrNm,
-                "",
-                "",
-                PYR_STT_CD,
-                LOTNO_ROAD_ADDR_SE_CD,
-                zip == null ? "" : zip,
-                "", "", "", "", "",
-                roadNmDaddr == null ? "" : roadNmDaddr,
-                "",
-                MNG_ITEM_CN1,
-                prjId == null ? "" : prjId,
-                cntrPathCode,
-                userId);
+            Locgov locgov = locgovRepository.findById(form.cntrLocgovCode()).orElse(null);
+            if (locgov == null) {
+                log.error("■■■API■■■ nextBugaRequest - 지자체 없음 {}", form.cntrLocgovCode());
+                return result;
+            }
+            String fisSp = effectiveFisSp(locgov);
+            String spclFisBizCd = ("51".equals(fisSp) || "61".equals(fisSp))
+                    ? SPCL_FIS_BIZ_CD_SPECIAL : SPCL_FIS_BIZ_CD_DEFAULT;
+            String today = LocalDate.now().format(YMD);
 
-        LocalTaxClient.RelayResponse response = localTaxClient.sendNextBuga(request);
-        String epayNo = extractEpayNo(response.linkRstMsg());
+            NextBugaRequest request = new NextBugaRequest(
+                    levyLinkLogWriteRepository.nextLinkMngKey(),
+                    locgov.getAdministInsttCode(),
+                    localTaxClient.linkTrgtCd(),
+                    stripDeptCodeTail(locgov.getProcessDeptCode()),
+                    spclFisBizCd,
+                    LocalDate.now().format(YEAR),
+                    fisSp,
+                    RPRS_TXM_CD,
+                    OPER_ITEM_CD,
+                    today,
+                    form.frstPctAmt(),
+                    today,
+                    PYR_SE_CD,
+                    form.pyrNo(),
+                    form.pyrNm(),
+                    "",
+                    "",
+                    PYR_STT_CD,
+                    LOTNO_ROAD_ADDR_SE_CD,
+                    form.zip(),
+                    form.roadNmCd(),
+                    form.bmno(),
+                    form.bsno(),
+                    null,
+                    form.dongCd(),
+                    form.roadNmDaddr(),
+                    form.glNm(),
+                    MNG_ITEM_CN1,
+                    form.prjId(),
+                    form.cntrPathCode(),
+                    0L,
+                    form.cntrLocgovCode(),
+                    form.presentType(),
+                    form.prjId());
 
-        if (!localTaxClient.enabled()) {
-            // 모크일 때만: 1415 부과연계 로그 화면에서 확인할 수 있게 남긴다
-            levyLinkLogWriteRepository.insertNextBuga(request,
-                    response.success() ? "100" : "900", response.linkRstCd(), response.linkRstMsg());
+            Map<String, Object> response = localTaxClient.sendNextBuga(request);
+            String linkRstCd = response.get("linkRstCd") == null ? "" : response.get("linkRstCd").toString();
+            String linkRstMsg = response.get("linkRstMsg") == null ? "" : response.get("linkRstMsg").toString();
+            String epayNo = extractEpayNo(linkRstMsg);
+
+            if (localTaxClient.serviceTypeLocal()) {
+                // local(가짜 응답)일 때만: 1415 부과연계 로그 화면에서 확인할 수 있게 남긴다
+                levyLinkLogWriteRepository.insertNextBuga(request,
+                        LINK_RST_SUCCESS.equals(linkRstCd) && !epayNo.isEmpty() ? "100" : "900", linkRstCd, linkRstMsg);
+            }
+            result.putAll(response);
+            result.put("epayNo", epayNo);
+        } catch (DonationException e) {
+            log.error("■■■API■■■ nextBugaRequest UserException : {}", e.getMessage());
+            throw e;
+        } catch (IOException | RuntimeException e) {
+            log.error("■■■API■■■ nextBugaRequest EXCEPTION", e);
         }
-        return new BugaResult(epayNo, response.linkRstCd(), response.linkRstMsg());
+        return result;
     }
 
     /**
@@ -168,10 +217,17 @@ public class LevyRelayService {
                 levyLinkLogWriteRepository.nextSeoulBookNo(),
                 sysGubun);
 
-        LocalTaxClient.SeoulResponse response = localTaxClient.sendSeoulBuga(request);
+        LocalTaxClient.SeoulResponse response;
+        try {
+            response = localTaxClient.sendSeoulBuga(request);
+        } catch (IOException e) {
+            // AS-IS getSdonationCharge: IOException은 로그만 남기고 빈 결과(전자납부번호 없음)로 성공 응답
+            log.error("■■■API■■■ getSdonationCharge IOException", e);
+            return new BugaResult(null, null, null);
+        }
 
-        if (!localTaxClient.enabled()) {
-            // 모크일 때만: 1413 서울세외 부과연계 로그 화면에서 확인할 수 있게 남긴다
+        if (localTaxClient.serviceTypeLocal()) {
+            // local(가짜 응답)일 때만: 1413 서울세외 부과연계 로그 화면에서 확인할 수 있게 남긴다
             levyLinkLogWriteRepository.insertSeoulBuga(request, response.enapbuNo(),
                     response.errorCd(), response.errorMsg());
         }

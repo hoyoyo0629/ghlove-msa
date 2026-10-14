@@ -32,21 +32,29 @@ public class LevyRelayAdminApiController {
 
     private final LevyRelayService levyRelayService;
 
-    /** 지방세외수입 차세대 부과요청. */
+    /**
+     * 지방세외수입 차세대 부과요청 - 기탁서 등록 화면이 보내는 값 그대로(AS-IS NextBugaRequestDto 바인딩).
+     * 응답은 연계서버 응답 키 전부 + epayNo(AS-IS putAll). 특정사업 검증 실패(UserException)만 400 message.
+     */
     @PostMapping("/next-buga")
-    public ResponseEntity<?> nextBuga(@RequestParam String locgovCode,
-                                      @RequestParam(required = false) Long userId,
+    public ResponseEntity<?> nextBuga(@RequestParam(required = false) String frstPctAmt,
                                       @RequestParam(required = false) String pyrNo,
                                       @RequestParam(required = false) String pyrNm,
-                                      @RequestParam BigDecimal amount,
-                                      @RequestParam(required = false) String prjId,
-                                      @RequestParam(defaultValue = "200") String cntrPathCode,
+                                      @RequestParam(required = false) String roadNmCd,
+                                      @RequestParam(required = false) String bmno,
+                                      @RequestParam(required = false) String bsno,
                                       @RequestParam(required = false) String zip,
-                                      @RequestParam(required = false) String roadNmDaddr) {
+                                      @RequestParam(required = false) String dongCd,
+                                      @RequestParam(required = false) String roadNmDaddr,
+                                      @RequestParam(required = false) String glNm,
+                                      @RequestParam(required = false) String cntrLocgovCode,
+                                      @RequestParam(required = false) String presentType,
+                                      @RequestParam(required = false) String prjId,
+                                      @RequestParam(defaultValue = "200") String cntrPathCode) {
         try {
-            LevyRelayService.BugaResult result = levyRelayService.requestNextBuga(locgovCode, userId,
-                    pyrNo, pyrNm, amount, prjId, cntrPathCode, zip, roadNmDaddr);
-            return ResponseEntity.ok(LevyRelayService.toMap(result));
+            return ResponseEntity.ok(levyRelayService.requestNextBuga(new LevyRelayService.NextBugaForm(
+                    frstPctAmt, pyrNo, pyrNm, roadNmCd, bmno, bsno, zip, dongCd, roadNmDaddr, glNm,
+                    cntrLocgovCode, presentType, prjId, cntrPathCode)));
         } catch (DonationException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

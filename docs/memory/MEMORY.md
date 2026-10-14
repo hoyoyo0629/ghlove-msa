@@ -24,7 +24,7 @@
 - [AS-IS 테이블 실데이터 export 폴더 확대](asis-table-dump-path.md) — 2026-10-07부터 Desktop 1.DB 폴더에 테이블별 대량 export 상시 추가됨, 확인 전 먼저 거기 찾아보기
 - [이벤트 관리(featured) 이식 진척](admin-featured-event-port-progress.md) — featured=지자체별 이벤트(실사용). 목록 완료, 등록/수정 폼 잔여. [[featured-unused-skip]]은 '미사용' 오판 기록
 - [커밋은 요청 시에만](commit-only-when-asked.md) — 사용자가 git 커밋 직접 관리, 커밋 여부 확인 금지
-- [빌드는 내가·재기동은 사용자](build-is-mine-restart-is-users.md) — compileJava만 X, bootJar까지 구워야 재기동에 반영. ★bootJar EXIT=0은 기동 보증 아님 → 여분 포트로 확인
+- [빌드는 내가·재기동은 사용자](build-is-mine-restart-is-users.md) — compileJava만 X, bootJar까지 구워야 재기동에 반영. ★bootJar EXIT=0은 기동 보증 아님 → 여분 포트로 확인(Kafka 리스너 끄고, 끝나면 반드시 내릴 것 - 10-06·10-12 인스턴스 방치 사례)
 - [조건부 검색 LIKE는 cast 필수](hql-null-param-needs-cast.md) — concat 안의 파라미터는 cast(:x as String), 없으면 null이 bytea로 바인딩돼 500
 - [세션 쿠키는 서비스별 이름](session-cookie-name-per-service.md) — 쿠키는 포트 무시, admin·member가 JSESSIONID 서로 덮어써 운영자 화면이 로그인으로 튕겼음. OP_MANAGER_TIMEOUT은 "분"
 - [인라인JS 대괄호2개 금지](thymeleaf-js-inline-bracket-hazard.md) — 렌더링 중단→ERR_INCOMPLETE_CHUNKED_ENCODING 200, 에디터 쓰는 16화면이 동시에 깨져 있었음. 가드 테스트 있음
@@ -44,7 +44,7 @@
 - [시스템관리 영역 이식 원장](admin-system-area-port-progress.md) — 25화면 AS-IS JSP 매핑표, **25/25 완료(2026-10-03)**, 화면별 AS-IS 결함·구조갭 기록
 - [storefront 설문 DTO 버그 수정](storefront-survey-dto-fixed.md) — 보내는 키가 안 맞아 응답이 빈 값으로 저장되던 것, 2026-10-03 해결+검증 시드
 - [회원관리 영역 이식 원장](admin-member-area-port-progress.md) — 두 번째 영역 8화면 **완료**(2026-10-04), 담당자 사용여부 9/2 변환 규칙, 주소검색 팝업 신규
-- [소규모 영역 묶음 이식 원장](admin-small-areas-port-progress.md) — 기부혜택증3·대시보드1·커뮤니티6 완료, 오프라인기부금접수는 15102만 보류(본인인증·ROLE_ADMIN_11 결정 대기)
+- [소규모 영역 묶음 이식 원장](admin-small-areas-port-progress.md) — 기부혜택증3·대시보드1·커뮤니티6·오프라인기부금접수2 완료(15102는 2026-10-13 verbatim 재이식)
 - [★★대원칙: AS-IS에 없으면 발명 금지, 추가는 물어보고](no-invented-features-ask-first.md) — AS-IS에 없는 기능/화면/필드/버튼 발명·추가 절대 금지, 무조건 있는 그대로. 예외 ISP/RFP 신규·변경은 먼저 질문. TO-BE에만 있는 건 제거해 AS-IS로 되돌림
 - [★화면 이식 고정절차](asis-screen-port-procedure.md) — ★★기준은 JSP+매퍼SQL+**서비스로직** 3종(2026-10-06). 서비스 본문 안 읽어 업로드 검증·조건부 정리·파일삭제를 반복 누락함. 발명 금지
 - [AS-IS 문구사전 적재완료](asis-message-catalog-loaded.md) — op_common_message 2132행, 템플릿 ${msg.get()}·JS /common/message. 덤프는 DDL만이라 데이터는 export 요청해야 함
@@ -105,12 +105,23 @@
 - [지자체담당자관리·운영관리자 상세 레이아웃+경로 수정](admin-locgov-charger-edit-layout-and-breadcrumb-fix.md) — 목록버튼이 flex_box 밖으로 분리돼있던것+메뉴경로 "상세" 크럼 누락(JS 자체가 없었음, LNB토글 누락과 같은유형), 2화면 수정. admin 재기동 필요
 - [메뉴경로 크럼 누락 전수조사 완료](admin-breadcrumb-append-script-audit.md) — AS-IS 25화면 전수대조, 17개 이미정상+6개(give-operation/point/reqmng-list/reqmng-form/state-detail, statistics-locgov) 신규수정+6개(통계통합)·1개(미이식) 적용대상아님 확인. admin 재기동 필요
 - [운영관리자 회원구분·사용여부 비활성규칙 신규구현](admin-oper-charger-authority-status-disable-rules.md) — AS-IS adminRoleCheck 4규칙(시스템↔행안부 그룹전환 금지·본인 사용여부 불가·부담당자 전체 불가) 전체가 안 포팅돼 있었음, th:disabled로 신규구현. admin 재기동 필요
-<<<<<<< Updated upstream
 - [PG numeric 나눗셈 스케일이 화면을 깨뜨림](pg-numeric-division-scale-breaks-display.md) — CUBRID 2자리가 PG에선 16+자리 → 0E-20/0.61000000000000000000. SQL 캐스팅+AS-IS와 같은 float+요약만 @opNum.format(목록은 포맷 안 함). 다른 비율 컬럼 소급점검
 - [AS-IS 라디오는 input+형제 label](asis-radio-needs-sibling-label.md) — label로 감싸면 .input-form flex gap이 죽어 글자가 라디오에 달라붙음. gapPx·중심선 Y 실측으로 검증. 잔여 2곳(access/form, featured-admin/list)
 - [발명된 "← …" 링크는 화면별로 정리](admin-invented-backlink-per-screen-cleanup.md) — AS-IS 0건인데 21화면에 있음. 충돌 위험으로 일괄제거 금지, 원장 docs/admin-invented-backlink-cleanup-ledger.md의 화면별 조치만 수행. 19화면 잔여
-=======
 - [개인정보 다운로드 사유모달 분류코드 select 추가](admin-privacy-access-modal-reasontype-dropdown.md) — AS-IS는 공통JS(Shop.downloadExcelOrder)가 열때마다 DOM에 끼워넣어서 마크업만 봐서는 "없다"고 오판했던 것, 백엔드(EXCELDOWNLOAD_REASON_TYPE 공통코드+엔드포인트)는 이미 준비돼 있어 프론트만 추가. 이 모달 쓰는 화면 전부에 적용됨. admin 재기동 필요
-- [엑셀다운로드 CSV→진짜xlsx 진행중(2/7)](admin-excel-download-real-xlsx-progress.md) — ★AS-IS에 클래스 있어도 실제론 안쓰이는 죽은코드 다수 발견(살아있는 stream*() 기준으로 재구현), 오프라인담당자·기부혜택증열람현황 완료, 운영유지관리·오프라인기부접수는 컬럼수 자체가 부족해 다음세션 재개 필요, gift/order 서비스 3곳은 admin 확인후 착수. admin 재기동 필요
+- [엑셀다운로드 CSV→진짜xlsx 진행중(3/7)](admin-excel-download-real-xlsx-progress.md) — ★AS-IS에 클래스 있어도 실제론 안쓰이는 죽은코드 다수 발견(살아있는 stream*() 기준으로 재구현), 오프라인담당자·기부혜택증열람현황·기부금접수관리(10-14) 완료, 운영유지관리는 컬럼수 부족으로 재개 필요, gift/order 서비스 3곳은 admin 확인후 착수. admin 재기동 필요
+- [AskUserQuestion 한글은 손수 이스케이프 금지](askuserquestion-korean-plain-text-not-escaped.md) — \uXXXX 수동계산 오타로 "어뙙게"/"바맔" 등 깨진 글자 반복노출, 그냥 UTF-8 원문 그대로 쓸 것
 - [기부금관리(14000) 4축분석 완료·구현보류](admin-give-state-area-port-progress.md) — 14101 역할분기(mois/locgov)·GET빈화면·카드4개(5개는발명)·No컬럼·엑셀 등 상세스펙 확정. 발생포인트·답례품사용금액 정합화는 ReadModel 스키마 확장 필요해 DA설계안 대기로 보류(RFP SFR-009와 상충하지만 기존 동결결정 우선). 기금사업소개(14201)는 menu_url 빈값이라 LNB에서 안보임, 신규구현 대상
->>>>>>> Stashed changes
+- [★AS-IS 실행 소스는 C:\workspace\ghlove](asis-live-source-is-workspace-ghlove.md) — Desktop 1.AS-IS 소스는 분석용 사본(수정 금지). 재기동은 gradlew bootRun 직접(start-all.bat를 Start-Process로 돌리면 다 내려가기만 함), jar 잠금은 gradlew --stop
+- [★★이식 때 대체·생략 금지](no-pragmatic-substitutions-in-ports.md) — 자산/데이터 없어도 같은 메커니즘으로(버튼 대체·숨김요소 생략·인라인 width 금지), 오타 클래스까지 verbatim, 데이터 출처는 매퍼 SQL로 확인. 15102에서 반복 지적
+- [기탁서 등록(15102) 재이식+테스트데이터](offgive-15102-verbatim-port-data-gaps.md) — 시군구 정렬 AS-IS값·대표답례품 테스트매핑 5건 적재. 결함 2개(답례품 주문 미생성·S형 옵션 반대)+연계 우회 문제 2026-10-13 해결. 대표답례품 관리화면은 미이식
+- [기탁서 답례품 주문 = 입금대기→수납 후 확정](offgive-gift-order-asis-flow.md) — AS-IS는 등록 시 재고도 안 줄임(죽은 stockMap). TO-BE: WAITING_DEPOSIT 저장, point.ledger EARN(refKey=cntrSn, 커밋 후 발행)으로 출고 SAGA. 미이식 4건(삭제기부 주문정리 배치·국민비서 문자·모바일분할·부분처리)
+- [★외부연계: 실경로=AS-IS, 우회=로컬에서만](integration-bypass-local-only.md) — 실명인증·행정주소=요청URL localhost(AS-IS 조건·값), 세외수입=donation local 프로파일(ServiceType.LOCAL). 지어낸 연계값(GHLOVE·wetax URL) 교정. 다른 서비스 연계는 아직 단일설정 false
+- [★AS-IS 관리자 인터셉터 예외경로는 TO-BE에도](admin-interceptor-asis-exempt-paths.md) — isManagerPage 예외 40개, 안 넣으면 권한없는 롤이 공통조회 시 권한없음 HTML→화면 깨짐(15102 시군구 undefined→부과요청 실패). sci-result·options-by-locgovCode 반영
+- [가입구분·회원지자체코드 AS-IS 정합(해결)](member-sbscrb-se-code-general-mismatch.md) — GENERAL→SBSCRB_SE 100/200, OP_USER.LOCGOV_CODE=admCd→G_INSTT_CODE(313건 적재)·즉석가입은 행정지. 회원구분 표시는 상수 '일반회원'(2026-10-14)
+- [g_cntr 수납일 채움·AS-IS 조건 복구](donation-sttemnt-pay-de-populated.md) — 수납완료면 수납일 있음(불변식), 기존 41건 백필, 집계 13곳 "수납일 있음" 복구(2026-10-14)
+- [★서비스 로직 전수조사 예정(운영관리→답례품관리→대민)](service-logic-full-audit-planned.md) — 서비스 본문 블록 단위 대조, 갭원장 먼저, 미착수
+- [성인답례품 제한(완료)·주문대행 주문생성(대기)](adult-item-and-order-agency-unported.md) — 성인 제한 2026-10-14 이식(관리자 폼 칸은 임시 위치), 주문대행은 AS-IS 범위 조사 끝·이식 대기
+- [누락 배치 job은 일괄 이식](missing-batch-jobs-port-together.md) — 세외수입 수납내역 배치 포함, 그때 기탁서 상세 임시 "수납처리" 버튼 제거
+- [NOT NULL DEFAULT 컬럼 매핑하면 NULL insert](jpa-mapped-not-null-default-column-sends-null.md) — g_cntr.delete_at 매핑(10-06) 뒤 기부 insert 전부 실패, saveRequested에서 'N' 지정으로 수정(10-14). 매핑 전 컬럼 기본값 확인
+- [gift S형 옵션 = name1 제목·name2 내용](gift-option-s-name-convention.md) — AS-IS 실데이터 기준으로 전환+5행 이관, 라벨 "제목 : 내용". S2·S3 단계별 제목(item_option_title)은 TO-BE 미매핑

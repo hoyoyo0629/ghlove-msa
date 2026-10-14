@@ -137,9 +137,23 @@ public class ShipmentSagaService {
                 : anyConfirmed ? STATUS_CONFIRMED : STATUS_CANCELLED;
 
         orderRepository.findById(orderId).ifPresent(order -> {
+            String before = order.getOrderStatus();
             order.setOrderStatus(headerStatus);
             order.setUpdatedDate(LocalDateTime.now());
             orderRepository.save(order);
+            // 답례품 주문이 결제완료되면 국민비서 답례품 주문 문자를 보낸다 - 온라인 주문은 AS-IS
+            // saveGiveOrderTempAndPay(주문 즉시), 기탁서 등록 답례품은 procOffOrder(수납완료 뒤 결제처리)가 보내던 것.
+            // 처음 종결될 때 한 번만(이후 부분취소 재집계에서는 다시 안 보낸다). AS-IS 주문은 전부 성공하거나 전부
+            // 실패해 부분확정이 없다 - TO-BE 부분확정이면 결제된(확정) 품목만 싣는다.
+            if (STATUS_PENDING.equals(before)
+                    && (STATUS_CONFIRMED.equals(headerStatus) || STATUS_PARTIAL.equals(headerStatus))) {
+                List<OrderItem> paid = items.stream()
+                        .filter(i -> STATUS_CONFIRMED.equals(i.getItemStatus()))
+                        .sorted(java.util.Comparator.comparing(OrderItem::getOrderItemId,
+                                java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                        .toList();
+                orderSagaPublisher.publishPresentOrderPaid(order, paid);
+            }
         });
     }
 

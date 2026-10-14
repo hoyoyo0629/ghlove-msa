@@ -3,6 +3,8 @@ import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
 import { formatN } from '../../utils/format'
+import { useAuthStore } from '../../stores/auth'
+import { modalAlert } from '../../composables/useModal'
 
 // SFR-003 "기부금 납부 시 답례품 선택 기능 추가" - 기부 결제완료(MyDonationsView의 완료 처리) 직후
 // "답례품을 제공 받음"을 선택한 기부 건이면 여기로 이동한다. AS-IS/기존 TO-BE는 기부→포인트적립까지만
@@ -11,6 +13,7 @@ import { formatN } from '../../utils/format'
 // 그대로 쓴다(새 결제 수단을 만들지 않음).
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 
 const locgovCode = route.query.locgovCode ?? ''
 
@@ -46,6 +49,11 @@ function imgUrl(gift) {
 
 async function addToCart(gift) {
   errorMessage.value = ''
+  // AS-IS 답례품 목록 담기($goodsItem.addToCart) - 성인 답례품인데 성인이 아니면 막는다.
+  if (gift.adultItemYn === 'Y' && auth.me?.adultYn !== 'Y') {
+    modalAlert('19세 미만의 청소년은 이용할 수 없습니다.')
+    return
+  }
   try {
     await api.post('order', '/api/cart/items', { itemId: gift.itemId, quantity: 1 })
     addedItemIds.value = new Set([...addedItemIds.value, gift.itemId])

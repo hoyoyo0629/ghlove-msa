@@ -19,7 +19,7 @@
      - 합계 행의 정합여부 칸에는 '금액일치/금액불일치'가 아니라 차액이 찍힌다.
 
      ★ 금액 대응은 TO-BE 주문 모델에 맞춰 바뀌었다(order의 OrderReconciliationRepository 주석 참고):
-     결제금액=포인트 결제액, 취소금액=상태 CANCELLED, 입금대기금액은 TO-BE에 해당 상태가 없어 0,
+     결제금액=포인트 결제액, 취소금액=상태 CANCELLED, 입금대기금액=상태 WAITING_DEPOSIT('AB%' 수기주문은 바로 확정이라 실제로는 0),
      정산금액(op_remittance_detail)·미정주문건수(op_order_item_hold)는 아직 쌓이는 게 없어 0이다. -->
 <div class="admin_wrap">
 <div id="container">

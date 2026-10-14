@@ -33,6 +33,7 @@ public class DonationPublicApiController {
     private final MemberClient memberClient;
     private final JwtVerifier jwtVerifier;
     private final com.ghlove.donation.service.LocgovAdminService locgovAdminService;
+    private final com.ghlove.donation.service.DesignatedAdminService designatedAdminService;
 
     /** AS-IS getLocGovLmtt 응답의 표시용 3개 필드. 날짜는 AS-IS SQL이 DATE_FORMAT(...,'%Y.%m.%d')로
      *  내려주던 형식(yyyy.MM.dd) 그대로 맞춘다 - 화면 문구에 그대로 박히는 값이라서다. */
@@ -229,7 +230,9 @@ public class DonationPublicApiController {
                                    String cntrDeFormatted, BigDecimal cntrAmt, String cheerMsg) {
     }
 
-    public record NoticeDto(Long prjNoticeId, String prjNoticeSubject, String prjNoticeCn, String dateText) {
+    /** prjFiles - AS-IS getNoticeList가 공지마다 붙이던 첨부(FILE_SEQ DESC, fileName은 암호화 토큰). */
+    public record NoticeDto(Long prjNoticeId, String prjNoticeSubject, String prjNoticeCn, String dateText,
+                            List<com.ghlove.donation.service.DesignatedAdminService.PublicNoticeFile> prjFiles) {
     }
 
     public record DesignatedDetailDto(Long dsgnDntnBizId, String dsgnDntnBizTtl, String dsgnDntnBizCn, String imageUrl,
@@ -256,7 +259,8 @@ public class DonationPublicApiController {
                 .map(n -> {
                     String pnttm = n.getFrstRegDt() == null ? null : n.getFrstRegDt().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
                     String dateText = pnttm != null && pnttm.length() >= 8 ? formatYmd(pnttm.substring(0, 8)) : "";
-                    return new NoticeDto(n.getNoticeId(), n.getSubject(), n.getContent(), dateText);
+                    return new NoticeDto(n.getNoticeId(), n.getSubject(), n.getContent(), dateText,
+                            designatedAdminService.publicNoticeFilesOf(n.getNoticeId()));
                 })
                 .toList();
         return ResponseEntity.ok(new DesignatedDetailDto(project.getDsgnDntnBizId(), project.getDsgnDntnBizTtl(),

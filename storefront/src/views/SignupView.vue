@@ -160,6 +160,8 @@ const form = reactive({
   post: '',
   address: '',
   addressDetail: '',
+  // AS-IS join.html param.locgovCode - 주소검색 admCd 앞 5자리(서버가 G_INSTT_CODE로 매핑해 회원 지자체코드로 저장)
+  locgovCode: '',
 })
 
 // 주소찾기 - AS-IS users/join.html은 행안부 juso.go.kr 팝업(jusoPopup.html)을 쓴다(Daum
@@ -167,9 +169,10 @@ const form = reactive({
 // 상태의 임의 변경이었다, 2026-10-08 사용자 지시로 원복). public/juso-popup.html이 그 팝업이고
 // window.jusoCallBack을 opener(이 화면)에 직접 호출한다(같은 오리진이라 postMessage 불필요).
 function searchAddress() {
-  window.jusoCallBack = (addrPart1, addrPart2, addrDetail, zipNo) => {
+  window.jusoCallBack = (addrPart1, addrPart2, addrDetail, zipNo, jibunAddr, engAddr, admCd) => {
     form.post = zipNo
     form.address = addrPart1 + addrPart2
+    form.locgovCode = admCd ? admCd.substring(0, 5) : ''
     form.addressDetail = addrDetail
   }
   window.open('/juso-popup.html', 'jusoPopup', 'width=570,height=520,scrollbars=yes')

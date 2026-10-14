@@ -51,7 +51,7 @@ public class GiftPublicApiController {
 
     public record GiftCardDto(Long itemId, String itemName, Integer salePrice, boolean soldOut,
                                String locgovCode, String locgovName, String thumbnailUrl,
-                               boolean isNew, boolean wishlisted) {
+                               boolean isNew, boolean wishlisted, String adultItemYn) {
     }
 
     public record ListResponse(String pageTitle, String selectedCategory, String q, String locgovCode,
@@ -106,7 +106,8 @@ public class GiftPublicApiController {
                     return new GiftCardDto(g.getItemId(), g.getItemName(), g.getSalePrice(),
                             soldOut, g.getLocgovCode(), locgovNames.get(g.getLocgovCode()),
                             imageName != null ? "/uploads/" + imageName : null,
-                            newItemIds.contains(g.getItemId()), wishlistedItemIds.contains(g.getItemId()));
+                            newItemIds.contains(g.getItemId()), wishlistedItemIds.contains(g.getItemId()),
+                            g.getAdultItemYn());
                 })
                 .toList();
 
@@ -126,9 +127,10 @@ public class GiftPublicApiController {
     public record SellerDto(String companyName, String telephoneNumber) {
     }
 
-    /** SFR-005 "카탈로그 관리: 옵션" - AS-IS와 동일하게 S/S2/S3/T 지원. optionName(=name1)은
-     *  기존 단일옵션 storefront 호환용, optionName2/3은 조합형(S2·S3)용. 옵션형태(itemOptionType)와
-     *  각인(itemTextOptionFlag/Title1~3)은 응답의 gift 필드에 실려 나간다. */
+    /** SFR-005 "카탈로그 관리: 옵션" - AS-IS와 동일하게 S/S2/S3/T 지원. optionName=name1,
+     *  optionName2/3=name2/3 그대로(AS-IS 저장규칙: 선택형 S는 name1=옵션 제목·name2=옵션 내용,
+     *  조합형은 name1~3=단계별 값). 옵션형태(itemOptionType)와 각인(itemTextOptionFlag/Title1~3)은
+     *  응답의 gift 필드에 실려 나간다. */
     public record OptionDto(Long itemOptionId, String optionType, String optionName, String optionName2,
                              String optionName3, Integer optionPrice, boolean soldOut,
                              boolean stockTracked, Integer stockQuantity) {
@@ -218,8 +220,15 @@ public class GiftPublicApiController {
         }
     }
 
-    /** 조합형(S2·S3) 옵션명은 name1/2/3을 " / "로 이어 붙여 스냅샷한다(AS-IS 옵션명 표기). */
+    /**
+     * 장바구니·주문에 남길 옵션명 스냅샷. 선택형(S)은 AS-IS ShopUtils.viewOptionTextNoUl과 같은
+     * "옵션 제목 : 옵션 내용"(예: 색상 : 빨강), 조합형(S2·S3)은 name1/2/3을 " / "로 이어 붙인다.
+     */
     private String combinedOptionName(com.ghlove.gift.domain.GiftOption o) {
+        if ("S".equals(o.getOptionType())) {
+            return (o.getOptionName1() == null ? "" : o.getOptionName1()) + " : "
+                    + (o.getOptionName2() == null ? "" : o.getOptionName2());
+        }
         StringBuilder sb = new StringBuilder(o.getOptionName1() == null ? "" : o.getOptionName1());
         if (o.getOptionName2() != null && !o.getOptionName2().isBlank()) {
             sb.append(" / ").append(o.getOptionName2());

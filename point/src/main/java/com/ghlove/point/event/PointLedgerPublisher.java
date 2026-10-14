@@ -5,11 +5,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * 원장행 발행 - admin이 자기 DB를 못 읽으니(DB per Service) 포인트 통계 ReadModel을
  * 만들려면 이 이벤트를 구독해야 한다 (SFR-007/009 gap fill). 새 원장행이 생기는
  * 모든 지점(적립/사용/회수/복원/소멸)에서 호출한다.
+ *
+ * <p>호출 트랜잭션이 커밋된 뒤에 발행한다(롤백되면 발행하지 않는다) - order가 기부 적립(EARN)을
+ * 받고 곧바로 그 포인트를 차감하라는 SHIPMENT_CREATED를 보내므로(기탁서 등록 답례품), 적립이
+ * 커밋되기 전에 차감이 도착해 잔액 부족으로 엇갈리면 안 된다.
  */
 @Component
 @RequiredArgsConstructor
@@ -22,12 +28,27 @@ public class PointLedgerPublisher {
 
     public void publish(PointLedger ledger) {
         PointLedgerEvent event = new PointLedgerEvent(ledger.getLedgerId(), ledger.getUserId(),
-                ledger.getLocgovCode(), ledger.getTxnType(), ledger.getPointAmount(), ledger.getCreatedDate());
-        kafkaTemplate.send(TOPIC, String.valueOf(ledger.getUserId()), event).whenComplete((result, ex) -> {
+                ledger.getLocgovCode(), ledger.getTxnType(), ledger.getPointAmount(), ledger.getCreatedDate(),
+                ledger.getRefKey());
+        String key = String.valueOf(ledger.getUserId());
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    send(key, event);
+                }
+            });
+            return;
+        }
+        send(key, event);
+    }
+
+    private void send(String key, PointLedgerEvent event) {
+        kafkaTemplate.send(TOPIC, key, event).whenComplete((result, ex) -> {
             if (ex != null) {
-                log.error("Failed to publish PointLedgerEvent for ledgerId={}", ledger.getLedgerId(), ex);
+                log.error("Failed to publish PointLedgerEvent for ledgerId={}", event.ledgerId(), ex);
             } else {
-                log.info("Published PointLedgerEvent ledgerId={} txnType={}", ledger.getLedgerId(), ledger.getTxnType());
+                log.info("Published PointLedgerEvent ledgerId={} txnType={}", event.ledgerId(), event.txnType());
             }
         });
     }

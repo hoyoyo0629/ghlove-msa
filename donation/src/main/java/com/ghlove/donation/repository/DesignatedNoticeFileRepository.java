@@ -11,6 +11,11 @@ public interface DesignatedNoticeFileRepository
 
     List<DesignatedNoticeFile> findByNoticeIdOrderByFileSeqAsc(Long noticeId);
 
+    /** 대민 공지 첨부 목록 - AS-IS selectDesignatedDonationNoticeFileList(ORDER BY FILE_SEQ DESC). */
+    List<DesignatedNoticeFile> findByNoticeIdOrderByFileSeqDesc(Long noticeId);
+
+    Optional<DesignatedNoticeFile> findFirstByNoticeIdAndFileNm(Long noticeId, String fileNm);
+
     Optional<DesignatedNoticeFile> findByNoticeIdAndFileSeq(Long noticeId, Integer fileSeq);
 
     void deleteByNoticeId(Long noticeId);

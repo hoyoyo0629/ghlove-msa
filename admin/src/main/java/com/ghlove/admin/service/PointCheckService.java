@@ -29,8 +29,8 @@ import java.util.Map;
  * <p><b>MSA 구성 차이</b>: 세 표의 소유 서비스가 달라(주문=order, 사용포인트=point) 한 쿼리로
  * 조인할 수 없으므로, 각 서비스의 조회 전용 집계 API를 불러 admin이 주문번호로 맞춘다.
  * TO-BE 주문 모델 대응은 order 쪽 {@code OrderReconciliationRepository} 주석에 적어 두었다
- * (결제금액=포인트 결제액, 취소금액=상태 CANCELLED, 입금대기금액은 TO-BE에 해당 상태가 없어 0,
- * 정산금액·미정주문건수는 아직 쌓이는 표가 없어 0).
+ * (결제금액=포인트 결제액, 취소금액=상태 CANCELLED, 입금대기금액=상태 WAITING_DEPOSIT - 'AB%' 수기주문은
+ * 바로 확정이라 실제로는 0, 정산금액·미정주문건수는 아직 쌓이는 표가 없어 0).
  */
 @Service
 @RequiredArgsConstructor
@@ -164,6 +164,7 @@ public class PointCheckService {
 
     /** TO-BE od_order.order_status(이름) → AS-IS 화면 라벨. */
     private static final Map<String, String> STATUS_LABELS = Map.of(
+            "WAITING_DEPOSIT", "입금대기",
             "CREATED", "결제대기",
             "PAID", "결제완료",
             "PREPARING", "배송준비중",

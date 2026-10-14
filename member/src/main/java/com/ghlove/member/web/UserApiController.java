@@ -72,14 +72,61 @@ public class UserApiController {
     @PostMapping("/api/users/walk-in")
     public ResponseEntity<?> registerWalkIn(@RequestParam String userName, @RequestParam(required = false) String phoneNumber,
                                              @RequestParam(required = false) String birthday,
-                                             @RequestParam(required = false) String address) {
+                                             @RequestParam(required = false) String address,
+                                             @RequestParam(required = false) String mberCi,
+                                             @RequestParam(required = false) String mberDi,
+                                             @RequestParam(required = false) String post,
+                                             @RequestParam(required = false) String addressDetail,
+                                             @RequestParam(required = false) String gender,
+                                             @RequestParam(required = false) String locgovCode) {
         try {
-            MemberService.WalkInResult result = memberService.registerWalkIn(userName, phoneNumber, birthday, address);
+            MemberService.WalkInResult result = memberService.registerWalkIn(userName, phoneNumber, birthday, address,
+                    mberCi, mberDi, post, addressDetail, gender, locgovCode);
             return ResponseEntity.ok(Map.of("userId", result.userId(), "loginId", result.loginId(),
                     "tempPassword", result.tempPassword()));
         } catch (MemberException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
+    }
+
+    /**
+     * SCI 실명인증 결과(CI)로 기존회원을 조회 - AS-IS {@code sciResponse()}가
+     * {@code /opmanager/offgive/user-check}로 호출하는 자리. 찾으면 그 회원 정보로
+     * 폼을 채우고(주소/전화 disabled), 못 찾으면 방문자 정보 그대로 즉석가입한다.
+     * (post/addressDetail까지 필요해 공유 DTO인 {@link UserInfoDto}와는 별도로 내려준다.)
+     */
+    @GetMapping("/api/users/by-ci")
+    public ResponseEntity<ByCiDto> byCi(@RequestParam String mberCi) {
+        return userRepository.findFirstByMberCiAndStatusCodeOrderByUserIdDesc(mberCi, "ACTIVE")
+                .map(user -> {
+                    UserDetail detail = userDetailRepository.findById(user.getUserId()).orElse(null);
+                    return new ByCiDto(user.getUserId(), user.getUserName(), user.getLoginId(),
+                            detail != null ? detail.getPhoneNumber() : null,
+                            detail != null ? detail.getPost() : null,
+                            detail != null ? detail.getAddress() : null,
+                            detail != null ? detail.getAddressDetail() : null);
+                })
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * 기탁서 등록(admin 15102)의 "휴대폰번호 수정하기" - AS-IS offgive-mapper {@code updatePhoneNumber}
+     * ({@code UPDATE OP_USER_DETAIL SET PHONE_NUMBER = #{phoneNumber} WHERE USER_ID = #{userId}}).
+     */
+    @PostMapping("/api/users/{userId}/phone-number")
+    public ResponseEntity<?> updatePhoneNumber(@PathVariable Long userId, @RequestParam String phoneNumber) {
+        return userDetailRepository.findById(userId)
+                .map(detail -> {
+                    detail.setPhoneNumber(phoneNumber);
+                    userDetailRepository.save(detail);
+                    return ResponseEntity.ok(Map.of("updated", 1));
+                })
+                .orElseGet(() -> ResponseEntity.ok(Map.of("updated", 0)));
+    }
+
+    public record ByCiDto(Long userId, String userName, String loginId, String phoneNumber,
+                          String post, String address, String addressDetail) {
     }
 
     /** admin "총괄 현황"(회원수현황) + "총괄 누계 현황"(연령별 기부건수) 리포트용 - 가입일/생년월일

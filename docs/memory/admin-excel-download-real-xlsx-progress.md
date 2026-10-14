@@ -45,6 +45,13 @@ admin이 아니라 **다른 서비스를 호출**해서 그 서비스가 CSV를 
   등 실제 값 그대로) 재현. `createStyles()`/`writeTitleAndHeaderRow()`/`dataCell()`/
   `write(response, workbook, fileName, password)` 4개 공개 메서드.
 
+3. **기부금 접수관리(오프라인기부접수, 15101)** - 2026-10-14 완료. `OffgiveReceiptAdminController.downloadExcel`이
+   `streamOffgiveList` 그대로(시트 OFFGIVE_DATA, 제목 "오프라인 기부금 접수 관리 목록", 폭 {2000,7500,3000,7500,5000,7500,
+   5000,5000,7500,7500,7500}, No 역순 콤마, 이름 비마스킹, 수납일·금액 원값, 신고일은 Timestamp 문자열 "…:56.0",
+   지자체/지점은 Java 문자열 더하기라 null이면 "null"). 화면은 신청일 확인 alert 후 privacy-access 모달(openPrivacyModal).
+   같은 날 목록 SQL도 AS-IS getOffgiveList로 재작성(경로 200·300, 사업명 g_dsgn_dntn_biz_mng+'자치단체에 기부하기',
+   일치검색, 복지센터명, delete_at 조건 제거, role 전달). 복호화 검증법: admin bootJar의 BOOT-INF/lib POI로 javac 소도구.
+
 **미완료 - 컬럼 자체가 부족함이 추가로 발견됨(파일형식 문제보다 큰 갭)**:
 - **운영유지관리**(`MaintenanceAdminController`) - 지금 CSV는 7컬럼(접수일/제목/요청경로/
   업무구분/완료구분/담당자/처리내용)뿐인데 실제 AS-IS(`MaintenanceServiceImpl#

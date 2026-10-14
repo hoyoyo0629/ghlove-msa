@@ -52,6 +52,14 @@ public class Gift {
     @Column(name = "STOCK_QUANTITY")
     private Integer stockQuantity;
 
+    /**
+     * 재고연동 여부(AS-IS OP_ITEM.STOCK_FLAG, 'Y'면 답례품 단위 재고를 본다). 기탁서 등록 답례품의 수납 후 재고
+     * 차감(AS-IS procOffOrder)이 이 값으로 갈린다. NOT NULL DEFAULT 'N' 컬럼이라 읽기 전용으로만 매핑한다
+     * (쓰기 가능하게 매핑하면 null이 들어가 insert가 실패한다).
+     */
+    @Column(name = "STOCK_FLAG", insertable = false, updatable = false)
+    private String stockFlag;
+
     /** 1회 주문 최대 수량 (AS-IS item.orderMaxQuantity) - 답례품 상세 "최대 주문 수량" 표시·제한용. */
     @Column(name = "ORDER_MAX_QUANTITY")
     private Integer orderMaxQuantity;
@@ -143,6 +151,13 @@ public class Gift {
      */
     @Column(name = "MOBILE_ITEM_YN")
     private String mobileItemYn;
+
+    /**
+     * 구매 제한 "성인"(AS-IS OP_ITEM.ADULT_ITEM_YN) - 'Y'면 19세 미만(AS-IS UserUtils.isAdult)은 담기·구매·주문을 못 한다.
+     * 관리자 답례품 폼에서 판매자에게 성인답례품 등록권한({@link Seller#getAdultItemYn()})이 있을 때만 켤 수 있다.
+     */
+    @Column(name = "ADULT_ITEM_YN")
+    private String adultItemYn = "N";
 
     /** 대표상품 여부 (AS-IS opmanager/item/representative-item - 실제 운영사이트에 살아있는
      *  기능, view_search_spcl_item과는 무관). 'Y'면 대표상품 목록에 노출된다. */

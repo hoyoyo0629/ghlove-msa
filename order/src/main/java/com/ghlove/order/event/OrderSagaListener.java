@@ -45,7 +45,8 @@ public class OrderSagaListener {
             case "SHIPMENT_POINT_DEDUCTED" -> shipmentSagaService.onPointDeducted(objectMapper.readValue(payload, ShipmentPointDeductedEvent.class));
             case "SHIPMENT_POINT_DEDUCT_FAILED" -> shipmentSagaService.onPointDeductFailed(objectMapper.readValue(payload, ShipmentPointDeductFailedEvent.class));
             case "ORDER_CREATED", "ORDER_CONFIRMED", "ORDER_CANCELLED",
-                 "SHIPMENT_CREATED", "SHIPMENT_CANCELLED", "ITEM_CANCELLED" -> { /* published by this service - not consumed here */ }
+                 "SHIPMENT_CREATED", "SHIPMENT_CANCELLED", "ITEM_CANCELLED",
+                 "PRESENT_ORDER_PAID", "OFFGIVE_ORDER_PAID" -> { /* published by this service - not consumed here */ }
             default -> log.warn("Unknown eventType={} for orderId={} - ignoring", eventType, orderId);
         }
     }

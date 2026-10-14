@@ -297,6 +297,21 @@ public class DesignatedProjectClient {
         }
     }
 
+    /**
+     * 대민 공지 첨부 내용(AS-IS ProgramFileDownloadController PRJ_NOTICE) - 대민 화면이 받은 파일명 토큰을 그대로
+     * 넘긴다(복호화는 키를 가진 donation이 한다). 그 공지의 첨부가 아니거나 파일이 없으면 null.
+     */
+    public byte[] noticeFileContent(long noticeId, String fileNameToken) {
+        try {
+            return restClient.get()
+                    .uri(b -> b.path("/api/designated-projects/admin/notices/{noticeId}/file-content")
+                            .queryParam("fileName", fileNameToken).build(noticeId))
+                    .retrieve().body(byte[].class);
+        } catch (RestClientException e) {
+            return null;
+        }
+    }
+
     public void deleteNoticeFile(Long noticeId, Integer fileSeq) {
         try {
             restClient.post()

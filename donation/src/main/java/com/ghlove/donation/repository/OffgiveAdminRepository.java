@@ -23,8 +23,7 @@ import java.util.List;
  * 화면 라디오 값은 AS-IS대로 100/200/300을 유지하고 <b>변환은 여기 경계에서</b> 한다 -
  * 담당자 사용여부 9/2를 ACTIVE/LOCKED로 바꾼 것과 같은 방식이다.
  *
- * <p>오프라인 접수분만 보여야 하므로 {@code CNTR_PATH_CODE = '200'}(오프라인)으로 한정한다
- * (공통코드 CNTR_PATH: 100 온라인 / 200 오프라인).
+ * <p>오프라인 접수분은 공통코드 CNTR_PATH 200(오프라인 농협)·300(행정복지센터)이다 - 조건 전체는 {@link #search}.
  */
 @Repository
 @RequiredArgsConstructor
@@ -34,9 +33,6 @@ public class OffgiveAdminRepository {
     private static final String STATUS_REQUESTED = "REQUESTED";
     private static final String STATUS_COMPLETED = "COMPLETED";
     private static final String STATUS_CANCELLED = "CANCELLED";
-
-    /** 공통코드 CNTR_PATH - 오프라인 접수. */
-    private static final String PATH_OFFLINE = "200";
 
     private final EntityManager entityManager;
 
@@ -61,43 +57,55 @@ public class OffgiveAdminRepository {
      *   <li>소속지점(RCEPT_BANK_CODE) - 오프라인 담당자는 자기 지점으로 고정된다</li>
      * </ul>
      */
+    /**
+     * AS-IS {@code SlaveOffgiveMapper.getOffgiveList} 그대로(2026-10-14 SQL 대조 재작성):
+     * <ul>
+     *   <li>접수경로 200(오프라인 농협)·300(행정복지센터) 둘 다. role OFF_MAIN/OFF_SUB는 200만, OFF_CENTER는 300만.</li>
+     *   <li>삭제여부 조건이 없다(AS-IS 그대로 - 삭제된 기부도 목록에 보인다).</li>
+     *   <li>검색: 접수번호·전자납부번호는 <b>일치</b>, 기부지자체는 "시도 시군구" 부분일치, 지점/센터명은 접수지점명
+     *       또는 행정복지센터명 부분일치.</li>
+     *   <li>신청일·금액은 시작/끝이 <b>둘 다</b> 있을 때만 BETWEEN.</li>
+     *   <li>지점명 조건(shRceptBankNm)은 OFF_MAIN/OFF_SUB일 때만.</li>
+     *   <li>지점/센터명: 경로 300이면 행정복지센터명, 아니면 접수지점명.</li>
+     *   <li>특정사업명: {@code NVL(DSGN_DNTN_BIZ_TTL, '자치단체에 기부하기')} - 특정사업이 아닌 일반(지자체) 기부는 이 문구.</li>
+     * </ul>
+     */
     @SuppressWarnings("unchecked")
     public List<Row> search(String shKeyword, String shText, String startDate, String endDate,
                             BigDecimal amountFrom, BigDecimal amountTo, String asIsStatusCode,
-                            String rceptBankCode, String rceptBankNm) {
+                            String rceptBankCode, String rceptBankNm, String role) {
         StringBuilder sql = new StringBuilder("""
                 select c.cntr_sn, c.cntr_sttus_code, c.elctrn_pay_no, c.sttemnt_pay_de,
                        c.cntr_locgov_code, l.upper_locgov_nm, l.locgov_nm, c.user_id, c.cntr_amt,
-                       c.rcept_bank_code, c.rcept_bank_nm, c.frst_regist_pnttm,
-                       p.prj_subject, c.cntr_point, c.rtnpsnt_reqst_code
+                       c.rcept_bank_code,
+                       case when c.cntr_path_code = '300' then w.pbadms_wlfr_cntr_nm else c.rcept_bank_nm end,
+                       c.frst_regist_pnttm,
+                       coalesce(d.dsgn_dntn_biz_ttl, '자치단체에 기부하기'), c.cntr_point, c.rtnpsnt_reqst_code
                   from donation.g_cntr c
-                  left join donation.g_locgov l on l.locgov_code = c.cntr_locgov_code
-                  left join donation.g_dsgncntr_prj_mng p on p.prj_id = c.prj_id
-                 where c.cntr_path_code = :pathCode
-                   and c.delete_at = 'N'
+                  left join donation.g_dsgn_dntn_biz_mng d on d.dsgn_dntn_biz_id = c.dsgn_dntn_biz_id
+                  left join donation.g_lclgv_pbadms_wlfr_cntr_mng w on cast(w.pbadms_wlfr_cntr_id as varchar) = c.rcept_bank_code
+                  join donation.g_locgov l on l.locgov_code = c.cntr_locgov_code
+                 where c.cntr_path_code in ('200', '300')
                 """);
 
         if (notBlank(shText) && notBlank(shKeyword)) {
             switch (shKeyword) {
-                case "CNTR_SN" -> sql.append("   and c.cntr_sn like concat('%', :shText, '%')\n");
+                case "CNTR_SN" -> sql.append("   and c.cntr_sn = :shText\n");
                 case "LOCGOV_NM" ->
                         sql.append("   and concat(l.upper_locgov_nm, ' ', l.locgov_nm) like concat('%', :shText, '%')\n");
-                case "ELCTRN_PAY_NO" -> sql.append("   and c.elctrn_pay_no like concat('%', :shText, '%')\n");
-                case "RCEPT_BANK_NM" -> sql.append("   and c.rcept_bank_nm like concat('%', :shText, '%')\n");
+                case "ELCTRN_PAY_NO" -> sql.append("   and c.elctrn_pay_no = :shText\n");
+                case "RCEPT_BANK_NM" -> sql.append("   and (c.rcept_bank_nm like concat('%', :shText, '%')\n"
+                        + "        or w.pbadms_wlfr_cntr_nm like concat('%', :shText, '%'))\n");
                 default -> { }
             }
         }
-        if (notBlank(startDate)) {
-            sql.append("   and c.frst_regist_pnttm >= concat(:startDate, '000000')\n");
+        boolean dateRange = notBlank(startDate) && notBlank(endDate);
+        if (dateRange) {
+            sql.append("   and substr(c.frst_regist_pnttm, 1, 8) between :startDate and :endDate\n");
         }
-        if (notBlank(endDate)) {
-            sql.append("   and c.frst_regist_pnttm <= concat(:endDate, '235959')\n");
-        }
-        if (amountFrom != null) {
-            sql.append("   and c.cntr_amt >= :amountFrom\n");
-        }
-        if (amountTo != null) {
-            sql.append("   and c.cntr_amt <= :amountTo\n");
+        boolean amountRange = amountFrom != null && amountTo != null;
+        if (amountRange) {
+            sql.append("   and c.cntr_amt between :amountFrom and :amountTo\n");
         }
         String status = toStatusCode(asIsStatusCode);
         if (status != null) {
@@ -106,27 +114,29 @@ public class OffgiveAdminRepository {
         if (notBlank(rceptBankCode)) {
             sql.append("   and c.rcept_bank_code = :rceptBankCode\n");
         }
-        // 오프라인 부담당자·센터는 지점명까지 자기 것으로 고정된다(AS-IS shRceptBankNm)
-        if (notBlank(rceptBankNm)) {
+        boolean offBranch = "OFF_MAIN".equals(role) || "OFF_SUB".equals(role);
+        if (offBranch) {
+            sql.append("   and c.cntr_path_code = '200'\n");
+        }
+        if ("OFF_CENTER".equals(role)) {
+            sql.append("   and c.cntr_path_code = '300'\n");
+        }
+        boolean bankNmFilter = notBlank(rceptBankNm) && offBranch;
+        if (bankNmFilter) {
             sql.append("   and c.rcept_bank_nm = :rceptBankNm\n");
         }
         sql.append(" order by c.frst_regist_pnttm desc");
 
         Query q = entityManager.createNativeQuery(sql.toString());
-        q.setParameter("pathCode", PATH_OFFLINE);
         if (notBlank(shText) && notBlank(shKeyword)) {
             q.setParameter("shText", shText);
         }
-        if (notBlank(startDate)) {
+        if (dateRange) {
             q.setParameter("startDate", startDate);
-        }
-        if (notBlank(endDate)) {
             q.setParameter("endDate", endDate);
         }
-        if (amountFrom != null) {
+        if (amountRange) {
             q.setParameter("amountFrom", amountFrom);
-        }
-        if (amountTo != null) {
             q.setParameter("amountTo", amountTo);
         }
         if (status != null) {
@@ -135,7 +145,7 @@ public class OffgiveAdminRepository {
         if (notBlank(rceptBankCode)) {
             q.setParameter("rceptBankCode", rceptBankCode);
         }
-        if (notBlank(rceptBankNm)) {
+        if (bankNmFilter) {
             q.setParameter("rceptBankNm", rceptBankNm);
         }
 
@@ -146,6 +156,48 @@ public class OffgiveAdminRepository {
                         str(r[9]), str(r[10]), str(r[11]), str(r[12]),
                         r[13] == null ? null : ((Number) r[13]).longValue(), str(r[14])))
                 .toList();
+    }
+
+    /**
+     * 기탁서 상세 한 건 - AS-IS {@code SlaveOffgiveMapper.getOffgive}의 g_cntr·g_locgov·지정기부·변경신청 부분.
+     * 회원 정보(아이디·이름·생년월일·연락처·주소)는 member, 선택 답례품·배송지는 order, 포인트는 point,
+     * 시도명(WDR 공통코드)은 admin이 채운다.
+     *
+     * <p>금년도 누적 기부액은 AS-IS {@code YEAR(CNTR_DE)=올해 AND USER_ID AND DELETE_AT='N' AND
+     * CNTR_STTUS_CODE='200' AND STTEMNT_PAY_DE IS NOT NULL}이다. 상태 200만 TO-BE 낱말 COMPLETED로 바꾸고 나머지는 그대로.
+     */
+    public record Detail(String cntrSn, String frstRegistPnttm, String infoAgreAt, String upperLocgovCode,
+                         String locgovCode, String locgovNm, BigDecimal cntrAmt, BigDecimal cntrAmtYearTotal,
+                         String rceptBankNm, String elctrnPayNo, String cntrSttusCode, Long reqId,
+                         String prjSubject, Long userId) {
+    }
+
+    @SuppressWarnings("unchecked")
+    public java.util.Optional<Detail> detail(String cntrSn) {
+        List<Object[]> rows = entityManager.createNativeQuery("""
+                select gc.cntr_sn, gc.frst_regist_pnttm, gc.info_agre_at, gl.upper_locgov_code,
+                       gl.locgov_code, gl.locgov_nm, gc.cntr_amt,
+                       (select coalesce(sum(a.cntr_amt), 0) from donation.g_cntr a
+                         where substr(a.cntr_de, 1, 4) = to_char(current_date, 'YYYY')
+                           and a.user_id = gc.user_id and a.delete_at = 'N'
+                           and a.cntr_sttus_code = :completed and a.sttemnt_pay_de is not null) as cntr_amt_year_total,
+                       gc.rcept_bank_nm, gc.elctrn_pay_no, gc.cntr_sttus_code,
+                       (select gcr.req_id from donation.g_cntr_reqmng gcr
+                         where gcr.req_status_code = '100' and gcr.cntr_sn = gc.cntr_sn limit 1) as req_id,
+                       coalesce(dpm.dsgn_dntn_biz_ttl, '자치단체기부') as prj_subject,
+                       gc.user_id
+                  from donation.g_cntr gc
+                  left join donation.g_dsgn_dntn_biz_mng dpm on gc.dsgn_dntn_biz_id = dpm.dsgn_dntn_biz_id
+                  join donation.g_locgov gl on gc.cntr_locgov_code = gl.locgov_code
+                 where gc.cntr_sn = :cntrSn
+                """)
+                .setParameter("completed", STATUS_COMPLETED)
+                .setParameter("cntrSn", cntrSn)
+                .getResultList();
+        return rows.stream().findFirst().map(r -> new Detail(str(r[0]), str(r[1]), str(r[2]), str(r[3]),
+                str(r[4]), str(r[5]), decimal(r[6]), decimal(r[7]), str(r[8]), str(r[9]), str(r[10]),
+                r[11] == null ? null : ((Number) r[11]).longValue(), str(r[12]),
+                r[13] == null ? null : ((Number) r[13]).longValue()));
     }
 
     /** AS-IS 기부상태 라디오값(100/200/300)을 TO-BE 낱말로. 빈 값(전체)이면 null. */

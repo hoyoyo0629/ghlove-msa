@@ -17,8 +17,11 @@ public class MemberClient {
 
     private final RestClient restClient;
 
-    public MemberClient(@Value("${ghlove.member-service.base-url}") String memberServiceBaseUrl) {
-        this.restClient = RestClient.create(memberServiceBaseUrl);
+    /** member /api/admin/**은 내부 인증 헤더가 있어야 한다 - 2026-10-14까지 헤더 없이 불러 401을 받고 빈 목록으로 삼켜졌다. */
+    public MemberClient(@Value("${ghlove.member-service.base-url}") String memberServiceBaseUrl,
+                        @Value("${ghlove.internal.admin-secret}") String adminSecret) {
+        this.restClient = RestClient.builder().baseUrl(memberServiceBaseUrl)
+                .defaultHeader("X-Internal-Secret", adminSecret).build();
     }
 
     public List<MemberSnapshot> allForResync() {
@@ -35,5 +38,22 @@ public class MemberClient {
     }
 
     public record MemberSnapshot(Long userId, LocalDateTime createdDate, String birthday) {
+    }
+
+    /**
+     * 성인 여부(AS-IS UserUtils.isAdult) - 성인 답례품 주문 제한용. member를 못 부르면 주문을 막아야 하므로
+     * 성인 아님(false)으로 본다.
+     */
+    public boolean isAdult(Long userId) {
+        try {
+            java.util.Map<String, String> body = restClient.get()
+                    .uri("/api/admin/members/{userId}/adult", userId)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<java.util.Map<String, String>>() {
+                    });
+            return body != null && "Y".equals(body.get("adultYn"));
+        } catch (RestClientException e) {
+            return false;
+        }
     }
 }

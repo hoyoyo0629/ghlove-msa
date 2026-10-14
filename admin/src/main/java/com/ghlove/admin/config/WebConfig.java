@@ -110,6 +110,15 @@ public class WebConfig implements WebMvcConfigurer {
                         // 열려 있었지만, TO-BE admin은 운영자 전용 서비스라 공개할 이유가 없다(의도적 편차).
                         "/smarteditor/**")
                 .excludePathPatterns("/admin/login", "/admin/logout",
-                        "/admin/manager-requests/new", "/admin/manager-requests/complete");
+                        "/admin/manager-requests/new", "/admin/manager-requests/complete",
+                        // 실명인증 결과수신(사이렌24 → ok_url) - AS-IS OpmanagerHandlerInterceptor.isManagerPage도
+                        // /opmanager/offgive/sci-result를 관리자 페이지에서 뺀다(세션 없이 들어오는 벤더 콜백).
+                        "/offgive/sci-result",
+                        // 시도→시군구 셀렉트 조회 - AS-IS isManagerPage 예외(/give/give-state/options-by-locgovCode).
+                        // 기탁서 등록(15102) 등 기부금관리(14101) 메뉴권한이 없는 롤도 부르는 공통 조회라, 권한검사를
+                        // 태우면 오프라인 담당자에게 권한없음 화면(HTML)이 돌아가 시군구가 전부 undefined가 된다.
+                        "/give-state/options-by-locgovCode",
+                        // 개인정보 암호화 솔루션 설치 확인 페이지 - AS-IS isManagerPage 예외(/offgive/pdbtest).
+                        "/offgive/pdbtest");
     }
 }

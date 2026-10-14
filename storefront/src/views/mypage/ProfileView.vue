@@ -24,6 +24,8 @@ const emailAddressCustom = ref('')
 const post = ref('')
 const address = ref('')
 const addressDetail = ref('')
+// AS-IS modify.html param.locgovCode - 저장된 회원 지자체코드로 시작하고, 주소를 다시 검색하면 admCd 앞 5자리
+const locgovCode = ref('')
 const receivePbanc = ref(false)
 const receiveEmail = ref(false)
 const receiveSms = ref(false)
@@ -44,6 +46,7 @@ async function load() {
   post.value = data.post ?? ''
   address.value = data.address ?? ''
   addressDetail.value = data.addressDetail ?? ''
+  locgovCode.value = data.locgovCode ?? ''
   receivePbanc.value = data.receivePbanc
   receiveEmail.value = data.receiveEmail
   receiveSms.value = data.receiveSms
@@ -77,9 +80,10 @@ onMounted(load)
 // "다른 화면과 통일"하겠다고 Daum으로 바꿔놨던 건 AS-IS 미확인 상태의 임의 변경이었다,
 // 2026-10-08 사용자 지시로 원복). SignupView.vue와 동일한 public/juso-popup.html을 쓴다.
 function searchAddress() {
-  window.jusoCallBack = (addrPart1, addrPart2, addrDetail, zipNo) => {
+  window.jusoCallBack = (addrPart1, addrPart2, addrDetail, zipNo, jibunAddr, engAddr, admCd) => {
     post.value = zipNo
     address.value = addrPart1 + addrPart2
+    locgovCode.value = admCd ? admCd.substring(0, 5) : ''
     addressDetail.value = addrDetail
   }
   window.open('/juso-popup.html', 'jusoPopup', 'width=570,height=520,scrollbars=yes')
@@ -100,6 +104,7 @@ async function onSubmit() {
       receiveEmail: receiveEmail.value,
       receiveSms: receiveSms.value,
       receiveKakao: receiveKakao.value,
+      locgovCode: locgovCode.value,
     })
     successMessage.value = '회원 정보가 수정되었습니다.'
     await load()

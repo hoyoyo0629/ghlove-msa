@@ -204,6 +204,17 @@ public class DesignatedAdminApiController {
         return designatedAdminService.noticeFilesOf(noticeId).stream().map(NoticeFileDto::of).toList();
     }
 
+    /**
+     * 대민 공지 첨부 내용 - admin {@code /fileDownload/downloadByProgramData}(AS-IS ProgramFileDownloadController,
+     * PRJ_NOTICE)가 대민 화면에서 받은 파일명 토큰을 그대로 넘긴다. 복호화·검증은 키를 가진 이 서비스가 한다.
+     */
+    @GetMapping("/api/designated-projects/admin/notices/{noticeId}/file-content")
+    public ResponseEntity<byte[]> noticeFileContent(@PathVariable Long noticeId, @RequestParam String fileName) {
+        byte[] bytes = designatedAdminService.noticeFileContent(noticeId, fileName);
+        return bytes == null ? ResponseEntity.notFound().build()
+                : ResponseEntity.ok().contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM).body(bytes);
+    }
+
     @PostMapping("/api/designated-projects/admin/notices/{noticeId}/files/{fileSeq}/delete")
     public void deleteNoticeFile(@PathVariable Long noticeId, @PathVariable Integer fileSeq) {
         designatedAdminService.deleteNoticeFile(noticeId, fileSeq);

@@ -107,6 +107,10 @@ public class Order {
     @Column(name = "DELIVERY_ADDRESS_DETAIL")
     private String deliveryAddressDetail;
 
+    /** 배송지 우편번호 - AS-IS OP_ORDER_SHIPPING_INFO.RECEIVE_ZIPCODE. 기탁서 상세(15102)가 "배송지 주소" 첫 줄에 보여준다. */
+    @Column(name = "DELIVERY_ZIPCODE")
+    private String deliveryZipcode;
+
     @Column(name = "RECEIVER_NAME")
     private String receiverName;
 

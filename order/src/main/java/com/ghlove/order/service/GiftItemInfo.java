@@ -11,7 +11,22 @@ public record GiftItemInfo(Long itemId, String itemName, Long sellerId, Integer 
                             Integer shippingExtraCharge1, Integer shippingExtraCharge2,
                             String itemReturnFlag, String mobileItemYn, Integer orderMaxQuantity,
                             Integer shippingItemCount, String shippingGroupCode, String shipmentGroupCode,
-                            Integer shippingReturn, String deliveryType) {
+                            Integer shippingReturn, String deliveryType, String adultItemYn) {
+
+    /** 구매 제한 없음(adultItemYn 미지정) - 성인 답례품 필드를 쓰지 않는 기존 호출용. */
+    public GiftItemInfo(Long itemId, String itemName, Long sellerId, Integer salePrice,
+                        Integer stockQuantity, String soldOut, String dataStatusCode,
+                        String locgovCode, String thumbnailPath, String deliveryCompanyName,
+                        String shippingType, Integer shipping, Integer shippingFreeAmount,
+                        Integer shippingExtraCharge1, Integer shippingExtraCharge2,
+                        String itemReturnFlag, String mobileItemYn, Integer orderMaxQuantity,
+                        Integer shippingItemCount, String shippingGroupCode, String shipmentGroupCode,
+                        Integer shippingReturn, String deliveryType) {
+        this(itemId, itemName, sellerId, salePrice, stockQuantity, soldOut, dataStatusCode, locgovCode,
+                thumbnailPath, deliveryCompanyName, shippingType, shipping, shippingFreeAmount,
+                shippingExtraCharge1, shippingExtraCharge2, itemReturnFlag, mobileItemYn, orderMaxQuantity,
+                shippingItemCount, shippingGroupCode, shipmentGroupCode, shippingReturn, deliveryType, null);
+    }
 
     /**
      * 교환·반품이 가능한 답례품인가 - AS-IS `mypage/orderList.html:318,321`의 버튼 노출 조건

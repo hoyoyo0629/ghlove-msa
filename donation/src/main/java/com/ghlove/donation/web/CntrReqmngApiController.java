@@ -83,6 +83,20 @@ public class CntrReqmngApiController {
         }
     }
 
+    /** 기탁서 상세의 "기부취소"(AS-IS offgiveCancel) - {@link CntrReqmngService#submitOffgiveCancel}. */
+    @PostMapping("/api/cntr-reqmng/offgive-cancel")
+    public ResponseEntity<?> offgiveCancel(@RequestParam String cntrSn,
+                                           @RequestParam(required = false) String sttemntPayDe,
+                                           @RequestParam(required = false) String discription,
+                                           @RequestParam Long managerId) {
+        try {
+            return ResponseEntity.ok(CntrReqmngDto.of(
+                    cntrReqmngService.submitOffgiveCancel(cntrSn, sttemntPayDe, discription, managerId)));
+        } catch (DonationException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
     @PostMapping("/api/cntr-reqmng/{reqId}/approve")
     public ResponseEntity<?> approve(@PathVariable Long reqId, @RequestParam Long managerId) {
         try {

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!--/* AS-IS opmanager/offgive/sci-call.jsp(실명확인 요청 Sample JSP) - 숨김 iframe(sciCallIframe)이 받는다.
+     - 로컬 우회(mockCi 있음): AS-IS와 같은 조건(localhost)·같은 값으로 parent.sciResponse()를 바로 부른다.
+     - 그 밖: SciClient가 만든 암호문(reqInfo)과 결과수신 URL(ok_url)을 사이렌24로 자동 제출한다.
+       AS-IS는 tiles 레이아웃(inc_head의 jQuery)이 감싸 $(function(){...})가 돌았다 - 같은 jQuery를 싣는다. */-->
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:if="${mockCi != null}">
+<body>
+<script type="text/javascript" th:inline="javascript">
+	var sciUser = {
+		"result" : "1",
+		"message" : "",
+		"ci" : /*[[${mockCi}]]*/ "",
+		"di" : /*[[${mockDi}]]*/ ""
+	};
+	parent.sciResponse(sciUser);
+</script>
+</body>
+</th:block>
+<th:block th:if="${mockCi == null}">
+<head>
+<title>실명확인 서비스 Sample 화면</title>
+<meta http-equiv="Content-Type" content="text/html; charset=euc-kr">
+<script type="text/javascript" th:src="@{/content/modules/jquery/jquery-1.11.0.min.js}"></script>
+</head>
+
+<body>
+
+<!-- 실명확인서비스 요청 form --------------------------->
+<form id="checkForm" name="checkForm" method="post" th:action="${actionUrl}">
+    <input type="text" name="reqInfo"     th:value="${reqInfo}">
+    <input type="text" name="ok_url"      th:value="${retUrl}">
+<!--     <input type="submit" value="실명확인서비스 요청"> -->
+</form>
+<!--End 실명확인서비스 요청 form ----------------------->
+
+<script type="text/javascript">
+$(function() {
+	$("#checkForm").submit();
+});
+</script>
+
+</body>
+</th:block>
+</html>

@@ -122,6 +122,24 @@ ghlove:
       svc-grp-id: "812"
       prvc-idntfc-se-cd: C0090001
       esb-if-id: IF_P01_MIS_IPS_ALM08
+    # SCI(사이렌24) 실명인증 - 기탁서 등록(15102) 화면의 "실명인증" 버튼. AS-IS sci-call.jsp/sci-result.jsp
+    # 그대로(sciSecu_v2.jar SEED 암복호화+HMAC, 결과는 ok_url=/offgive/sci-result로 돌아온다).
+    # 아래 값은 AS-IS JSP에 박혀 있던 값이다. 로컬 우회는 AS-IS와 같은 조건(요청 URL에 localhost) -
+    # name.siren24.com이 사전 등록된 서버 IP만 받아 로컬에서는 항상 실패하기 때문이다.
+    sci:
+      site-id: "XTEE001"
+      name-check-url: "https://name.siren24.com/servlet/name_check_seed"
+      foreign-name-check-url: "https://name.siren24.com/servlet/foreign_name_check_seed"
+    # 행정정보공동이용센터(행정안전부) 주소조회 - AS-IS getUserAddressInfo(내국인, outconn.admin-addressinfo-url)와
+    # getForeignApiData(외국인 거소, outconn.in-link-url + /api/mopas/rsgstadresinfoForeigner) 운영 주소 그대로.
+    # 행정망 내부에서만 닿아 로컬 우회는 AS-IS와 같은 조건(요청 URL에 localhost)·같은 값(경기도 시흥시)이다.
+    administrative-addressinfo:
+      url: "http://192.168.84.55:4143/api/mopas/rsgstadresinfo"
+      in-link-url: "https://192.168.84.55:4145"
+    # OZ Report 서버 - AS-IS saleson.url.oz(로컬 localhost:12000 / 개발 152.99.104.8 / 운영 ilovegohyang.go.kr).
+    # 기탁서 상세의 "납부신청서 출력" 팝업(offgive/form-apply)이 {url}/oz80/ozhviewer 뷰어와 {url}/oz80/server를 쓴다.
+    oz:
+      url: "http://localhost:12000"
   # 도로명주소 검색 팝업(/admin/juso-popup) - 행정안전부 주소검색 API. 브라우저에서 JSONP로
   # 직접 호출하는 클라이언트 전용 위젯이고, AS-IS는 이 세 값을 juso-popup.jsp 안에 상수로
   # 박아 뒀다(아래 기본값이 AS-IS 소스의 값 그대로다). 운영 승인키 교체는 여기서 한다.

@@ -69,25 +69,30 @@ public class GiftOptionAdminApiController {
         }
     }
 
+    /** 선택형(S) 한 줄 - optionTitle(옵션 제목)=name1, optionName(옵션 내용)=name2 (AS-IS 저장규칙). */
     @PostMapping
-    public GiftOption register(@PathVariable Long itemId, @RequestParam String optionName,
+    public GiftOption register(@PathVariable Long itemId, @RequestParam(required = false) String optionTitle,
+                                @RequestParam String optionName,
                                 @RequestParam(required = false) Integer optionPrice,
                                 @RequestParam(required = false, defaultValue = "false") boolean stockTracked,
                                 @RequestParam(required = false) Integer stockQuantity) {
         try {
-            return giftOptionService.register(itemId, optionName, optionPrice, stockTracked, stockQuantity);
+            return giftOptionService.register(itemId, optionTitle, optionName, optionPrice, stockTracked,
+                    stockQuantity);
         } catch (GiftException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
     }
 
     @PutMapping("/{optionId}")
-    public GiftOption edit(@PathVariable Long itemId, @PathVariable Long optionId, @RequestParam String optionName,
+    public GiftOption edit(@PathVariable Long itemId, @PathVariable Long optionId,
+                            @RequestParam(required = false) String optionTitle, @RequestParam String optionName,
                             @RequestParam(required = false) Integer optionPrice,
                             @RequestParam(required = false, defaultValue = "false") boolean stockTracked,
                             @RequestParam(required = false) Integer stockQuantity) {
         try {
-            return giftOptionService.edit(optionId, optionName, optionPrice, stockTracked, stockQuantity);
+            return giftOptionService.edit(optionId, optionTitle, optionName, optionPrice, stockTracked,
+                    stockQuantity);
         } catch (GiftException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }

@@ -152,8 +152,15 @@ async function toggleWishlist() {
   modalAlert(res.wishlisted ? '관심답례품에 추가 되었습니다.' : '해당 답례품이 관심답례품에서 삭제되었습니다.')
 }
 
+// AS-IS items/details-main.html buyFlag = api getItem의 adultErr - 성인 답례품(adultItemYn='Y')인데 성인이 아니면 'Y'.
+const buyFlag = computed(() => (detail.value?.gift?.adultItemYn === 'Y' && auth.me?.adultYn !== 'Y' ? 'Y' : 'N'))
+
 async function addToCart() {
   if (!auth.loggedIn) return requireLogin()
+  if (buyFlag.value === 'Y') {
+    modalAlert('미성년자는 이상품을 담을 수 없습니다.')
+    return
+  }
   const payload = cartPayload()
   if (!payload) return
   try {
@@ -167,6 +174,10 @@ async function addToCart() {
 
 async function buyNow() {
   if (!auth.loggedIn) return requireLogin()
+  if (buyFlag.value === 'Y') {
+    modalAlert('미성년자는 이상품을 구매 할 수 없습니다.')
+    return
+  }
   const payload = cartPayload()
   if (!payload) return
   try {
@@ -322,14 +333,15 @@ async function likeReview(r) {
           </div>
 
           <!-- SFR-005 옵션 선택 (AS-IS 동일) - 선택한 옵션이 장바구니·주문·주문상세까지 반영된다. -->
-          <!-- 단일형(S) -->
+          <!-- 단일형(S) - AS-IS details-main.html: 드롭다운 제목은 첫 옵션의 optionName1(옵션 제목),
+               항목은 각 옵션의 optionName2(옵션 내용) -->
           <div class="info_row" v-if="detail.options.length && optType === 'S'">
             <div class="s-txt" style="width: 100%">
               <p style="font-weight: bold; margin-bottom: 4px">옵션 선택</p>
               <select v-model="selectedOptionId" style="width: 100%; padding: 8px">
-                <option value="">옵션을 선택하세요</option>
+                <option value="">{{ detail.options[0].optionName }}</option>
                 <option v-for="o in detail.options" :key="o.itemOptionId" :value="o.itemOptionId" :disabled="o.soldOut">
-                  {{ o.optionName }}<template v-if="o.optionPrice"> (+{{ formatN(o.optionPrice) }}P)</template><template v-if="o.soldOut"> [품절]</template><template v-else-if="o.stockTracked && o.stockQuantity > 0"> | 재고 {{ o.stockQuantity }}개</template>
+                  {{ o.optionName2 }}<template v-if="o.optionPrice"> (+{{ formatN(o.optionPrice) }}P)</template><template v-if="o.soldOut"> [품절]</template><template v-else-if="o.stockTracked && o.stockQuantity > 0"> | 재고 {{ o.stockQuantity }}개</template>
                 </option>
               </select>
             </div>

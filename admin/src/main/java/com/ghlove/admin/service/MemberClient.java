@@ -8,6 +8,7 @@ import org.springframework.web.client.RestClientException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /** 관리자권한요청 폼 프리필용 - 신청자는 JWT로 이미 신원이 확인된 기존 회원이라(SFR-010),
  *  member 서비스의 GET /api/users/{id}에서 이름/휴대폰/이메일/생년월일을 그대로 받아온다. */
@@ -37,7 +38,35 @@ public class MemberClient {
     }
 
     public record MemberInfo(Long userId, String userName, String birthday, String address, String loginId,
-                              String phoneNumber, String email) {
+                              String phoneNumber, String email, String post, String addressDetail) {
+    }
+
+    /** 기탁서 등록(15102) SCI 실명인증 결과(CI)로 기존회원 조회 - AS-IS user-check. */
+    public ByCiInfo findByCi(String mberCi) {
+        try {
+            return restClient.get().uri("/api/users/by-ci?mberCi={ci}", mberCi).retrieve().body(ByCiInfo.class);
+        } catch (RestClientException e) {
+            return null;
+        }
+    }
+
+    public record ByCiInfo(Long userId, String userName, String loginId, String phoneNumber,
+                            String post, String address, String addressDetail) {
+    }
+
+    /** 기탁서 등록 "휴대폰번호 수정하기" - AS-IS updatePhoneNumber. 수정 건수(0이면 실패)를 돌려준다. */
+    @SuppressWarnings("unchecked")
+    public int updatePhoneNumber(Long userId, String phoneNumber) {
+        try {
+            Map<String, Object> body = restClient.post()
+                    .uri(uriBuilder -> uriBuilder.path("/api/users/{id}/phone-number")
+                            .queryParam("phoneNumber", phoneNumber).build(userId))
+                    .retrieve().body(Map.class);
+            Object updated = body != null ? body.get("updated") : null;
+            return updated instanceof Number n ? n.intValue() : 0;
+        } catch (RestClientException e) {
+            return 0;
+        }
     }
 
     /** report "총괄 현황"(회원수현황) + "총괄 누계 현황"(연령별 기부건수)용 - 회원 전체 가입일/생년월일 스냅샷. */

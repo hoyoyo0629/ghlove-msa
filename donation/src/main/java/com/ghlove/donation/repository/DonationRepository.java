@@ -47,13 +47,14 @@ public interface DonationRepository extends JpaRepository<Donation, String> {
      * <p><b>{@code is not null}이 아니라 {@code > 0}이어야 한다</b>: {@code dsgn_dntn_biz_id}가
      * <b>0</b>인(=일반 기부) 행이 실제로 있어서, null 검사만 하면 일반 기부가 특정사업 집계에 섞인다.
      *
-     * <p>AS-IS에는 {@code STTEMNT_PAY_DE IS NOT NULL}(수납완료) 조건도 있는데 TO-BE는 그 컬럼이
-     * 채워지지 않아(수납확인 연계 미이식) 적용하면 집계가 전부 0이 된다 - 연계 이식 때 켤 것.
+     * <p>AS-IS의 {@code STTEMNT_PAY_DE IS NOT NULL}(수납완료) 조건도 그대로 건다 - 2026-10-14부터 수납완료가
+     * 수납일을 넣는다.
      */
     @Query("""
             select d from Donation d
              where d.dsgnDntnBizId is not null and d.dsgnDntnBizId > 0
                and d.cntrSttusCode = :status
+               and d.sttemntPayDe is not null
                and (d.deleteAt is null or d.deleteAt = 'N')
             """)
     List<Donation> findDesignatedByStatus(@Param("status") String status);

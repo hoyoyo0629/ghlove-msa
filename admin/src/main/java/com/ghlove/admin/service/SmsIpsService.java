@@ -156,9 +156,21 @@ public class SmsIpsService {
             log.error("사용자 ID : {} {} SMS 전송 실패", receiver.userId(), type.getTitle());
             return;
         }
+        insertTifIpsSndngM(type, receiver.mberCi(), contents);
+    }
+
+    /**
+     * AS-IS {@code insertTifIpsSndngM(List<ReceiverInfo>)} 한 건 - 호출부가 수신동의·CI·발송내용을 이미
+     * 확인하고 발송내용을 다 만든 경우(답례품 주문 문자처럼 내용이 문자종류별 공통 규칙이 아닌 것)에 쓴다.
+     * 발송내용이나 수신자 식별값이 비면 건너뛴다(AS-IS도 동일).
+     */
+    @Transactional
+    public void insertTifIpsSndngM(SmsType type, String prvcIdntfcInfo, String sndngCntnts) {
+        if (prvcIdntfcInfo == null || prvcIdntfcInfo.isBlank() || sndngCntnts == null || sndngCntnts.isBlank()) {
+            return;
+        }
         if (!enabled) {
-            log.warn("[sms-ips disabled] 국민비서 적재 건너뜀: svcId={}, userId={}",
-                    type.getCode(), receiver.userId());
+            log.warn("[sms-ips disabled] 국민비서 적재 건너뜀: svcId={}, sndngCntnts={}", type.getCode(), sndngCntnts);
             return;
         }
 
@@ -174,8 +186,8 @@ public class SmsIpsService {
         long sn = ipsSendingMasterRepository.nextListSn();
         row.setListSn(sn);
         row.setInsttCrtSn(sn);
-        row.setPrvcIdntfcInfo(receiver.mberCi());
-        row.setSndngCntnts(contents);
+        row.setPrvcIdntfcInfo(prvcIdntfcInfo);
+        row.setSndngCntnts(sndngCntnts);
         row.setSvcId(type.getCode());
         ipsSendingMasterRepository.save(row);
     }

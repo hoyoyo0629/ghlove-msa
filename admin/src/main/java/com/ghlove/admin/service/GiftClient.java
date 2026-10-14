@@ -37,6 +37,28 @@ public class GiftClient {
                               String bankAccountNumber) {
     }
 
+    /**
+     * 국민비서 답례품 주문 문자(PRESENT_ORDER)의 답례품 제공자 수신정보 - AS-IS getSellerById +
+     * getSellerUserByLoginIdForSms. 업체·판매자 계정이 없거나(204) 조회에 실패하면 null(그 제공자 문자만 건너뛴다).
+     */
+    public SellerSmsReceiver sellerSmsReceiver(Long sellerId) {
+        if (sellerId == null) {
+            return null;
+        }
+        try {
+            return restClient.get()
+                    .uri("/api/admin/sellers/{id}/sms-receiver", sellerId)
+                    .retrieve()
+                    .body(SellerSmsReceiver.class);
+        } catch (RestClientException e) {
+            return null;
+        }
+    }
+
+    /** userName = 업체명(AS-IS COMPANY_NAME AS USER_NAME), phoneNumber = 업체 휴대폰, mberCi·receiveSms = 판매자 계정. */
+    public record SellerSmsReceiver(String userName, String mberCi, String phoneNumber, String receiveSms) {
+    }
+
     /** StatsService ReadModel 재동기화용 - 답례품 전체 현재 상태 스냅샷. */
     public List<ItemSnapshot> allForResync() {
         try {
@@ -114,7 +136,7 @@ public class GiftClient {
                                 String address, String addressDetail, String companyName, String representativeName,
                                 String businessNumber, String businessLocation, Double commissionRate,
                                 String remittanceType, String statusCode, String createdDate, Long createdUserId,
-                                String updatedDate, Long updatedUserId) {
+                                String updatedDate, Long updatedUserId, String adultItemYn) {
     }
 
     /** 브랜드관리 (AS-IS opmanager/brand) - gift가 소유한 OP_BRAND의 cross-service CRUD. */
@@ -167,5 +189,17 @@ public class GiftClient {
     }
 
     public record WishlistEntry(Integer wishlistId, Long itemId, Long userId, String createdDate) {
+    }
+
+    /**
+     * 기탁서 등록 대표답례품 - AS-IS {@code offRprs}(G_LCLGV_OFF_RPRS_GDS_MNG). 행은 AS-IS 매퍼와
+     * 같은 소문자 키 맵이고(화면 JS가 그 키로 읽는다), 없으면 null(AS-IS와 같다).
+     */
+    public List<java.util.Map<String, Object>> offRprs(String lclgvCd) {
+        return restClient.get()
+                .uri("/api/admin/gift-items/off-rprs?lclgv_cd={lc}", lclgvCd)
+                .retrieve()
+                .body(new ParameterizedTypeReference<List<java.util.Map<String, Object>>>() {
+                });
     }
 }

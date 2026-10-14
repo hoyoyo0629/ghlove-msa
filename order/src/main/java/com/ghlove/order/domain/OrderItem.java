@@ -88,6 +88,15 @@ public class OrderItem {
     @Column(name = "CANCEL_REASON")
     private String cancelReason;
 
+    /** 오프라인 답례품의 기부일련번호(AS-IS OP_ORDER_ITEM.FILLER9) - 기탁서 등록(admin 15102)으로 만든
+     *  주문만 채워진다. 수납완료 뒤 이 값으로 입금대기 주문을 찾아 결제처리한다(AS-IS procOffOrder). */
+    @Column(name = "CNTR_SN")
+    private String cntrSn;
+
+    /** 오프라인 답례품 처리여부(AS-IS OP_ORDER_ITEM.OFF_PROC_YN, DDL 기본값 'N') - 수납완료 처리 후 'Y'. */
+    @Column(name = "OFF_PROC_YN")
+    private String offProcYn = "N";
+
     @Column(name = "CREATED_DATE")
     private LocalDateTime createdDate;
 

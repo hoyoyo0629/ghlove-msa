@@ -46,6 +46,25 @@ public class SellerApiController {
         return sellerRepository.findById(id).orElseThrow();
     }
 
+    /**
+     * 국민비서 답례품 주문 문자(AS-IS PRESENT_ORDER)의 답례품 제공자 수신정보 - AS-IS
+     * getSellerUserByLoginIdForSms. 업체나 같은 로그인ID의 판매자 계정이 없으면 204(AS-IS는 이때 NPE를
+     * 잡고 그 제공자 문자만 건너뛴다).
+     */
+    @GetMapping("/{id}/sms-receiver")
+    public org.springframework.http.ResponseEntity<SmsReceiver> smsReceiver(@PathVariable Long id) {
+        List<Object[]> rows = sellerRepository.findSmsReceiver(id);
+        if (rows.isEmpty()) {
+            return org.springframework.http.ResponseEntity.noContent().build();
+        }
+        Object[] row = rows.get(0);
+        return org.springframework.http.ResponseEntity.ok(new SmsReceiver(
+                (String) row[0], (String) row[1], (String) row[2], (String) row[3]));
+    }
+
+    public record SmsReceiver(String userName, String mberCi, String phoneNumber, String receiveSms) {
+    }
+
     @PostMapping
     public Seller create(@RequestBody Seller form) {
         form.setSellerId(null);
@@ -77,6 +96,7 @@ public class SellerApiController {
         seller.setCommissionRate(form.getCommissionRate());
         seller.setRemittanceType(form.getRemittanceType());
         seller.setCommunityBusinessYn(form.getCommunityBusinessYn());
+        seller.setAdultItemYn(form.getAdultItemYn() != null ? form.getAdultItemYn() : seller.getAdultItemYn());
         seller.setUpdatedDate(DATE_FORMAT.format(LocalDateTime.now()));
         return sellerRepository.save(seller);
     }

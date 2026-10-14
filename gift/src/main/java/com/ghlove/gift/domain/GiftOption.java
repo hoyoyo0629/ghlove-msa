@@ -39,11 +39,12 @@ public class GiftOption {
     @Column(name = "OPTION_HIDE_FLAG")
     private String optionHideFlag;
 
-    /** S: 단일값 / S2: 1단계값 / S3: 1단계값. (조합형은 name1→name2[→name3] 종속) */
+    /** S: 옵션 제목(예: 색상) / S2·S3: 1단계값 / T: 텍스트 옵션명. (조합형은 name1→name2[→name3] 종속)
+     *  AS-IS 저장규칙 그대로 - 실데이터 예: S '토마토' / '완숙 토마토 4kg'. */
     @Column(name = "OPTION_NAME1")
     private String optionName1;
 
-    /** S2/S3의 2단계값. */
+    /** S: 옵션 내용(예: 빨강) / S2·S3: 2단계값. */
     @Column(name = "OPTION_NAME2")
     private String optionName2;
 

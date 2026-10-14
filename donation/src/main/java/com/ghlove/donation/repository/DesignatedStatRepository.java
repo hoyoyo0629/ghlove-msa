@@ -12,8 +12,8 @@ import java.util.List;
  * selectDesignatedLocgovMonth{Campaign,AmountRaised,Amount} 3종을 CUBRID→Postgres로 포팅한 것.
  * AS-IS 로직을 그대로 재현하되, AS-IS와 TO-BE의 스키마 값 사전(dictionary)이 다른 부분만 치환했다:
  *  - 확정기부 판정: AS-IS `CNTR_STTUS_CODE='200' AND STTEMNT_PAY_DE IS NOT NULL` →
- *    TO-BE는 기부확정 상태를 CNTR_STTUS_CODE='COMPLETED'로 저장하고 정산일자(STTEMNT_PAY_DE)를
- *    채우지 않으므로(전 행 NULL) 'COMPLETED'를 확정조건으로 쓴다(기존 analysis 코드와 동일).
+ *    TO-BE `CNTR_STTUS_CODE='COMPLETED' AND STTEMNT_PAY_DE IS NOT NULL`(상태 낱말만 치환 - 2026-10-14 수납완료가
+ *    수납일을 넣게 되어 빼 두었던 수납일 조건을 되살렸다).
  *  - 사업상태: AS-IS '1'(대기)/'2'(진행)/'9'(종료) → TO-BE PENDING/OPEN/CLOSED. 쿼리 내부에서
  *    AS-IS 코드값으로 환산해 상태파생(진행→모금≥목표 또는 종료일경과 시 종료)과 prjStatus
  *    필터(0전체/2진행/9종료)가 AS-IS와 동일하게 동작하도록 했다.
@@ -59,7 +59,7 @@ public interface DesignatedStatRepository extends JpaRepository<DesignatedProjec
                         FROM donation.G_CNTR
                         WHERE CNTR_DE <= to_char(now(), 'YYYYMMDD')
                             AND DELETE_AT = 'N'
-                            AND CNTR_STTUS_CODE = 'COMPLETED'
+                            AND CNTR_STTUS_CODE = 'COMPLETED' AND STTEMNT_PAY_DE IS NOT NULL
                             AND DSGN_DNTN_BIZ_ID > 0
                         GROUP BY DSGN_DNTN_BIZ_ID
                     ) C ON P.DSGN_DNTN_BIZ_ID = C.DSGN_DNTN_BIZ_ID
@@ -133,7 +133,7 @@ public interface DesignatedStatRepository extends JpaRepository<DesignatedProjec
                         FROM donation.G_CNTR
                         WHERE CNTR_DE <= to_char(now(), 'YYYYMMDD')
                             AND DELETE_AT = 'N'
-                            AND CNTR_STTUS_CODE = 'COMPLETED'
+                            AND CNTR_STTUS_CODE = 'COMPLETED' AND STTEMNT_PAY_DE IS NOT NULL
                             AND DSGN_DNTN_BIZ_ID > 0
                         GROUP BY DSGN_DNTN_BIZ_ID
                     ) C ON P.DSGN_DNTN_BIZ_ID = C.DSGN_DNTN_BIZ_ID
@@ -251,7 +251,7 @@ public interface DesignatedStatRepository extends JpaRepository<DesignatedProjec
                         FROM donation.G_CNTR
                         WHERE CNTR_DE <= to_char(now(), 'YYYYMMDD')
                             AND DELETE_AT = 'N'
-                            AND CNTR_STTUS_CODE = 'COMPLETED'
+                            AND CNTR_STTUS_CODE = 'COMPLETED' AND STTEMNT_PAY_DE IS NOT NULL
                             AND DSGN_DNTN_BIZ_ID > 0
                         GROUP BY DSGN_DNTN_BIZ_ID
                     ) C ON P.DSGN_DNTN_BIZ_ID = C.DSGN_DNTN_BIZ_ID
@@ -268,7 +268,7 @@ public interface DesignatedStatRepository extends JpaRepository<DesignatedProjec
                 ON  P.PRJ_ID = C.DSGN_DNTN_BIZ_ID
                 AND C.CNTR_DE BETWEEN (:selYear || '0101') AND (CASE WHEN (:selYear || '1231') <= to_char(now() - INTERVAL '1 day', 'YYYYMMDD') THEN (:selYear || '1231') ELSE to_char(now() - INTERVAL '1 day', 'YYYYMMDD') END)
                 AND C.DELETE_AT = 'N'
-                AND C.CNTR_STTUS_CODE = 'COMPLETED'
+                AND C.CNTR_STTUS_CODE = 'COMPLETED' AND C.STTEMNT_PAY_DE IS NOT NULL
             WHERE ( (:prjStatus = '0') OR (:prjStatus <> '0' AND P.PRJ_STATUS = :prjStatus) )
             GROUP BY P.PRJ_ID
         ) T_A
@@ -317,7 +317,7 @@ public interface DesignatedStatRepository extends JpaRepository<DesignatedProjec
                     LEFT OUTER JOIN (
                         SELECT SUM(CAST(CNTR_AMT AS BIGINT)) AS CNTR_AMT, COUNT(*) AS CNT, DSGN_DNTN_BIZ_ID
                         FROM donation.G_CNTR
-                        WHERE CNTR_DE <= to_char(now(), 'YYYYMMDD') AND DELETE_AT = 'N' AND CNTR_STTUS_CODE = 'COMPLETED' AND DSGN_DNTN_BIZ_ID > 0
+                        WHERE CNTR_DE <= to_char(now(), 'YYYYMMDD') AND DELETE_AT = 'N' AND CNTR_STTUS_CODE = 'COMPLETED' AND STTEMNT_PAY_DE IS NOT NULL AND DSGN_DNTN_BIZ_ID > 0
                         GROUP BY DSGN_DNTN_BIZ_ID
                     ) C ON P.DSGN_DNTN_BIZ_ID = C.DSGN_DNTN_BIZ_ID
                 WHERE 1 = 1
@@ -384,7 +384,7 @@ public interface DesignatedStatRepository extends JpaRepository<DesignatedProjec
                     LEFT OUTER JOIN (
                         SELECT SUM(CAST(CNTR_AMT AS BIGINT)) AS CNTR_AMT, COUNT(*) AS CNT, DSGN_DNTN_BIZ_ID
                         FROM donation.G_CNTR
-                        WHERE CNTR_DE <= to_char(now(), 'YYYYMMDD') AND DELETE_AT = 'N' AND CNTR_STTUS_CODE = 'COMPLETED' AND DSGN_DNTN_BIZ_ID > 0
+                        WHERE CNTR_DE <= to_char(now(), 'YYYYMMDD') AND DELETE_AT = 'N' AND CNTR_STTUS_CODE = 'COMPLETED' AND STTEMNT_PAY_DE IS NOT NULL AND DSGN_DNTN_BIZ_ID > 0
                         GROUP BY DSGN_DNTN_BIZ_ID
                     ) C ON P.DSGN_DNTN_BIZ_ID = C.DSGN_DNTN_BIZ_ID
                 WHERE 1 = 1

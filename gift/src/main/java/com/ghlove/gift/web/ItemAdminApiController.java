@@ -1,6 +1,7 @@
 package com.ghlove.gift.web;
 
 import com.ghlove.gift.domain.Gift;
+import com.ghlove.gift.repository.OffRprsRepository;
 import com.ghlove.gift.service.GiftException;
 import com.ghlove.gift.service.GiftService;
 import com.ghlove.gift.service.ThumbnailService;
@@ -31,6 +32,7 @@ public class ItemAdminApiController {
 
     private final GiftService giftService;
     private final ThumbnailService thumbnailService;
+    private final OffRprsRepository offRprsRepository;
 
     @GetMapping
     public List<Gift> search(@RequestParam(required = false) String itemName,
@@ -38,6 +40,108 @@ public class ItemAdminApiController {
                               @RequestParam(required = false) Long sellerId,
                               @RequestParam(required = false) String dataStatusCode) {
         return giftService.adminSearch(itemName, categoryCode, sellerId, dataStatusCode);
+    }
+
+    /**
+     * 기탁서 등록(admin 15102) 대표답례품 - AS-IS {@code OffgiveServiceImpl.selectOffRprs} 그대로.
+     * 출처는 지자체 담당자가 답례품 목록 화면에서 지정하는 G_LCLGV_OFF_RPRS_GDS_MNG(지자체당 최대
+     * 2개)다 - OP_ITEM의 대표상품 여부 컬럼이 아니다. 옵션 문자열(S: 4토막, S3: 8토막)로 옵션
+     * 한 건을 찾아 붙이고(못 찾으면 changed_option=Y), 재고 1~9개인 건 뺀다(-1 무제한·0은 남긴다).
+     * 남는 게 없으면 null(AS-IS와 같다).
+     *
+     * <p>TO-BE 번역 두 가지: ① {@code load_image}는 AS-IS ShopUtils.loadImage 경로 대신 이
+     * 서비스의 대표이미지(/uploads/..) ② 승인상태는 화면이 AS-IS 코드("1")로 비교하므로
+     * APPROVED를 "1"로 바꿔 내려준다.
+     */
+    @GetMapping("/off-rprs")
+    public List<Map<String, Object>> offRprs(@RequestParam("lclgv_cd") String lclgvCd) {
+        List<Map<String, Object>> result = offRprsRepository.selectOffRprs(lclgvCd);
+        if (result == null || result.isEmpty()) {
+            return null;
+        }
+        List<Long> itemIds = result.stream().map(r -> ((Number) r.get("gds_id")).longValue()).toList();
+        Map<Long, String> thumbnails = giftService.thumbnailsOf(itemIds);
+
+        Map<String, Object> s = new java.util.HashMap<>();
+        List<Integer> removeIndex = new java.util.ArrayList<>();
+        for (int i = 0; i < result.size(); i++) {
+            Map<String, Object> row = result.get(i);
+            String option = (String) row.get("options");
+            String thumbnail = thumbnails.get(((Number) row.get("gds_id")).longValue());
+            row.put("load_image", thumbnail != null ? "/uploads/" + thumbnail : "");
+            if ("APPROVED".equals(row.get("data_status_code"))) {
+                row.put("data_status_code", "1");
+            }
+            // AS-IS OP_ITEM.ITEM_OPTION_FLAG는 항상 Y/N인데 TO-BE는 옵션을 저장한 적 없는 상품이 NULL이다.
+            // 화면 JS가 'N'일 때만 상품 재고로 최대주문수량을 그리므로(아니면 옵션 재고), NULL = 옵션 없음(N).
+            if (row.get("item_option_flag") == null) {
+                row.put("item_option_flag", "N");
+            }
+
+            if (option != null && !option.isEmpty()) {
+                String[] sp = option.split("\\|\\|");
+                if (sp.length == 4) {
+                    s.put("gdsId", row.get("gds_id"));
+                    s.put("optionType", sp[0]);
+                    s.put("optionName2", sp[2]);
+                    s.put("optionPrice", sp[3]);
+                }
+                if (sp.length == 8) {
+                    s.put("gdsId", row.get("gds_id"));
+                    s.put("optionType", sp[0]);
+                    s.put("optionName1", sp[2]);
+                    s.put("optionName2", sp[4]);
+                    s.put("optionName3", sp[6]);
+                    s.put("optionPrice", sp[7]);
+                }
+                Map<String, Object> sResult = s.isEmpty() ? null : offRprsRepository.selectOffRprsOption(s);
+                if (sResult != null) {
+                    if (sResult.get("option_stock_quantity") == null) {
+                        sResult.put("option_stock_quantity", 0);
+                    }
+                    int checkStockQuantity = toInt(sResult.get("option_stock_quantity"));
+                    if (checkStockQuantity > 0 && checkStockQuantity < 10) {
+                        removeIndex.add(i);
+                    }
+                    row.put("item_option_id", sResult.get("item_option_id"));
+                    row.put("option_price", sResult.get("option_price"));
+                    row.put("option_stock_flag", sResult.get("option_stock_flag"));
+                    row.put("option_stock_quantity", sResult.get("option_stock_quantity"));
+                    row.put("total_price", toInt(row.get("sale_price")) + toInt(sResult.get("option_price")));
+                    row.put("changed_option", "N");
+                } else {
+                    row.put("changed_option", "Y");
+                }
+            } else {
+                if (row.get("stock_quantity") == null) {
+                    row.put("stock_quantity", 0);
+                }
+                int checkStockQuantity = toInt(row.get("stock_quantity"));
+                if (checkStockQuantity > 0 && checkStockQuantity < 10) {
+                    removeIndex.add(i);
+                }
+                row.put("changed_option", "N");
+                row.put("total_price", toInt(row.get("sale_price")));
+            }
+        }
+        for (int j = removeIndex.size() - 1; j >= 0; j--) {
+            result.remove((int) removeIndex.get(j));
+        }
+        return result.isEmpty() ? null : result;
+    }
+
+    private static int toInt(Object o) {
+        if (o == null) {
+            return 0;
+        }
+        if (o instanceof Number n) {
+            return n.intValue();
+        }
+        try {
+            return Integer.parseInt(o.toString().trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     @GetMapping("/{id}")
@@ -60,11 +164,13 @@ public class ItemAdminApiController {
                         @RequestParam(required = false) String displayEndDate,
                         @RequestParam(required = false) Integer minDonationAmount,
                         @RequestParam(required = false) Integer brandId,
-                        @RequestParam(required = false) List<MultipartFile> images) {
+                        @RequestParam(required = false) List<MultipartFile> images,
+                        @RequestParam(required = false) String adultItemYn) {
         try {
             Gift gift = giftService.adminCreate(sellerId, itemName, itemSummary, detailContent, categoryCode,
                     locgovCode, salePrice, stockQuantity, displayType, displayStartDate, displayEndDate,
                     minDonationAmount, brandId, images);
+            gift = giftService.applyAdultItemYn(gift, adultItemYn);
             giftService.imagesOf(gift.getItemId())
                     .forEach(img -> thumbnailService.generateThumbnails(img.getItemImageId(), img.getImageName()));
             return gift;
@@ -83,10 +189,12 @@ public class ItemAdminApiController {
                         @RequestParam(required = false) String displayStartDate,
                         @RequestParam(required = false) String displayEndDate,
                         @RequestParam(required = false) Integer minDonationAmount,
-                        @RequestParam(required = false) Integer brandId) {
+                        @RequestParam(required = false) Integer brandId,
+                        @RequestParam(required = false) String adultItemYn) {
         try {
-            return giftService.adminEdit(id, sellerId, itemName, itemSummary, detailContent, categoryCode,
+            Gift gift = giftService.adminEdit(id, sellerId, itemName, itemSummary, detailContent, categoryCode,
                     salePrice, stockQuantity, displayType, displayStartDate, displayEndDate, minDonationAmount, brandId);
+            return giftService.applyAdultItemYn(gift, adultItemYn);
         } catch (GiftException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }

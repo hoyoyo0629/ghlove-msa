@@ -13,5 +13,6 @@ package com.ghlove.order.service;
 public record CartLine(Long cartItemId, Long itemId, String itemName, String thumbnailUrl,
                         Integer quantity, Integer unitPrice, long lineTotal,
                         long deliveryFee, long payable, String optionName, Integer optionPrice,
-                        String textOption) {
+                        String textOption, String adultItemYn) {
+    // adultItemYn - AS-IS order/step1.html이 buy.items[].item.adultItemYn으로 결제버튼을 숨기는 데 쓴다.
 }

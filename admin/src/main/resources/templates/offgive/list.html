@@ -228,7 +228,7 @@
 				-->
 				<td th:text="${item.no}">0</td>
 				<td>
-					<a th:href="@{'/offgive/' + ${item.cntrSn}}" th:text="${item.cntrSn}"></a>
+					<a th:href="@{'/offgive/detail/' + ${item.cntrSn}}" th:text="${item.cntrSn}"></a>
 				</td>
 				<td th:text="${item.cntrSttusNm}"></td>
 				<td th:text="${item.elctrnPayNo}"></td>
@@ -237,7 +237,8 @@
 				<td th:text="${item.maskedUserName}"></td>
 				<td th:text="${item.cntrAmtText}"></td>
 				<td th:text="${item.bankText}"></td>
-				<td th:text="${@opDate.ymd(item.frstRegistPnttm)}"></td>
+				<!--/* AS-IS fn:substring(frstRegistPnttm, 0, 19) = "yyyy-MM-dd HH:mm:ss" - 컨트롤러가 같은 모양으로 만든다 */-->
+				<td th:text="${item.frstRegistPnttm}"></td>
 				<td th:text="${item.prjSubject}"></td>
 			</tr>
 		</tbody>
@@ -274,6 +275,14 @@
 	<span id="year1" th:text="${year}"></span>
 </div>
 <!--// 날짜 셋팅 영역  -->
+
+<form name="excelLogForm" id="excelLogForm">
+    <input type="hidden" name="uri" value=""/>
+    <input type="hidden" name="url" value=""/>
+</form>
+
+<!-- AS-IS Shop.downloadExcelOrder(..., true)가 띄우는 개인정보 엑셀 다운로드 사유 모달 -->
+<div th:replace="~{fragments/privacy-access :: modal}"></div>
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
@@ -313,10 +322,17 @@
 
 	/**
 	 *	함 수 명 : downloadExcel
-	 *	기	능  : 오프라인기부금접수현황목록 엑셀 (AS-IS는 xlsx, TO-BE는 CSV)
+	 *	기	능  : 오프라인기부금접수현황목록 엑셀 - AS-IS list.jsp 그대로(신청일 범위 확인 후
+	 *	          Shop.downloadExcelOrder(url, 검색폼, true) = 개인정보 다운로드 사유 모달 → 접근로그 → 다운로드).
+	 *	          TO-BE는 그 모달을 privacy-access 조각의 openPrivacyModal로 연다(다른 엑셀 화면과 같은 방식).
 	 */
 	function downloadExcel() {
-		location.href = "/offgive/list/download-excel?" + $("#searchForm").serialize();
+	    if ($('#shFrstRegistPnttmStart').val() == "" || $('#shFrstRegistPnttmEnd').val() == "") {
+			alert("조회 진행 후 엑셀 다운로드를 진행해주세요.");
+			return;
+		}
+
+	    openPrivacyModal("/offgive/list/download-excel?" + $('#searchForm').serialize());
 	}
 </script>
 </body>

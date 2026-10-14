@@ -50,6 +50,7 @@
                     <td>
                         <select name="orderStatus">
                             <option value="">전체</option>
+                            <option value="WAITING_DEPOSIT" th:selected="${orderStatus == 'WAITING_DEPOSIT'}">입금대기</option>
                             <option value="PENDING" th:selected="${orderStatus == 'PENDING'}">처리중</option>
                             <option value="CONFIRMED" th:selected="${orderStatus == 'CONFIRMED'}">주문확정</option>
                             <option value="CLAIM_REQUESTED" th:selected="${orderStatus == 'CLAIM_REQUESTED'}">반품/교환신청중</option>
@@ -122,7 +123,7 @@
                 <td th:text="${o.sellerId()}"></td>
                 <td th:text="${o.quantity()}"></td>
                 <td th:text="${#numbers.formatInteger(o.pointAmount(), 0, 'COMMA')} + 'P'"></td>
-                <td th:text="${o.orderStatus() == 'PENDING'} ? '처리중' : (${o.orderStatus() == 'CONFIRMED'} ? '주문확정' : (${o.orderStatus() == 'CLAIM_REQUESTED'} ? '반품/교환신청중' : '취소'))"></td>
+                <td th:text="${o.orderStatus() == 'WAITING_DEPOSIT'} ? '입금대기' : (${o.orderStatus() == 'PENDING'} ? '처리중' : (${o.orderStatus() == 'CONFIRMED'} ? '주문확정' : (${o.orderStatus() == 'CLAIM_REQUESTED'} ? '반품/교환신청중' : '취소')))"></td>
                 <td th:text="${o.deliveryStatus() == null} ? '미발송' : (${o.deliveryStatus() == 'SHIPPED'} ? '발송완료' : (${o.deliveryStatus() == 'IN_TRANSIT'} ? '배송중' : (${o.deliveryStatus() == 'DELIVERED'} ? '배송완료' : '구매확정')))"></td>
                 <td th:text="${o.createdDate() != null ? #strings.substring(o.createdDate(), 0, 16) : '-'}"></td>
             </tr>

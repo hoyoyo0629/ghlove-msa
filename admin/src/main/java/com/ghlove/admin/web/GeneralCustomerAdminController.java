@@ -103,9 +103,14 @@ public class GeneralCustomerAdminController {
             return sttemntPayDe != null && !sttemntPayDe.isBlank();
         }
 
-        /** AS-IS: 납부일이 없으면 '미결제'. */
+        /** AS-IS: 납부일이 없으면 '미결제'. 있으면 매퍼가 DATE_FORMAT(STTEMNT_PAY_DE,'%Y-%m-%d')로 내려준 모양. */
         public String getSttemntPayDeText() {
-            return isPaid() ? sttemntPayDe : "미결제";
+            if (!isPaid()) {
+                return "미결제";
+            }
+            return sttemntPayDe.length() == 8
+                    ? sttemntPayDe.substring(0, 4) + "-" + sttemntPayDe.substring(4, 6) + "-" + sttemntPayDe.substring(6, 8)
+                    : sttemntPayDe;
         }
     }
 

@@ -56,7 +56,9 @@ public class SellerAdminController {
                 form.userName(), form.telephoneNumber(), form.phoneNumber(), form.email(), form.address(),
                 form.addressDetail(), form.companyName(), form.representativeName(), form.businessNumber(),
                 form.businessLocation(), form.commissionRate(), form.remittanceType(), form.statusCode(),
-                form.createdDate(), userId, form.updatedDate(), userId);
+                form.createdDate(), userId, form.updatedDate(), userId,
+                // AS-IS 체크박스 + hidden "!adultItemYn"=N - 체크 안 하면 'N'으로 저장한다.
+                "Y".equals(form.adultItemYn()) ? "Y" : "N");
     }
 
     @PostMapping("/{id}/status")
@@ -68,6 +70,6 @@ public class SellerAdminController {
     private GiftClient.SellerDetail emptySeller() {
         return new GiftClient.SellerDetail(null, "N", null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null, null,
-                "1", "0", null, null, null, null);
+                "1", "0", null, null, null, null, "N");
     }
 }

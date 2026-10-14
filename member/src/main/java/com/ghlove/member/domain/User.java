@@ -55,8 +55,17 @@ public class User {
     @Column(name = "UPDATED_DATE")
     private String updatedDate;
 
+    /** 가입구분 - AS-IS 공통코드 SBSCRB_SE(100 온라인 / 200 오프라인). 기탁서 즉석가입만 200이다. */
     @Column(name = "SBSCRB_SE_CODE")
     private String sbscrbSeCode;
+
+    /**
+     * 회원 지자체코드 - AS-IS OP_USER.LOCGOV_CODE. 온라인 가입·회원정보 수정은 주소검색 행정구역코드(admCd) 앞 5자리를
+     * G_INSTT_CODE로 매핑한 값(join-mapper updateUserInfo / user-mapper updateUserEtcInfo), 기탁서 즉석가입은 행정지
+     * 지자체(OffgiveServiceImpl.insertOffgive). AS-IS에서도 저장만 하고 읽는 화면은 없다. 탈퇴 시 NULL.
+     */
+    @Column(name = "LOCGOV_CODE")
+    private String locgovCode;
 
     @Column(name = "LOGIN_PATH_CODE")
     private String loginPathCode;

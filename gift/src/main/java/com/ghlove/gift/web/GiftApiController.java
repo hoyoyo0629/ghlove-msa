@@ -81,7 +81,7 @@ public class GiftApiController {
                             g.getShipping(), g.getShippingFreeAmount(), g.getShippingExtraCharge1(),
                             g.getShippingExtraCharge2(), g.getItemReturnFlag(), g.getMobileItemYn(),
                             g.getOrderMaxQuantity(), g.getShippingItemCount(), g.getShippingGroupCode(),
-                            g.getShipmentGroupCode(), g.getShippingReturn(), g.getDeliveryType()));
+                            g.getShipmentGroupCode(), g.getShippingReturn(), g.getDeliveryType(), g.getAdultItemYn()));
                 })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -94,7 +94,7 @@ public class GiftApiController {
                                    Integer shippingExtraCharge1, Integer shippingExtraCharge2,
                                    String itemReturnFlag, String mobileItemYn, Integer orderMaxQuantity,
                                    Integer shippingItemCount, String shippingGroupCode, String shipmentGroupCode,
-                                   Integer shippingReturn, String deliveryType) {
+                                   Integer shippingReturn, String deliveryType, String adultItemYn) {
     }
 
     /** admin "정산" 상세화면의 입금계좌 표시용 - AS-IS remittance가 확정 시점에 제공자

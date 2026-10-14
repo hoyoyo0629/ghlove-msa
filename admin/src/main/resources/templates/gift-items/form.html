@@ -33,8 +33,23 @@
                     <select name="sellerId" required form="itemForm">
                         <option value="">선택하세요</option>
                         <option th:each="s : ${sellers}" th:value="${s.sellerId()}" th:text="${s.sellerName()} + ' (' + ${s.companyName()} + ')'"
+                                th:attr="data-adult=${s.adultItemYn()}"
                                 th:selected="${s.sellerId()} == ${item.sellerId()}"></option>
                     </select>
+                </td>
+            </tr>
+            <!-- AS-IS item/form.jsp "구매 제한" - form:checkbox path="adultItemYn" label="성인",
+                 disabled="${seller.adultItemYn == 'Y' ? 'false' : 'true'}"(판매자 성인답례품 등록권한이 없으면 비활성).
+                 AS-IS는 같은 행 앞칸에 "답례품 분류(모바일 발송전용)"가 있는데 TO-BE 폼엔 아직 없다(폼 전체 재이식은
+                 서비스로직 전수조사 답례품관리 단계). 판매자를 고르는 화면이라 고른 판매자 권한으로 켜고 끈다. -->
+            <tr>
+                <td class="label">구매 제한</td>
+                <td>
+                    <div class="checkbox">
+                        <input type="checkbox" id="adultItemYn1" name="adultItemYn" value="Y" form="itemForm"
+                               th:checked="${item.adultItemYn() == 'Y'}">
+                        <label for="adultItemYn1">성인</label>
+                    </div>
                 </td>
             </tr>
             <tr>
@@ -225,10 +240,11 @@
     <div th:if="${item.itemId()} != null" style="margin-top:32px;">
         <h4>답례품 옵션</h4>
         <table class="board_list_table">
-            <thead><tr><th>옵션명</th><th>추가금액</th><th>재고연동</th><th>재고수량</th><th>품절</th><th>노출</th><th>처리</th></tr></thead>
+            <thead><tr><th>옵션 제목</th><th>옵션 내용</th><th>추가금액</th><th>재고연동</th><th>재고수량</th><th>품절</th><th>노출</th><th>처리</th></tr></thead>
             <tbody>
             <tr th:each="o : ${options}">
                 <td th:text="${o.optionName1()}"></td>
+                <td th:text="${o.optionName2()}"></td>
                 <td th:text="${#numbers.formatInteger(o.optionPrice() ?: 0, 0, 'COMMA')} + '원'"></td>
                 <td th:text="${o.optionStockFlag()} == 'Y' ? '연동' : '미연동'"></td>
                 <td th:text="${o.optionStockFlag()} == 'Y' ? ${o.optionStockQuantity()} : '-'"></td>
@@ -253,7 +269,8 @@
 
         <form th:action="@{'/admin/gift-items/' + ${item.itemId()} + '/options'}" method="post" style="margin-top:12px;">
             <div class="flex_box gap-08 item-center">
-                <input type="text" name="optionName" placeholder="옵션명(예: 빨강, L 사이즈)" required style="width:200px;">
+                <input type="text" name="optionTitle" placeholder="예) 색상" title="옵션명" required style="width:160px;">
+                <input type="text" name="optionName" placeholder="예) 빨강" title="옵션값" required style="width:200px;">
                 <input type="number" name="optionPrice" placeholder="추가금액" min="0" style="width:120px;"> 원
                 <label><input type="checkbox" name="stockTracked" value="true"> 재고연동</label>
                 <input type="number" name="stockQuantity" placeholder="재고수량" min="0" style="width:100px;">
@@ -266,5 +283,25 @@
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
+<script>
+    // 구매 제한 "성인"은 판매자에게 성인답례품 등록권한이 있을 때만 켤 수 있다(AS-IS disabled 조건).
+    (function () {
+        var sellerSelect = document.querySelector('select[name="sellerId"]');
+        var adult = document.getElementById('adultItemYn1');
+        if (!sellerSelect || !adult) {
+            return;
+        }
+        function syncAdult() {
+            var opt = sellerSelect.options[sellerSelect.selectedIndex];
+            var allowed = opt && opt.getAttribute('data-adult') === 'Y';
+            adult.disabled = !allowed;
+            if (!allowed) {
+                adult.checked = false;
+            }
+        }
+        sellerSelect.addEventListener('change', syncAdult);
+        syncAdult();
+    })();
+</script>
 </body>
 </html>

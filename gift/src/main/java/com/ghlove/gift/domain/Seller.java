@@ -27,6 +27,10 @@ public class Seller {
     @Column(name = "COMMUNITY_BUSINESS_YN")
     private String communityBusinessYn;
 
+    /** 성인답례품 등록권한(AS-IS OP_SELLER.ADULT_ITEM_YN) - 'Y'인 판매자의 답례품만 구매 제한 "성인"을 켤 수 있다. */
+    @Column(name = "ADULT_ITEM_YN")
+    private String adultItemYn = "N";
+
     @Column(name = "SELLER_NAME")
     private String sellerName;
 

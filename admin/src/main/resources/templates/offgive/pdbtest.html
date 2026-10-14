@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <meta charset="UTF-8">
+    <title>PrivacyDB Test Page</title>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!--/* AS-IS opmanager/i18n/offgive/pdbtest.jsp 이식 - OffgiveManagerController의 클래스 레이아웃(default)
+     안에 JSP 본문이 그대로 들어간다(JSP 자체가 <html>문서라 브라우저가 겹친 html/head/body는 버리고
+     <style>과 표만 남긴다 - 여기서는 그 결과 모양 그대로 둔다). 스크립틀릿의 암·복호화 값은
+     OffgiveController.pdbtest가 채운다. imgPath "./img/"도 AS-IS 그대로(AS-IS도 이미지 파일이 없다). */-->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+
+<style type="text/css">
+html,body {
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	background: #f9f9f9;
+}
+
+body {
+	color: #3c3c3c;
+	font-family: "굴림", "arial", "helvetica";
+}
+
+.style7 {
+	font-size: 16pt;
+	font-weight: bold;
+	font-family: Geneva, Arial, Helvetica, sans-serif;
+}
+
+.nbox {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	padding: 0px;
+	margin: 0px;
+	background: #FFFFFF;
+	border: 1px solid #c6c6c6;
+}
+
+.board {
+	padding: 0px;
+	border-top: 1pt solid #d1d1d1;
+	border-right: 1pt solid #d1d1d1;
+	height: 30px;
+	text-align: left;
+}
+
+.board tr td {
+	padding: 1px;
+	border-bottom: 1pt solid #d1d1d1;
+	border-left: 1pt solid #d1d1d1;
+	height: 30px;
+	color: #3c3c3c;
+	font-size: 10pt;
+	word-break: break-all;
+}
+
+;
+.board thead tr {
+	height: 31px;
+}
+
+</style>
+<div style="position: absolute; left: 25px; top: 75px; width:51px; height:106px ; z-index:1" ><img src="./img/crpto-owl.png" /></div>
+	<table width="100%" border="0" cellspacing="0" cellpadding="0"
+		class="nbox">
+		<tr height="55px">
+			<td colspan="3" style="background: #ff0000; valign: middle; align: left;">
+				<img src="./img/top_logo.jpg" width="81px" height="43px" style="cursor:pointer" onclick="location.href='http://owlsystems.co.kr';"/></td>
+			<td width="150px" style="background: #ff0000;"></td>
+			<td style="width: 150px; background: #ff0000; align: right; valign: middle">
+				<img src="./img/Privacy_logo.png" width="143px" height="43px"  style="cursor:pointer"  onclick="location.href='http://owlsystems.co.kr/products/owl_privacy.php';"/></td>
+		</tr>
+		<tr height="55px">
+			<td  width="55px" style="background: #ff0000;" rowspan="2" ></td>
+			<td align='left' colspan="3"><br>
+			<span class="style7">
+					&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="./img/dot.gif" width="20" height="21" />
+					Welcome PrivacyDB Test - pdbtest.jsp<br><br>
+			</span>
+			</td>
+		</tr>
+		<!--탑메뉴-->
+
+		<tr>
+			<td width="50px">&nbsp;</td>
+			<td align="left" valign="top" colspan="1">
+				<table width="100%" border="0" cellspacing="0" cellpadding="0"
+					class="board">
+					<tbody>
+						<tr>
+							<td width="150px" bgcolor="f2f2f2">&nbsp;<font color=red>암호화(normal)</font></td>
+							<td>&nbsp;<th:block th:text="${sString}"></th:block> <b>&nbsp;→&nbsp;</b> <font color=red th:text="${v.sOutput}"></font></td>
+						</tr>
+						<tr>
+							<td bgcolor="f2f2f2">&nbsp;<font color=blue>복호화(normal)</font></td>
+							<td>&nbsp;<th:block th:text="${v.sOutput}"></th:block> <b>&nbsp;→&nbsp;</b> <font color=blue th:text="${v.sDecoded}"></font></td>
+						</tr>
+						<tr>
+							<td bgcolor="f2f2f2">&nbsp;<font color=red>암호화(pattern7)</font></td>
+							<td>&nbsp;<th:block th:text="${sString}"></th:block> <b>&nbsp;→&nbsp;</b> <font color=red th:text="${v.sOutput7}"></font></td>
+						</tr>
+						<tr>
+							<td bgcolor="f2f2f2">&nbsp;<font color=blue>복호화(pattern7)</font></td>
+							<td>&nbsp;<th:block th:text="${v.sOutput7}"></th:block> <b>&nbsp;→&nbsp;</b> <font
+								color=blue th:text="${v.sDecoded7}"></font></td>
+						</tr>
+						<tr>
+							<td bgcolor="f2f2f2">&nbsp;<font color=red>암호화(hash)</font></td>
+							<td>&nbsp;<th:block th:text="${sString}"></th:block> <b>&nbsp;→&nbsp;</b> <font color=red th:text="${v.sOutputh}"></font></td>
+						</tr>
+						<tr>
+							<td bgcolor="f2f2f2">&nbsp;<font color=red>암호화(hash.5)</font></td>
+							<td>&nbsp;<th:block th:text="${sString}"></th:block> <b>&nbsp;→&nbsp;</b> <font color=red th:text="${v.sOutputh2}"></font></td>
+						</tr>
+						<tr>
+							<td bgcolor="f2f2f2">&nbsp;LibError</td>
+							<td>&nbsp;<th:block th:text="${v.libError}"></th:block></td>
+						</tr>
+						<tr>
+							<td bgcolor="f2f2f2">&nbsp;GetErrMsg</td>
+							<td>&nbsp;<th:block th:text="${v.error}"></th:block></td>
+						</tr>
+						<tr>
+							<td bgcolor="f2f2f2">&nbsp;TEST VIEW(JAVA)</td>
+							<td>&nbsp;<th:block th:text="${v.javaTest}"></th:block></td>
+						</tr>
+						<tr>
+							<td bgcolor="f2f2f2">&nbsp;TEST VIEW(Lib)</td>
+							<td>&nbsp;<th:block th:text="${v.libTest}"></th:block></td>
+						</tr>
+					</tbody>
+				</table>
+				<br>
+				<table width="100%" border="0" cellspacing="0" cellpadding="0"
+					class="board">
+					<tr>
+						<td width="150px" bgcolor="f2f2f2">&nbsp;ERROR</td>
+						<td>&nbsp;<th:block th:text="${sLoadErr}"></th:block></td>
+					</tr>
+				</table>
+			</td>
+			<td colspan="2" align="center" valign="bottom"><img src="./img/right_privacy.jpg" /></td>
+		</tr>
+		<tr>
+			<td colspan="5"
+				style="background-color: #d8d8d8; height: 25px; text-align: center; text-valign: bottom; font-size: 9pt;">
+				OWLSystems, Inc. All rights reserved</td>
+		</tr>
+	</table>
+
+    </div>
+    </div>
+</div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

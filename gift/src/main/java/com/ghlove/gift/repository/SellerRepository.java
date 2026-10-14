@@ -31,4 +31,15 @@ public interface SellerRepository extends JpaRepository<Seller, Long> {
             + "   and email is not null and email <> ''"
             + "   and user_name is not null and user_name <> ''", nativeQuery = true)
     List<Object[]> findEmailSendTargets();
+
+    /**
+     * AS-IS {@code sellerMapper.getSellerById} + {@code sellerUserMapper.getSellerUserByLoginIdForSms} - 국민비서
+     * 답례품 주문 문자의 답례품 제공자 수신정보. 이름은 업체명(OP_SELLER.COMPANY_NAME), 휴대폰은 업체
+     * (OP_SELLER.PHONE_NUMBER), CI·수신동의는 같은 로그인ID의 판매자 계정(OP_SELLER_USER)에서 읽는다.
+     * 순서: COMPANY_NAME, MBER_CI, PHONE_NUMBER, RECEIVE_SMS.
+     */
+    @Query(value = "select s.company_name, su.mber_ci, s.phone_number, su.receive_sms"
+            + "  from op_seller s join op_seller_user su on s.login_id = su.login_id"
+            + " where s.seller_id = :sellerId", nativeQuery = true)
+    List<Object[]> findSmsReceiver(@org.springframework.data.repository.query.Param("sellerId") Long sellerId);
 }

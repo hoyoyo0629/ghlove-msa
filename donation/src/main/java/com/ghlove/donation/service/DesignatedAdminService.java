@@ -65,6 +65,9 @@ public class DesignatedAdminService {
 
     private static final String STATUS_COMPLETED = "COMPLETED";
 
+    // 메서드 안에 승인이력 지역변수 log가 있어 @Slf4j 대신 이름을 달리 둔다.
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(DesignatedAdminService.class);
+
     private final DesignatedProjectRepository designatedProjectRepository;
     private final PrjNoticeRepository prjNoticeRepository;
     private final DesignatedPartRepository designatedPartRepository;
@@ -78,6 +81,8 @@ public class DesignatedAdminService {
     private final com.ghlove.donation.repository.DesignatedNoticeRepository designatedNoticeRepository;
     private final com.ghlove.donation.repository.DesignatedNoticeFileRepository designatedNoticeFileRepository;
     private final com.ghlove.donation.repository.DesignatedNoticeImgExplnRepository designatedNoticeImgExplnRepository;
+    /** 대민 공지 첨부의 저장 파일명 토큰(AS-IS pCrypto "normal" 자리) - 직인 이미지와 같은 AES-GCM 대체 모듈. */
+    private final SealCipher sealCipher;
     private final com.ghlove.donation.repository.DesignatedProjectImageRepository designatedProjectImageRepository;
 
     public List<DesignatedProject> listAll() {
@@ -417,6 +422,59 @@ public class DesignatedAdminService {
 
     public List<DesignatedNoticeFile> noticeFilesOf(Long noticeId) {
         return designatedNoticeFileRepository.findByNoticeIdOrderByFileSeqAsc(noticeId);
+    }
+
+    /** 대민 공지 첨부 한 줄 - AS-IS PrjNoticeFile 복사본(getPrjFiles)의 값, fileName은 암호화 토큰. */
+    public record PublicNoticeFile(Long prjNoticeId, Integer fileSeq, String fileName, String orgFileName) {
+    }
+
+    /**
+     * 대민 공지 첨부 목록 - AS-IS {@code DesignatedDonationController.getNoticeList}: 첨부(FILE_SEQ DESC)의 저장
+     * 파일명을 {@code pCrypto.Encrypt("normal", ...)}로 바꿔 내려보낸다. 암호화가 실패하면 AS-IS처럼 로그만 남기고
+     * 원래 값을 그대로 둔다.
+     */
+    public List<PublicNoticeFile> publicNoticeFilesOf(Long noticeId) {
+        List<PublicNoticeFile> files = new ArrayList<>();
+        for (DesignatedNoticeFile f : designatedNoticeFileRepository.findByNoticeIdOrderByFileSeqDesc(noticeId)) {
+            String fileName = f.getFileNm();
+            try {
+                fileName = sealCipher.encryptText(f.getFileNm());
+            } catch (RuntimeException e) {
+                LOG.error("ERROR: {}", "=========== getNoticeList =============");
+            }
+            files.add(new PublicNoticeFile(f.getNoticeId(), f.getFileSeq(), fileName, f.getOrgnflNm()));
+        }
+        return files;
+    }
+
+    /**
+     * 대민 공지 첨부 내려받기 - AS-IS {@code ProgramFileDownloadController.downloadByProgramData}(PRJ_NOTICE)의 파일
+     * 쪽: 토큰을 복호화하고 {@code "../"}·{@code "..\"} 를 지운 뒤(AS-IS 정규식 그대로) 그 공지의 첨부 파일을 읽는다.
+     * AS-IS는 공지별 폴더(prjNotice/{공지ID}/)에서 찾았고, TO-BE는 첨부를 한 폴더에 두므로 "그 공지의 첨부인지"를
+     * 첨부 표로 확인한다.
+     *
+     * @return 파일 내용, 토큰이 깨졌거나 그 공지의 첨부가 아니거나 파일이 없으면 null
+     */
+    public byte[] noticeFileContent(Long noticeId, String fileNameToken) {
+        String fileName;
+        try {
+            fileName = sealCipher.decryptText(fileNameToken);
+        } catch (RuntimeException e) {
+            return null;
+        }
+        fileName = fileName.replaceAll("../", "").replaceAll("..\\\\", "");
+        DesignatedNoticeFile file = designatedNoticeFileRepository.findFirstByNoticeIdAndFileNm(noticeId, fileName)
+                .orElse(null);
+        if (file == null) {
+            return null;
+        }
+        java.nio.file.Path path = fileStorageService.resolve(file.getFileNm(), file.getPathNm());
+        try {
+            return java.nio.file.Files.exists(path) ? java.nio.file.Files.readAllBytes(path) : null;
+        } catch (java.io.IOException e) {
+            LOG.error("CustomFileService getFileDownloadDataByProgramNameIdFileOrgName error", e);
+            return null;
+        }
     }
 
     public DesignatedNoticeFile noticeFileOrThrow(Long noticeId, Integer fileSeq) {

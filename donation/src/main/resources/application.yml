@@ -9,6 +9,11 @@ server:
 spring:
   application:
     name: donation
+  # AS-IS ServiceType.LOCAL(= spring.profiles.active=local)과 같은 자리 - 프로파일을 따로 주지 않고
+  # 띄우는 로컬 개발 실행은 local로 본다. 운영/개발 서버는 --spring.profiles.active=production 등으로
+  # 띄워 local이 아니게 한다(그때만 세외수입 부과요청 같은 연계를 실제로 호출한다).
+  profiles:
+    default: local
   servlet:
     multipart:
       # AS-IS application-production.yml 그대로(50MB). 설정이 없으면 스프링 기본 1MB라
@@ -51,6 +56,8 @@ ghlove:
     base-url: http://localhost:8083
   admin-service:
     base-url: http://localhost:8086
+  order-service:
+    base-url: http://localhost:8085
   # member의 내부 전용 API(/api/users/walk-in, /api/users/{id})를 호출할 때 싣는 공유 시크릿 -
   # member의 application.yml과 반드시 동일해야 한다(InternalApiAuthInterceptor).
   internal:
@@ -61,14 +68,19 @@ ghlove:
   # 열리면 enabled=true + 아래 URL/인증정보만 채우면 된다.
   integrations:
     local-tax:
+      # 아래 enabled와 seoul/contry-base-url은 기부 완료처리(DonationService.completeDonation)가 쓰는
+      # TO-BE 부과/수납 모크 경로 전용이다(납부게이트웨이 이식 라운드 대기, AS-IS 로직 아님).
       enabled: false
       seoul-base-url: https://etax.seoul.go.kr
       contry-base-url: https://wetax.go.kr
-      # AS-IS NgDonationRelayServiceImpl 상수 LINK_TRGT_CD(연계대상코드) - 지방세외 차세대
-      # 부과요청 전문에 들어간다. enabled=false면 실제 호출 없이 AS-IS LOCAL 분기와 같은
-      # 가짜 응답(전자납부번호 "99"+yyyyMMddHHmmssSSS, linkRstCd=000)을 만들고, 요청/응답을
-      # 연계로그 표에 남겨 admin 1413·1415 화면에서 확인할 수 있다.
-      link-trgt-cd: "GHLOVE"
+      # 기탁서 등록(15102) 부과요청 - AS-IS 실제 연계 주소(application-production.yml 그대로).
+      # local 프로파일(AS-IS ServiceType.LOCAL)이면 호출하지 않고 AS-IS LOCAL 분기와 같은 가짜 응답
+      # (전자납부번호 "99"+yyyyMMddHHmmssSSS, linkRstCd=000)을 만들어 연계로그 표에 남긴다
+      # (admin 1413·1415 화면에서 확인).
+      next-buga-request-url: https://192.168.84.55:4145/api/nextgnr/send
+      seoul-buga-url: http://192.168.84.55:4142/api/seoul/epaymentno
+      # AS-IS NgDonationRelayServiceImpl 상수 LINK_TRGT_CD(연계대상코드) - 지방세외 차세대 부과요청 전문.
+      link-trgt-cd: "1741000HLE01001"
     nts:
       enabled: false
       login-url: https://api.hometax.go.kr/login

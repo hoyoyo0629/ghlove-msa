@@ -65,4 +65,22 @@ public class SealCipher {
             throw new IllegalStateException("직인 이미지 복호화에 실패했습니다.", e);
         }
     }
+
+    /**
+     * 문자열 토큰 암호화 - AS-IS {@code pCrypto.Encrypt("normal", 값, "")} 자리(특정사업 공지 첨부의 저장 파일명을
+     * 대민 화면에 숨겨 내려보낼 때). 주소창에 실리는 값이라 URL-safe Base64(패딩 없음)로 만든다.
+     */
+    public String encryptText(String plain) {
+        return Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(encrypt(plain.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+    }
+
+    /** {@link #encryptText}의 역 - AS-IS {@code pCrypto.Decrypt("normal", 값, "", 0)} 자리. 토큰이 깨졌으면 예외. */
+    public String decryptText(String token) {
+        byte[] raw = Base64.getUrlDecoder().decode(token);
+        if (raw.length <= IV_LENGTH) {
+            throw new IllegalStateException("암호문이 올바르지 않습니다.");
+        }
+        return new String(decrypt(raw), java.nio.charset.StandardCharsets.UTF_8);
+    }
 }

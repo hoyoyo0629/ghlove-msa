@@ -568,6 +568,19 @@ public class GiftService {
         return saved;
     }
 
+    /**
+     * 구매 제한 "성인"(AS-IS item/form.jsp {@code form:checkbox path="adultItemYn"}) 저장. AS-IS 화면은 판매자에게 성인답례품
+     * 등록권한(OP_SELLER.ADULT_ITEM_YN='Y')이 없으면 체크박스를 disabled로 둬 값이 넘어오지 않는다 - 여기서도 권한 없는
+     * 판매자의 답례품은 'Y'로 저장하지 않는다.
+     */
+    @Transactional
+    public Gift applyAdultItemYn(Gift gift, String adultItemYn) {
+        boolean sellerAllowed = gift.getSellerId() != null && sellerRepository.findById(gift.getSellerId())
+                .map(s -> "Y".equals(s.getAdultItemYn())).orElse(false);
+        gift.setAdultItemYn(sellerAllowed && "Y".equals(adultItemYn) ? "Y" : "N");
+        return giftRepository.save(gift);
+    }
+
     /** 관리자 직접 수정 - 셀러 소유권 검증 없이(edit()과 달리) 모든 답례품을 수정할 수 있고,
      *  판매자 재지정/재고수량 수정도 가능하다(둘 다 셀러 self-service edit()에는 없는 항목). */
     @Transactional
@@ -845,6 +858,87 @@ public class GiftService {
             giftShipmentStockRepository.save(reservation);
         }
         return true;
+    }
+
+    /**
+     * 기탁서 등록 답례품의 수납 후 재고 차감 - AS-IS {@code NgDonationBatchServiceImpl.procOffOrder} "재고처리" 이식.
+     * <b>재고가 모자라도 막지 않는다</b>(실패 없음, 항상 true). AS-IS 규칙 그대로:
+     * <ul>
+     *   <li>답례품 재고연동(STOCK_FLAG='Y'): {@code updateItemStock} - 재고가 0보다 클 때만 주문수량을 뺀다
+     *       (수량이 재고보다 많으면 음수가 된다, 0 이하면 그대로 둔다). 품절표시는 건드리지 않는다.</li>
+     *   <li>그 외: 주문 옵션 표시문자열을 "/"로 잘라 둘 이상일 때만 {@code updateItemOptionStock} - 옵션
+     *       재고연동('Y')이고 옵션재고가 0보다 큰, OPTION_NAME1~3이 각 이름을 포함(LIKE '%이름%')하는 그 답례품의 옵션행
+     *       전부에서 뺀다. 표시문자열("제목 : 이름 / 제목 : 이름")이 "/"로 갈리는 건 S2·S3뿐이고, S2는 세 번째 이름이
+     *       없어 {@code '%' || NULL || '%'}(CUBRID 기본: NULL)과 비교되므로 아무 행도 안 맞는다 - 실제로 빠지는 건
+     *       S3 옵션뿐이다. S·T·옵션 없음은 빼지 않는다.</li>
+     * </ul>
+     * 복원 기록(GIFT_SHIPMENT_STOCK)은 실제로 뺀 그 품목의 답례품/주문 옵션행 기준으로만 남긴다 - AS-IS 취소 복원도
+     * 주문 옵션ID 기준이다.
+     */
+    @Transactional
+    public boolean deductStockForOffgiveShipment(Long shipmentId,
+                                                 List<com.ghlove.gift.event.ShipmentCreatedEvent.Line> lines) {
+        if (giftShipmentStockRepository.existsByShipmentId(shipmentId)) {
+            log.info("Shipment {} already processed for stock deduction - skipping duplicate event", shipmentId);
+            return true;
+        }
+        if (lines == null) {
+            return true;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        for (var line : lines) {
+            int need = line.quantity() != null ? line.quantity() : 0;
+            Gift gift = giftRepository.findById(line.itemId()).orElse(null);
+            if (gift == null) {
+                continue;
+            }
+            Long deductedOptionId = null;
+            boolean deducted = false;
+            if ("Y".equals(gift.getStockFlag())) {
+                int stock = gift.getStockQuantity() == null ? 0 : gift.getStockQuantity();
+                if (stock > 0) {
+                    gift.setStockQuantity(stock - need);
+                    giftRepository.save(gift);
+                    deducted = true;
+                }
+            } else if (line.itemOptionId() != null && line.itemOptionId() > 0) {
+                var ordered = giftOptionRepository.findById(line.itemOptionId()).orElse(null);
+                if (ordered != null && "S3".equals(ordered.getOptionType())) {
+                    for (var option : giftOptionRepository.findByItemIdOrderByItemOptionIdAsc(gift.getItemId())) {
+                        int stock = option.getOptionStockQuantity() == null ? 0 : option.getOptionStockQuantity();
+                        if ("Y".equals(option.getOptionStockFlag()) && stock > 0
+                                && contains(option.getOptionName1(), ordered.getOptionName1())
+                                && contains(option.getOptionName2(), ordered.getOptionName2())
+                                && contains(option.getOptionName3(), ordered.getOptionName3())) {
+                            option.setOptionStockQuantity(stock - need);
+                            giftOptionRepository.save(option);
+                            if (option.getItemOptionId().equals(ordered.getItemOptionId())) {
+                                deductedOptionId = option.getItemOptionId();
+                                deducted = true;
+                            }
+                        }
+                    }
+                }
+            }
+            if (!deducted) {
+                continue;
+            }
+            com.ghlove.gift.domain.GiftShipmentStock reservation = new com.ghlove.gift.domain.GiftShipmentStock();
+            reservation.setOrderItemId(line.orderItemId());
+            reservation.setShipmentId(shipmentId);
+            reservation.setItemId(line.itemId());
+            reservation.setItemOptionId(deductedOptionId);
+            reservation.setQuantity(need);
+            reservation.setStatus(RESERVATION_RESERVED);
+            reservation.setCreatedDate(now);
+            giftShipmentStockRepository.save(reservation);
+        }
+        return true;
+    }
+
+    /** AS-IS {@code OPTION_NAMEn like '%' || 이름 || '%'} - 어느 한쪽이 NULL이면 맞지 않는다. */
+    private static boolean contains(String column, String name) {
+        return column != null && name != null && column.contains(name.trim());
     }
 
     /** 옵션이 존재하고 재고연동(option_stock_flag='Y')이면 옵션단위 재고로 관리한다. */

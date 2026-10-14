@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 224e315d-88ae-4d9f-90e1-af3100460c29
-  modified: 2026-10-04T14:11:08.278Z
+  modified: 2026-10-13T01:35:09.505Z
 ---
 
 [[asis-screen-port-procedure]] 절차로 진행하는 **세 번째 묶음 = 소규모 영역 4개**. 사용자가 정한 순서:
@@ -20,7 +20,7 @@ metadata:
 | 기부혜택증 | 19102 | 기부혜택증 설정 | `/opmanager/lclgvHnrUser/lclgvHnruserMng/form` | /admin/honor-users/**form** | **완료**(분리) |
 | 기부혜택증 | 19103 | 기부혜택증 열람현황 | `/opmanager/lclgvHnrUser/lclgvHnrUserViewHist/list` | /admin/honor-users/view-history | **완료** |
 | 오프라인기부금접수 | 15101 | 기부금 접수관리 | `/opmanager/offgive/list/` | /offgive/**list** | **완료**(분리) |
-| 오프라인기부금접수 | 15102 | 기탁서 등록 | `/opmanager/offgive/create` | /offgive/**new** | **보류**(아래 ★★ - 결정 필요) |
+| 오프라인기부금접수 | 15102 | 기탁서 등록 | `/opmanager/offgive/create` | /offgive/**new** | **완료**(2026-10-13 verbatim 재이식, 데이터 갭은 [[offgive-15102-verbatim-port-data-gaps]]) |
 | 대시보드 | 20101 | 기부현황 대시보드 | `/opmanager/bix5-access` | /admin/bix5-access | |
 | 커뮤니티 | 11401 | 소통방 | `/opmanager/community/bbs/list` | /community/bbs | |
 | 커뮤니티 | 11402 | 자료실 | `/opmanager/community/databoard/list` | /community/databoard | |

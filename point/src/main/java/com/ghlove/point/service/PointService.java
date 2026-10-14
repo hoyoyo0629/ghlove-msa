@@ -552,29 +552,42 @@ public class PointService {
      * 그래야 나중에 품목 단위 부분취소/반품({@link #restoreForItem})이 그 품목분만 정확히 복원한다.
      * 잔액 검증은 출고 총액을 기준으로 한 번만 한다(같은 지자체라 lot 소진 순서는 무관).
      *
+     * <p><b>기탁서 등록 답례품</b>({@code partialAllowed})은 AS-IS {@code NgDonationBatchServiceImpl.procOffOrder}를
+     * 따른다: 그 지자체 잔여 포인트를 차례로 소진하고(남은 결제금액보다 잔여가 적으면 잔여 전부), 다 써도 모자란
+     * 금액은 그냥 두고 결제완료로 진행한다 - 부족 판정이 없다. 그래서 품목 순서대로 남은 잔액만큼만 차감하고
+     * 항상 성공을 돌려준다(잔액이 0이면 차감 행 없이 성공).
+     *
      * @return true면 차감 성공(SHIPMENT_POINT_DEDUCTED 발행), false면 포인트 부족(FAILED 발행)
      */
     @Transactional
     public boolean deductForShipment(Long shipmentId, String orderId, Long userId, long groupPointAmount,
-                                      String locgovCode, List<ShipmentCreatedEvent.Line> lines) {
+                                      String locgovCode, List<ShipmentCreatedEvent.Line> lines,
+                                      boolean partialAllowed) {
         if (lines == null || lines.isEmpty()) {
             return true;
         }
-        // 멱등 - 이 출고의 첫 품목 refKey가 이미 있으면 처리된 것으로 본다.
-        String firstRefKey = itemRefKey(orderId, lines.get(0).orderItemId());
-        if (pointLedgerRepository.existsByRefKeyAndTxnType(firstRefKey, TXN_USE)) {
+        // 멱등 - 이 출고의 품목 refKey가 하나라도 있으면 처리된 것으로 본다(부분 차감이면 앞 품목만 있을 수도 있다).
+        boolean processed = lines.stream().anyMatch(l ->
+                pointLedgerRepository.existsByRefKeyAndTxnType(itemRefKey(orderId, l.orderItemId()), TXN_USE));
+        if (processed) {
             log.info("Shipment {} already processed for point deduction - skipping duplicate event", shipmentId);
             return true;
         }
-        if (balanceByLocgov(userId, locgovCode) < groupPointAmount) {
+        long available = balanceByLocgov(userId, locgovCode);
+        if (!partialAllowed && available < groupPointAmount) {
             return false;
+        }
+        if (partialAllowed && available < groupPointAmount) {
+            log.warn("Offline gift shipment {} (order {}): point short - needs {}P, deducting only {}P (AS-IS procOffOrder)",
+                    shipmentId, orderId, groupPointAmount, available);
         }
 
         for (ShipmentCreatedEvent.Line line : lines) {
-            long amount = line.pointAmount();
+            long amount = partialAllowed ? Math.min(line.pointAmount(), available) : line.pointAmount();
             if (amount <= 0) {
                 continue;
             }
+            available -= amount;
             String refKey = itemRefKey(orderId, line.orderItemId());
             PointLedger ledger = new PointLedger();
             ledger.setUserId(userId);

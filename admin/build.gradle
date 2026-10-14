@@ -48,6 +48,10 @@ dependencies {
     implementation 'org.apache.poi:poi:4.1.2'
     implementation 'org.apache.poi:poi-ooxml:4.1.2'
 
+    // SCI(사이렌24) 실명인증 암복호화 모듈 - AS-IS libs/sciSecu_v2.jar 그대로(벤더 배포본, Maven 저장소 없음).
+    // 기탁서 등록(15102) sci-call/sci-result가 com.sci.v2.comm.secu.SciSecuManager·SciHmac을 쓴다.
+    implementation files('libs/sciSecu_v2.jar')
+
     // 로컬 개발 전용: SQL 로그에 파라미터를 인라인해 "바로 실행 가능한 쿼리" 형태로 찍는다(P6Spy).
     // developmentOnly = bootRun/IDE 실행 시에만 classpath 에 오르고 운영 bootJar 에는 포함되지 않는다.
     developmentOnly 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.10.0'

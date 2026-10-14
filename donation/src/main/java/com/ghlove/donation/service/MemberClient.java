@@ -70,10 +70,39 @@ public class MemberClient {
         }
     }
 
-    /** 오프라인 기부접수(offgive) - 계좌 없는 방문 시민 즉석 가입. member의 UserApiController
-     *  가 실제 가입 처리를 하고, 여기선 결과(발급된 아이디/임시비밀번호)를 그대로 전달한다. */
     public WalkInResult registerWalkIn(String userName, String phoneNumber, String birthday, String address) {
+        return registerWalkIn(userName, phoneNumber, birthday, address, null, null);
+    }
+
+    /** 오프라인 기부접수(offgive) - 계좌 없는 방문 시민 즉석 가입. member의 UserApiController
+     *  가 실제 가입 처리를 하고, 여기선 결과(발급된 아이디/임시비밀번호)를 그대로 전달한다.
+     *  mberCi/mberDi(SCI 실명인증 결과)까지 같이 저장해야 다음 접수부터 user-check로
+     *  재사용된다(아니면 매번 새 계정이 생긴다). */
+    public WalkInResult registerWalkIn(String userName, String phoneNumber, String birthday, String address,
+                                        String mberCi, String mberDi) {
+        return registerWalkIn(userName, phoneNumber, birthday, address, mberCi, mberDi, null, null, null, null);
+    }
+
+    /**
+     * 기탁서 등록 - AS-IS insertOffgive가 USER_DETAIL에 우편번호·주소·상세주소·성별까지 저장하고, OP_USER.LOCGOV_CODE에
+     * 행정지 지자체(psitnLocgovCode)를 넣는다.
+     */
+    public WalkInResult registerWalkIn(String userName, String phoneNumber, String birthday, String address,
+                                        String mberCi, String mberDi, String post, String addressDetail,
+                                        String gender, String locgovCode) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        if (locgovCode != null) {
+            body.add("locgovCode", locgovCode);
+        }
+        if (post != null) {
+            body.add("post", post);
+        }
+        if (addressDetail != null) {
+            body.add("addressDetail", addressDetail);
+        }
+        if (gender != null) {
+            body.add("gender", gender);
+        }
         body.add("userName", userName);
         if (phoneNumber != null) {
             body.add("phoneNumber", phoneNumber);
@@ -83,6 +112,12 @@ public class MemberClient {
         }
         if (address != null) {
             body.add("address", address);
+        }
+        if (mberCi != null) {
+            body.add("mberCi", mberCi);
+        }
+        if (mberDi != null) {
+            body.add("mberDi", mberDi);
         }
         try {
             return restClient.post().uri("/api/users/walk-in")

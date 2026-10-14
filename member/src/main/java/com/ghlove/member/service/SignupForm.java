@@ -43,6 +43,10 @@ public class SignupForm {
     private String address;
     private String addressDetail;
 
+    /** AS-IS join.html jusoCallBack - 주소검색 행정구역코드(admCd) 앞 5자리. 서버가 G_INSTT_CODE로 매핑해
+     *  OP_USER.LOCGOV_CODE에 넣는다(join-mapper updateUserInfo). */
+    private String locgovCode;
+
     /** 본인인증 결과(연계기관 CI/DI). AS-IS `UserDomainInfo.mberCi/mberDi`에 대응하며,
      * 화면이 입력받는 값이 아니라 본인인증 단계가 채워 넣는 값이다. 이 환경은 인증
      * 게이트웨이가 열려 있지 않아 비어 오지만, 값이 있으면 CI 중복가입 검사가 걸린다

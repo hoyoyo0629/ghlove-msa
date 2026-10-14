@@ -36,23 +36,24 @@ public class ItemOptionAdminClient {
         }
     }
 
-    public void register(Long itemId, String optionName, Integer optionPrice, boolean stockTracked, Integer stockQuantity) {
+    public void register(Long itemId, String optionTitle, String optionName, Integer optionPrice, boolean stockTracked,
+                          Integer stockQuantity) {
         try {
             restClient.post().uri("/api/admin/gift-items/{itemId}/options", itemId)
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                    .body(form(optionName, optionPrice, stockTracked, stockQuantity))
+                    .body(form(optionTitle, optionName, optionPrice, stockTracked, stockQuantity))
                     .retrieve().toBodilessEntity();
         } catch (RestClientResponseException e) {
             throw new ManagerException(extractMessage(e, "옵션 등록에 실패했습니다."));
         }
     }
 
-    public void edit(Long itemId, Long optionId, String optionName, Integer optionPrice, boolean stockTracked,
-                      Integer stockQuantity) {
+    public void edit(Long itemId, Long optionId, String optionTitle, String optionName, Integer optionPrice,
+                      boolean stockTracked, Integer stockQuantity) {
         try {
             restClient.put().uri("/api/admin/gift-items/{itemId}/options/{optionId}", itemId, optionId)
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                    .body(form(optionName, optionPrice, stockTracked, stockQuantity))
+                    .body(form(optionTitle, optionName, optionPrice, stockTracked, stockQuantity))
                     .retrieve().toBodilessEntity();
         } catch (RestClientResponseException e) {
             throw new ManagerException(extractMessage(e, "옵션 수정에 실패했습니다."));
@@ -78,9 +79,10 @@ public class ItemOptionAdminClient {
         }
     }
 
-    private static MultiValueMap<String, String> form(String optionName, Integer optionPrice, boolean stockTracked,
-                                                        Integer stockQuantity) {
+    private static MultiValueMap<String, String> form(String optionTitle, String optionName, Integer optionPrice,
+                                                        boolean stockTracked, Integer stockQuantity) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("optionTitle", optionTitle);
         body.add("optionName", optionName);
         body.add("optionPrice", String.valueOf(optionPrice != null ? optionPrice : 0));
         body.add("stockTracked", String.valueOf(stockTracked));
@@ -98,8 +100,10 @@ public class ItemOptionAdminClient {
         }
     }
 
-    public record OptionDto(Long itemOptionId, Long itemId, String optionType, String optionName1, Integer optionPrice,
-                             String optionStockFlag, Integer optionStockQuantity, String optionSoldOutFlag,
-                             String optionDisplayFlag, Long createdUserId, String createdDate) {
+    /** 선택형(S)은 AS-IS 저장규칙대로 optionName1=옵션 제목, optionName2=옵션 내용. */
+    public record OptionDto(Long itemOptionId, Long itemId, String optionType, String optionName1, String optionName2,
+                             Integer optionPrice, String optionStockFlag, Integer optionStockQuantity,
+                             String optionSoldOutFlag, String optionDisplayFlag, Long createdUserId,
+                             String createdDate) {
     }
 }

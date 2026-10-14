@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '../../api/http'
 import { loadDaumPostcode } from '../../utils/daumPostcode'
 import { formatN, formatTextOption } from '../../utils/format'
+import { useAuthStore } from '../../stores/auth'
 
 // AS-IS order/step1.html 재현 (Thymeleaf 버전 order/checkout.html과 동일 출처). 장바구니에서
 // 선택한 cartItemId 목록을 쿼리로 받아 읽기전용 재표시 + 배송지입력 + 결제하기.
@@ -18,6 +19,11 @@ const cartItemIds = Array.isArray(route.query.cartItemId)
     : []
 
 const groups = ref([])
+const auth = useAuthStore()
+// AS-IS order/step1.html: 답례품 중 성인상품이 있고 현재 사용자가 성인이 아니면 'N'(결제버튼 삭제).
+const paymentYn = computed(() =>
+  groups.value.some((g) => g.lines.some((l) => l.adultItemYn === 'Y')) && auth.me?.adultYn !== 'Y' ? 'N' : 'Y',
+)
 // 쿠폰 할인/배송비까지 반영된 실제 결제 금액. 화면에서 직접 계산하지 않고 서버의
 // /api/checkout/preview를 그대로 쓴다 - 결제(complete)와 완전히 같은 CartService 계산이라
 // "화면에 뜬 포인트 != 실제 차감 포인트"가 구조적으로 생길 수 없다.
@@ -359,11 +365,16 @@ async function submit() {
       </div>
     </div>
 
+    <!-- AS-IS order/step1.html paymentYn - 성인 답례품이 있는데 성인이 아니면 결제버튼을 지우고 안내한다. -->
+    <div class="payment-yn-text" v-if="paymentYn == 'N'" style="display:flex;flex-direction: column;justify-content:center;align-items:center;font-weight: bold;margin-bottom: 5px;">
+      <div style="color: red;">구매제한 물품이 있어 미성년자는 주문할 수 없습니다.</div>
+      <div style="color: red;">취소 버튼을 누르면 이전화면으로 돌아갑니다.</div>
+    </div>
     <div class="btn-box order">
       <button type="button" class="blueBtn cancellation" @click="router.push('/cart')">
         취소<span><img src="/images/icon/cli-icon_btn-hover-arrow.png" alt="이전화면으로 이동" /></span>
       </button>
-      <button type="button" class="blueBtn u-confirm" :disabled="submitting || !quote" @click="submit">
+      <button type="button" class="blueBtn u-confirm" v-if="paymentYn == 'Y'" :disabled="submitting || !quote" @click="submit">
         <span>{{ formatN(quote?.totalPayable ?? 0) }} P</span>&nbsp;결제하기<span><img src="/images/icon/cli-icon_btn-hover-arrow.png" alt="답례품 주문하기" /></span>
       </button>
     </div>

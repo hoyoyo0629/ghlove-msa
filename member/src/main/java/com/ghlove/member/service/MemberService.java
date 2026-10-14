@@ -45,7 +45,11 @@ public class MemberService {
     private static final long DEFAULT_PASSWORD_LIFE_TIME_DAYS = 180L;
     private static final String STATUS_WITHDRAWN = "WITHDRAWN";
     private static final String STATUS_DORMANT = "DORMANT";
-    private static final String USER_TYPE_GENERAL = "GENERAL";
+    /** AS-IS 공통코드 SBSCRB_SE - 100 온라인(join-mapper updateUserInfo) / 200 오프라인(기탁서 즉석가입). */
+    public static final String SBSCRB_SE_ONLINE = "100";
+    private static final String SBSCRB_SE_OFFLINE = "200";
+    /** AS-IS 회원가입·회원정보 수정 화면의 "회원구분" - 코드가 아니라 화면 상수 디폴트등급(["일반회원"])이다. */
+    public static final String MEMBER_LEVEL_LABEL = "일반회원";
     /** AS-IS 공통코드 LOGIN_PATH 실제값(09.공통코드 목록.xlsx) - 100:ID/PWD. */
     private static final String LOGIN_PATH_IDPW = "100";
     private static final String ROLE_USER = "ROLE_USER";
@@ -163,7 +167,9 @@ public class MemberService {
         user.setUserName(form.getUserName());
         user.setEmail(form.getEmail());
         user.setStatusCode(STATUS_ACTIVE);
-        user.setSbscrbSeCode(USER_TYPE_GENERAL);
+        user.setSbscrbSeCode(SBSCRB_SE_ONLINE);
+        // AS-IS join-mapper updateUserInfo - 주소검색 admCd 앞 5자리를 G_INSTT_CODE로 매핑(없으면 NULL).
+        user.setLocgovCode(donationClient.locgovMapngCode(form.getLocgovCode()));
         user.setLoginPathCode(LOGIN_PATH_IDPW);
         user.setLoginCount(0);
         user.setLoginFailCount(0);
@@ -210,6 +216,29 @@ public class MemberService {
      */
     @Transactional
     public WalkInResult registerWalkIn(String userName, String phoneNumber, String birthday, String address) {
+        return registerWalkIn(userName, phoneNumber, birthday, address, null, null);
+    }
+
+    /**
+     * 기탁서(오프라인) 접수 시 SCI 실명인증 결과(mberCi/mberDi)까지 받는다 - AS-IS
+     * {@code sciResponse()}가 CI로 기존회원을 먼저 찾고(이 메서드는 그 조회가 실패했을
+     * 때만 호출된다), 즉석가입 계정에도 같은 CI/DI를 심어 둬야 다음 접수부터 재사용된다
+     * (아니면 매번 새 계정이 생긴다).
+     */
+    public WalkInResult registerWalkIn(String userName, String phoneNumber, String birthday, String address,
+                                        String mberCi, String mberDi) {
+        return registerWalkIn(userName, phoneNumber, birthday, address, mberCi, mberDi, null, null, null, null);
+    }
+
+    /**
+     * 기탁서 등록 즉석가입 - AS-IS insertOffgive는 USER_DETAIL에 우편번호(POST)·주소·상세주소(ADDRESS_DETAIL)·
+     * 성별(GENDER, 화면이 주민번호 뒷자리로 계산)까지 넣고, OP_USER에 가입구분 200(오프라인)과
+     * 회원 지자체코드 = 행정지 지자체(psitnLocgovCode, 매핑 없이 그대로)를 넣는다.
+     */
+    @Transactional
+    public WalkInResult registerWalkIn(String userName, String phoneNumber, String birthday, String address,
+                                        String mberCi, String mberDi, String post, String addressDetail,
+                                        String gender, String locgovCode) {
         if (userName == null || userName.isBlank()) {
             throw new MemberException("이름을 입력해 주세요.");
         }
@@ -224,10 +253,13 @@ public class MemberService {
         user.setPasswordType(PASSWORD_TYPE_TEMPORARY);
         user.setUserName(userName);
         user.setStatusCode(STATUS_ACTIVE);
-        user.setSbscrbSeCode(USER_TYPE_GENERAL);
+        user.setSbscrbSeCode(SBSCRB_SE_OFFLINE);
+        user.setLocgovCode(trimToNull(locgovCode));
         user.setLoginPathCode(LOGIN_PATH_IDPW);
         user.setLoginCount(0);
         user.setLoginFailCount(0);
+        user.setMberCi(trimToNull(mberCi));
+        user.setMberDi(trimToNull(mberDi));
         user.setCreatedDate(now());
         user.setUpdatedDate(now());
         User saved = userRepository.save(user);
@@ -238,6 +270,9 @@ public class MemberService {
         detail.setPhoneNumber(phoneNumber);
         detail.setBirthday(birthday != null ? birthday.replace("-", "") : null);
         detail.setAddress(address);
+        detail.setPost(post);
+        detail.setAddressDetail(addressDetail);
+        detail.setGender(trimToNull(gender));
         detail.setUseFlag("Y");
         userDetailRepository.save(detail);
 
@@ -612,6 +647,21 @@ public class MemberService {
         return userRepository.findById(userId);
     }
 
+    /**
+     * 성인 여부 - AS-IS {@code UserUtils.isAdult}: 올해 연도 - 출생연도(OP_USER_DETAIL.BIRTHDAY yyyyMMdd)가 19 이상.
+     * 생일을 보지 않는 연 나이다. AS-IS는 생년월일이 비거나 형식이 다르면 파싱 예외로 끝나는데, 여기서는 성인 아님으로 본다.
+     */
+    public boolean isAdult(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        String birthday = userDetailRepository.findById(userId).map(UserDetail::getBirthday).orElse(null);
+        if (birthday == null || birthday.length() < 4 || !birthday.substring(0, 4).chars().allMatch(Character::isDigit)) {
+            return false;
+        }
+        return java.time.LocalDate.now().getYear() - Integer.parseInt(birthday.substring(0, 4)) >= 19;
+    }
+
     /** 마이페이지 "회원 정보 수정" (AS-IS users/modify.html) 조회. */
     public UserDetail profileOf(Long userId) {
         return userDetailRepository.findById(userId).orElseGet(() -> {
@@ -631,8 +681,26 @@ public class MemberService {
     public void updateProfile(Long userId, String phoneNumber, String email, String post, String address,
                                String addressDetail, boolean receivePbanc, boolean receiveEmail,
                                boolean receiveSms, boolean receiveKakao, String remoteAddr) {
+        updateProfile(userId, phoneNumber, email, post, address, addressDetail, receivePbanc, receiveEmail,
+                receiveSms, receiveKakao, remoteAddr, null);
+    }
+
+    /** 저장된 회원 지자체코드(OP_USER.LOCGOV_CODE) - 회원정보 수정 화면이 들고 있다가 다시 보낸다. */
+    public String locgovCodeOf(Long userId) {
+        return userRepository.findById(userId).map(User::getLocgovCode).orElse(null);
+    }
+
+    /**
+     * @param locgovCode AS-IS modify.html param.locgovCode - 처음엔 저장된 회원 지자체코드, 주소를 다시 검색하면 admCd 앞
+     *                   5자리. AS-IS updateUserEtcInfo처럼 매번 G_INSTT_CODE로 매핑해 덮어쓴다(못 찾으면 NULL).
+     */
+    @Transactional
+    public void updateProfile(Long userId, String phoneNumber, String email, String post, String address,
+                               String addressDetail, boolean receivePbanc, boolean receiveEmail,
+                               boolean receiveSms, boolean receiveKakao, String remoteAddr, String locgovCode) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new MemberException("회원 정보를 찾을 수 없습니다."));
+        user.setLocgovCode(donationClient.locgovMapngCode(locgovCode));
         user.setEmail(email);
         user.setUpdatedDate(now());
         userRepository.save(user);
@@ -803,6 +871,7 @@ public class MemberService {
         user.setPasswordType("N");
         user.setPasswordExpiredDate(null);
         user.setSbscrbSeCode(null);
+        user.setLocgovCode(null);
         user.setLoginPathCode(null);
         user.setUpdatedDate(now());
         userRepository.save(user);

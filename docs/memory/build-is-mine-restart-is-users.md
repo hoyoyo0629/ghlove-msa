@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: 224e315d-88ae-4d9f-90e1-af3100460c29
-  modified: 2026-10-06T00:15:01.237Z
+  modified: 2026-10-13T05:50:10.072Z
 ---
 
 **코드 수정 후 빌드는 내가 끝까지 한다 — `compileJava`만이 아니라 실행 jar를 굽는 `bootJar`(또는 `build`)까지.** 재기동(서비스 restart)은 기본적으로 사용자가 한다(2026-10-01 명시: "빌드는 니가 해줘. 앞으로도." / "재기동은 내가 할께").
@@ -27,7 +27,15 @@ EXIT=0이었고, 다음 날 아침 사용자가 재기동하자 **donation이 �
 `X-Internal-Secret`(각 서비스 application.yml `ghlove.internal.admin-secret`) 헤더로 직접 호출해
 런타임 동작까지 볼 수 있다. **선결 확인 2가지**: 해당 서비스에 지금 발화할 `@Scheduled`가 없는지,
 `ddl-auto`가 `none`인지(둘 다 충족하면 읽기전용 기동이라 부작용이 없다).
-Git Bash에서 한글 쿼리파라미터는 CP949로 나갈 수 있으니 **UTF-8 퍼센트인코딩으로 직접** 보낼 것.
+Git Bash에서 한글 쿼리파라미터는 CP949로 나갈 수 있으니 **UTF-8 퍼센트인코딩으로 직접** 보낼 것
+(2026-10-13 `curl --data-urlencode "pyrNm=홍길동"`도 CP949로 나가 연계로그 테스트행 이름이 깨졌다 → 그 행만 지움).
+
+**★[2026-10-13 보완] 여분 포트 인스턴스는 반드시 내리고, Kafka 리스너는 끄고 띄운다.**
+`--spring.kafka.listener.auto-startup=false`를 붙인다 - 안 붙이면 운영 인스턴스와 **같은 컨슈머 그룹**
+(order-service/admin-service 등)에 붙어 메시지를 가로챈다. 2026-10-13 확인 결과 내가 안 내린 인스턴스가
+2개 남아 있었다: **admin 18086(10-06부터, 리스너 켜진 채 - 일주일 묵은 코드가 admin-service 그룹의 통계
+이벤트를 받아갔을 수 있음)**, donation 18092(10-12, Kafka 주소를 19999로 막아 둠). 둘 다 정리했다.
+검증이 끝나면 `Get-CimInstance Win32_Process`로 `--server.port=1xxxx/2xxxx` 남은 게 없는지 확인할 것.
 
 **How to apply:**
 - 서비스별 자기 gradlew로: `Set-Location C:\workspace\ghlove-msa\<svc>; .\gradlew.bat -q bootJar` (EXIT=0 확인). 각 서비스는 자기 gradlew 사용.

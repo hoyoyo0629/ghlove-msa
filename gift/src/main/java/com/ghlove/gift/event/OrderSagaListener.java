@@ -52,7 +52,10 @@ public class OrderSagaListener {
             case "SHIPMENT_CREATED" -> {
                 ShipmentCreatedEvent event = objectMapper.readValue(payload, ShipmentCreatedEvent.class);
                 log.info("Received ShipmentCreatedEvent: {}", event);
-                boolean reserved = giftService.reserveStockForShipment(event.shipmentId(), event.lines());
+                // 기탁서 등록 답례품은 AS-IS procOffOrder처럼 재고가 모자라도 막지 않는다.
+                boolean reserved = event.cntrSn() != null && !event.cntrSn().isBlank()
+                        ? giftService.deductStockForOffgiveShipment(event.shipmentId(), event.lines())
+                        : giftService.reserveStockForShipment(event.shipmentId(), event.lines());
                 if (reserved) {
                     orderSagaPublisher.publishShipmentStockReserved(event.shipmentId(), event.orderId());
                 } else {

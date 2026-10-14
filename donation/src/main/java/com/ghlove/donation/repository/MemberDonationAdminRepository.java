@@ -26,13 +26,8 @@ import java.util.Map;
  *
  * <p><b>AS-IS 조건의 TO-BE 번역</b>: AS-IS는 "납부완료된 기부"를
  * {@code STTEMNT_PAY_DE IS NOT NULL AND DELETE_AT = 'N' AND CNTR_STTUS_CODE = '200'}으로
- * 집었다. 이 프로젝트는 상태코드를 <b>낱말</b>로 쓰고({@code COMPLETED}/{@code REQUESTED}/
- * {@code CANCELLED} - 실측도 그렇다) {@code STTEMNT_PAY_DE}(납부일)는 아직 어디서도 쓰지 않는다
- * (납부 게이트웨이 이식이 별도 라운드로 결정돼 있다 - [[donation-payment-gateway-port-decision]]).
- * 그래서 AS-IS의 "완료 + 납부일 있음"에 대응하는 TO-BE 조건은
- * {@code cntr_sttus_code = 'COMPLETED' AND delete_at = 'N'}이다 - AS-IS 문자열을 그대로 쓰면
- * ('200', 납부일 NOT NULL) 모든 화면이 0건이 된다. donation의 다른 누적 조회
- * ({@code DonationTotalAdminApiController})도 같은 기준이다.
+ * 집었다. 상태코드만 TO-BE 낱말({@code COMPLETED})로 바꾸고 나머지는 그대로다 - 2026-10-14부터 수납완료가
+ * 수납일을 넣어(DonationService.completeDonation) 빼 두었던 {@code STTEMNT_PAY_DE IS NOT NULL}을 되살렸다.
  *
  * <p>엔티티({@code Donation})가 cntr_point·cntr_blce_point·sttemnt_pay_de·elctrn_pay_no를
  * 매핑하지 않고 있어 네이티브 쿼리로 읽는다 - 조회 전용이라 엔티티를 넓히지 않는 쪽이 안전하다.
@@ -71,6 +66,7 @@ public class MemberDonationAdminRepository {
                   from donation.g_cntr c
                  where c.user_id = :userId
                    and c.cntr_sttus_code = :status
+                   and c.sttemnt_pay_de is not null
                    and c.delete_at = 'N'
                 """);
         q.setParameter("userId", userId);
@@ -87,6 +83,7 @@ public class MemberDonationAdminRepository {
                   join donation.g_locgov l on l.locgov_code = c.cntr_locgov_code
                  where c.user_id = :userId
                    and c.cntr_sttus_code = :status
+                   and c.sttemnt_pay_de is not null
                    and c.delete_at = 'N'
                 """);
         q.setParameter("userId", userId);
@@ -104,6 +101,7 @@ public class MemberDonationAdminRepository {
                   join donation.g_locgov l on l.locgov_code = c.cntr_locgov_code
                  where c.user_id = :userId
                    and c.cntr_sttus_code = :status
+                   and c.sttemnt_pay_de is not null
                    and c.delete_at = 'N'
                  order by c.frst_regist_pnttm desc
                  offset :startRow limit :size
@@ -129,6 +127,7 @@ public class MemberDonationAdminRepository {
                   left join donation.g_locgov l on l.locgov_code = c.cntr_locgov_code
                  where c.user_id = :userId
                    and c.cntr_sttus_code = :status
+                   and c.sttemnt_pay_de is not null
                    and c.delete_at = 'N'
                 """);
         q.setParameter("userId", userId);
@@ -155,6 +154,7 @@ public class MemberDonationAdminRepository {
                   from donation.g_cntr c
                  where c.user_id in (:userIds)
                    and c.cntr_sttus_code = :status
+                   and c.sttemnt_pay_de is not null
                    and c.delete_at = 'N'
                  group by c.user_id
                 """);

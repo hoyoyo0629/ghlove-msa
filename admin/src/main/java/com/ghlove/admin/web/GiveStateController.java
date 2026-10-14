@@ -31,6 +31,18 @@ public class GiveStateController {
     private final DonationLedgerRepository donationLedgerRepository;
     private final LocgovClient locgovClient;
     private final MemberClient memberClient;
+    private final com.ghlove.admin.service.OffgiveClient offgiveClient;
+
+    /**
+     * AS-IS GiveStateManagerController {@code POST options-by-locgovCode} - 시도 코드로 사용중인
+     * 시군구 목록({LOCGOV_CODE, LOCGOV_NM}, ORDERING 순). 기탁서 등록(15102) 등 여러 화면의
+     * 시도→시군구 연동 셀렉트가 이걸 부른다.
+     */
+    @org.springframework.web.bind.annotation.PostMapping("/give-state/options-by-locgovCode")
+    @org.springframework.web.bind.annotation.ResponseBody
+    public List<Map<String, Object>> optionsByLocgovCode(@RequestParam(name = "code", defaultValue = "0") String code) {
+        return offgiveClient.locgovOptions(code);
+    }
 
     @GetMapping("/give-state")
     public String list(@RequestParam(required = false) String cntrYear,
