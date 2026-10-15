@@ -86,7 +86,13 @@ public class Seller {
     @Column(name = "REMITTANCE_TYPE")
     private String remittanceType;
 
-    /** 0:승인대기, 1:승인, 2:반려, 3:중지 (AS-IS 코드 관행 재사용). */
+    /** AS-IS OP_SELLER.STATUS_CODE 그대로 - {@link #STATUS_ACTIVE 2:사용}, {@link #STATUS_STOPPED 3:중지},
+     *  {@link #STATUS_WAITING 5:승인대기}(AS-IS seller/list.jsp·form.jsp). 2026-10-15 이전 TO-BE가 쓰던
+     *  0대기/1승인/2반려/3중지는 AS-IS '2'(사용)와 충돌해 전환했다(반려는 AS-IS에 없는 상태라 없앴다). */
+    public static final String STATUS_ACTIVE = "2";
+    public static final String STATUS_STOPPED = "3";
+    public static final String STATUS_WAITING = "5";
+
     @Column(name = "STATUS_CODE")
     private String statusCode;
 

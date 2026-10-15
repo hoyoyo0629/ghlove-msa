@@ -53,4 +53,11 @@ public class SignupForm {
      * ({@link MemberService#signup}). */
     private String mberCi;
     private String mberDi;
+
+    /** 알림서비스 수신동의(AS-IS join.html param.receive*) - "0" 수신 / "1" 비수신. 약관동의 단계에서
+     *  체크한 항목만 "0"이 온다(AS-IS getAgreeInfo). 국민비서=receiveSms, SMS=receivePbanc. */
+    private String receiveEmail;
+    private String receiveSms;
+    private String receivePbanc;
+    private String receiveKakao;
 }

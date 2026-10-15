@@ -143,6 +143,8 @@ public class ManagerAuthController {
             }
             session.removeAttribute(SESSION_PENDING_LOGIN_ID_KEY);
             session.setAttribute(SESSION_MANAGER_KEY, manager);
+            // AS-IS setSessionByManager: 로그인 직후 표시 - 메인화면이 첫 진입에 오프라인 담당자 안내를 띄우고 지운다.
+            session.setAttribute(AdminHomeController.SESSION_LOGIN_NOW, "Y");
             auditLogService.recordLogin(loginId, true, request.getRemoteAddr(), null);
             sendManagerLoginSms(manager);
             Map<String, Object> body = data("SUCC");
@@ -250,6 +252,7 @@ public class ManagerAuthController {
         if ("SUCC".equals(result.code())) {
             Manager manager = result.manager();
             session.setAttribute(SESSION_MANAGER_KEY, manager);
+            session.setAttribute(AdminHomeController.SESSION_LOGIN_NOW, "Y");
             auditLogService.recordLogin(manager.getLoginId(), true, request.getRemoteAddr(), "인증서 로그인");
             sendManagerLoginSms(manager);
             body.put("redirect", returnTo != null && !returnTo.isBlank() ? returnTo : defaultLandingPage(manager));
@@ -384,11 +387,8 @@ public class ManagerAuthController {
         return "admin/access-denied";
     }
 
-    /** 로그인 직후 랜딩 화면. AdminHomeController(/admin)가 실제 대시보드(오늘 주문/회원
-     *  카운트+최근 공지)를 보여주고 위젯 접근권한과 무관하게 모든 로그인 관리자가 볼 수
-     *  있다 - 예전엔 이 대시보드 자체가 없어서 "접근 가능한 첫 메뉴"로 그냥 넘겨버렸는데,
-     *  그러면 지자체담당자(ROLE_ADMIN_5/6)가 로그인할 때마다 자기 업무와 무관한 메뉴에
-     *  떨어지는 문제가 있었다. */
+    /** 로그인 직후 랜딩 화면 - AS-IS처럼 관리자 메인(/admin, AdminHomeController = AS-IS main/index.jsp).
+     *  권한별로 보이는 위젯이 다를 뿐 모든 로그인 관리자가 같은 주소로 간다. */
     private String defaultLandingPage(Manager manager) {
         return "/admin";
     }

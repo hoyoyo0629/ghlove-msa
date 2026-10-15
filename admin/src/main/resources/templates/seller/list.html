@@ -36,16 +36,17 @@
             <td th:text="${s.userName()}"></td>
             <td th:text="${s.phoneNumber()}"></td>
             <td>
-                <span class="pill" th:classappend="${s.statusCode() == '1'} ? 'on' : 'off'"
-                      th:text="${s.statusCode() == '1' ? '승인' : (s.statusCode() == '2' ? '반려' : (s.statusCode() == '3' ? '중지' : '승인대기'))}"></span>
+                <!-- 상태코드는 AS-IS OP_SELLER 값: 2 사용 / 3 중지 / 5 승인대기(AS-IS seller/list.jsp 라벨). -->
+                <span class="pill" th:classappend="${s.statusCode() == '2'} ? 'on' : 'off'"
+                      th:text="${s.statusCode() == '2' ? '사용' : (s.statusCode() == '3' ? '중지' : (s.statusCode() == '5' ? '승인대기' : ''))}"></span>
             </td>
             <td>
                 <a class="small-btn" th:href="@{'/seller/' + ${s.sellerId()} + '/edit'}">수정</a>
-                <form th:if="${s.statusCode() != '1'}" th:action="@{'/seller/' + ${s.sellerId()} + '/status'}" method="post" class="inline-form">
-                    <input type="hidden" name="statusCode" value="1">
+                <form th:if="${s.statusCode() != '2'}" th:action="@{'/seller/' + ${s.sellerId()} + '/status'}" method="post" class="inline-form">
+                    <input type="hidden" name="statusCode" value="2">
                     <button type="submit" class="small-btn">승인</button>
                 </form>
-                <form th:if="${s.statusCode() == '1'}" th:action="@{'/seller/' + ${s.sellerId()} + '/status'}" method="post" class="inline-form"
+                <form th:if="${s.statusCode() == '2'}" th:action="@{'/seller/' + ${s.sellerId()} + '/status'}" method="post" class="inline-form"
                       onsubmit="return confirm('중지하시겠습니까?')">
                     <input type="hidden" name="statusCode" value="3">
                     <button type="submit" class="small-btn ghost">중지</button>

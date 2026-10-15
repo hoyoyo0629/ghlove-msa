@@ -53,6 +53,9 @@ public class MemberService {
     /** AS-IS 공통코드 LOGIN_PATH 실제값(09.공통코드 목록.xlsx) - 100:ID/PWD. */
     private static final String LOGIN_PATH_IDPW = "100";
     private static final String ROLE_USER = "ROLE_USER";
+    /** 수신동의(RECEIVE_*) AS-IS 값 - "0" 수신 / "1" 비수신. */
+    public static final String RECEIVE_AGREE = "0";
+    public static final String RECEIVE_DISAGREE = "1";
     private static final int MAX_LOGIN_FAIL_COUNT = 5;
     private static final int DEFAULT_DORMANT_INACTIVE_DAYS = 365;
     /** AS-IS 레거시 컬럼 컨벤션(VARCHAR(14)) - User/LoginLog/UserChangeLog의 날짜 필드가 전부 이 형식이다. */
@@ -143,6 +146,11 @@ public class MemberService {
         }
     }
 
+    /** 가입 요청의 수신동의 값 - "0"만 수신, 그 외(미전송 포함)는 AS-IS 기본값 "1". */
+    private static String receiveFlag(String value) {
+        return RECEIVE_AGREE.equals(value) ? RECEIVE_AGREE : RECEIVE_DISAGREE;
+    }
+
     private static String trimToNull(String s) {
         if (s == null) {
             return null;
@@ -198,6 +206,11 @@ public class MemberService {
         detail.setPost(form.getPost());
         detail.setAddress(form.getAddress());
         detail.setAddressDetail(form.getAddressDetail());
+        // AS-IS join.html: 네 항목 기본값 "1"(비수신), 약관동의에서 체크한 항목만 "0"(수신).
+        detail.setReceiveEmail(receiveFlag(form.getReceiveEmail()));
+        detail.setReceiveSms(receiveFlag(form.getReceiveSms()));
+        detail.setReceivePbanc(receiveFlag(form.getReceivePbanc()));
+        detail.setReceiveKakao(receiveFlag(form.getReceiveKakao()));
         detail.setUseFlag("Y");
         userDetailRepository.save(detail);
 
@@ -785,10 +798,11 @@ public class MemberService {
         detail.setPost(post);
         detail.setAddress(address);
         detail.setAddressDetail(addressDetail);
-        detail.setReceivePbanc(receivePbanc ? "Y" : "N");
-        detail.setReceiveEmail(receiveEmail ? "Y" : "N");
-        detail.setReceiveSms(receiveSms ? "Y" : "N");
-        detail.setReceiveKakao(receiveKakao ? "Y" : "N");
+        // AS-IS 정본: "0" 수신 / "1" 비수신(GeneralCustomer 주석). 운영자 화면·국민비서 문자 대상이 '0'만 동의로 본다.
+        detail.setReceivePbanc(receivePbanc ? RECEIVE_AGREE : RECEIVE_DISAGREE);
+        detail.setReceiveEmail(receiveEmail ? RECEIVE_AGREE : RECEIVE_DISAGREE);
+        detail.setReceiveSms(receiveSms ? RECEIVE_AGREE : RECEIVE_DISAGREE);
+        detail.setReceiveKakao(receiveKakao ? RECEIVE_AGREE : RECEIVE_DISAGREE);
         if (detail.getUseFlag() == null) {
             detail.setUseFlag("Y");
         }

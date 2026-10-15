@@ -239,6 +239,12 @@ async function onSubmit() {
     ...form,
     phoneNumber: phoneCode.value + phoneMid.value + phoneLast.value,
     email: `${emailFirst.value}@${domain}`,
+    // AS-IS join.html getAgreeInfo: 약관동의에서 체크한 알림서비스 항목만 "0"(수신), 나머지는 기본값 "1"(비수신).
+    // policyId 대응 - 국민비서=receiveSms, Email=receiveEmail, SMS=receivePbanc, 알림톡=receiveKakao.
+    receiveSms: terms.adSms ? '0' : '1',
+    receiveEmail: terms.adEmail ? '0' : '1',
+    receivePbanc: terms.adPbanc ? '0' : '1',
+    receiveKakao: terms.adKakao ? '0' : '1',
   }
   try {
     const data = await auth.signup(payload)

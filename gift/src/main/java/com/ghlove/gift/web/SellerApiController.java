@@ -71,7 +71,7 @@ public class SellerApiController {
         form.setCreatedDate(DATE_FORMAT.format(LocalDateTime.now()));
         form.setUpdatedDate(DATE_FORMAT.format(LocalDateTime.now()));
         if (form.getStatusCode() == null) {
-            form.setStatusCode("0");
+            form.setStatusCode(Seller.STATUS_WAITING);
         }
         return sellerRepository.save(form);
     }

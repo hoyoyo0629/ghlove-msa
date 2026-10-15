@@ -61,8 +61,11 @@ public class ProfileApiController {
                 user.getEmail(), profile.getPhoneNumber(), profile.getBirthday(),
                 profile.getPost(), profile.getAddress(), profile.getAddressDetail(),
                 addressRegionOf(profile.getAddress()),
-                "Y".equals(profile.getReceivePbanc()), "Y".equals(profile.getReceiveEmail()), "Y".equals(profile.getReceiveSms()),
-                "Y".equals(profile.getReceiveKakao()),
+                // 수신동의는 AS-IS 값 "0"(수신)일 때만 동의로 그린다.
+                MemberService.RECEIVE_AGREE.equals(profile.getReceivePbanc()),
+                MemberService.RECEIVE_AGREE.equals(profile.getReceiveEmail()),
+                MemberService.RECEIVE_AGREE.equals(profile.getReceiveSms()),
+                MemberService.RECEIVE_AGREE.equals(profile.getReceiveKakao()),
                 donationClient.interestLocgovsOf(user.getUserId()),
                 locgovs, provinces,
                 loginPathCode, userKeyYN, kakaoUserKeyYN,

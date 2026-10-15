@@ -92,7 +92,7 @@
 - [op_qna는 QNA_TYPE으로 세 화면이 나뉜다](op-qna-split-by-qna-type.md) — 0=1:1문의(5102)/1=상품문의(중지)/2=공개Q&A(5112), 공개 쪽 필터 누락으로 개인문의 노출됐던 것 2026-10-05 수정
 - [공개 FAQ 정본은 op_faq + FaqType enum](public-faq-canonical-table.md) — 시드가 지자체FAQ 표에 자체코드로 넣어둔 걸 2026-10-05 교정, 11403은 중지라 그 표 유지
 - [국민비서 문자 발송부 위치](ips-sms-sender-lives-in-admin.md) — TIF_IPS_SNDNG_M 적재가 "발송", admin SmsIpsService 하나뿐·기부/주문 문자는 미이식
-- [수신동의 인코딩 두 갈래](receive-sms-encoding-split.md) — AS-IS 0/1인데 TO-BE가 Y/N과 0 혼용, 운영자화면 "비동의" 오표시·문자 누락
+- [수신동의 인코딩 통일(해소)](receive-sms-encoding-split.md) — AS-IS 0=수신/1=비수신으로 member 저장·읽기·가입 통일+기존 4명 변환(2026-10-15). 빈 값 61명은 그대로
 - [내 PC 설정변경은 푸시 금지](local-env-changes-never-pushed.md) — 공유 저장소. 추적파일은 skip-worktree(.vscode/settings.json 적용중), 무시규칙은 .git/info/exclude. git rm --cached 금지
 - [VS Code JDK 경로가 업데이트마다 깨짐](vscode-java-jdk-path-breaks-on-update.md) — Temurin 패치 시 폴더명 변경(.8→.101), 에디터만 죽고 빌드는 멀쩡. LS Clean 재시작 필요
 - [admin 공통코드 표가 둘(★해소됨)](admin-common-code-two-tables.md) — 2026-10-07 같은날 후속조율로 op_common_code 단일표 통합 확정, ADMIN_COMMON_CODE DROP. 과거 두표 상태는 기록으로 보존
@@ -140,3 +140,5 @@
 - [통계 전체(all) 화면 교정](admin-give-statistics-year-select-source.md) — ①년도 select는 YYYY 공통코드(데이터 있는 해만 뽑아 2026 하나뿐이었음) ②★차트 축은 서비스에서 빈 구간 0으로 채울 것(월 12·시 24) - 안 하면 0원인 날 그래프가 아예 안 그려짐
 - [주문 표 인덱스 누락](order-table-missing-indexes.md) — od_order·od_claim·od_claim_memo가 PK 하나뿐. 보강 DDL 작성했으나 ★동료 협의 전까지 .git/info/exclude로 로컬 보관(푸시 금지). 적용도 ord 테이블 owner가 postgres라 사용자가 psql -U postgres로 해야 함
 - [통계>관심지자체 재구현](admin-interest-locgov-port.md) — 이전 구현(텍스트검색·"전체연도"·발명된 막대그래프)을 AS-IS 사양(지자체2단select·페이징·요약카드2개+월별차트·엑셀)으로 전면교체. ★지자체담당자는 목록 자체를 못 보고 자기 지자체로 강제리다이렉트, 다른 지자체 상세 직접접근도 차단
+- [관리자 메인 AS-IS 재이식(10-15)](admin-main-dashboard-asis-port.md) — 발명 위젯 제거, 권한별(SYS/LOC/OFF) 위젯+5개 서비스 집계API+콜등록 팝업, 데이터는 버튼 눌러야 조회. REPORT_DASHBOARD 배치 미이식·/opmanager/dashboard 미이식·판매자 상태코드 혼재 기록
+- [판매자 상태코드 AS-IS 전환(10-15)](gift-seller-status-asis-codes.md) — 2=사용/3=중지/5=승인대기, TO-BE 발명 0/1/2반려와 충돌하던 것 코드·데이터 18곳 전환. 판매자 관리 화면 자체는 아직 발명 화면
