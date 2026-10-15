@@ -1,43 +1,176 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
     <title>연간통계 현황 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
+<!-- AS-IS opmanager/i18n/shop-statistics/report/year.jsp 이식.
+
+     ★ AS-IS 특징(그대로 옮김)
+     - 조회(검색) 버튼이 없다. 년도 + 시/도 + 시/군/구를 고르고 "엑셀"을 누르면 그 지자체의 연간 집계가 시트 8장으로 내려간다.
+       화면에 표시되는 데이터는 없다.
+     - 년도 select는 YYYY 공통코드 중 올해 이전(2022·2023 제외) - 올해 데이터는 매년 2월 28일 집계된다.
+     - 시/도를 고르면 options-by-lclgv(지자체 현황과 같은 URL)를 POST로 불러 시/군/구를 채운다. 이때 AS-IS는 tabId를 넘기지 않고
+       searchSigungu의 lclgv 인자가 undefined라 채운 뒤 시/군/구 select가 "빈 선택"이 된다 - 그대로라 값을 다시 골라야 한다.
+     - 엑셀 버튼: 시/도·시/군/구가 비어 있으면 안내 alert 후 중단. 지자체 담당자(ROLE_ADMIN_5/6)는 select 대신 소속 이름만 보이고
+       서버가 소속으로 고정한다(그래서 두 select가 없어도 검사를 통과).
+     - 월 select(#shMonth)가 이 화면에는 없어 monthChange는 년도를 바꿀 때 아무 일도 하지 않는다(AS-IS 그대로). nowYear 등 모델 값도
+       이 화면에는 안 담기므로 빈 문자열이다.
+     - 연통계집계-적재 버튼은 AS-IS가 주석처리해 둔 상태 - 켜지 않는다. -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <h3>연간통계 현황</h3>
-    <table class="board_list_table">
-        <thead>
-        <tr><th>연도</th><th>기부건수</th><th>기부금액</th><th>답례품건수</th></tr>
-        </thead>
-        <tbody>
-        <tr th:each="row : ${yearlyStats}">
-            <td th:text="${row.year()} + '년'"></td>
-            <td th:text="${row.donationCount()} + '건'"></td>
-            <td th:text="${#numbers.formatInteger(row.donationAmount(), 0, 'COMMA')} + '원'"></td>
-            <td th:text="${row.giftCount()} + '건'"></td>
-        </tr>
-        </tbody>
-    </table>
+
+<div class="statistics_web">
+	<h3><span>연간통계 현황</span></h3>
+	<form id="statisticsParam" method="post" th:action="@{/shop-statistics/report/year}">
+		<input type="hidden" id="tabId" name="tabId" th:value="${statisticsParam.tabId}"/>
+
+		<div class="board_write mt10">
+			<table class="board_write_table" summary="연간통계 현황">
+		            <colgroup>
+		                <col style="width:220px;">
+		                <col>
+		                <col style="width:220px;">
+		                <col>
+		            </colgroup>
+		            <tbody>
+		                <tr>
+		                    <td class="label">기간</td>
+		                    <td>
+		                        <div class="flex_box gap-08" style="align-items: center;">
+		                            <select id="shYear" name="shYear" title="년도" class="wd-150" th:attr="onchange=|monthChange(this.value, 0)|">
+										<option th:each="y : ${yyyy}" th:value="${y.key}" th:text="${y.value}"></option>
+		                            </select>
+		                            년
+		                        </div>
+		                    </td>
+		                    <td class="label">지자체</td>
+					        <td>
+					          <div class="flex_box gap-08" style="align-items: center;">
+		                        	<th:block th:unless="${scoped}">
+			                            <select id="shWdr" name="shWdr" title="광역지자체" class="wd-150" onchange="searchSigungu(this.value)">
+			                                <option value="">시,도</option>
+											<option th:each="data : ${mctpv}" th:value="${data.code()}" th:text="${data.name()}"></option>
+			                            </select>
+			                            <select id="shLocgovCode" name="shLocgovCode" title="지자체" class="wd-150">
+			                                <option value="">시,군,구</option>
+			                            </select>
+			                    	</th:block>
+		                        	<th:block th:if="${scoped}" th:text="${scopedName}"></th:block>
+		                        </div>
+					        </td>
+		                </tr>
+		            </tbody>
+		        </table>
+
+		</div> <!-- // board_write -->
+		<div class="btn_all btn_left">
+			<ul class="list-bullet point">
+		        <li>
+		            엑셀 버튼을 클릭하면 조건에 맞는 엑셀파일을 다운로드할 수 있습니다.
+		        </li>
+	        </ul>
+	  	</div>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<caption>매년 2월 28일 기준 집계 완료된 통계자료(작년)까지만 조회 가능합니다.</caption>
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="javascript:excelPastYearStatsStored()">엑셀</button>
+				<button type="button" class="btn btn-dark-gray btn-mini" th:attr="onclick=|location.href='@{/shop-statistics/report/year}'|"> 초기화</button>
+			</div>
+		</div>
+		<div class="btn_all btn_left">
+			<div class="flex_box gap-08">
+				<!-- AS-IS 주석처리: 연통계집계-적재 버튼 -->
+			</div>
+		</div>
+	</form>
+</div>
+
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
+
+<script type="text/javascript">
+	function excelPastYearStatsStored() {
+		if($("#shWdr").val() == "") {
+			alert("상위 지자체를 선택해 주세요.");
+			$("#shWdr").focus();
+			return false;
+		}
+		if($("#shLocgovCode").val() == "") {
+			alert("지자체을 선택해 주세요.");
+			$("#shLocgovCode").focus();
+			return false;
+		}
+		Shop.downloadExcelOrder("/shop-statistics/report/lclgv/excel-pastYearStatsStored", $('#statisticsParam').serialize(), false);
+	}
+
+	function monthChange(year, month) {
+		$("#shYear").val(year).prop("selected", true);
+		var nowYear = '';
+		var nowMonth = '';
+		var searchYear = '';
+		var searchMonth = '';
+		Common.loading.display = false;
+		$("#shMonth option").remove();
+		if ($("#shYear").val() != "") {
+			if(year == nowYear) {
+				for (var i = 1; i < parseInt(nowMonth); i++) {
+		            var options = '<option value="' + i + '">' + i + '</option>';
+		            $('#shMonth').append(options);
+		        }
+				if(year == searchYear) {
+					$("#shMonth").val(month).prop("selected", true);
+				} else {
+					$("#shMonth").val(parseInt(nowMonth)-1).prop("selected", true);
+				}
+			} else {
+				for (var i = 1; i <= 12; i++) {
+		            var options = '<option value="' + i + '">' + i + '</option>';
+		            $('#shMonth').append(options);
+		        }
+				if(year == searchYear) {
+					$("#shMonth").val(month).prop("selected", true);
+				} else {
+					$("#shMonth").val(12).prop("selected", true);
+				}
+			}
+		} else {
+	        $('#shMonth').append('<option value="">검색월</option>');
+		}
+	}
+
+	function searchSigungu(mctpv, lclgv, tabId) {
+		$("#shWdr").val(mctpv).prop("selected", true);
+		$("#shLocgovCode option").remove();
+		if ($("#shWdr").val() != "") {
+			$.post(url("/shop-statistics/report/lclgv/options-by-lclgv"), {'mctpv' : mctpv, 'tabId' : tabId}, function(response) {
+				$('#shLocgovCode').append('<option value="">시,군,구</option>');
+				for (var i = 0; i < response.length; i++) {
+		            var options = '<option value="' + response[i].lclgvCd + '">' + response[i].lclgvNm + '</option>';
+		            $('#shLocgovCode').append(options);
+		        }
+				$("#shLocgovCode").val(lclgv).prop("selected", true);
+		    });
+		} else {
+	        $('#shLocgovCode').append('<option value="">시,군,구</option>');
+		}
+	}
+
+	function statisticsYearBatch() {
+		uri = "/shop-statistics/report/general/statisticsYearBatch";
+		location.href = uri;
+	}
+</script>
+
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

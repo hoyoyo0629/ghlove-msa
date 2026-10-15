@@ -61,7 +61,7 @@ class Daily extends CommonReport {
   getDailyReport = async () => {
     loding('show');
 
-	let response = await fetch("/opmanager/shop-statistics/dashboard/day/report/daily/" + this.searchDate, {
+	let response = await fetch("/shop-statistics/dashboard/day/report/daily/" + this.searchDate, {
       method: "GET",
     });
 
@@ -185,7 +185,7 @@ class Week extends CommonReport {
 
   getWeekReport = async () => {
     loding('show');
-      let res = await fetch("/opmanager/shop-statistics/dashboard/day/report/daily/" + this.startDate +'/' +this.endDate, {
+      let res = await fetch("/shop-statistics/dashboard/day/report/daily/" + this.startDate +'/' +this.endDate, {
         method: "GET",
       });
       return await this.reportParsingWeek(this.endDate, await res.json());

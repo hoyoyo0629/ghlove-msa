@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 
 /**
  * AS-IS opmanager/shop-statistics의 "판매(sales)/대시보드/선호도" 스위트 재구현 (Tier B - report
- * 스위트는 {@link ReportStatisticsService}가 별개로 담당). admin은 order 서비스 DB를 직접 못 읽으므로
+ * 스위트는 ShopStatisticsReport*Controller/ShopStatisticsReportGeneralService가 별개로 담당). admin은 order 서비스 DB를 직접 못 읽으므로
  * (DB per Service) StatsService의 ReadModel(OrderLedger)과 gift/member의 크로스서비스 스냅샷을 조인한다.
  *
  * 이 프로젝트는 실결제(PG)가 아니라 전액 포인트 결제이므로 AS-IS의 "매출액(원)"은 전부 "포인트"로
@@ -384,28 +384,6 @@ public class ShopStatisticsTierBService {
     //         아직 쓰므로 남긴다).
 
 
-    public record DashboardDay(String date, long payCount, long payAmount, long cancelCount, long newUserCount) {
-    }
-
-    public DashboardDay dashboardDay(String date) {
-        String d = defaultEnd(date);
-        long payCount = 0, payAmount = 0, cancelCount = 0;
-        for (OrderLedger o : allOrders()) {
-            if (o.getCreatedDate() == null || !ymd(o.getCreatedDate()).equals(d)) {
-                continue;
-            }
-            if (isPay(o)) {
-                payCount++;
-                payAmount += amt(o);
-            } else if (isCancel(o)) {
-                cancelCount++;
-            }
-        }
-        long newUsers = memberClient.allForResync().stream()
-                .filter(m -> m.createdDate() != null && ymd(m.createdDate()).equals(d)).count();
-        return new DashboardDay(d, payCount, payAmount, cancelCount, newUsers);
-    }
-
     public record DashboardMonth(String yearMonth, List<PeriodStat> dailyBreakdown, long totalPayCount, long totalPayAmount) {
     }
 
@@ -424,17 +402,6 @@ public class ShopStatisticsTierBService {
     // ---- R. 대시보드 텍스트 리포트 (AS-IS opmanager/report - ReportController, part1 3b/B10).
     // 행안부 일일/주간보고용 - 이미 계산된 대시보드 데이터를 클립보드복사에 알맞은 정형 텍스트로
     // 포맷팅만 한다(별도 신규 데이터소스 없음). ----
-
-    public String dashboardDayReportText(DashboardDay d) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("[고향사랑e음 일일 현황 보고]\n");
-        sb.append("일자 : ").append(d.date()).append('\n');
-        sb.append("결제건수 : ").append(d.payCount()).append("건\n");
-        sb.append("결제포인트 : ").append(formatComma(d.payAmount())).append("P\n");
-        sb.append("취소건수 : ").append(d.cancelCount()).append("건\n");
-        sb.append("신규가입자수 : ").append(d.newUserCount()).append("명\n");
-        return sb.toString();
-    }
 
     public String dashboardMonthReportText(DashboardMonth d) {
         StringBuilder sb = new StringBuilder();

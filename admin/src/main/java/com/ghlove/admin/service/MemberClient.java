@@ -317,4 +317,22 @@ public class MemberClient {
     public record ChangeLog(Long changeLogId, Long userId, String loginId, String parameter,
                              String remoteAddr, String createdDate) {
     }
+
+    /** 통계 > 보고서 > 일일 현황보고 - 정상회원 수(누적/전체/기간 증가). 실패 시 null. */
+    public java.util.Map<String, Object> dailyUser(String searchDay, String startDay, String endDay) {
+        try {
+            return restClient.get()
+                    .uri(uriBuilder -> {
+                        var b = uriBuilder.path("/api/admin/report/daily-user").queryParam("searchDay", searchDay);
+                        if (startDay != null) {
+                            b.queryParam("startDay", startDay).queryParam("endDay", endDay);
+                        }
+                        return b.build();
+                    })
+                    .retrieve().body(new ParameterizedTypeReference<java.util.Map<String, Object>>() {
+                    });
+        } catch (RestClientException e) {
+            return null;
+        }
+    }
 }

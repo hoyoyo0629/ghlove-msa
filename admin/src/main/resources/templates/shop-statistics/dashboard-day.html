@@ -1,73 +1,246 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <title>일일 현황보고 - 고향사랑e음 (admin service)</title>
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
-    <title>일일 현황 보고 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
+<!-- AS-IS opmanager/i18n/shop-statistics/dashboard/day.jsp 이식.
+
+     ★ AS-IS 특징(그대로 옮김)
+     - 표 3개(총괄현황/기부현황/답례품현황)는 AS-IS도 값 칸이 전부 비어 있는 틀뿐이다(모델에 없는 ${total}을 읽는다).
+       "2024년/2023년"도 하드코딩. 그대로 비워 둔다.
+     - 이 화면의 실제 기능은 버튼이다: 초기화 / 검색(POST) / 엑셀(기준일 양식) / 행안부 일일보고 / 행안부 주간보고 /
+       복사. 일일·주간보고는 daily.report.js가 /report/daily/.. JSON을 받아 문안을 조립해 textarea에 넣는다.
+     - 종료일(endDate) input은 id="endDate" 여야 한다 - daily.report.js 생성자가 전역 endDate(= 그 input)를 읽는다
+       (AS-IS는 form:input이 id를 자동으로 붙여 줬다).
+     - AS-IS 검색 버튼의 onclick="fnSearch()"는 정의된 곳이 없는 함수라 AS-IS에서도 ReferenceError(제출은 그대로 됨) -
+       옮기지 않았다. -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <h3>일일 현황 보고</h3>
 
-    <form method="get" th:action="@{/shop-statistics/dashboard/day}" class="field" style="display:flex; gap:8px; align-items:center;">
-        <input type="text" name="date" th:value="${dashboard.date()}" placeholder="yyyyMMdd">
-        <button type="submit" class="btn">조회</button>
-    </form>
+<div class="statistics_web">
+	<h3><span>일자별 매출</span></h3>
+	<form id="statisticsParam" method="post" th:action="@{/shop-statistics/dashboard/day}">
+		<div class="board_write">
+			<table class="board_write_table" summary="일자별 매출">
+				<caption>일자별 매출</caption>
+				<colgroup>
+					<col style="width: 140px;">
+					<col style="width: auto;">
+				</colgroup>
+				<tbody>
+					<tr>
+						<td class="label">기간</td>
+						<td>
+					 		<div>
+								<span class="datepicker"><input type="text" id="dp28" name="startDate" class="term datepicker" title="시작일"
+										th:value="${statisticsParam.startDate}"/></span>
+								<span class="datepicker" style="display:none;"><input type="text" id="endDate" name="endDate" class="datepicker" maxlength="6" title="정산일자 종료일"
+										th:value="${statisticsParam.endDate}"/></span>
+								<span class="day_btns">
+									<a href="javascript:;" class="btn_date today">오늘</a>
+									<a href="javascript:;" class="btn_date week-1">1주일</a>
+									<a href="javascript:;" class="btn_date day-15">15일</a>
+									<a href="javascript:;" class="btn_date month-1">한달</a>
+									<a href="javascript:;" class="btn_date month-3">3개월</a>
+									<a href="javascript:;" class="btn_date year-1">1년</a>
+								</span>
+							</div>
+				 		</td>
+					</tr>
+					<!-- AS-IS 주석처리: 판매자 select + [검색] 팝업 -->
+				</tbody>
+			</table>
 
-    <table class="board_list_table">
-        <tbody>
-        <tr><th style="width:200px;">일자</th><td th:text="${dashboard.date()}"></td></tr>
-        <tr><th>결제건수</th><td th:text="${dashboard.payCount()} + '건'"></td></tr>
-        <tr><th>결제포인트</th><td th:text="${#numbers.formatInteger(dashboard.payAmount(), 0, 'COMMA')} + 'P'"></td></tr>
-        <tr><th>취소건수</th><td th:text="${dashboard.cancelCount()} + '건'"></td></tr>
-        <tr><th>신규가입자수</th><td th:text="${dashboard.newUserCount()} + '명'"></td></tr>
-        </tbody>
-    </table>
+		</div> <!-- // board_write -->
 
-    <h4 style="margin-top:20px;">행안부 보고용 텍스트</h4>
-    <p>
-        <button type="button" class="btn" id="loadReportBtn">텍스트 생성</button>
-        <button type="button" class="btn" id="copyReportBtn" disabled>클립보드 복사</button>
-        <span id="copyStatus" style="color:#1a6b3c; margin-left:8px;"></span>
-    </p>
-    <textarea id="reportText" rows="8" style="width:100%; max-width:600px;" readonly></textarea>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08" style="align-items: center;">
+				<button type="button" class="btn btn-dark-gray btn-mini" th:attr="onclick=|location.href='@{/shop-statistics/dashboard/day}'|"> 초기화</button>
+				<button type="submit" class="btn btn-dark-gray btn-mini"> 검색</button>
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="javascript:excelDownload();">엑셀</button>
+				<span class="datepicker"><input type="text" class="term datepicker" id="report-searchdate"/></span>
+				<button type="button" class="btn btn-dark-gray btn-mini" id="daily-report">행안부 일일보고</button>
+				<button type="button" class="btn btn-dark-gray btn-mini" id="week-report">행안부 주간보고</button>
+			</div>
+		</div>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08" style="align-items: center;">
+				<span style="color:red;">*일일보고: 지정한 날짜 기준 / 주간보고: 지정한 날짜 부터 -6일 사이 기준</span>
+			</div>
+		</div>
+	</form>
+	<style>
+		textarea {
+			width: 50%;
+			height: 400px;
+			padding: 10px;
+			box-sizing: border-box;
+			border: solid 2px #1E90FF;
+			border-radius: 5px;
+			resize: both;
+			margin-top: 15px;
+		}
+	</style>
+<textarea id="daily-report-area" >
+	</textarea>
+<button type="button" class="btn btn-dark-gray btn-mini" id="daily-report-copy">복사</button>
+	<div class="sort_area mt30">
+		<div class="left">
+			<span>총 건수 : <span class="font_b"></span>건 (결제건수 : 건, 취소/반품 : 건)</span> | <span>총 매출합계 : <span class="font_b"></span>원</span>
+		</div>
+	</div>
 
-    <script th:inline="javascript">
-        /*<![CDATA[*/
-        var reportUrl = /*[[@{/shop-statistics/dashboard/day/report(date=${dashboard.date()})}]]*/ '';
-        document.getElementById('loadReportBtn').addEventListener('click', function () {
-            fetch(reportUrl).then(function (res) { return res.text(); }).then(function (text) {
-                document.getElementById('reportText').value = text;
-                document.getElementById('copyReportBtn').disabled = false;
-                document.getElementById('copyStatus').textContent = '';
-            });
-        });
-        document.getElementById('copyReportBtn').addEventListener('click', function () {
-            var el = document.getElementById('reportText');
-            el.select();
-            navigator.clipboard.writeText(el.value).then(function () {
-                document.getElementById('copyStatus').textContent = '복사되었습니다.';
-            });
-        });
-        /*]]>*/
-    </script>
+	<div class="board_list">
+
+		<table class="board_list_table stats odd-even">
+			<thead>
+				<tr>
+					<th colspan="5">총괄현황</th>
+				</tr>
+				<tr>
+					<th colspan="2">구 분</th>
+					<th></th> <!-- 날짜 -->
+					<th>전일 대비</th>
+					<th>전년동일<br>대비(누적)비고</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td colspan="2">회원 수</td>
+					<td class="number"></td>
+					<td class="number"></td>
+					<td class="number"></td>
+				</tr>
+				<tr>
+					<td rowspan="2">기부</td>
+					<td>기부건수</td>
+					<td class="number"></td>
+					<td class="number"></td>
+					<td class="number"></td>
+				</tr>
+				<tr>
+					<td style="border-left:1px solid #d5d5d5;">기부금액</td>
+					<td class="number"></td>
+					<td class="number"></td>
+					<td class="number"></td>
+				</tr>
+				<tr>
+					<td rowspan="3">답례품</td>
+					<td>등록건수</td>
+					<td class="number"></td>
+					<td class="number"></td>
+					<td class="number"></td>
+				</tr>
+				<tr>
+					<td style="border-left:1px solid #d5d5d5;">신청건수</td>
+					<td class="number"></td>
+					<td class="number"></td>
+					<td class="number"></td>
+				</tr>
+				<tr>
+					<td style="border-left:1px solid #d5d5d5;">판매액</td>
+					<td class="number"></td>
+					<td class="number"></td>
+					<td class="number"></td>
+				</tr>
+			</tbody>
+		</table>
+
+		<table class="board_list_table stats odd-even">
+			<thead>
+				<tr>
+					<th colspan="5">기부현황</th>
+				</tr>
+				<tr>
+					<th rowspan="2">구 분</th>
+					<th colspan="2">2024년</th>
+					<th colspan="2">2023년</th>
+				</tr>
+				<tr>
+					<th style="border-left:1px solid #d5d5d5;"></th> <!-- 날짜 -->
+					<th>누계</th>
+					<th></th> <!-- 날짜 -->
+					<th>누계</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr><td>금액 계</td><td class="number"></td><td class="number"></td><td class="number"></td><td class="number"></td></tr>
+				<tr><td>온라인</td><td class="number"></td><td class="number"></td><td class="number"></td><td class="number"></td></tr>
+				<tr><td>오프라인</td><td class="number"></td><td class="number"></td><td class="number"></td><td class="number"></td></tr>
+				<tr><td>건수 계</td><td class="number"></td><td class="number"></td><td class="number"></td><td class="number"></td></tr>
+				<tr><td>온라인</td><td class="number"></td><td class="number"></td><td class="number"></td><td class="number"></td></tr>
+				<tr><td>오프라인</td><td class="number"></td><td class="number"></td><td class="number"></td><td class="number"></td></tr>
+			</tbody>
+		</table>
+
+		<table class="board_list_table stats odd-even">
+			<thead>
+				<tr>
+					<th colspan="5">답례품현황</th>
+				</tr>
+				<tr>
+					<th rowspan="2">구 분</th>
+					<th colspan="2">2024년</th>
+					<th colspan="2">2023년</th>
+				</tr>
+				<tr>
+					<th style="border-left:1px solid #d5d5d5;"></th> <!-- 날짜 -->
+					<th>누계</th>
+					<th></th> <!-- 날짜 -->
+					<th>누계</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr><td>등록건수</td><td class="number"></td><td class="number"></td><td class="number"></td><td class="number"></td></tr>
+				<tr><td>신청건수</td><td class="number"></td><td class="number"></td><td class="number"></td><td class="number"></td></tr>
+				<tr><td>총 판매액</td><td class="number"></td><td class="number"></td><td class="number"></td><td class="number"></td></tr>
+			</tbody>
+		</table>
+
+		<!-- AS-IS: sec:authorize hasRole('ROLE_EXCEL') 엑셀 다운로드 링크(판매자 전용이라 운영자 화면에는 안 보임) -->
+	</div>
+	<div class="graph_wrap">
+	    <div class="bd_gray mb15">
+	        <h4 style="margin-bottom: 20px; font-size: 20px; font-weight: bold; text-align:center;">금액별</h4>
+	        <div class="graph">
+	            <canvas id="amountBarChart"></canvas>
+	        </div>
+	    </div>
+	    <div class="bd_gray mb15">
+	        <h4 style="margin-bottom: 20px; font-size: 20px; font-weight: bold; text-align:center;">건수별</h4>
+	        <div class="graph">
+	            <canvas id="countBarChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
+
+<script type="text/javascript" th:src="@{/content/modules/clipboard.min.js}"></script>
+<script type="text/javascript" th:src="@{/content/modules/report/daily.report.js}"></script>
+<script type="text/javascript">
+	$(function(){
+		Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="startDate"]' , 'input[name="endDate"]');
+	});
+
+	function excelDownload() {
+		let startDate = document.getElementById('dp28').value;
+		Shop.downloadExcelOrder("/shop-statistics/dashboard/day/list-excel", startDate, false);
+	}
+</script>
+
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

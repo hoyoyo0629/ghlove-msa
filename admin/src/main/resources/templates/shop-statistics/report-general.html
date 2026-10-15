@@ -1,83 +1,374 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
     <title>총괄 현황 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
+<!-- AS-IS opmanager/i18n/shop-statistics/report/general.jsp 이식.
+
+     ★ AS-IS 특징(그대로 옮김)
+     - 표 4개(회원 수 / 기부건수 / 기부건수(2000만원) / 답례품건수)를 한 페이지에 다 그려 두고 탭 버튼 4개가
+       보이는 표만 바꾼다. 선택 탭은 hidden tabId로 검색 때 같이 간다. 첫 진입(GET)은 표를 비워 두고 검색(POST)에서 채운다.
+     - 기간은 년도 select 하나(월 select는 display:none 으로 숨김 - 직전월까지만 조회 가능). 월은 JS(monthChange)가
+       년도에 맞춰 채운다(올해면 1월~직전월, 지난해면 1~12월).
+     - "엑셀" 버튼은 이 화면 자체가 아니라 report/lclgv/excel-download(14개 시트 통합 파일)를 부른다.
+     - 연령배치/통계배치/연통계 버튼은 AS-IS가 주석처리해 둔 상태 - 켜지 않는다.
+     - 검색 버튼의 onclick="search()"는 정의된 곳이 없는 함수라 AS-IS에서도 ReferenceError(제출은 그대로 됨) - 옮기지 않았다.
+     - 표의 값은 AS-IS 통계 배치가 적재해 둔 사전집계 표(MBR_TNOCS_STATS 등)를 읽는다. -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <h3>총괄 현황</h3>
-    <form method="get" style="margin-bottom:16px;">
-        <label>연도 <input type="number" name="year" th:value="${year}" style="width:90px;"></label>
-        <button type="submit" class="small-btn">조회</button>
-    </form>
 
-    <h4 style="font-size:16px;">회원 수 현황 (월별 신규가입)</h4>
-    <table class="board_list_table" style="margin-bottom:24px;">
-        <thead><tr><th>월</th><th th:text="${year} + '년'"></th><th>전년 동월</th></tr></thead>
-        <tbody>
-        <tr th:each="row : ${memberCounts}">
-            <td th:text="${row.month()} + '월'"></td>
-            <td th:text="${row.currentYear()} + '명'"></td>
-            <td th:text="${row.priorYear()} + '명'"></td>
-        </tr>
-        </tbody>
-    </table>
+<div class="statistics_web">
+	<h3><span>총괄 현황</span></h3>
+	<form id="statisticsParam" method="post" th:action="@{/shop-statistics/report/general}">
+		<input type="hidden" id="tabId" name="tabId" th:value="${statisticsParam.tabId}"/>
 
-    <h4 style="font-size:16px;">기부건수 현황</h4>
-    <table class="board_list_table" style="margin-bottom:24px;">
-        <thead><tr><th>월</th><th th:text="${year} + '년'"></th><th>전년 동월</th></tr></thead>
-        <tbody>
-        <tr th:each="row : ${donationCounts}">
-            <td th:text="${row.month()} + '월'"></td>
-            <td th:text="${row.currentYear()} + '건'"></td>
-            <td th:text="${row.priorYear()} + '건'"></td>
-        </tr>
-        </tbody>
-    </table>
+		<div class="board_write mt10">
+			<table class="board_write_table" summary="총괄 현황">
+		            <colgroup>
+		                <col style="width:220px;">
+		                <col>
+		                <col style="width:220px;">
+		                <col>
+		            </colgroup>
+		            <tbody>
+		                <tr>
+		                    <td class="label">기간</td>
+		                    <td>
+		                        <div class="flex_box gap-08" style="align-items: center;">
+		                            <select id="shYear" name="shYear" title="년도" class="wd-150" th:attr="onchange=|monthChange(this.value, ${statisticsParam.shMonth})|">
+										<option th:each="data : ${crtrYear}" th:value="${data}" th:text="${data}"></option>
+		                            </select>
+		                            년
+		                            <select id="shMonth" name="shMonth" title="월" class="wd-150" style="display:none">
+										<th:block th:each="i : ${#numbers.sequence(1, 12)}">
+											<option th:if="${i &lt; nowMonth}" th:value="${i}" th:text="${i}"></option>
+										</th:block>
+		                            </select>
+		                            <!-- 월 -->
+		                        </div>
+		                    </td>
+		                </tr>
+		            </tbody>
+		        </table>
 
-    <h4 style="font-size:16px;">기부건수(2,000만원 한도내) 현황</h4>
-    <!-- 고향사랑기부금법상 연간 개인 기부한도(2천만원)를 인정한 건수만 - SYSTEM_CONFIG.ANNUAL_TOTAL_LIMIT -->
-    <table class="board_list_table" style="margin-bottom:24px;">
-        <thead><tr><th>월</th><th th:text="${year} + '년'"></th><th>전년 동월</th></tr></thead>
-        <tbody>
-        <tr th:each="row : ${donationCountsCapped}">
-            <td th:text="${row.month()} + '월'"></td>
-            <td th:text="${row.currentYear()} + '건'"></td>
-            <td th:text="${row.priorYear()} + '건'"></td>
-        </tr>
-        </tbody>
-    </table>
+		</div> <!-- // board_write -->
+		<div class="btn_all btn_left">
+			<ul class="list-bullet point">
+		        <li>
+		            검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.
+		        </li>
+	        </ul>
+	  	</div>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<caption>현재 날짜 기준 집계 완료된 통계자료(직전월)까지만 조회 가능합니다.</caption>
+				<button type="submit" class="btn btn-dark-gray btn-mini"> 검색</button>
+				<button type="button" class="btn btn-dark-gray btn-mini" th:attr="onclick=|location.href='@{/shop-statistics/report/general}'|"> 초기화</button>
+			</div>
+		</div>
+	</form>
 
-    <h4 style="font-size:16px;">답례품건수 현황</h4>
-    <table class="board_list_table">
-        <thead><tr><th>월</th><th th:text="${year} + '년'"></th><th>전년 동월</th></tr></thead>
-        <tbody>
-        <tr th:each="row : ${giftCounts}">
-            <td th:text="${row.month()} + '월'"></td>
-            <td th:text="${row.currentYear()} + '건'"></td>
-            <td th:text="${row.priorYear()} + '건'"></td>
-        </tr>
-        </tbody>
-    </table>
+	<div class="board_list">
+		<div class="btn_all btn_left">
+			<div class="flex_box gap-08">
+				<button type="button" id="btn_tab1" class="btn btn-dark-gray btn-mini">회원 수 현황</button>
+				<button type="button" id="btn_tab2"  class="btn btn-dark-gray btn-mini">기부건수 현황</button>
+				<button type="button" id="btn_tab3"  class="btn btn-dark-gray btn-mini">기부건수(2000만원) 현황</button>
+				<button type="button" id="btn_tab4"  class="btn btn-dark-gray btn-mini">답례품건수 현황</button>
+			</div>
+		</div>
+
+		<div id="divCaptionForMbr" class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<caption>(단위: 명)</caption>
+			</div>
+		</div>
+		<div id="tbMbrTnocsStats">
+			<table class="board_list_table" summary="총 회원수 현황">
+				<thead>
+					<tr>
+						<th th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth)}" scope="col" th:id="'th_mts_' + ${i}" th:text="${i} + '월'"></th>
+						<th scope="col">합계</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="list : ${mbrTnocsStats}" style="background:#fff;">
+						<td th:each="c, st : ${list.cells()}" th:id="${st.index &lt; st.size - 1} ? 'td_mts_' + ${st.index + 1}" th:text="${c}"></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<div id="divCaptionForDntn" class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<caption>(단위: 건, %)</caption>
+			</div>
+		</div>
+		<div id="tbDntnTnocsStats" style="overflow-x:auto;">
+			<table class="board_list_table" style="width:max-content;min-width:100%" summary="총 기부건수 현황">
+				<colgroup>
+					<col width="200px" />
+					<col width="100px" />
+					<col width="100px" />
+					<col th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth * 3)}" width="100px" />
+				</colgroup>
+				<thead>
+					<tr style="position:relative;">
+						<th class="stickyColumn" scope="col">시/도</th>
+						<th scope="col">올해 총계</th>
+						<th scope="col">전년도</th>
+						<th:block th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth)}">
+								<th th:id="'th_dts_now_yr_' + ${i}" scope="col" th:text="${i} + '월'"></th>
+								<th th:id="'th_dts_prvyr_' + ${i}" scope="col" th:text="'전년도 ' + ${i} + '월'"></th>
+								<th th:id="'th_dts_rt_' + ${i}" scope="col">전년대비</th>
+						</th:block>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="list : ${dntnTnocsStats}" style="background:#fff; position:relative;">
+						<td class="stickyColumn" th:text="${list.name()}"></td>
+						<td th:each="c : ${list.cells()}" th:text="${c}"></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<div id="divCaptionForGds" class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<caption>(단위: 건, %)</caption>
+			</div>
+		</div>
+		<div id="tbGdsTnocsStats" style="overflow-x:auto;">
+			<table class="board_list_table" style="width:max-content;min-width:100%" summary="총 답례품건수 현황">
+				<colgroup>
+					<col width="200px" />
+					<col width="100px" />
+					<col width="100px" />
+					<col th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth * 3)}" width="100px" />
+				</colgroup>
+				<thead>
+					<tr style="position:relative;">
+						<th class="stickyColumn" scope="col">시/도</th>
+						<th scope="col">올해 총계</th>
+						<th scope="col">전년도</th>
+						<th:block th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth)}">
+								<th th:id="'th_dts_now_yr_' + ${i}" scope="col" th:text="${i} + '월'"></th>
+								<th th:id="'th_dts_prvyr_' + ${i}" scope="col" th:text="'전년도 ' + ${i} + '월'"></th>
+								<th th:id="'th_dts_rt_' + ${i}" scope="col">전년대비</th>
+						</th:block>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="list : ${gdsTnocsStats}" style="background:#fff; position:relative;">
+						<td class="stickyColumn" th:text="${list.name()}"></td>
+						<td th:each="c : ${list.cells()}" th:text="${c}"></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<div id="divCaptionForDntnMaxAmt" class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<caption>(단위: 건, %)</caption>
+			</div>
+		</div>
+		<div id="tbDntnTnocsMaxAmtStats" style="overflow-x:auto;">
+			<table class="board_list_table" style="width:max-content;min-width:100%" summary="총 기부건수(2000만원) 현황">
+				<colgroup>
+					<col width="200px" />
+					<col width="100px" />
+					<col width="100px" />
+					<col th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth * 3)}" width="100px" />
+				</colgroup>
+				<thead>
+					<tr style="position:relative;">
+						<th class="stickyColumn" scope="col">시/도</th>
+						<th scope="col">올해 총계</th>
+						<th scope="col">전년도</th>
+						<th:block th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth)}">
+								<th th:id="'th_dts_now_yr_' + ${i}" scope="col" th:text="${i} + '월'"></th>
+								<th th:id="'th_dts_prvyr_' + ${i}" scope="col" th:text="'전년도 ' + ${i} + '월'"></th>
+								<th th:id="'th_dts_rt_' + ${i}" scope="col">전년대비</th>
+						</th:block>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="list : ${dntnTnocsMaxAmtStats}" style="background:#fff; position:relative;">
+						<td class="stickyColumn" th:text="${list.name()}"></td>
+						<td th:each="c : ${list.cells()}" th:text="${c}"></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<!-- 엑셀버튼 -->
+		<div class="btn_all btn_left">
+			<div class="flex_box gap-08">
+				<!-- AS-IS 주석처리: 연령배치 / 통계배치 / 연통계 버튼 -->
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="excelDownload();">엑셀</button>
+			</div>
+		</div>
+	</div>
+</div>
+
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
+
+<!-- AS-IS JSP가 EL로 문자열에 끼워 넣던 값들(현재 년월·검색 년월·탭·탭별 기준년) - 인라인 JS에 직접 쓰지 않고 data 속성으로 넘긴다 -->
+<div id="rptData" style="display:none"
+     th:attr="data-now-year=${nowYear}, data-now-month=${nowMonth}, data-search-year=${statisticsParam.shYear}, data-search-month=${statisticsParam.shMonth}, data-tab=${tabId}"
+     th:with="mbrLast=${#lists.isEmpty(mbrTnocsStats) ? '' : mbrTnocsStats[#lists.size(mbrTnocsStats) - 1].crtrYr()},
+              maxLast=${#lists.isEmpty(dntnTnocsMaxAmtStats) ? '' : dntnTnocsMaxAmtStats[#lists.size(dntnTnocsMaxAmtStats) - 1].crtrYr()},
+              gdsLast=${#lists.isEmpty(gdsTnocsStats) ? '' : gdsTnocsStats[#lists.size(gdsTnocsStats) - 1].crtrYr()}">
+    <span id="rptMbrYr" th:text="${mbrLast}"></span>
+    <span id="rptMaxYr" th:text="${maxLast}"></span>
+    <span id="rptGdsYr" th:text="${gdsLast}"></span>
+</div>
+
+<script type="text/javascript" th:src="@{/content/modules/op.chart.js}"></script>
+<script type="text/javascript">
+	function excelDownload() {
+		Shop.downloadExcelOrder("/shop-statistics/report/lclgv/excel-download", $('#statisticsParam').serialize(), false);
+	}
+
+	function excelLastYearDownload() {
+		var selYear = $("#shYear").val();
+		var nowYear = $('#rptData').attr('data-now-year');
+		if(selYear == nowYear){
+			alert(nowYear + "년도에서 과거년도 통계를 제공합니다.");
+			$("#shYear").val(nowYear-1).prop("selected", true);
+			return;
+		}
+		Shop.downloadExcelOrder("/shop-statistics/report/lclgv/excel-pastYear-download", $('#statisticsParam').serialize(), false);
+	}
+
+	function birthdayBatch() {
+		uri = "/shop-statistics/report/general/birthdayBatch";
+		location.href = uri;
+	}
+
+	function statisticsBatch() {
+		uri = "/shop-statistics/report/general/statisticsBatch";
+		location.href = uri;
+	}
+
+	/* 탭 버튼: 표 4개 중 하나만 보이게(다른 표와 단위 캡션은 숨김) + 선택 탭 버튼 색(#00215A, 나머지 #004CCE) */
+	function showTab(n) {
+		var tables = ["tbMbrTnocsStats", "tbDntnTnocsStats", "tbDntnTnocsMaxAmtStats", "tbGdsTnocsStats"];
+		var captions = ["divCaptionForMbr", "divCaptionForDntn", "divCaptionForDntnMaxAmt", "divCaptionForGds"];
+		for (var i = 0; i < 4; i++) {
+			document.getElementById(tables[i]).style.display = (i + 1 == n) ? "" : "none";
+			document.getElementById(captions[i]).style.display = (i + 1 == n) ? "" : "none";
+			document.getElementById("btn_tab" + (i + 1)).setAttribute("style", "background-color:" + ((i + 1 == n) ? "#00215A" : "#004CCE"));
+		}
+	}
+
+	/* AS-IS는 탭마다 "응답 목록 중 마지막 행의 기준년"을 crtrYr로 쓴다(탭1·2 회원수, 3 2000만원, 4 답례품). 목록이 비어 있으면 undefined. */
+	function crtrYrOf(spanId) {
+		var v = $.trim($("#" + spanId).text());
+		/* 조회된 행이 없으면(첫 진입·데이터 없는 달) 서버가 정해 준 기본/검색 년도(직전월의 년)를 그대로 선택한다 */
+		return v === "" ? $('#rptData').attr('data-search-year') : v;
+	}
+
+	$("#btn_tab1").click(function() {
+		showTab(1);
+		var crtrYr = crtrYrOf("rptMbrYr");
+		var crtrMm = $('#rptData').attr('data-search-month');
+		var tabId = "1";
+		$('#tabId').val(tabId);
+		monthChange(crtrYr, crtrMm);
+	})
+
+	$("#btn_tab2").click(function() {
+		showTab(2);
+		var crtrYr = crtrYrOf("rptMbrYr");
+		var crtrMm = $('#rptData').attr('data-search-month');
+		var tabId = "2";
+		$('#tabId').val(tabId);
+		monthChange(crtrYr, crtrMm);
+	})
+
+	$("#btn_tab3").click(function() {
+		showTab(3);
+		var crtrYr = crtrYrOf("rptMaxYr");
+		var crtrMm = $('#rptData').attr('data-search-month');
+		var tabId = "3";
+		$('#tabId').val(tabId);
+		monthChange(crtrYr, crtrMm);
+	})
+
+	$("#btn_tab4").click(function() {
+		showTab(4);
+		var crtrYr = crtrYrOf("rptGdsYr");
+		var crtrMm = $('#rptData').attr('data-search-month');
+		console.log("crtrYr : " + crtrYr + " ,crtrMm : " + crtrMm);
+		var tabId = "4";
+		$('#tabId').val(tabId);
+		monthChange(crtrYr, crtrMm);
+	})
+
+	document.addEventListener("DOMContentLoaded", function(){
+		var tabVal = $('#rptData').attr('data-tab');
+		if(tabVal == "1") {
+			$("#btn_tab1").trigger("click");
+		} else if(tabVal == "2") {
+			$("#btn_tab2").trigger("click");
+		} else if(tabVal == "3") {
+			$("#btn_tab3").trigger("click");
+		} else {
+			$("#btn_tab4").trigger("click");
+		}
+	});
+
+	function monthChange(year, month) {
+		$("#shYear").val(year).prop("selected", true);
+		var nowYear = $('#rptData').attr('data-now-year');
+		var nowMonth = $('#rptData').attr('data-now-month');
+		var searchYear = $('#rptData').attr('data-search-year');
+		var searchMonth = $('#rptData').attr('data-search-month');
+
+		Common.loading.display = false;
+		$("#shMonth option").remove();
+		if ($("#shYear").val() != "") {
+			if(year == nowYear) {
+				for (var i = 1; i < parseInt(nowMonth); i++) {
+		            var options = '<option value="' + i + '">' + i + '</option>';
+		            $('#shMonth').append(options);
+		        }
+				if(year == searchYear) {
+					$("#shMonth").val(month).prop("selected", true);
+				} else {
+					$("#shMonth").val(parseInt(nowMonth)-1).prop("selected", true);
+				}
+			} else {
+				for (var i = 1; i <= 12; i++) {
+		            var options = '<option value="' + i + '">' + i + '</option>';
+		            $('#shMonth').append(options);
+		        }
+				if(year == searchYear) {
+					$("#shMonth").val(month).prop("selected", true);
+				} else {
+					$("#shMonth").val(12).prop("selected", true);
+				}
+			}
+		} else {
+	        $('#shMonth').append('<option value="">검색월</option>');
+		}
+	}
+
+	monthChange($("#shYear").val(), "");//안보이는 달 셋팅해줘야함
+</script>
+
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>지자체별 현황 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/shop-statistics/report/mctpv.jsp 이식. 총괄 현황(report-general.html)과 같은 틀.
+
+     ★ AS-IS 특징(그대로 옮김)
+     - 표 3개(지자체별 기부금 현황(누계) / 2000만원 누계 / 지자체별 답례품 제공현황)를 한 페이지에 다 그려 두고 탭 버튼 3개가
+       보이는 표를 바꾼다. 첫 진입(GET)은 표를 비워 두고 검색(POST)에서 채운다. 기본 탭은 3번(1·2번이 아니면 3번).
+     - 년도 select와 월 select가 둘 다 보인다(월은 년도에 맞춰 JS monthChange가 채운다 - 올해면 1월~직전월).
+     - 세 표 모두 단위 캡션이 "(단위: 백만원, %)"(답례품 표도 그렇다). 값은 원 단위를 백만원으로 반올림한 값.
+     - 2000만원 탭만 값 0과 전년대비 '0'을 "-"로 찍는다(다른 두 탭은 0 그대로).
+     - 탭 전환 JS의 crtrYr은 세 탭 모두 "기부금 누계 표 목록의 마지막 행 기준년"이다.
+     - "엑셀" 버튼은 report/lclgv/excel-download(총괄 현황과 같은 14개 시트 파일)를 부른다.
+     - 검색 버튼의 onclick="search()"는 정의된 곳이 없는 함수라 AS-IS에서도 ReferenceError(제출은 그대로 됨) - 옮기지 않았다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<div class="statistics_web">
+	<h3><span>지자체별 현황</span></h3>
+	<form id="statisticsParam" method="post" th:action="@{/shop-statistics/report/mctpv}">
+		<input type="hidden" id="tabId" name="tabId" th:value="${statisticsParam.tabId}"/>
+
+		<div class="board_write mt10">
+			<table class="board_write_table" summary="지자체별 현황">
+		            <colgroup>
+		                <col style="width:220px;">
+		                <col>
+		                <col style="width:220px;">
+		                <col>
+		            </colgroup>
+		            <tbody>
+		                <tr>
+		                    <td class="label">기간</td>
+		                    <td>
+		                        <div class="flex_box gap-08" style="align-items: center;">
+		                            <select id="shYear" name="shYear" title="년도" class="wd-150" th:attr="onchange=|monthChange(this.value, ${statisticsParam.shMonth})|">
+										<option th:each="data : ${crtrYear}" th:value="${data}" th:text="${data}"></option>
+		                            </select>
+		                            년
+		                            <select id="shMonth" name="shMonth" title="월" class="wd-150">
+										<th:block th:each="i : ${#numbers.sequence(1, 12)}">
+											<option th:if="${i &lt; nowMonth}" th:value="${i}" th:text="${i}" th:selected="${i == statisticsParam.shMonth}"></option>
+										</th:block>
+		                            </select>
+		                            월
+		                        </div>
+		                    </td>
+		                </tr>
+		            </tbody>
+		        </table>
+
+		</div> <!-- // board_write -->
+		<div class="btn_all btn_left">
+			<ul class="list-bullet point">
+		        <li>
+		            검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.
+		        </li>
+	        </ul>
+	  	</div>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<caption>현재 날짜 기준 집계 완료된 통계자료(직전월)까지만 조회 가능합니다.</caption>
+				<button type="submit" class="btn btn-dark-gray btn-mini"> 검색</button>
+				<button type="button" class="btn btn-dark-gray btn-mini" th:attr="onclick=|location.href='@{/shop-statistics/report/mctpv}'|"> 초기화</button>
+			</div>
+		</div>
+	</form>
+
+	<div class="board_list">
+		<div class="btn_all btn_left">
+			<div class="flex_box gap-08">
+				<button type="button" id="btn_tab1" class="btn btn-dark-gray btn-mini">지자체별 기부금 현황(누계)</button>
+				<button type="button" id="btn_tab2"  class="btn btn-dark-gray btn-mini">지자체별 기부금 현황(2000만원, 누계)</button>
+				<button type="button" id="btn_tab3"  class="btn btn-dark-gray btn-mini">지자체별 답례품 제공현황</button>
+			</div>
+		</div>
+
+		<div id="divCaptionForMctpvDntn" class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<caption>(단위: 백만원, %)</caption>
+			</div>
+		</div>
+		<div id="tbMctpvDntnStats" style="overflow-x:auto;">
+			<table class="board_list_table" style="width:max-content;min-width:100%" summary="총 기부건수 현황">
+				<colgroup>
+					<col width="200px" />
+					<col th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth * 3)}" width="100px" />
+				</colgroup>
+				<thead>
+					<tr style="position:relative;">
+						<th class="stickyColumn" scope="col">시/도</th>
+						<th:block th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth)}">
+								<th th:id="'th_dts_now_yr_' + ${i}" scope="col" th:text="${i} + '월'"></th>
+								<th th:id="'th_dts_prvyr_' + ${i}" scope="col" th:text="'전년도 ' + ${i} + '월'"></th>
+								<th th:id="'th_dts_rt_' + ${i}" scope="col">전년대비</th>
+						</th:block>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="list : ${mctpvDntnStats}" style="background:#fff; position:relative;">
+						<td class="stickyColumn" th:text="${list.name()}"></td>
+						<td th:each="c : ${list.cells()}" th:text="${c}"></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<div id="divCaptionForMctpvDntnMax" class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<caption>(단위: 백만원, %)</caption>
+			</div>
+		</div>
+		<div id="tbMctpvDntnMaxStats" style="overflow-x:auto;">
+			<table class="board_list_table" style="width:max-content;min-width:100%" summary="총 기부건수 현황">
+				<colgroup>
+					<col width="200px" />
+					<col th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth * 3)}" width="100px" />
+				</colgroup>
+				<thead>
+					<tr style="position:relative;">
+						<th class="stickyColumn" scope="col">시/도</th>
+						<th:block th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth)}">
+								<th th:id="'th_dts_now_yr_' + ${i}" scope="col" th:text="${i} + '월'"></th>
+								<th th:id="'th_dts_prvyr_' + ${i}" scope="col" th:text="'전년도 ' + ${i} + '월'"></th>
+								<th th:id="'th_dts_rt_' + ${i}" scope="col">전년대비</th>
+						</th:block>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="list : ${mctpvDntnMaxAmtStats}" style="background:#fff; position:relative;">
+						<td class="stickyColumn" th:text="${list.name()}"></td>
+						<td th:each="c : ${list.cells()}" th:text="${c}"></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<div id="divCaptionForMctpvGds" class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<caption>(단위: 백만원, %)</caption>
+			</div>
+		</div>
+		<div id="tbMctpvGdsStats" style="overflow-x:auto;">
+			<table class="board_list_table" style="width:max-content;min-width:100%" summary="총 기부건수 현황">
+				<colgroup>
+					<col width="200px" />
+					<col th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth * 3)}" width="100px" />
+				</colgroup>
+				<thead>
+					<tr style="position:relative;">
+						<th class="stickyColumn" scope="col">시/도</th>
+						<th:block th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth)}">
+								<th th:id="'th_dts_now_yr_' + ${i}" scope="col" th:text="${i} + '월'"></th>
+								<th th:id="'th_dts_prvyr_' + ${i}" scope="col" th:text="'전년도 ' + ${i} + '월'"></th>
+								<th th:id="'th_dts_rt_' + ${i}" scope="col">전년대비</th>
+						</th:block>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="list : ${mctpvGdsStats}" style="background:#fff; position:relative;">
+						<td class="stickyColumn" th:text="${list.name()}"></td>
+						<td th:each="c : ${list.cells()}" th:text="${c}"></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<!-- 엑셀버튼 -->
+		<div class="btn_all btn_left">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="javascript:excelDownload();">엑셀</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<!-- AS-IS JSP가 EL로 문자열에 끼워 넣던 값들(현재 년월·검색 년월·탭·기부금 누계 표 마지막 행의 기준년) - data 속성으로 넘긴다 -->
+<div id="rptData" style="display:none"
+     th:attr="data-now-year=${nowYear}, data-now-month=${nowMonth}, data-search-year=${statisticsParam.shYear}, data-search-month=${statisticsParam.shMonth}, data-tab=${tabId}"
+     th:with="dntnLast=${#lists.isEmpty(mctpvDntnStats) ? '' : mctpvDntnStats[#lists.size(mctpvDntnStats) - 1].crtrYr()}">
+    <span id="rptDntnYr" th:text="${dntnLast}"></span>
+</div>
+
+<script type="text/javascript" th:src="@{/content/modules/op.chart.js}"></script>
+<script type="text/javascript">
+	function excelDownload() {
+		Shop.downloadExcelOrder("/shop-statistics/report/lclgv/excel-download", $('#statisticsParam').serialize(), false);
+	}
+
+	/* 탭 버튼: 표 3개 중 하나만 보이게(단위 캡션도 같이) + 선택 탭 버튼 색(#00215A, 나머지 #004CCE) */
+	function showTab(n) {
+		var tables = ["tbMctpvDntnStats", "tbMctpvDntnMaxStats", "tbMctpvGdsStats"];
+		var captions = ["divCaptionForMctpvDntn", "divCaptionForMctpvDntnMax", "divCaptionForMctpvGds"];
+		for (var i = 0; i < 3; i++) {
+			document.getElementById(tables[i]).style.display = (i + 1 == n) ? "" : "none";
+			document.getElementById(captions[i]).style.display = (i + 1 == n) ? "" : "none";
+			document.getElementById("btn_tab" + (i + 1)).setAttribute("style", "background-color:" + ((i + 1 == n) ? "#00215A" : "#004CCE"));
+		}
+	}
+
+	/* AS-IS는 세 탭 모두 "기부금 누계 표 목록의 마지막 행 기준년"을 crtrYr로 쓴다. 목록이 비어 있으면 undefined. */
+	function crtrYrOfDntn() {
+		var v = $.trim($("#rptDntnYr").text());
+		/* 조회된 행이 없으면(첫 진입·데이터 없는 달) 서버가 정해 준 기본/검색 년도(직전월의 년)를 그대로 선택한다 */
+		return v === "" ? $('#rptData').attr('data-search-year') : v;
+	}
+
+	function selectTab(n) {
+		showTab(n);
+		var crtrYr = crtrYrOfDntn();
+		var crtrMm = $('#rptData').attr('data-search-month');
+		var tabId = "" + n;
+		$('#tabId').val(tabId);
+		monthChange(crtrYr, crtrMm);
+	}
+
+	$("#btn_tab1").click(function() { selectTab(1); })
+	$("#btn_tab2").click(function() { selectTab(2); })
+	$("#btn_tab3").click(function() { selectTab(3); })
+
+	document.addEventListener("DOMContentLoaded", function(){
+		var tabVal = $('#rptData').attr('data-tab');
+		if(tabVal == "1") {
+			$("#btn_tab1").trigger("click");
+		} else if(tabVal == "2") {
+			$("#btn_tab2").trigger("click");
+		} else {
+			$("#btn_tab3").trigger("click");
+		}
+	});
+
+	function monthChange(year, month) {
+		$("#shYear").val(year).prop("selected", true);
+		var nowYear = $('#rptData').attr('data-now-year');
+		var nowMonth = $('#rptData').attr('data-now-month');
+		var searchYear = $('#rptData').attr('data-search-year');
+		var searchMonth = $('#rptData').attr('data-search-month');
+
+		Common.loading.display = false;
+		$("#shMonth option").remove();
+		if ($("#shYear").val() != "") {
+			if(year == nowYear) {
+				for (var i = 1; i < parseInt(nowMonth); i++) {
+		            var options = '<option value="' + i + '">' + i + '</option>';
+		            $('#shMonth').append(options);
+		        }
+				if(year == searchYear) {
+					$("#shMonth").val(month).prop("selected", true);
+				} else {
+					$("#shMonth").val(parseInt(nowMonth)-1).prop("selected", true);
+				}
+			} else {
+				for (var i = 1; i <= 12; i++) {
+		            var options = '<option value="' + i + '">' + i + '</option>';
+		            $('#shMonth').append(options);
+		        }
+				if(year == searchYear) {
+					$("#shMonth").val(month).prop("selected", true);
+				} else {
+					$("#shMonth").val(12).prop("selected", true);
+				}
+			}
+		} else {
+	        $('#shMonth').append('<option value="">검색월</option>');
+		}
+	}
+</script>
+
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

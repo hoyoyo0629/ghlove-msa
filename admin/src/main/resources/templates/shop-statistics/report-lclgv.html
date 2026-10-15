@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>지자체 현황 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/shop-statistics/report/lclgv.jsp 이식. 지자체별 누계 현황(report-mctpv.html)과 같은 틀에 시/도→시/군/구 select가 더해진다.
+
+     ★ AS-IS 특징(그대로 옮김)
+     - 표 3개(지자체별 기부금 현황 / 2000만원 / 지자체별 답례품 제공현황)를 한 페이지에 다 그려 두고 탭 버튼 3개가 보이는 표를 바꾼다.
+       첫 진입(GET)은 표를 비워 두고 검색(POST)에서 채운다. 기본 탭은 3번(1·2번이 아니면 3번).
+     - 월 select는 display:none(직전월까지만 조회 가능). 년도에 맞춰 JS monthChange가 채운다.
+     - 지자체 칸: 시스템/행안부는 시/도 select + 시/군/구 select(시/도를 고르면 options-by-lclgv를 POST로 불러 채운다).
+       지자체 담당자(ROLE_ADMIN_5/6)는 select 대신 자기 소속 이름만 보이고 조회 범위가 소속으로 고정된다.
+     - 표는 높이 700px 스크롤 박스, 시/도·지자체 두 열은 왼쪽 고정(sticky). 단위는 천원(원 단위를 천원으로 반올림).
+     - 기부금 두 탭(전체·2000만원)은 값 0과 전년대비 '0'을 "-"로 찍고, 답례품 탭은 0 그대로.
+     - 탭 전환 JS(AS-IS 그대로): 1·3번 탭은 "기부금 표의 마지막 행", 2번 탭은 "답례품 표의 마지막 행"에서 기준년·시/도·지자체를 읽는다.
+       1·2번 탭의 지자체 select 복원식은 AS-IS 오타(shLclgv가 비면 #shMctpv를 비우고, 아니면 #shLclgv에 시/도 코드를 넣음)가 있지만
+       바로 뒤 searchSigungu()가 시/도·시/군/구를 다시 맞춰 주므로 결과는 같다 - 그대로 옮겼다.
+     - AS-IS 시/도 option 마크업의 stray `}"` 문자와 3번 탭의 쓰이지 않는 변수(lclgvCd/mctpvCd에 목록 toString)는 옮기지 않았다.
+     - "엑셀" 버튼은 report/lclgv/excel-download(총괄 현황과 같은 14개 시트 파일)를 부른다 - 폼의 시/도·지자체 선택이 그대로 실린다.
+     - 검색 버튼의 onclick="search()"는 정의된 곳이 없는 함수라 AS-IS에서도 ReferenceError(제출은 그대로 됨) - 옮기지 않았다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<div class="statistics_web">
+	<h3><span>지자체 현황</span></h3>
+	<form id="statisticsParam" method="post" th:action="@{/shop-statistics/report/lclgv}">
+		<input type="hidden" id="tabId" name="tabId" th:value="${statisticsParam.tabId}"/>
+
+		<div class="board_write mt10">
+			<table class="board_write_table" summary="지자체(243개) 현황">
+		            <colgroup>
+		                <col style="width:220px;">
+		                <col>
+		                <col style="width:220px;">
+		                <col>
+		            </colgroup>
+		            <tbody>
+		                <tr>
+		                    <td class="label">기간</td>
+		                    <td>
+		                        <div class="flex_box gap-08" style="align-items: center;">
+		                            <select id="shYear" name="shYear" title="년도" class="wd-150" th:attr="onchange=|monthChange(this.value, ${statisticsParam.shMonth})|">
+										<option th:each="data : ${crtrYear}" th:value="${data}" th:text="${data}"></option>
+		                            </select>
+		                            년
+		                            <select id="shMonth" name="shMonth" title="월" class="wd-150" style="display:none">
+										<th:block th:each="i : ${#numbers.sequence(1, 12)}">
+											<option th:if="${i &lt; nowMonth}" th:value="${i}" th:text="${i}" th:selected="${i == statisticsParam.shMonth}"></option>
+										</th:block>
+		                            </select>
+		                            <!-- 월 -->
+		                        </div>
+		                    </td>
+		                    <td class="label">지자체</td>
+		                    <td>
+		                        <div class="flex_box gap-08" style="align-items: center;">
+		                        	<th:block th:unless="${scoped}">
+			                            <select id="shMctpv" name="shMctpv" title="광역지자체" class="wd-150" onchange="searchSigungu(this.value)">
+			                                <option value="">시,도</option>
+											<option th:each="data : ${mctpv}" th:value="${data.code()}" th:text="${data.name()}"></option>
+			                            </select>
+			                            <select id="shLclgv" name="shLclgv" title="지자체" class="wd-150">
+			                                <option value="">시,군,구</option>
+			                            </select>
+			                    	</th:block>
+		                        	<th:block th:if="${scoped}" th:text="${scopedName}"></th:block>
+		                        </div>
+		                    </td>
+		                </tr>
+		            </tbody>
+		        </table>
+
+		</div> <!-- // board_write -->
+		<div class="btn_all btn_left">
+			<ul class="list-bullet point">
+		        <li>
+		            검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.
+		        </li>
+	        </ul>
+	  	</div>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<caption>현재 날짜 기준 집계 완료된 통계자료(직전월)까지만 조회 가능합니다.</caption>
+				<button type="submit" class="btn btn-dark-gray btn-mini"> 검색</button>
+				<button type="button" class="btn btn-dark-gray btn-mini" th:attr="onclick=|location.href='@{/shop-statistics/report/lclgv}'|"> 초기화</button>
+			</div>
+		</div>
+	</form>
+
+	<div class="board_list">
+		<div class="btn_all btn_left">
+			<div class="flex_box gap-08">
+				<button type="button" id="btn_tab1" class="btn btn-dark-gray btn-mini">지자체별 기부금 현황</button>
+				<button type="button" id="btn_tab2"  class="btn btn-dark-gray btn-mini">지자체별 기부금 현황(2000만원)</button>
+				<button type="button" id="btn_tab3"  class="btn btn-dark-gray btn-mini">지자체별 답례품 제공현황</button>
+			</div>
+		</div>
+
+		<div id="divCaptionForLclgvAod" class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<caption>(단위: 천원, %)</caption>
+			</div>
+		</div>
+		<div id="tbLclgvAodStats" style="overflow-x:auto; overflow:scroll; height:700px">
+			<table class="board_list_table" style="width:max-content;min-width:100%;" summary="총 기부건수 현황">
+				<colgroup>
+					<col width="200px" />
+					<col width="100px" />
+					<col width="100px" />
+					<col width="100px" />
+					<col th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth * 3)}" width="100px" />
+				</colgroup>
+				<thead>
+					<tr style="position:relative;">
+						<th style="position:sticky;left:0;" scope="col">시/도</th>
+						<th style="position:sticky;left:200px;" scope="col">지자체</th>
+						<th scope="col">올해 총계</th>
+						<th scope="col">전년도</th>
+						<th:block th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth)}">
+								<th scope="col" th:text="${i} + '월'"></th>
+								<th scope="col" th:text="'전년도 ' + ${i} + '월'"></th>
+								<th scope="col">전년대비</th>
+						</th:block>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="list : ${lclgvAodStats}" style="background:#fff; position:relative;">
+						<td style="position:sticky;left:0;background-color:#fff;" th:text="${list.mctpvNm()}"></td>
+						<td style="position:sticky;left:200px;background-color:#fff;" th:text="${list.lclgvNm()}"></td>
+						<td th:each="c : ${list.cells()}" th:text="${c}"></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<div id="divCaptionForLclgvAodMax" class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<caption>(단위: 천원, %)</caption>
+			</div>
+		</div>
+		<div id="tbLclgvAodMaxStats" style="overflow-x:auto; overflow:scroll; height:700px">
+			<table class="board_list_table" style="width:max-content;min-width:100%;" summary="총 기부건수 현황">
+				<colgroup>
+					<col width="200px" />
+					<col width="100px" />
+					<col width="100px" />
+					<col width="100px" />
+					<col th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth * 3)}" width="100px" />
+				</colgroup>
+				<thead>
+					<tr style="position:relative;">
+						<th style="position:sticky;left:0;" scope="col">시/도</th>
+						<th style="position:sticky;left:200px;" scope="col">지자체</th>
+						<th scope="col">올해 총계</th>
+						<th scope="col">전년도</th>
+						<th:block th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth)}">
+								<th scope="col" th:text="${i} + '월'"></th>
+								<th scope="col" th:text="'전년도 ' + ${i} + '월'"></th>
+								<th scope="col">전년대비</th>
+						</th:block>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="list : ${lclgvAodMaxAmtStats}" style="background:#fff; position:relative;">
+						<td style="position:sticky;left:0;background-color:#fff;" th:text="${list.mctpvNm()}"></td>
+						<td style="position:sticky;left:200px;background-color:#fff;" th:text="${list.lclgvNm()}"></td>
+						<td th:each="c : ${list.cells()}" th:text="${c}"></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<div id="divCaptionForLclgvGds" class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<caption>(단위: 천원, %)</caption>
+			</div>
+		</div>
+		<div id="tbLclgvGdsStats" style="overflow-x:auto;overflow:scroll;height:700px">
+			<table class="board_list_table" style="width:max-content;min-width:100%;" summary="총 기부건수 현황">
+				<colgroup>
+					<col width="200px" />
+					<col width="100px" />
+					<col width="100px" />
+					<col width="100px" />
+					<col th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth * 3)}" width="100px" />
+				</colgroup>
+				<thead>
+					<tr style="position:relative;">
+						<th style="position:sticky;left:0;" scope="col">시/도</th>
+						<th style="position:sticky;left:200px;" scope="col">지자체</th>
+						<th scope="col">올해 총계</th>
+						<th scope="col">전년도</th>
+						<th:block th:each="i : ${#numbers.sequence(1, statisticsParam.shMonth)}">
+								<th scope="col" th:text="${i} + '월'"></th>
+								<th scope="col" th:text="'전년도 ' + ${i} + '월'"></th>
+								<th scope="col">전년대비</th>
+						</th:block>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="list : ${lclgvGdsStats}" style="background:#fff; position:relative;">
+						<td style="position:sticky;left:0;background-color:#fff;" th:text="${list.mctpvNm()}"></td>
+						<td style="position:sticky;left:200px;background-color:#fff;" th:text="${list.lclgvNm()}"></td>
+						<td th:each="c : ${list.cells()}" th:text="${c}"></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<!-- 엑셀버튼 -->
+		<div class="btn_all btn_left">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="javascript:excelDownload();">엑셀</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<!-- AS-IS JSP가 EL로 문자열에 끼워 넣던 값들(현재 년월·검색 조건·탭·표 마지막 행의 기준년/시/도/지자체 코드) - data 속성으로 넘긴다 -->
+<div id="rptData" style="display:none"
+     th:attr="data-now-year=${nowYear}, data-now-month=${nowMonth}, data-search-year=${statisticsParam.shYear}, data-search-month=${statisticsParam.shMonth}, data-sh-mctpv=${statisticsParam.shMctpv}, data-sh-lclgv=${statisticsParam.shLclgv}, data-tab=${tabId}"
+     th:with="aodLast=${#lists.isEmpty(lclgvAodStats) ? null : lclgvAodStats[#lists.size(lclgvAodStats) - 1]},
+              gdsLast=${#lists.isEmpty(lclgvGdsStats) ? null : lclgvGdsStats[#lists.size(lclgvGdsStats) - 1]}">
+    <span id="rptAod" th:if="${aodLast != null}" th:attr="data-yr=${aodLast.crtrYr()}, data-mctpv=${aodLast.mctpvCd()}, data-lclgv=${aodLast.lclgvCd()}"></span>
+    <span id="rptGds" th:if="${gdsLast != null}" th:attr="data-yr=${gdsLast.crtrYr()}, data-mctpv=${gdsLast.mctpvCd()}, data-lclgv=${gdsLast.lclgvCd()}"></span>
+</div>
+
+<script type="text/javascript" th:src="@{/content/modules/op.chart.js}"></script>
+<script type="text/javascript">
+	function excelDownload() {
+		Shop.downloadExcelOrder("/shop-statistics/report/lclgv/excel-download", $('#statisticsParam').serialize(), false);
+	}
+
+	/* 탭 버튼: 표 3개 중 하나만 보이게(단위 캡션도 같이) + 선택 탭 버튼 색(#00215A, 나머지 #004CCE) */
+	function showTab(n) {
+		var tables = ["tbLclgvAodStats", "tbLclgvAodMaxStats", "tbLclgvGdsStats"];
+		var captions = ["divCaptionForLclgvAod", "divCaptionForLclgvAodMax", "divCaptionForLclgvGds"];
+		for (var i = 0; i < 3; i++) {
+			document.getElementById(tables[i]).style.display = (i + 1 == n) ? "" : "none";
+			document.getElementById(captions[i]).style.display = (i + 1 == n) ? "" : "none";
+			document.getElementById("btn_tab" + (i + 1)).setAttribute("style", "background-color:" + ((i + 1 == n) ? "#00215A" : "#004CCE"));
+		}
+	}
+
+	/* AS-IS는 표 목록을 도는 루프의 var로 마지막 행의 기준년/시도/지자체 코드를 읽는다. 목록이 비어 있으면 undefined. */
+	function lastRowOf(spanId, key) {
+		var v = $("#" + spanId).attr("data-" + key);
+		return v === undefined || v === "" ? undefined : v;
+	}
+
+	/* 기준년: 조회된 행이 없으면(첫 진입·데이터 없는 달) 서버가 정해 준 기본/검색 년도(직전월의 년)를 그대로 선택한다 */
+	function crtrYrOf(spanId) {
+		var v = lastRowOf(spanId, "yr");
+		return v === undefined ? $('#rptData').attr('data-search-year') : v;
+	}
+
+	/* 탭 1·2 공통(AS-IS 오타까지 그대로): shLclgv가 비면 #shMctpv를 비우고, 아니면 #shLclgv에 "시/도 코드"를 넣는다 */
+	function selectTabTypo(n, spanId) {
+		showTab(n);
+		var crtrYr = crtrYrOf(spanId);
+		var mctpv = lastRowOf(spanId, "mctpv");
+		var lclgv = lastRowOf(spanId, "lclgv");
+		var crtrMm = $('#rptData').attr('data-search-month');
+		var shMctpv = $('#rptData').attr('data-sh-mctpv') || "";
+		var shLclgv = $('#rptData').attr('data-sh-lclgv') || "";
+		if(shMctpv == "") {
+			$("#shMctpv").val("").prop("selected", true)
+		} else {
+			$("#shMctpv").val(mctpv).prop("selected", true)
+		}
+		if(shLclgv == "") {
+			$("#shMctpv").val("").prop("selected", true)
+		} else {
+			$("#shLclgv").val(mctpv).prop("selected", true)
+		}
+		var tabId = "" + n;
+		$('#tabId').val(tabId);
+		monthChange(crtrYr, crtrMm);
+		searchSigungu(shMctpv, shLclgv, tabId);
+	}
+
+	$("#btn_tab1").click(function() { selectTabTypo(1, "rptAod"); })
+	$("#btn_tab2").click(function() { selectTabTypo(2, "rptGds"); })
+
+	$("#btn_tab3").click(function() {
+		showTab(3);
+		var crtrYr = crtrYrOf("rptAod");
+		var mctpv = lastRowOf("rptAod", "mctpv");
+		var lclgv = lastRowOf("rptAod", "lclgv");
+		var crtrMm = $('#rptData').attr('data-search-month');
+		var shMctpv = $('#rptData').attr('data-sh-mctpv') || "";
+		var shLclgv = $('#rptData').attr('data-sh-lclgv') || "";
+		if(shMctpv == "") {
+			$("#shMctpv").val("").prop("selected", true)
+		} else {
+			$("#shMctpv").val(mctpv).prop("selected", true)
+		}
+		if(shLclgv == "") {
+			$("#shLclgv").val("").prop("selected", true)
+		} else {
+			$("#shLclgv").val(lclgv).prop("selected", true)
+		}
+		var tabId = "3";
+		$('#tabId').val(tabId);
+		monthChange(crtrYr, crtrMm);
+		searchSigungu(shMctpv, shLclgv, tabId);
+	})
+
+	document.addEventListener("DOMContentLoaded", function(){
+		var tabVal = $('#rptData').attr('data-tab');
+		if(tabVal == "1") {
+			$("#btn_tab1").trigger("click");
+		} else if(tabVal == "2") {
+			$("#btn_tab2").trigger("click");
+		}  else {
+			$("#btn_tab3").trigger("click");
+		}
+	});
+
+	function monthChange(year, month) {
+		$("#shYear").val(year).prop("selected", true);
+		var nowYear = $('#rptData').attr('data-now-year');
+		var nowMonth = $('#rptData').attr('data-now-month');
+		var searchYear = $('#rptData').attr('data-search-year');
+		var searchMonth = $('#rptData').attr('data-search-month');
+
+		Common.loading.display = false;
+		$("#shMonth option").remove();
+		if ($("#shYear").val() != "") {
+			if(year == nowYear) {
+				for (var i = 1; i < parseInt(nowMonth); i++) {
+		            var options = '<option value="' + i + '">' + i + '</option>';
+		            $('#shMonth').append(options);
+		        }
+				if(year == searchYear) {
+					$("#shMonth").val(month).prop("selected", true);
+				} else {
+					$("#shMonth").val(parseInt(nowMonth)-1).prop("selected", true);
+				}
+			} else {
+				for (var i = 1; i <= 12; i++) {
+		            var options = '<option value="' + i + '">' + i + '</option>';
+		            $('#shMonth').append(options);
+		        }
+				if(year == searchYear) {
+					$("#shMonth").val(month).prop("selected", true);
+				} else {
+					$("#shMonth").val(12).prop("selected", true);
+				}
+			}
+		} else {
+	        $('#shMonth').append('<option value="">검색월</option>');
+		}
+	}
+
+	function searchSigungu(mctpv, lclgv, tabId) {
+		$("#shMctpv").val(mctpv).prop("selected", true);
+		$("#shLclgv option").remove();
+		if ($("#shMctpv").val() != "") {
+			$.post(url("/shop-statistics/report/lclgv/options-by-lclgv"), {'mctpv' : mctpv, 'tabId' : tabId}, function(response) {
+				$('#shLclgv').append('<option value="">시,군,구</option>');
+				for (var i = 0; i < response.length; i++) {
+		            var options = '<option value="' + response[i].lclgvCd + '">' + response[i].lclgvNm + '</option>';
+		            $('#shLclgv').append(options);
+		        }
+				$("#shLclgv").val(lclgv).prop("selected", true);
+		    });
+		} else {
+	        $('#shLclgv').append('<option value="">시,군,구</option>');
+		}
+	}
+</script>
+
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

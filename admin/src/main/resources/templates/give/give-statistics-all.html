@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>기부금 모금현황 - 고향사랑e음 (admin service)</title>
+    <title th:text="${foreigner ? '외국인 기부 현황 (전체)' : '기부금 모금현황'} + ' - 고향사랑e음 (admin service)'">기부금 모금현황 - 고향사랑e음 (admin service)</title>
     <!-- 공통 head(AS-IS inc_head verbatim: CSS 6 + JS 12) - csrf meta/폰트/op.* 전부 여기서 로드 -->
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
     <style>
@@ -13,19 +13,26 @@
 
 <!-- AS-IS opmanager/give/statistics/all/detail.jsp 그대로 이식(요약 3카드 + Chart.js 차트 5종).
      집계는 donation G_CNTR(연=확정일 CNTR_DE 연도, 확정=COMPLETED). ajax URL만 admin 경로로,
-     나머지(차트/JS/op.chart.js)는 AS-IS verbatim. 외국인(foreignerFlag) 경로는 데이터 없어 제외.
-     레이아웃은 AS-IS inc_header.jsp 중첩(.admin_wrap > #container > .contents > .contents_inner)을
-     그대로 재현 - .location(position:absolute)의 기준 박스가 #container(position:relative)이고,
-     responsive 차트 폭이 .admin_wrap .mainArea{width:1440px}에 걸려 있어 이 래퍼가 필수다. -->
+     나머지(차트/JS/op.chart.js)는 AS-IS verbatim. 레이아웃은 AS-IS inc_header.jsp 중첩(.admin_wrap >
+     #container > .contents > .contents_inner)을 그대로 재현 - .location(position:absolute)의 기준 박스가
+     #container(position:relative)이고, responsive 차트 폭이 .admin_wrap .mainArea{width:1440px}에 걸려
+     있어 이 래퍼가 필수다.
+
+     ★외국인 기부 현황(전체)는 AS-IS가 이 JSP를 searchParam.foreignerFlag == 'Y'로 재사용한다(2026-10-15):
+       - 카드 3개·월별 차트 4개 제목에 "외국인 " 접두어, 시간대별 차트 블록은 빈 숨김 div로 대체
+         (init()은 그대로 statisticsAllByTime()을 불러 "undefined" 날짜로 /hour를 POST하지만 외국인 분기는 그리지 않는다)
+       - 페이지 제목은 JS가 "외국인 기부 현황 (전체)" / "기부금 모금현황"으로 덮어쓴다
+       - ajax URL이 /give-statistics/foreigner/all/ 로 바뀌고 집계 쿼리에 FOREIGN_STATUS_CODE != '0' 조건이 붙는다.
+     나이대별 차트 2개(giveAgeCntBarChart/AmountBarChart)와 statisticsAllByAge()는 AS-IS가 주석처리한 상태라 옮기지 않는다. -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <h3><span>기부금 모금현황</span></h3>
+    <h3><span th:text="${foreigner ? '외국인 기부 현황 (전체)' : '기부금 모금현황'}">기부금 모금현황</span></h3>
 
-    <form id="searchParam" method="get" th:action="@{/give-statistics/all}">
+    <form id="searchParam" method="get" th:action="${foreigner} ? @{/give-statistics/foreigner/all} : @{/give-statistics/all}">
         <div class="board_write mb30">
             <table class="board_write_table">
                 <colgroup><col style="width:220px;"><col><col style="width:220px;"><col></colgroup>
@@ -44,43 +51,46 @@
                 </tbody>
             </table>
         </div>
+        <input type="hidden" id="foreignerFlag" name="foreignerFlag" th:value="${foreigner} ? 'Y' : ''">
     </form>
 
     <div class="mainArea loc_details mb30">
         <div class="list_box">
             <ul class="list">
                 <li class="bg01 col-md-4">
-                    <p class="tit">총 기부금액</p>
+                    <p class="tit" th:text="${foreigner} ? '외국인 총 기부금액' : '총 기부금액'">총 기부금액</p>
                     <p class="txt"><span th:text="${#numbers.formatInteger(total.cntrAmt, 0, 'COMMA')}">0</span></p>
                 </li>
                 <li class="bd02 col-md-4">
-                    <p class="tit">총 기부인원 <span class="s-txt">(중복제외)</span></p>
+                    <p class="tit"><th:block th:text="${foreigner} ? '외국인 총 기부인원 ' : '총 기부인원 '">총 기부인원 </th:block><span class="s-txt">(중복제외)</span></p>
                     <p class="txt"><span th:text="${#numbers.formatInteger(total.cntrPerson, 0, 'COMMA')}">0</span></p>
                 </li>
                 <li class="bd02 col-md-4">
-                    <p class="tit">총 기부건수</p>
+                    <p class="tit" th:text="${foreigner} ? '외국인 총 기부건수' : '총 기부건수'">총 기부건수</p>
                     <p class="txt"><span th:text="${#numbers.formatInteger(total.cntrCnt, 0, 'COMMA')}">0</span></p>
                 </li>
             </ul>
         </div>
         <div class="graph_wrap all">
             <div class="bd_gray mb15">
-                <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;">월별 기부건수</p>
+                <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;" th:text="${foreigner} ? '외국인 월별 기부건수' : '월별 기부건수'">월별 기부건수</p>
                 <div class="graph"><canvas id="giveCountLineChart"></canvas></div>
             </div>
             <div class="bd_gray mb15">
-                <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;">월별 기부건수</p>
+                <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;" th:text="${foreigner} ? '외국인 월별 기부건수' : '월별 기부건수'">월별 기부건수</p>
                 <div class="graph"><canvas id="giveCountBarChart"></canvas></div>
             </div>
             <div class="bd_gray mb15">
-                <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;">월별 기부인원</p>
+                <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;" th:text="${foreigner} ? '외국인 월별 기부인원' : '월별 기부인원'">월별 기부인원</p>
                 <div class="graph"><canvas id="givePersonLineChart"></canvas></div>
             </div>
             <div class="bd_gray mb15">
-                <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;">월별 기부금액</p>
+                <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;" th:text="${foreigner} ? '외국인 월별 기부금액' : '월별 기부금액'">월별 기부금액</p>
                 <div class="graph"><canvas id="giveAmountLineChart"></canvas></div>
             </div>
-            <div class="bd_gray mb15">
+            <div class="bd_gray mb15" style="display: none;" th:if="${foreigner}">
+            </div>
+            <div class="bd_gray mb15" th:unless="${foreigner}">
                 <div style="display: flex;">
                     <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;">시간대별 기부금액</p>
                     <select id="giveDate" class="wd-150 ml40" onchange="statisticsAllByTime()"></select>
@@ -99,12 +109,21 @@
 <script type="text/javascript" th:src="@{/content/modules/chart.min.js}"></script>
 <script type="text/javascript" th:src="@{/content/modules/op.chart.js}"></script>
 <script type="text/javascript">
+    /* AS-IS는 JSP가 foreignerFlag로 분기해 문자열을 박는다 - 같은 값을 폼의 hidden foreignerFlag에서 읽는다 */
+    var FOREIGNER = $("#foreignerFlag").val() == 'Y';
+    var STAT_URL = FOREIGNER ? '/give-statistics/foreigner/all/' : '/give-statistics/all/';
+
     $(function () {
+        if (FOREIGNER) {
+            $(".contents_inner > h3:first > span").html("외국인 기부 현황 (전체)");
+        } else {
+            $(".contents_inner > h3:first > span").html("기부금 모금현황");
+        }
         init();
     });
 
     function init() {
-        // 시간대별 기부금액 날짜 옵션(선택 연도 기준 최근 7일) - AS-IS diffDate
+        // 시간대별 기부금액 날짜 옵션(선택 연도 기준 최근 7일) - AS-IS diffDate (외국인 화면에는 #giveDate가 없어 no-op)
         for (var i = 1; i <= 7; i++) {
             var d = diffDate($("#shCntrYear").val(), i);
             $('#giveDate').append($('<option></option>').attr('value', d.replaceAll('-', '')).text(d));
@@ -129,7 +148,7 @@
         var amtArr = [{ label: '금액별', data: [], backgroundColor: '#09C2C7', borderColor: '#09C2C7' }];
         var onlineArr = [{ label: '온라인', data: [], backgroundColor: '#00215A', borderColor: '#00215A' }, { label: '오프라인', data: [], backgroundColor: '#09C2C7', borderColor: '#09C2C7' }];
 
-        var url = '/give-statistics/all/';
+        var url = STAT_URL;
         $.post(url + $("#shCntrYear").val() + '/month', {}, function (resp) {
             if (resp.isSuccess) {
                 resp.data.forEach(function (d, i) {
@@ -155,7 +174,7 @@
         var timeArr = [];
         var amtArr = [{ label: '시간별', data: [], backgroundColor: '#00215A', borderColor: '#00215A' }];
 
-        var url = '/give-statistics/all/';
+        var url = STAT_URL;
         $.post(url + $("#giveDate").val() + '/hour', {}, function (resp) {
             if (resp.isSuccess) {
                 resp.data.forEach(function (d, i) {
@@ -179,12 +198,14 @@
                     }
                 };
 
-                var p = $('#giveCountLineByTimeChart').parent('div');
-                var ele = $('#giveCountLineByTimeChart').clone();
-                p.empty();
-                p.append(ele);
+                if (!FOREIGNER) {
+                    var p = $('#giveCountLineByTimeChart').parent('div');
+                    var ele = $('#giveCountLineByTimeChart').clone();
+                    p.empty();
+                    p.append(ele);
 
-                ChartCommon.drawChart('giveCountLineByTimeChart', 'line', options, timeArr, amtArr, { x: '시(h)', y: '천원' });
+                    ChartCommon.drawChart('giveCountLineByTimeChart', 'line', options, timeArr, amtArr, { x: '시(h)', y: '천원' });
+                }
             } else {
                 alert(resp.errorMessage);
             }

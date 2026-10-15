@@ -1,0 +1,86 @@
+<!-- AS-IS opmanager/categories/create.jsp - 목록(list.html)이 ajax로 받아 .right_box에 끼워 넣는 조각이다(layout=blank). -->
+<div xmlns:th="http://www.thymeleaf.org" th:remove="tag">
+	<h5 style="margin-top: 0; border-left: 4px solid #000; padding-left: 8px;"> 2차 카테고리 등록</h5>
+
+	<table class="board_write_table bt2">
+		<caption th:utext="${' ' + msg.get('M00545')}"> 카테고리 만들기</caption>
+		<colgroup>
+			<col style="width: 150px;" />
+			<col style="width: auto;" />
+		</colgroup>
+		<tbody>
+		 	 <tr>
+				<td class="label" th:utext="${msg.get('M01139')}">카테고리명</td>
+				<td>
+					<div>
+						<input name="categoryName" type="text" class="required full" th:title="${msg.get('M00561')}" style="width: 50%;">
+						<input name="categoryLevel" type="hidden" value="1" />
+				 	</div>
+				</td>
+			</tr>
+			 <tr>
+				<td class="label">URL</td>
+				<td>
+					<div class="flex_box gap-12 item-center">
+                        <div>
+                            /categories/index/<input name="categoryUrl" type="text" class="required" th:title="${msg.get('M00270') + ' URL'}" style="width: 150px;">
+                            <input name="categoryUrlCheck" type="hidden" value="0" />
+                        </div>
+						<a href="javascript:;" id="categroyUrlSearch" class="btn btn-gradient btn-sm" th:utext="${msg.get('M01488')}">중복확인</a>
+				 	</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label">1차 카테고리</td>
+				<td>
+					<div>
+						<p>
+							<select name="categoryGroupId" class="category">
+								<option value="0" th:utext="${msg.get('M00431')}">선택</option>
+								<th:block th:each="categoriesTeam : ${categoryTeamGroupList}">
+									<th:block th:if="${categoriesTeam.flag == 'Y'}">
+										<optgroup th:label="${categoriesTeam.name}">
+										<th:block th:each="categoriesGroup : ${categoriesTeam.groups}">
+											<option th:if="${categoriesGroup.flag == 'Y'}" th:value="${categoriesGroup.id}" th:attr="label=${categoriesGroup.name}"></option>
+										</th:block>
+										</optgroup>
+									</th:block>
+								</th:block>
+
+							</select>
+						</p>
+				 	</div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label" th:utext="${msg.get('M00191')}">공개유무</td>
+				<td>
+                    <div class="flex_box gap-12">
+                        <div class="input-form">
+                            <input type="radio" name="categoryFlag" value="Y" id="out_all" checked="checked" />
+                            <label for="out_all" th:utext="${msg.get('M00096')}">공개</label>
+                        </div>
+                        <div class="input-form">
+                            <input type="radio" name="categoryFlag" value="N" id="out"  />
+                            <label for="out" th:utext="${msg.get('M00097')}">비공개</label>
+                        </div>
+                        </div>
+				</td>
+			</tr>
+			<tr style="display:none;">
+				<td class="label" th:utext="${msg.get('M01604')}">접속권한</td>
+				<td>
+					<div>
+						<input type="radio" name="accessType" value="1" id="accessType1" checked="checked" /> <label for="accessType1" th:utext="${msg.get('M00497')}">제한 없음</label>
+						<input type="radio" name="accessType" value="2" id="accessType2" /> <label for="accessType2" th:utext="${msg.get('M01605')}">회원만</label>
+					</div>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+	<div class="btn_all btn_center">
+        <div class="flex_box">
+            <button type="submit" class="btn btn-dark-gray btn-small">등록</button>
+        </div>
+	</div>
+</div>

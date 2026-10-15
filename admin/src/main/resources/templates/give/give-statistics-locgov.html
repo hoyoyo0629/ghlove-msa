@@ -16,16 +16,18 @@
 <!-- AS-IS opmanager/give/statistics/locgov/list.jsp 이식(차트 없는 서버렌더 표).
      연도+지자체별 기부인원(중복제외)/금액/건수. 필터(지자체/년도)·정렬·페이징. 데이터 ajax 없음
      (form GET), 시군구 캐스케이딩만 로컬. 집계=donation G_CNTR(연=CNTR_DE, 확정=COMPLETED).
-     지자체명 드릴다운(월별 detail)과 엑셀은 후속 작업으로 보류. -->
+     엑셀은 이식돼 있고, 지자체명은 월별 상세(give-statistics-locgov-detail.html)로 드릴다운한다(2026-10-15).
+     ★같은 템플릿이 외국인 기부 현황(지자체)도 그린다(foreigner=true): 제목·초기화·검색 URL·hidden foreignerFlag(엑셀 조건에도 실림)이 바뀌고
+     집계에 FOREIGN_STATUS_CODE != '0' 조건이 붙는다. 지자체 담당자(ROLE_ADMIN_5/6)는 AS-IS처럼 목록 없이 자기 지자체 상세로 바로 간다. -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <h3><span>지자체별 통계</span></h3>
+    <h3><span th:text="${foreigner} ? '외국인 기부 현황 (지자체)' : '기부금 모금현황'">지자체별 통계</span></h3>
 
-    <form id="searchParam" method="get" th:action="@{/give-statistics/locgov}">
+    <form id="searchParam" method="get" th:action="${foreigner} ? @{/give-statistics/foreigner/locgov} : @{/give-statistics/locgov}">
         <div class="board_write">
             <table class="board_write_table" summary="지자체별 통계 검색">
                 <colgroup><col style="width:150px"><col><col style="width:150px"><col></colgroup>
@@ -65,7 +67,7 @@
             </div>
             <div class="btn_all btn_right">
                 <div class="flex_box gap-08">
-                    <button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/give-statistics/locgov';">초기화</button>
+                    <button type="button" class="btn btn-dark-gray btn-mini" th:attr="onclick=|location.href='${foreigner ? '/give-statistics/foreigner/locgov' : '/give-statistics/locgov'}';|">초기화</button>
                     <button type="button" class="btn btn-dark-gray btn-mini" onclick="document.getElementById('page').value=1;document.getElementById('searchParam').submit();">검색</button>
                 </div>
             </div>
@@ -93,6 +95,7 @@
             </div>
         </div>
         <input type="hidden" name="page" id="page" th:value="${page}">
+        <input type="hidden" id="foreignerFlag" name="foreignerFlag" th:value="${foreigner} ? 'Y' : ''">
     </form>
 
     <div class="board_list">
@@ -116,7 +119,7 @@
                 <tr th:each="row, it : ${rows}" style="background:#fff;">
                     <td th:text="${startNo - it.index}">0</td>
                     <td th:text="${row.cntrYear}">0</td>
-                    <td th:text="${row.upperLocgovNm} + ' ' + ${row.locgovNm}"></td>
+                    <td><a href="javascript:;" th:attr="onclick=|detail('${row.cntrYear}', '${row.locgovCode}')|" th:text="${row.upperLocgovNm} + ' ' + ${row.locgovNm}"></a></td>
                     <td th:text="${#numbers.formatInteger(row.givePersons, 0, 'COMMA')}">0</td>
                     <td th:text="${#numbers.formatInteger(row.cntrAmt, 0, 'COMMA')}">0</td>
                     <td th:text="${#numbers.formatInteger(row.giveCnt, 0, 'COMMA')}">0</td>
@@ -150,7 +153,26 @@
     var ALL_LOCGOVS = /*[[${allLocgovs}]]*/ [];
     var SEL_LOCGOV  = /*[[${shLocgovCode}]]*/ '';
 
-    $(function(){ wdrChange($("#shWdr").val()); });
+    var FOREIGNER = $("#foreignerFlag").val() == 'Y';
+
+    $(function(){
+        wdrChange($("#shWdr").val());
+        // AS-IS list.jsp: JSP가 foreignerFlag로 페이지 제목을 JS로 덮어쓴다
+        if (FOREIGNER) {
+            $(".contents_inner > h3:first > span").html("외국인 기부 현황 (지자체)");
+        } else {
+            $(".contents_inner > h3:first > span").html("기부금 모금현황");
+        }
+    });
+
+    /* AS-IS detail() - 외국인은 선택된 년도로, 일반은 그 행의 년도로 상세(월별 차트)에 간다 */
+    function detail(cntrYear, locgovCode) {
+        if (FOREIGNER) {
+            location.href = '/give-statistics/foreigner/locgov/' + locgovCode + "?shCntrYear=" + $("#shCntrYear").val();
+        } else {
+            location.href = '/give-statistics/locgov/' + locgovCode + "?shCntrYear=" + cntrYear;
+        }
+    }
 
     function wdrChange(value) {
         $("#shLocgovCode option").remove();

@@ -21,11 +21,12 @@ public class GiveStatClient {
                 .defaultHeader("X-Internal-Secret", adminSecret).build();
     }
 
-    public AllSummary allSummary(String year, String locgovCode) {
+    public AllSummary allSummary(String year, String locgovCode, boolean foreigner) {
         try {
             AllSummary s = restClient.get()
                     .uri(uri -> uri.path("/api/give-statistics/admin/all/summary")
-                            .queryParam("year", nz(year)).queryParam("locgovCode", nz(locgovCode)).build())
+                            .queryParam("year", nz(year)).queryParam("locgovCode", nz(locgovCode))
+                            .queryParam("foreigner", foreigner ? "Y" : "N").build())
                     .retrieve().body(AllSummary.class);
             return s != null ? s : new AllSummary(0, 0, 0);
         } catch (RestClientException e) {
@@ -33,11 +34,11 @@ public class GiveStatClient {
         }
     }
 
-    public List<MonthRow> allByMonth(String year, String locgovCode) {
+    public List<MonthRow> allByMonth(String year, String locgovCode, boolean foreigner) {
         try {
             List<MonthRow> list = restClient.get()
                     .uri(uri -> uri.path("/api/give-statistics/admin/all/{year}/month")
-                            .queryParam("locgovCode", nz(locgovCode)).build(nz(year)))
+                            .queryParam("locgovCode", nz(locgovCode)).queryParam("foreigner", foreigner ? "Y" : "N").build(nz(year)))
                     .retrieve().body(new ParameterizedTypeReference<List<MonthRow>>() {
                     });
             return list != null ? list : List.of();
@@ -46,11 +47,11 @@ public class GiveStatClient {
         }
     }
 
-    public List<HourRow> allByHour(String date, String locgovCode) {
+    public List<HourRow> allByHour(String date, String locgovCode, boolean foreigner) {
         try {
             List<HourRow> list = restClient.get()
                     .uri(uri -> uri.path("/api/give-statistics/admin/all/{date}/hour")
-                            .queryParam("locgovCode", nz(locgovCode)).build(nz(date)))
+                            .queryParam("locgovCode", nz(locgovCode)).queryParam("foreigner", foreigner ? "Y" : "N").build(nz(date)))
                     .retrieve().body(new ParameterizedTypeReference<List<HourRow>>() {
                     });
             return list != null ? list : List.of();
@@ -59,11 +60,12 @@ public class GiveStatClient {
         }
     }
 
-    public List<LocgovYearRow> locgovList(String year, String locgovCode) {
+    public List<LocgovYearRow> locgovList(String year, String locgovCode, boolean foreigner) {
         try {
             List<LocgovYearRow> list = restClient.get()
                     .uri(uri -> uri.path("/api/give-statistics/admin/locgov/list")
-                            .queryParam("year", nz(year)).queryParam("locgovCode", nz(locgovCode)).build())
+                            .queryParam("year", nz(year)).queryParam("locgovCode", nz(locgovCode))
+                            .queryParam("foreigner", foreigner ? "Y" : "N").build())
                     .retrieve().body(new ParameterizedTypeReference<List<LocgovYearRow>>() {
                     });
             return list != null ? list : List.of();

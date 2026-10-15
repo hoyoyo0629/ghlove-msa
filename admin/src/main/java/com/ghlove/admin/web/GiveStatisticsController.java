@@ -26,8 +26,8 @@ import java.util.Map;
  *  기부금액/기부건수/개인별/일자별/운영통계 + 외국인 변형) 중 지자체별·운영통계는 이미
  *  구현된 기능(give-state/give-operation/stats)과 중복이라 제외하고, 나머지를 하나의
  *  통합 화면으로 재구성했다 - 사용자 확인 하에 결정된 스코프(제안요청서 SFR-007/009가
- *  화면 단위가 아닌 분석 내용 단위로 요구사항을 기술하는 점 확인 후). 외국인 변형은 이
- *  시스템에 내/외국인 구분 자체가 없어 제외. */
+ *  화면 단위가 아닌 분석 내용 단위로 요구사항을 기술하는 점 확인 후).  외국인 변형 중 전체(all)는
+ *  같은 템플릿에 foreigner 플래그로 구현(2026-10-15), 지자체별 외국인은 아직 없다. */
 @Controller
 @RequiredArgsConstructor
 public class GiveStatisticsController {
@@ -39,6 +39,7 @@ public class GiveStatisticsController {
     private final com.ghlove.admin.service.GiveOperateStatService giveOperateStatService;
     private final com.ghlove.admin.web.support.ExcelDownloadWriter excelDownloadWriter;
     private final com.ghlove.admin.service.CommonCodeService commonCodeService;
+    private final com.ghlove.admin.web.support.FlashRedirect flashRedirect;
 
     /**
      * AS-IS 통계 화면들의 년도 select - {@code CodeUtils.getCodeList("YYYY")} 공통코드다.
@@ -85,26 +86,55 @@ public class GiveStatisticsController {
 
     @GetMapping("/give-statistics/all")
     public String all(@RequestParam(required = false) String shCntrYear, Model model) {
+        return allView(shCntrYear, false, model);
+    }
+
+    @RequestMapping(value = "/give-statistics/all/{year}/month", method = {RequestMethod.GET, RequestMethod.POST})
+    @ResponseBody
+    public Map<String, Object> allMonth(@PathVariable String year) {
+        return success(giveStatClient.allByMonth(year, "", false));
+    }
+
+    @RequestMapping(value = "/give-statistics/all/{date}/hour", method = {RequestMethod.GET, RequestMethod.POST})
+    @ResponseBody
+    public Map<String, Object> allHour(@PathVariable String date) {
+        return success(giveStatClient.allByHour(date, "", false));
+    }
+
+    // ---- 외국인 기부 현황(전체) - 같은 화면에 foreignerFlag=Y(G_CNTR.FOREIGN_STATUS_CODE != '0') ----
+
+    /**
+     * AS-IS {@code GET give/statistics/foreigner/all}. ★AS-IS는 이 화면의 요약 카드를 채우는 POST(검색)를
+     * 매핑해 두지 않아(foreigner/all POST 핸들러 없음 → 405) 카드가 영영 안 채워진다 - TO-BE는 일반 화면처럼
+     * 조회(GET, 년도 파라미터)에서 요약을 계산한다.
+     */
+    @GetMapping("/give-statistics/foreigner/all")
+    public String foreignerAll(@RequestParam(required = false) String shCntrYear, Model model) {
+        return allView(shCntrYear, true, model);
+    }
+
+    @RequestMapping(value = "/give-statistics/foreigner/all/{year}/month", method = {RequestMethod.GET, RequestMethod.POST})
+    @ResponseBody
+    public Map<String, Object> foreignerAllMonth(@PathVariable String year) {
+        return success(giveStatClient.allByMonth(year, "", true));
+    }
+
+    @RequestMapping(value = "/give-statistics/foreigner/all/{date}/hour", method = {RequestMethod.GET, RequestMethod.POST})
+    @ResponseBody
+    public Map<String, Object> foreignerAllHour(@PathVariable String date) {
+        return success(giveStatClient.allByHour(date, "", true));
+    }
+
+    private String allView(String shCntrYear, boolean foreigner, Model model) {
         List<String> years = yearCodes();
         // AS-IS: 년도가 비어 오면 올해로 채운다(GET/POST 양쪽 동일)
         String year = (shCntrYear != null && !shCntrYear.isBlank()) ? shCntrYear
                 : String.valueOf(java.time.LocalDate.now().getYear());
         model.addAttribute("years", years);
         model.addAttribute("shCntrYear", year);
-        model.addAttribute("total", giveStatClient.allSummary(year, ""));
+        model.addAttribute("foreigner", foreigner);
+        model.addAttribute("total", giveStatClient.allSummary(year, "", foreigner));
         return "give/give-statistics-all";
-    }
-
-    @RequestMapping(value = "/give-statistics/all/{year}/month", method = {RequestMethod.GET, RequestMethod.POST})
-    @ResponseBody
-    public Map<String, Object> allMonth(@PathVariable String year) {
-        return success(giveStatClient.allByMonth(year, ""));
-    }
-
-    @RequestMapping(value = "/give-statistics/all/{date}/hour", method = {RequestMethod.GET, RequestMethod.POST})
-    @ResponseBody
-    public Map<String, Object> allHour(@PathVariable String date) {
-        return success(giveStatClient.allByHour(date, ""));
     }
 
     private static Map<String, Object> success(Object data) {
@@ -114,7 +144,7 @@ public class GiveStatisticsController {
         return m;
     }
 
-    // ---- 지자체별 - AS-IS give/statistics/locgov/list.jsp 재현(차트 없는 서버렌더 표) ----
+    // ---- 지자체별 - AS-IS give/statistics/locgov/list.jsp·detail.jsp 재현(+ 외국인 변형 foreignerFlag=Y) ----
 
     @GetMapping("/give-statistics/locgov")
     public String locgov(HttpSession session,
@@ -125,12 +155,38 @@ public class GiveStatisticsController {
             @RequestParam(required = false, defaultValue = "10") int itemsPerPage,
             @RequestParam(required = false, defaultValue = "1") int page,
             Model model) {
+        return locgovList(false, session, shWdr, shLocgovCode, shCntrYear, itemsOrder, itemsPerPage, page, model);
+    }
+
+    /** AS-IS {@code GET give/statistics/foreigner/locgov} - 같은 목록에 FOREIGN_STATUS_CODE != '0' 조건. */
+    @GetMapping("/give-statistics/foreigner/locgov")
+    public String foreignerLocgov(HttpSession session,
+            @RequestParam(required = false, defaultValue = "") String shWdr,
+            @RequestParam(required = false, defaultValue = "") String shLocgovCode,
+            @RequestParam(required = false, defaultValue = "") String shCntrYear,
+            @RequestParam(required = false, defaultValue = "") String itemsOrder,
+            @RequestParam(required = false, defaultValue = "10") int itemsPerPage,
+            @RequestParam(required = false, defaultValue = "1") int page,
+            Model model) {
+        return locgovList(true, session, shWdr, shLocgovCode, shCntrYear, itemsOrder, itemsPerPage, page, model);
+    }
+
+    private String locgovList(boolean foreigner, HttpSession session, String shWdr, String shLocgovCode,
+            String shCntrYear, String itemsOrder, int itemsPerPage, int page, Model model) {
         Manager manager = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
         boolean scoped = MenuService.isLocgovScoped(manager);
-        String effLocgov = scoped ? manager.getLocgovCode() : shLocgovCode;
+        // AS-IS getStatisticsList*: 지자체 담당자(LOC)는 목록 없이 자기 지자체 상세로 바로 이동한다
+        // (소속이 없으면 "지자체 등록 후 이용할 수 있습니다." 안내와 함께 홈으로).
+        if (scoped) {
+            String own = manager.getLocgovCode();
+            if (own == null || own.isBlank()) {
+                return flashRedirect.to("/", "지자체 등록 후 이용할 수 있습니다.");
+            }
+            return "redirect:" + locgovBase(foreigner) + "/" + own;
+        }
 
         List<GiveStatClient.LocgovYearRow> all =
-                new java.util.ArrayList<>(giveStatClient.locgovList(shCntrYear, effLocgov));
+                new java.util.ArrayList<>(giveStatClient.locgovList(shCntrYear, shLocgovCode, foreigner));
         // 정렬(AS-IS itemsOrder): 지정 시 해당 컬럼 내림차순(2차 정렬은 서버 기본순 유지).
         // 엑셀도 같은 정렬이어야 하므로 한 곳에서 처리한다.
         sortLocgovRows(all, itemsOrder);
@@ -150,6 +206,7 @@ public class GiveStatisticsController {
         model.addAttribute("itemsPerPage", size);
         model.addAttribute("itemsOrder", itemsOrder);
         model.addAttribute("scoped", scoped);
+        model.addAttribute("foreigner", foreigner);
         // AS-IS locgov/list.jsp 도 같은 YYYY 공통코드를 쓴다
         model.addAttribute("years", yearCodes());
         model.addAttribute("provinces", provinces());
@@ -160,8 +217,75 @@ public class GiveStatisticsController {
         return "give/give-statistics-locgov";
     }
 
+    private static String locgovBase(boolean foreigner) {
+        return foreigner ? "/give-statistics/foreigner/locgov" : "/give-statistics/locgov";
+    }
+
+    // ---- 지자체별 상세(월별 차트) - AS-IS give/statistics/locgov/detail.jsp ----
+
+    @GetMapping("/give-statistics/locgov/{locgovCode}")
+    public String locgovDetail(HttpSession session, @PathVariable String locgovCode,
+            @RequestParam(required = false) String shCntrYear, Model model) {
+        return locgovDetailView(false, session, locgovCode, shCntrYear, model);
+    }
+
+    @GetMapping("/give-statistics/foreigner/locgov/{locgovCode}")
+    public String foreignerLocgovDetail(HttpSession session, @PathVariable String locgovCode,
+            @RequestParam(required = false) String shCntrYear, Model model) {
+        return locgovDetailView(true, session, locgovCode, shCntrYear, model);
+    }
+
     /**
-     * AS-IS {@code GET /opmanager/give/statistics/locgov/excel} - 지자체별 통계 엑셀.
+     * AS-IS statisticsLocgovDetail - 지자체 담당자는 자기 지자체만 볼 수 있다(다른 코드면 "등록된 지자체만 이용할 수 있습니다."
+     * 안내와 함께 자기 상세로 되돌린다). ★AS-IS GET은 요약 카드를 계산하지 않고(POST 검색에서만) 외국인 목록의 링크는 GET으로
+     * 들어오므로 카드가 비어 있다 - TO-BE는 전체 화면과 같이 GET에서 계산한다.
+     */
+    private String locgovDetailView(boolean foreigner, HttpSession session, String locgovCode, String shCntrYear, Model model) {
+        Manager manager = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
+        boolean scoped = MenuService.isLocgovScoped(manager);
+        if (scoped) {
+            String own = manager.getLocgovCode();
+            if (own == null || own.isBlank()) {
+                return flashRedirect.to("/", "지자체 등록 후 이용할 수 있습니다.");
+            }
+            if (!own.equals(locgovCode)) {
+                return flashRedirect.to(locgovBase(foreigner) + "/" + own, "등록된 지자체만 이용할 수 있습니다.");
+            }
+        }
+        String year = (shCntrYear != null && !shCntrYear.isBlank()) ? shCntrYear
+                : String.valueOf(java.time.LocalDate.now().getYear());
+        model.addAttribute("years", yearCodes());
+        model.addAttribute("shCntrYear", year);
+        model.addAttribute("shLocgovCode", locgovCode);
+        model.addAttribute("locgovNm", locgovFullNm(locgovCode));
+        model.addAttribute("foreigner", foreigner);
+        model.addAttribute("scoped", scoped);
+        model.addAttribute("listUrl", locgovBase(foreigner));
+        model.addAttribute("total", giveStatClient.allSummary(year, locgovCode, foreigner));
+        return "give/give-statistics-locgov-detail";
+    }
+
+    @RequestMapping(value = "/give-statistics/locgov/{locgovCode}/{year}/month", method = {RequestMethod.GET, RequestMethod.POST})
+    @ResponseBody
+    public Map<String, Object> locgovMonth(HttpSession session, @PathVariable String locgovCode, @PathVariable String year) {
+        return success(giveStatClient.allByMonth(year, effectiveLocgov(session, locgovCode), false));
+    }
+
+    @RequestMapping(value = "/give-statistics/foreigner/locgov/{locgovCode}/{year}/month", method = {RequestMethod.GET, RequestMethod.POST})
+    @ResponseBody
+    public Map<String, Object> foreignerLocgovMonth(HttpSession session, @PathVariable String locgovCode, @PathVariable String year) {
+        return success(giveStatClient.allByMonth(year, effectiveLocgov(session, locgovCode), true));
+    }
+
+    /** 지자체 담당자는 어떤 코드가 와도 자기 지자체로 고정(상세 화면과 같은 규칙). */
+    private String effectiveLocgov(HttpSession session, String requested) {
+        Manager manager = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
+        return MenuService.isLocgovScoped(manager) ? manager.getLocgovCode() : requested;
+    }
+
+    /**
+     * AS-IS {@code GET /opmanager/give/statistics/locgov/excel} - 지자체별 통계 엑셀(외국인 화면도 같은 주소에
+     * foreignerFlag=Y를 싣는다).
      *
      * <p>AS-IS는 {@code GiveStatisticsExcelView} 에 {@code type="locgov"} 를 넘겨
      * 제목 <b>"기부금 모금 현황"</b> + No./년도/지자체/기부인원/기부금액/기부건수 6칸으로 쓴다.
@@ -176,13 +300,14 @@ public class GiveStatisticsController {
             @RequestParam(required = false, defaultValue = "") String shLocgovCode,
             @RequestParam(required = false, defaultValue = "") String shCntrYear,
             @RequestParam(required = false, defaultValue = "") String itemsOrder,
+            @RequestParam(required = false, defaultValue = "") String foreignerFlag,
             jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
         Manager manager = (Manager) session.getAttribute(ManagerAuthController.SESSION_MANAGER_KEY);
         // AS-IS: 지자체 담당자는 조건과 무관하게 자기 지자체로 고정된다(findAdminRoleAndLocgov).
         String effLocgov = MenuService.isLocgovScoped(manager) ? manager.getLocgovCode() : shLocgovCode;
 
         List<GiveStatClient.LocgovYearRow> rows =
-                new java.util.ArrayList<>(giveStatClient.locgovList(shCntrYear, effLocgov));
+                new java.util.ArrayList<>(giveStatClient.locgovList(shCntrYear, effLocgov, "Y".equals(foreignerFlag)));
         sortLocgovRows(rows, itemsOrder);
 
         org.apache.poi.xssf.streaming.SXSSFWorkbook workbook =

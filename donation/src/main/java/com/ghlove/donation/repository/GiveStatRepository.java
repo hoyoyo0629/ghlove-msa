@@ -16,7 +16,7 @@ import java.util.List;
  *    수납일을 넣게 되어 기부일(CNTR_DE)로 대신하던 번역을 AS-IS 기준으로 되돌렸다.
  *  - 시간대: HOUR(FRST_REGIST_PNTTM) → substr(FRST_REGIST_PNTTM,9,2)(yyyyMMddHHmmss).
  *  - 온/오프라인: CNTR_PATH_CODE '100'=온라인, '200'/'300'=오프라인.
- * foreignerFlag(외국인) 경로는 내/외국인 구분 데이터가 없어 보류라 N 경로만 포팅한다.
+ * foreignerFlag(외국인): AS-IS는 G_CNTR.FOREIGN_STATUS_CODE != '0' 로 거른다 - 같은 컬럼 조건을 :foreigner('Y') 인자로 옮겼다(전체 요약·월별·시간대별).
  */
 public interface GiveStatRepository extends JpaRepository<Donation, String> {
 
@@ -31,8 +31,10 @@ public interface GiveStatRepository extends JpaRepository<Donation, String> {
           AND CNTR_STTUS_CODE = 'COMPLETED'
           AND STTEMNT_PAY_DE IS NOT NULL
           AND (:locgovCode = '' OR CNTR_LOCGOV_CODE = :locgovCode)
+          AND (:foreigner <> 'Y' OR FOREIGN_STATUS_CODE <> '0')
         """)
-    List<Object[]> allSummary(@Param("year") String year, @Param("locgovCode") String locgovCode);
+    List<Object[]> allSummary(@Param("year") String year, @Param("locgovCode") String locgovCode,
+            @Param("foreigner") String foreigner);
 
     /** 월별(1~12): 건수/인원(중복제외)/금액/온라인건수/오프라인건수. */
     @Query(nativeQuery = true, value = """
@@ -48,10 +50,12 @@ public interface GiveStatRepository extends JpaRepository<Donation, String> {
           AND CNTR_STTUS_CODE = 'COMPLETED'
           AND STTEMNT_PAY_DE IS NOT NULL
           AND (:locgovCode = '' OR CNTR_LOCGOV_CODE = :locgovCode)
+          AND (:foreigner <> 'Y' OR FOREIGN_STATUS_CODE <> '0')
         GROUP BY substr(STTEMNT_PAY_DE, 5, 2)
         ORDER BY 1
         """)
-    List<Object[]> allByMonth(@Param("year") String year, @Param("locgovCode") String locgovCode);
+    List<Object[]> allByMonth(@Param("year") String year, @Param("locgovCode") String locgovCode,
+            @Param("foreigner") String foreigner);
 
     /** 시간대별(0~23): 특정일(cntr_de=yyyyMMdd)의 시간대별 기부금액. */
     @Query(nativeQuery = true, value = """
@@ -63,10 +67,12 @@ public interface GiveStatRepository extends JpaRepository<Donation, String> {
           AND CNTR_STTUS_CODE = 'COMPLETED'
           AND STTEMNT_PAY_DE IS NOT NULL
           AND (:locgovCode = '' OR CNTR_LOCGOV_CODE = :locgovCode)
+          AND (:foreigner <> 'Y' OR FOREIGN_STATUS_CODE <> '0')
         GROUP BY substr(FRST_REGIST_PNTTM, 9, 2)
         ORDER BY 1
         """)
-    List<Object[]> allByHour(@Param("date") String date, @Param("locgovCode") String locgovCode);
+    List<Object[]> allByHour(@Param("date") String date, @Param("locgovCode") String locgovCode,
+            @Param("foreigner") String foreigner);
 
     /** 지자체별(AS-IS getGivePersonStatisticsList): 연도+지자체 그룹, 기부인원(중복제외)/금액/건수.
      *  정렬(itemsOrder)·페이징은 호출측 메모리. 기본 정렬 연도desc·상위지자체·지자체. */
@@ -86,8 +92,10 @@ public interface GiveStatRepository extends JpaRepository<Donation, String> {
           AND GC.STTEMNT_PAY_DE IS NOT NULL
           AND (:shLocgovCode = '' OR GL.LOCGOV_CODE = :shLocgovCode)
           AND (:year = '' OR substr(GC.STTEMNT_PAY_DE, 1, 4) = :year)
+          AND (:foreigner <> 'Y' OR GC.FOREIGN_STATUS_CODE <> '0')
         GROUP BY substr(GC.STTEMNT_PAY_DE, 1, 4), GL.UPPER_LOCGOV_CODE, GL.UPPER_LOCGOV_NM, GL.LOCGOV_CODE, GL.LOCGOV_NM
         ORDER BY cntr_year DESC, GL.UPPER_LOCGOV_CODE, GL.LOCGOV_CODE
         """)
-    List<Object[]> locgovList(@Param("year") String year, @Param("shLocgovCode") String shLocgovCode);
+    List<Object[]> locgovList(@Param("year") String year, @Param("shLocgovCode") String shLocgovCode,
+            @Param("foreigner") String foreigner);
 }

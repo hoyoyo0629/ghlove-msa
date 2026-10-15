@@ -1,0 +1,26 @@
+<div id="day_stats" xmlns:th="http://www.thymeleaf.org">
+    <h4><span th:text="${year}" th:remove="tag"></span>년 <span th:text="${month}" th:remove="tag"></span>월 일별 접속통계</h4>
+    <div class="chart_vertical daily">
+        <table>
+            <tr>
+                <td th:each="dayStats : ${dayStatsList}"><div>
+                    <p class="name" th:text="${dayStats.displayDay()}"></p>
+                    <div class="bar_wrap">
+                        <p class="bar" th:style="'height: ' + ${dayStats.percent()} + '%'">
+                            <span class="number"><span th:text="${dayStats.percent()}" th:remove="tag"></span>%<br />(<span th:text="${dayStats.visitCount()}" th:remove="tag"></span>)</span>
+                        </p>
+                    </div>
+                </div></td>
+            </tr>
+        </table>
+        <div class="bar_bg">
+            <div class="grid">
+                <div><p>100%</p></div>
+                <div><p>80%</p></div>
+                <div><p>60%</p></div>
+                <div><p>40%</p></div>
+                <div><p>20%</p></div>
+            </div>
+        </div>
+    </div>
+</div>

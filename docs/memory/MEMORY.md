@@ -135,6 +135,7 @@
 - [admin Playwright 테스트계정 2개](admin-pwtest-manager-accounts.md) — pwtest_sys(ROLE_ADMIN_1)/pwtest_loc(ROLE_ADMIN_6, 11230), 비번 Test1234!, 지우지 않고 재사용
 - [★admin 로그인 게이트 블랙리스트 전환](admin-login-gate-whitelist-gaps.md) — 화이트리스트라 13화면이 로그인 없이 열려 있었음(point-history 69행 노출·NPE 500 3건). 2026-10-13 `/**` 전부 보호+공개만 제외로 뒤집음. ★이제 **공개 화면 만들면 exclude에 추가**해야 함(정적경로 누락 시 CSS까지 튕김)
 - [통계>매출통계 10화면 이식](admin-sales-day-statistics-port.md) — 발명된 축소판을 AS-IS 사양으로 교체. 일자별·월별·년도별·결제타입별·전체·지자체별·월별지자체별답례품현황·농협사업자답례품현황·카테고리별·답례품선호도 완료. ★취소 부호 규칙이 화면군마다 다름, ★기간은 timestamp 비교, 일부 컬럼은 TO-BE에 없어 "-". ★gift.Gift.categoryCode가 AS-IS 6종 카테고리와 1:1 대응. ★★"농협 사업자"는 bankName 아니라 G_NH_STAT_DATA_TEMP 사업자번호 매칭(이전 구현 오판 교정, 실데이터 6,779건 적재)
+- [접속통계 신규 이식](admin-visit-stats-port.md) — OP_VISIT_COUNT 1,096행 적재+메뉴URL(/stats→/stats/visit/index) 교정. ★접속 수집 쪽은 TO-BE에 없어 2026-06-09 이후 데이터 안 늘어남(결정 필요)
 - [count_title span 블록화 CSS 함정](admin-count-title-span-block-css-trap.md) — "총 N건"에서 숫자를 th:remove="tag" 없이 span으로 감싸면 opmanager.css가 세 줄로 쪼갠다. 2026-10-14 5화면 일괄 수정, 새 목록화면 포팅 시 체크리스트에 추가
 - [엑셀 No 컬럼 방향 불일치](admin-excel-no-column-direction-mismatch.md) — 화면은 내림차순인데 엑셀을 ++no(오름차순)로 짜서 어긋남(사용자 스크린샷 대조로 발견). ★AS-IS도 화면마다 방향이 다르니(관심지자체는 AS-IS 자체가 오름차순) 반드시 해당 화면의 *ExcelView.java 직접 확인, 짐작 금지. 검증도 content-type만 말고 POI로 복호화해 셀 값 대조할 것
 - [통계 전체(all) 화면 교정](admin-give-statistics-year-select-source.md) — ①년도 select는 YYYY 공통코드(데이터 있는 해만 뽑아 2026 하나뿐이었음) ②★차트 축은 서비스에서 빈 구간 0으로 채울 것(월 12·시 24) - 안 하면 0원인 날 그래프가 아예 안 그려짐
@@ -142,3 +143,7 @@
 - [통계>관심지자체 재구현](admin-interest-locgov-port.md) — 이전 구현(텍스트검색·"전체연도"·발명된 막대그래프)을 AS-IS 사양(지자체2단select·페이징·요약카드2개+월별차트·엑셀)으로 전면교체. ★지자체담당자는 목록 자체를 못 보고 자기 지자체로 강제리다이렉트, 다른 지자체 상세 직접접근도 차단
 - [관리자 메인 AS-IS 재이식(10-15)](admin-main-dashboard-asis-port.md) — 발명 위젯 제거, 권한별(SYS/LOC/OFF) 위젯+5개 서비스 집계API+콜등록 팝업, 데이터는 버튼 눌러야 조회. REPORT_DASHBOARD 배치 미이식·/opmanager/dashboard 미이식·판매자 상태코드 혼재 기록
 - [판매자 상태코드 AS-IS 전환(10-15)](gift-seller-status-asis-codes.md) — 2=사용/3=중지/5=승인대기, TO-BE 발명 0/1/2반려와 충돌하던 것 코드·데이터 18곳 전환. 판매자 관리 화면 자체는 아직 발명 화면
+- [일일 현황보고 이식](admin-dashboard-day-port.md) — 표3개는 AS-IS도 빈 틀, 실기능은 행안부 일일/주간보고 JSON·엑셀·복사. endDate id 필수, daily.report.js URL 패치. admin+donation+point+member 재기동 필요
+- [통계>보고서 5화면 이식(총괄·누계·지자체별·지자체·연간)](admin-report-general-port.md) — 2026-10-15 전부 완료, 통계표 22종 신설·적재 통계표 14종을 AS-IS 이름 그대로 신설·적재(2,066행), 탭4+14시트 엑셀. ★엑셀 버튼은 lclgv/excel-download를 부름, 통계 배치는 TO-BE에 없음. admin 재기동 필요
+- [외국인 기부 현황(전체·지자체별) 이식](admin-foreigner-give-stat-all-port.md) — (지자체별·상세 2026-10-15 추가, 6712 이식 완료) 6711 menu_url 누락이 원인, 전체 화면에 foreigner 분기. ★AS-IS는 검색 POST 405(카드 안 채워짐)라 TO-BE는 GET 계산. 개발데이터 전부 내국인이라 0 표시. admin+donation 재기동 필요
+- [카테고리관리(16101) 이식](admin-categories-port.md) — OP_CATEGORY 1~4차 jsTree를 gift에 올림, 메뉴URL→/categories, ★PG 한글정렬은 collate "C"로 AS-IS와 맞춤, OP_ITEM_FILTER엔 category_id 없음, 한계: GNB는 gift_subcategory를 읽음. admin+gift 재기동 필요

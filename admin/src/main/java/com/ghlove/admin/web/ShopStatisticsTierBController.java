@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /** AS-IS opmanager/shop-statistics의 "판매(sales)/대시보드/선호도" 스위트 재구현
- *  (report 스위트는 {@link ReportStatisticsController}가 별개로 담당). */
+ *  (report 스위트는 ShopStatisticsReport*Controller가 별개로 담당). */
 @Controller
 @RequiredArgsConstructor
 public class ShopStatisticsTierBController {
@@ -848,12 +848,6 @@ public class ShopStatisticsTierBController {
 
     // ---- O/P. 대시보드 ----
 
-    @GetMapping("/shop-statistics/dashboard/day")
-    public String dashboardDay(@RequestParam(required = false) String date, Model model) {
-        model.addAttribute("dashboard", service.dashboardDay(date));
-        return "shop-statistics/dashboard-day";
-    }
-
     @GetMapping("/shop-statistics/dashboard/month")
     public String dashboardMonth(@RequestParam(required = false) String yearMonth, Model model) {
         model.addAttribute("dashboard", service.dashboardMonth(yearMonth));
@@ -862,12 +856,6 @@ public class ShopStatisticsTierBController {
 
     // ---- R. 대시보드 텍스트 리포트 (AS-IS opmanager/report - ReportController, 행안부 일일/주간보고
     // 클립보드복사용 텍스트 생성. 이미 있는 대시보드 데이터를 정형 텍스트로만 포맷팅한다) ----
-
-    @GetMapping("/shop-statistics/dashboard/day/report")
-    @org.springframework.web.bind.annotation.ResponseBody
-    public String dashboardDayReport(@RequestParam(required = false) String date) {
-        return service.dashboardDayReportText(service.dashboardDay(date));
-    }
 
     @GetMapping("/shop-statistics/dashboard/month/report")
     @org.springframework.web.bind.annotation.ResponseBody

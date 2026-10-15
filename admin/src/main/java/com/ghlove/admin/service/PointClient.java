@@ -255,4 +255,17 @@ public class PointClient {
             return Map.of();
         }
     }
+
+    /** 통계 > 보고서 > 일일 현황보고 - 답례품 신청(포인트 사용) 누계. 실패 시 null. */
+    public java.util.Map<String, Object> dailyUsePoint(String searchDay) {
+        try {
+            return restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/report/daily-use-point")
+                            .queryParam("searchDay", searchDay).build())
+                    .retrieve().body(new ParameterizedTypeReference<java.util.Map<String, Object>>() {
+                    });
+        } catch (RestClientException e) {
+            return null;
+        }
+    }
 }

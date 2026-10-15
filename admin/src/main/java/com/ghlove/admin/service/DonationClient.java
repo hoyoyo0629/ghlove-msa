@@ -185,4 +185,18 @@ public class DonationClient {
     public record RelayLog(Integer relayLogId, Long userId, String relayType, String cntrLocgovCode,
                             String cntrSn, String relayResultCode, LocalDateTime frstRegistPnttm) {
     }
+
+    /** 통계 > 보고서 > 일일 현황보고 - 기부 집계(누계/증가/연계기관별). 실패 시 null. */
+    public java.util.Map<String, Object> dailyReport(String searchDay, String startDay, String endDay) {
+        try {
+            return restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/report/daily-donation")
+                            .queryParam("searchDay", searchDay).queryParam("startDay", startDay)
+                            .queryParam("endDay", endDay).build())
+                    .retrieve().body(new ParameterizedTypeReference<java.util.Map<String, Object>>() {
+                    });
+        } catch (RestClientException e) {
+            return null;
+        }
+    }
 }

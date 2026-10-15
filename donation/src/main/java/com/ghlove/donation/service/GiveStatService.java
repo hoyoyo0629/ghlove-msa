@@ -35,8 +35,8 @@ public class GiveStatService {
                                 String locgovNm, long cntrAmt, long givePersons, long giveCnt) {
     }
 
-    public AllSummary allSummary(String year, String locgovCode) {
-        List<Object[]> rows = repository.allSummary(y(year), n(locgovCode));
+    public AllSummary allSummary(String year, String locgovCode, boolean foreigner) {
+        List<Object[]> rows = repository.allSummary(y(year), n(locgovCode), flag(foreigner));
         if (rows.isEmpty()) {
             return new AllSummary(0, 0, 0);
         }
@@ -51,8 +51,8 @@ public class GiveStatService {
      * (기부가 있는 달만 나온다) 위에 1~12 루프를 돌며 빈 달을 0으로 메운다. 그 보정이 없으면
      * 차트 x축이 "1,2,3,5,6,8,9" 처럼 <b>데이터가 있는 달만</b> 찍혀 그래프가 어긋난다.
      */
-    public List<MonthRow> allByMonth(String year, String locgovCode) {
-        Map<Integer, MonthRow> found = repository.allByMonth(y(year), n(locgovCode)).stream()
+    public List<MonthRow> allByMonth(String year, String locgovCode, boolean foreigner) {
+        Map<Integer, MonthRow> found = repository.allByMonth(y(year), n(locgovCode), flag(foreigner)).stream()
                 .map(r -> new MonthRow(i(r[0]), l(r[1]), l(r[2]), l(r[3]), l(r[4]), l(r[5])))
                 .collect(Collectors.toMap(MonthRow::cntrMonth, m -> m, (a, b) -> a));
         List<MonthRow> result = new ArrayList<>(12);
@@ -69,8 +69,8 @@ public class GiveStatService {
      * 쿼리는 0행을 주는데, AS-IS는 24행(금액 0)으로 만들어 넘긴다 - 그래서 <b>0원인 날도
      * 그래프가 그려진다</b>(2026-10-13 사용자 지적으로 확인).
      */
-    public List<HourRow> allByHour(String date, String locgovCode) {
-        Map<Integer, HourRow> found = repository.allByHour(n(date), n(locgovCode)).stream()
+    public List<HourRow> allByHour(String date, String locgovCode, boolean foreigner) {
+        Map<Integer, HourRow> found = repository.allByHour(n(date), n(locgovCode), flag(foreigner)).stream()
                 .map(r -> new HourRow(i(r[0]), l(r[1])))
                 .collect(Collectors.toMap(HourRow::cntrHour, h -> h, (a, b) -> a));
         List<HourRow> result = new ArrayList<>(24);
@@ -80,8 +80,8 @@ public class GiveStatService {
         return result;
     }
 
-    public List<LocgovYearRow> locgovList(String year, String shLocgovCode) {
-        return repository.locgovList(n(year), n(shLocgovCode)).stream()
+    public List<LocgovYearRow> locgovList(String year, String shLocgovCode, boolean foreigner) {
+        return repository.locgovList(n(year), n(shLocgovCode), flag(foreigner)).stream()
                 .map(r -> new LocgovYearRow(i(r[0]), (String) r[1], (String) r[2], (String) r[3], (String) r[4],
                         l(r[5]), l(r[6]), l(r[7]))).toList();
     }
@@ -92,6 +92,11 @@ public class GiveStatService {
 
     private static long l(Object o) {
         return o == null ? 0L : ((Number) o).longValue();
+    }
+
+    /** AS-IS foreignerFlag == "Y" - 외국인(FOREIGN_STATUS_CODE != 0)만 집계. */
+    private static String flag(boolean foreigner) {
+        return foreigner ? "Y" : "N";
     }
 
     private static String n(String s) {

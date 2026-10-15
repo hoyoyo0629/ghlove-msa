@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${foreigner ? '외국인 기부 현황 (' + locgovNm + ')' : '기부금 모금현황(' + locgovNm + ')'} + ' - 고향사랑e음 (admin service)'">기부금 모금현황 - 고향사랑e음 (admin service)</title>
+    <!-- 공통 head(AS-IS inc_head verbatim: CSS 6 + JS 12) - csrf meta/폰트/op.* 전부 여기서 로드 -->
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <style>
+        .hourGraph canvas { position: absolute; width: 100%; top: 0; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/give/statistics/locgov/detail.jsp 이식 - 한 지자체의 월별 기부 현황(요약 3카드 + Chart.js 4종).
+     전체(give-statistics-all.html)와 같은 구조에서 시간대별 차트가 빠지고 위에 "목록" 버튼이 붙는다.
+
+     ★ AS-IS 특징(그대로 옮김)
+     - 목록 버튼은 지자체 담당자(adminRole == LOC)에게는 안 보인다(목록이 없고 자기 지자체 상세만 쓴다).
+     - 제목은 JS가 "기부금 모금현황(시/도 지자체)" / "외국인 기부 현황 (시/도 지자체)"로 덮어쓴다.
+     - 외국인(foreignerFlag == 'Y')이면 카드·차트 제목에 "외국인 " 접두어, ajax URL이 foreigner/locgov/{지자체}/ 로 바뀐다.
+     - 나이대별 차트 2개(giveAgeCntBarChart/AmountBarChart)와 statisticsAllByAge()는 AS-IS가 주석처리한 상태(그 JS는 $.post(+...)로
+       문법도 깨져 있다)라 옮기지 않았다.
+     ★ AS-IS는 요약 카드를 POST(검색)에서만 계산해 외국인 목록의 링크(GET)로 들어오면 카드가 비어 있다 - TO-BE는 GET에서 계산한다. -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+    <h3><span th:text="${foreigner ? '외국인 기부 현황 (' + locgovNm + ')' : '기부금 모금현황(' + locgovNm + ')'}">기부금 모금현황</span></h3>
+
+    <div class="btn_all btn_right">
+        <div class="flex_box gap-08 md15">
+            <button type="button" th:unless="${scoped}" class="btn btn-default btn-mini" style="margin-left : auto"
+                    th:attr="onclick=|location.href='${listUrl}'|">목록</button>
+        </div>
+    </div>
+
+    <form id="searchParam" method="get" th:action="@{${listUrl} + '/' + ${shLocgovCode}}">
+        <div class="board_write mb30">
+            <table class="board_write_table" summary="">
+                <colgroup><col style="width:220px;"></colgroup>
+                <tbody>
+                    <tr>
+                        <td class="label col-md-2">년도</td>
+                        <td>
+                            <div class="flex_box gap-08 item-center">
+                                <select id="shCntrYear" name="shCntrYear" title="년도" class="wd-150">
+                                    <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${y == shCntrYear}"></option>
+                                </select>
+                                <button type="submit" class="btn btn-dark-gray btn-mini">검색</button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <input type="hidden" id="foreignerFlag" name="foreignerFlag" th:value="${foreigner} ? 'Y' : ''">
+        <input type="hidden" id="shLocgovCode" name="shLocgovCode" th:value="${shLocgovCode}">
+        <input type="hidden" id="locgovNm" th:value="${locgovNm}">
+    </form>
+
+    <div class="mainArea loc_details mb30">
+        <div class="list_box">
+            <ul class="list">
+                <li class="bg01 col-md-4">
+                    <p class="tit" th:text="${foreigner} ? '외국인 총 기부금액' : '총 기부금액'">총 기부금액</p>
+                    <p class="txt"><span th:text="${#numbers.formatInteger(total.cntrAmt, 0, 'COMMA')}">0</span></p>
+                </li>
+                <li class="bd02 col-md-4">
+                    <p class="tit"><th:block th:text="${foreigner} ? '외국인 총 기부인원 ' : '총 기부인원 '">총 기부인원 </th:block><span class="s-txt">(중복제외)</span></p>
+                    <p class="txt"><span th:text="${#numbers.formatInteger(total.cntrPerson, 0, 'COMMA')}">0</span></p>
+                </li>
+                <li class="bd02 col-md-4">
+                    <p class="tit" th:text="${foreigner} ? '외국인 총 기부건수' : '총 기부건수'">총 기부건수</p>
+                    <p class="txt"><span th:text="${#numbers.formatInteger(total.cntrCnt, 0, 'COMMA')}">0</span></p>
+                </li>
+            </ul>
+        </div>
+        <div class="graph_wrap">
+            <div class="bd_gray mb15">
+                <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;" th:text="${foreigner} ? '외국인 월별 기부건수' : '월별 기부건수'">월별 기부건수</p>
+                <div class="graph"><canvas id="giveCountLineChart"></canvas></div>
+            </div>
+            <div class="bd_gray mb15">
+                <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;" th:text="${foreigner} ? '외국인 월별 기부건수' : '월별 기부건수'">월별 기부건수</p>
+                <div class="graph"><canvas id="giveCountBarChart"></canvas></div>
+            </div>
+            <div class="bd_gray mb15">
+                <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;" th:text="${foreigner} ? '외국인 월별 기부인원' : '월별 기부인원'">월별 기부인원</p>
+                <div class="graph"><canvas id="givePersonLineChart"></canvas></div>
+            </div>
+            <div class="bd_gray mb15">
+                <p class="tit" style="line-height: 36px; margin-bottom: 20px; font-weight: bold;" th:text="${foreigner} ? '외국인 월별 기부금액' : '월별 기부금액'">월별 기부금액</p>
+                <div class="graph"><canvas id="giveAmountLineChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<!-- AS-IS ViewUtils.redirect(url, message) - 안내문구(다른 지자체 접근 등)를 alert으로 띄운다 -->
+<input type="hidden" id="redirectMessage" th:value="${redirectMessage}">
+<script type="text/javascript" th:src="@{/content/modules/chart.min.js}"></script>
+<script type="text/javascript" th:src="@{/content/modules/op.chart.js}"></script>
+<script type="text/javascript">
+    var FOREIGNER = $("#foreignerFlag").val() == 'Y';
+    var LOCGOV_CODE = $("#shLocgovCode").val();
+    var LOCGOV_NM = $("#locgovNm").val();
+
+    $(function () {
+        var msg = $("#redirectMessage").val();
+        if (msg) {
+            alert(msg);
+        }
+        if (FOREIGNER) {
+            $(".contents_inner > h3:first > span").html("외국인 기부 현황 (" + LOCGOV_NM + ")");
+        } else {
+            $(".contents_inner > h3:first > span").html("기부금 모금현황(" + LOCGOV_NM + ")");
+        }
+        init();
+    });
+
+    function init() {
+        statisticsAllByMonth();
+    }
+
+    function statisticsAllByMonth() {
+        var monthArr = [];
+        var cntArr = [{ label: '건수별', data: [], backgroundColor: '#004CCE', borderColor: '#004CCE' }];
+        var personArr = [{ label: '인원별', data: [], backgroundColor: '#00215A', borderColor: '#00215A' }];
+        var amtArr = [{ label: '금액별', data: [], backgroundColor: '#09C2C7', borderColor: '#09C2C7' }];
+        var onlineArr = [{ label: '온라인', data: [], backgroundColor: '#00215A', borderColor: '#00215A' }, { label: '오프라인', data: [], backgroundColor: '#09C2C7', borderColor: '#09C2C7' }];
+
+        var url = FOREIGNER ? '/give-statistics/foreigner/locgov/' + LOCGOV_CODE + '/' : '/give-statistics/locgov/' + LOCGOV_CODE + '/';
+        $.post(url + $("#shCntrYear").val() + '/month', {}, function (resp) {
+            if (resp.isSuccess) {
+                resp.data.forEach(function (d, i) {
+                    monthArr.push(d.cntrMonth ? d.cntrMonth : 0);
+                    cntArr[0].data.push(d.cntrCnt ? d.cntrCnt : 0);
+                    personArr[0].data.push(d.cntrPerson ? d.cntrPerson : 0);
+                    amtArr[0].data.push(d.cntrAmt && d.cntrAmt > 0 ? Math.floor(d.cntrAmt / 1000) : 0);
+                    onlineArr[0].data.push(d.cntrOnline ? d.cntrOnline : 0);
+                    onlineArr[1].data.push(d.cntrOffline ? d.cntrOffline : 0);
+                });
+
+                ChartCommon.drawChart('giveCountLineChart', 'line', null, monthArr, cntArr, { x: '월', y: '건' });
+                ChartCommon.drawChart('givePersonLineChart', 'line', null, monthArr, personArr, { x: '월', y: '명' });
+                ChartCommon.drawChart('giveAmountLineChart', 'line', null, monthArr, amtArr, { x: '월', y: '천원' });
+                ChartCommon.drawChart('giveCountBarChart', 'bar', { scales: { x: { stacked: true }, y: { stacked: true } } }, monthArr, onlineArr, { x: '월', y: '건' });
+            } else {
+                alert(resp.errorMessage);
+            }
+        });
+    }
+</script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

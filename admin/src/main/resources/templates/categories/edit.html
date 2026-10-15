@@ -1,0 +1,158 @@
+<!-- AS-IS opmanager/categories/edit.jsp - 목록(list.html)이 ajax로 받아 .right_box에 끼워 넣는 조각이다(layout=blank).
+     AS-IS 운영은 view.type=api 라서 URL 미리보기는 api 분기(프론트 /goods/searchGoods.html?category=…&type=C 한 개)만 쓴다.
+     "카테고리 필터" 영역은 AS-IS도 이 화면 마크업에는 없다(스크립트만 남은 죽은 코드). -->
+<div xmlns:th="http://www.thymeleaf.org" th:remove="tag">
+<input type="hidden" name="categoryGroupId" th:if="${categories.categoryLevel != '1'}" th:value="${categories.categoryGroupId}" />
+
+    <!-- 2차 카테고리 수정 -->
+	<h5 style="margin-top: 0; border-left: 4px solid #000; padding-left: 8px;"> <th:block th:text="${level + 1}">2</th:block><th:block th:utext="${msg.get('M01292')}">차 카테고리 수정</th:block></h5>
+	<table class="board_write_table bt2">
+		<caption th:utext="${' ' + msg.get('M00545')}"> 카테고리 만들기</caption>
+		<colgroup>
+			<col style="width: 150px;" />
+			<col style="width: auto;" />
+		</colgroup>
+		<tbody>
+			<tr>
+				<td class="label">URL</td>
+				<td>
+					<div style="font-size: 13px;">
+						<a th:href="|${frontendUrl}/goods/searchGoods.html?category=${categories.categoryUrl}&amp;type=C|" target="_blank"><img src="/content/opmanager/images/icon/icon_preview_pc.gif" alt="" /></a>
+						/goods/searchGoods.html?category=
+
+						<input type="text" id="categoryUrl" name="categoryUrl" style="width: 150px; font-size: 12px; color: #000" th:value="${categories.categoryUrl}" />&amp;type=C
+				 	</div>
+				</td>
+			</tr>
+		 	 <tr>
+				<td class="label" th:utext="${msg.get('M01139')}">카테고리명</td>
+				<td>
+					<div>
+						<input name="categoryName" type="text" class="required full" th:title="${msg.get('M01139')}" th:value="${categories.categoryName}">
+						<input name="categoryId" type="hidden" th:value="${categories.categoryId}" />
+						<input name="categoryCode" type="hidden" th:value="${categories.categoryCode}" />
+						<input name="categoryClass1" type="hidden" th:value="${categories.categoryClass1}" />
+						<input name="categoryClass2" type="hidden" th:value="${categories.categoryClass2}" />
+						<input name="categoryClass3" type="hidden" th:value="${categories.categoryClass3}" />
+						<input name="categoryClass4" type="hidden" th:value="${categories.categoryClass4}" />
+						<input name="categoryLevel" type="hidden" th:value="${categories.categoryLevel}" />
+						<input name="currentCategoryUrl" type="hidden" th:value="${categories.categoryUrl}" />
+						<input name="categoryUrlCheck" type="hidden" value="1" />
+				 	</div>
+				</td>
+			</tr>
+
+			<tr th:if="${categories.categoryLevel == '1'}">
+				<td class="label">1차 카테고리</td>
+				<td>
+					<div>
+						<p>
+							<select name="categoryGroupId" class="category">
+								<option value="0">= 카테고리 그룹 =</option>
+								<th:block th:each="categoriesTeam : ${categoryTeamGroupList}">
+									<th:block th:if="${categoriesTeam.flag == 'Y'}">
+										<optgroup th:label="${categoriesTeam.name}">
+										<th:block th:each="categoriesGroup : ${categoriesTeam.groups}">
+											<option th:if="${categoriesGroup.flag == 'Y'}" th:value="${categoriesGroup.id}" th:attr="label=${categoriesGroup.name}"
+											        th:selected="${categoriesGroup.id == categories.categoryGroupId}" th:text="${categoriesGroup.name}"></option>
+										</th:block>
+										</optgroup>
+									</th:block>
+								</th:block>
+							</select>
+						</p>
+				 	</div>
+				</td>
+			</tr>
+
+			<tr>
+				<td class="label" th:utext="${msg.get('M00191')}">공개유무</td>
+				<td>
+                    <div class="flex_box gap-12">
+                        <div class="input-form">
+                            <input type="radio" name="categoryFlag" value="Y" id="out_all" th:checked="${categories.categoryFlag == 'Y'}" />
+                            <label for="out_all"><th:block th:utext="${msg.get('M00096')}">공개</th:block></label>
+                        </div>
+                        <div class="input-form">
+                            <input type="radio" name="categoryFlag" value="N" id="out" th:checked="${categories.categoryFlag == 'N'}" />
+                            <label for="out"><th:block th:utext="${msg.get('M00097')}">비공개</th:block></label>
+                        </div>
+                     </div>
+				</td>
+			</tr>
+			<tr style="display: none;">
+				<td class="label" th:utext="${msg.get('M01604')}">접속권한</td>
+				<td>
+					<div>
+						<!-- AS-IS: 첫 라디오는 checked 고정, 둘째는 바인딩 값이 2일 때만 checked - 브라우저는 마지막 checked가 이기므로 결국 현재 값이 유지된다 -->
+						<input type="radio" name="accessType" value="1" id="accessType1" th:checked="${categories.accessType != '2'}" /><label for="accessType1" th:utext="${msg.get('M00497')}">제한 없음</label>
+						<input type="radio" name="accessType" value="2" id="accessType2" th:checked="${categories.accessType == '2'}" /><label for="accessType2" th:utext="${msg.get('M01679')}">성인만</label>
+					</div>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+
+    <div class="btn_all btn_center">
+        <div class="flex_box gap-08">
+            <button type="submit" class="btn btn-small btn-dark-gray">수정</button>
+            <button type="button" class="btn btn-small btn-default op-delete-category" onclick="deleteCategory();" th:utext="${msg.get('M00074')}">삭제</button>
+        </div>
+    </div>
+    <!-- // 2차 카테고리 수정 -->
+
+	<!-- 3차 카테고리 등록 -->
+	<th:block th:if="${categories.categoryLevel != '2' and categories.categoryType == '1'}">
+		<h5 style="margin-top: 20px;border-left: 4px solid #000; padding-left: 8px;"> <th:block th:text="${level + 2}">3</th:block><th:block th:utext="${msg.get('M01294')}">차</th:block> 카테고리 등록</h5>
+		<table class="board_write_table bt2">
+			<caption th:utext="${' ' + msg.get('M00545')}"> 카테고리 만들기</caption>
+			<colgroup>
+				<col style="width: 150px;" />
+				<col style="width: auto;" />
+			</colgroup>
+			<tbody>
+				<tr>
+					<td class="label" th:utext="${msg.get('M01139')}">카테고리명</td>
+					<td>
+						<div>
+							 <input name="categoryLowName" type="text" class="full" style="width: 50%;" th:title="${msg.get('M01139')}" />
+					 	</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">URL</td>
+					<td>
+						<div class="flex_box gap-08">
+							 <input name="categoryLowUrl" type="text" class="full" style="width: 50%;" title="URL" />
+							 <input name="categoryLowUrlCheck" type="hidden" value="0" />
+							 <a href="javascript:;" id="categroyLowUrlSearch" class="btn btn-gradient btn-sm" th:utext="${msg.get('M01488')}">중복확인</a>
+					 	</div>
+					</td>
+				</tr>
+
+				<tr>
+					<td class="label" th:utext="${msg.get('M00191')}">공개유무</td>
+					<td>
+                        <div class="flex_box gap-12">
+                            <div class="input-form">
+                                <input type="radio" name="categoryLowFlag" value="Y" id="out_all-01" checked="checked" />
+                                <label for="out_all-01"><th:block th:utext="${msg.get('M00096')}">공개</th:block></label>
+                            </div>
+                            <div class="input-form">
+                                <input type="radio" name="categoryLowFlag" value="N" id="out-01" />
+                                <label for="out-01"><th:block th:utext="${msg.get('M00097')}">비공개</th:block></label>
+                            </div>
+                         </div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
+        <div class="btn_all btn_center">
+            <div class="flex_box gap-08">
+                <a href="javascript:;" id="categroyLowAdd" class="btn btn-small btn-dark-gray" th:text="|${level + 2}차 카테고리 등록|">3차 카테고리 등록</a>
+            </div>
+        </div>
+	</th:block>
+    <!-- // 3차 카테고리 등록 -->
+</div>

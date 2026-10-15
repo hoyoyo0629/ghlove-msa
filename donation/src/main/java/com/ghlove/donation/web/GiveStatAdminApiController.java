@@ -19,26 +19,30 @@ public class GiveStatAdminApiController {
 
     @GetMapping("/api/give-statistics/admin/all/summary")
     public GiveStatService.AllSummary allSummary(@RequestParam String year,
-            @RequestParam(required = false) String locgovCode) {
-        return giveStatService.allSummary(year, locgovCode);
+            @RequestParam(required = false) String locgovCode,
+            @RequestParam(required = false, defaultValue = "N") String foreigner) {
+        return giveStatService.allSummary(year, locgovCode, "Y".equals(foreigner));
     }
 
     @GetMapping("/api/give-statistics/admin/all/{year}/month")
     public List<GiveStatService.MonthRow> allMonth(@PathVariable String year,
-            @RequestParam(required = false) String locgovCode) {
-        return giveStatService.allByMonth(year, locgovCode);
+            @RequestParam(required = false) String locgovCode,
+            @RequestParam(required = false, defaultValue = "N") String foreigner) {
+        return giveStatService.allByMonth(year, locgovCode, "Y".equals(foreigner));
     }
 
     @GetMapping("/api/give-statistics/admin/all/{date}/hour")
     public List<GiveStatService.HourRow> allHour(@PathVariable String date,
-            @RequestParam(required = false) String locgovCode) {
-        return giveStatService.allByHour(date, locgovCode);
+            @RequestParam(required = false) String locgovCode,
+            @RequestParam(required = false, defaultValue = "N") String foreigner) {
+        return giveStatService.allByHour(date, locgovCode, "Y".equals(foreigner));
     }
 
     /** 지자체별 통계 목록(AS-IS give/statistics/locgov). */
     @GetMapping("/api/give-statistics/admin/locgov/list")
     public List<GiveStatService.LocgovYearRow> locgovList(@RequestParam(required = false) String year,
-            @RequestParam(required = false) String locgovCode) {
-        return giveStatService.locgovList(year, locgovCode);
+            @RequestParam(required = false) String locgovCode,
+            @RequestParam(required = false, defaultValue = "N") String foreigner) {
+        return giveStatService.locgovList(year, locgovCode, "Y".equals(foreigner));
     }
 }
