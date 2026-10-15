@@ -72,6 +72,9 @@ ghlove:
     base-url: http://localhost:8082
   member-service:
     base-url: http://localhost:8081
+  # 대민 사이트(storefront) - AS-IS SalesonProperty.getSalesonUrlFrontend() 대응(관리자 계정 잠김 화면의 비밀번호 찾기 등).
+  storefront:
+    base-url: http://localhost:5173
   point-service:
     base-url: http://localhost:8083
   gift-service:

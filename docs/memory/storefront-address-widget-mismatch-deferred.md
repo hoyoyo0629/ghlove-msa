@@ -68,3 +68,6 @@ admin처럼 opener 직접호출 방식, postMessage 불필요)로 교체, 저장
 - 행안부 API 키/도메인 승인 등 외부연계가 먼저 정리돼야 착수 가능하다고 판단한 것으로 보임.
 이 메모가 그 재개 시점의 체크리스트다: SignupView.vue·ProfileView.vue 두 파일만 juso.go.kr 팝업으로
 교체, DeliveryFormView.vue·CheckoutView.vue는 손대지 않음.
+
+
+**2026-10-15 키 교정**: storefront `public/juso-popup.html`이 AS-IS Vue initData의 개발키(devU01…, 실제로는 안 보내는 죽은 값)를 옮겨 개발키 만료(E0014 "개발승인키 기간이 만료") 후 검색이 막혔다. AS-IS가 실제로 보내는 폼 숨은 칸의 운영키(U01TX0FVVEgyMDIyMTEyNTE0…, admin과 같은 키)로 교체, API 응답 errorCode 0 확인. ★AS-IS에서 값을 옮길 때는 "실제로 전송되는 경로"의 값인지 확인할 것.

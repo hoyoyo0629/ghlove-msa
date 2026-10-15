@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+    <title>고향사랑e음 관리자</title>
+</head>
+<body>
+<!-- AS-IS opmanager/i18n/main/login-lock.jsp(/opmanager/login-lock, 접속제한) 이식.
+     "비밀번호 찾기 바로가기"는 AS-IS 프론트(SalesonProperty.getSalesonUrlFrontend())의 /users/find-idpw.html →
+     TO-BE 대민(storefront) /find-idpw. "관리자 로그인하기"의 AS-IS /opmanager → TO-BE /admin. -->
+<div class="admin_wrap">
+	<div id="header">
+		<div class="header_wrap">
+			<h1><a href="javascript:void(0);"><img src="../content/opmanager/images/img_logo.png" alt="고향사랑기부제" /></a></h1>
+		</div>
+	</div>
+	<div id="container" class="login">
+		<div class="login_cont">
+			<div class="login_tit mb50">계정 잠김 해지</div>
+			<div class="login_sub_tit">비밀번호 5회 오류로 계정이 잠김 처리되었습니다.<br>새로운 비밀번호를 설정하셔야 로그인이 가능합니다.</div>
+			<div class="login_sub_tit">고향사랑e음 > 로그인 > 비밀번호 찾기에서 본인인증을 통해 비밀번호 변경이 가능합니다.</div>
+			<div class="login_sub_tit">*오프라인 담당자는 상위 관리자에게 비밀번호 초기화를 요청해 주세요.</div>
+			<div class="button_wrap">
+				<a th:href="${frontendUrl} + '/find-idpw'" class="btn btn-dark-gray btn-large" target="_blank" rel="noreferrer"><span>비밀번호 찾기 바로가기</span></a>
+				<a href="/admin" class="btn btn-default btn-large"><span>관리자 로그인하기</span></a>
+			</div>
+		</div>
+	</div>
+	<div id="footer">
+		<div class="footer_wrap">
+			<span class="copy">© Ministry of the interior and safety. All rights reserved.</span>
+		</div>
+	</div>
+</div>
+</body>
+</html>

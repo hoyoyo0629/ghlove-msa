@@ -19,6 +19,11 @@ public class UserDetail {
     @Column(name = "PHONE_NUMBER")
     private String phoneNumber;
 
+    /** 전화번호 - 오프라인 담당자는 지점 연락처를 여기 둔다(AS-IS personincharge-mapper updateUserDetailSync /
+     *  deleteChargerTelNumber). 컬럼은 원래 있었고 매핑만 없었다. */
+    @Column(name = "TEL_NUMBER")
+    private String telNumber;
+
     @Column(name = "ADDRESS")
     private String address;
 

@@ -203,8 +203,12 @@
                 opener.location.reload();
             }
             self.close();
+        } else if (data.code == "ERR_STS" && (data.statusCode == "3" || data.statusCode == "4")) {
+            if (data.statusCode == "3") alert("탈퇴한 회원은 관리자 권한 승인 불가능합니다. \n관리자 권한 거절만 가능합니다.");
+            else if (data.statusCode == "4") alert("휴면 회원은 관리자 권한 승인 불가능합니다. \n관리자 권한 거절만 가능합니다.");
+
         } else {
-            alert(data.message ? data.message : '오류가 발생했습니다.');
+            alert("오류가 발생했습니다.");
         }
     }
 </script>

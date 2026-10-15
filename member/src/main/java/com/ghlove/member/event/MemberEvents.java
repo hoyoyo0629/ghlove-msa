@@ -34,4 +34,13 @@ public final class MemberEvents {
     /** 휴면 전환 (SFR-002 휴면 배치). */
     public record MemberDormantEvent(Long userId, LocalDateTime at) {
     }
+
+    /**
+     * 회원 비밀번호 변경 (마이페이지 변경·비밀번호 찾기·로그인 시 변경). admin이 받아 같은 아이디의 관리자 비밀번호도
+     * 바꾸고 로그인 실패횟수를 푼다 - AS-IS UserServiceImpl "관리자동기화"(updatePasswordForManager +
+     * updateClearLoginFailCountForManager). 비밀번호는 원문이 아니라 해시만 싣는다.
+     */
+    public record PasswordChangedEvent(Long userId, String loginId, String passwordHash, String passwordType,
+                                       String passwordExpiredDate, LocalDateTime at) {
+    }
 }

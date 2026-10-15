@@ -41,6 +41,11 @@ public class ManagerRequest {
     @Column(name = "REQST_SE_CODE")
     private String reqstSeCode;
 
+    /** 소속코드 - 오프라인은 은행코드(OFF_BANK_LIST), 행정복지센터는 센터 ID. 승인 시 OP_MANAGER.BANK_CODE로 간다
+     *  (AS-IS insertManagerByUserSync의 R.PSITN_CODE). 컬럼은 원래 있었고 매핑만 없었다. */
+    @Column(name = "PSITN_CODE")
+    private String psitnCode;
+
     @Column(name = "PSITN_NM")
     private String psitnNm;
 

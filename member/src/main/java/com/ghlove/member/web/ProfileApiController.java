@@ -28,6 +28,7 @@ public class ProfileApiController {
     private final DonationClient donationClient;
     private final PointClient pointClient;
     private final AuthCookieSupport authCookieSupport;
+    private final com.ghlove.member.service.DevBypassSettings devBypassSettings;
 
     private User requireLogin(HttpSession session) {
         return (User) session.getAttribute(AuthController.SESSION_USER_KEY);
@@ -66,7 +67,33 @@ public class ProfileApiController {
                 locgovs, provinces,
                 loginPathCode, userKeyYN, kakaoUserKeyYN,
                 // AS-IS modify.html getUserInfo → param.locgovCode(저장된 회원 지자체코드). 세션 User는 낡을 수 있어 새로 읽는다.
-                memberService.locgovCodeOf(user.getUserId())));
+                memberService.locgovCodeOf(user.getUserId()),
+                // AS-IS getUserInfo mberCiYN - 본인인증(CI)이 없으면 'N'(화면이 [본인인증] 버튼·"미완료" 문구를 보이고 비밀번호 변경을 막는다)
+                memberService.hasMberCi(user.getUserId()) ? "Y" : "N",
+                devBypassSettings.isIdentityVerificationBypass()));
+    }
+
+    /**
+     * 회원정보수정의 [본인인증] - AS-IS {@code /api/user/modifyMobileAuth}(휴대폰 본인인증 결과로 CI·DI·생년월일 저장)의
+     * <b>로컬 우회</b>. 이 환경엔 본인인증 연계가 없어 결과(CI)를 받을 수 없으므로, 가입 화면의 "본인인증 없이 진행(테스트용)"과
+     * 같은 우회 설정({@code ghlove.dev.identity-verification-bypass})이 켜진 동안만 테스트용 CI·DI를 넣는다. 운영 설정에선 막힌다.
+     */
+    @PostMapping("/api/profile/mobile-auth/test-bypass")
+    public ResponseEntity<Map<String, Object>> mobileAuthTestBypass(HttpSession session) {
+        User user = requireLogin(session);
+        if (user == null) {
+            return ResponseEntity.status(401).build();
+        }
+        if (!devBypassSettings.isIdentityVerificationBypass()) {
+            return ResponseEntity.badRequest().body(Map.of("status", "ERROR", "message", "본인인증 연계가 필요합니다."));
+        }
+        try {
+            memberService.modifyMobileAuth(user.getUserId(), "TEST-CI-" + user.getLoginId(),
+                    "TEST-DI-" + user.getLoginId(), null);
+            return ResponseEntity.ok(Map.of("status", "OK"));
+        } catch (MemberException e) {
+            return ResponseEntity.badRequest().body(Map.of("status", "ERROR", "message", e.getMessage()));
+        }
     }
 
     public record ProfileResponse(Long userId, String loginId, String userName, String userTypeLabel,
@@ -77,7 +104,7 @@ public class ProfileApiController {
                                    java.util.List<DonationClient.LocgovInfo> allLocgovs,
                                    Map<String, String> provinces,
                                    String loginPathCode, String userKeyYN, String kakaoUserKeyYN,
-                                   String locgovCode) {
+                                   String locgovCode, String mberCiYN, boolean identityVerificationBypass) {
     }
 
     /** locgovCode - AS-IS modify.html param.locgovCode(저장된 회원 지자체코드, 주소 재검색 시 admCd 앞 5자리). */

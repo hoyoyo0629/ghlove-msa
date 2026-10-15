@@ -41,19 +41,17 @@ import java.util.Set;
  * 요구하므로, 방금 등록한 담당자가 목록에 보이지도 로그인하지도 못한다(등록 기능이 사실상 불구).
  * TO-BE는 등록 시 '사용'({@code ACTIVE})로 넣는다.
  *
- * <p>AS-IS와 다른 점(TO-BE 구조상 불가피):
- * <ul>
- *   <li>AS-IS 등록은 OP_USER·OP_USER_DETAIL·OP_USER_ROLE·OP_MANAGER 4개 테이블에 넣는다. TO-BE는
- *       회원(OP_USER)을 member 서비스가 소유하고 admin은 OP_MANAGER만 쓴다 - 이미 있는
- *       {@link ManagerAdminService}의 계정등록도 같은 방식이다. 권한은 OP_USER_ROLE이 아니라
- *       {@code OP_MANAGER.AUTHORITY}에 들어간다.</li>
- *   <li>AS-IS 아이디 중복확인은 {@code userService.checkDuplication}이라 OP_USER의 가입불가 아이디
- *       목록까지 본다. TO-BE는 OP_MANAGER만 확인한다.</li>
- * </ul>
+ * <p>회원 계정과의 연결(AS-IS 그대로): 등록은 회원(OP_USER·OP_USER_DETAIL)을 먼저 만들고 <b>같은 회원번호</b>로
+ * 관리자를 만든다(회원은 member 서비스가 만든다). 수정은 회원 이름·이메일·휴대폰을 맞추고(updateUserSync/
+ * updateUserDetailSync), 삭제는 관리자만 지우고 회원의 지점 연락처를 비운다(deleteChargerTelNumber), 임시 비밀번호
+ * 발급은 회원·관리자 비밀번호를 함께 바꾼다. 권한은 OP_USER_ROLE이 아니라 {@code OP_MANAGER.AUTHORITY}에 들어간다.
+ * 아이디 중복확인은 관리자와 회원 아이디를 모두 본다.
  */
 @Service
 @RequiredArgsConstructor
 public class OffPersonInChargeAdminService {
+
+    private final MemberClient memberClient;
 
     private static final DateTimeFormatter DATETIME_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -186,7 +184,8 @@ public class OffPersonInChargeAdminService {
 
     /** AS-IS 아이디 중복확인 - 이미 쓰고 있는 아이디면 true(화면은 "중복된 아이디입니다."). */
     public boolean isOccupiedLoginId(String loginId) {
-        return loginId != null && !loginId.isBlank() && managerRepository.findByLoginId(loginId).isPresent();
+        return loginId != null && !loginId.isBlank()
+                && (managerRepository.findByLoginId(loginId).isPresent() || memberClient.loginIdExists(loginId));
     }
 
     /**
@@ -202,10 +201,13 @@ public class OffPersonInChargeAdminService {
     @Transactional
     public void insertOffPersonInCharge(String loginId, String password, String userName, String phoneNumber,
                                          String bankCode, String psitnNm, String empId, String email) {
+        String rawPassword = password == null || password.isBlank() ? DEFAULT_PASSWORD : password;
+        // AS-IS 0~2: 회원(OP_USER + OP_USER_DETAIL)을 먼저 만들고 그 번호를 관리자 번호로 쓴다.
+        Long userId = memberClient.createManagerAccount(loginId, rawPassword, userName, email);
         Manager manager = new Manager();
+        manager.setUserId(userId);
         manager.setLoginId(loginId);
-        manager.setPassword(passwordEncoder.encode(
-                password == null || password.isBlank() ? DEFAULT_PASSWORD : password));
+        manager.setPassword(passwordEncoder.encode(rawPassword));
         manager.setUserName(userName);
         manager.setPhoneNumber(phoneNumber);
         manager.setBankCode(bankCode);
@@ -262,6 +264,8 @@ public class OffPersonInChargeAdminService {
         applyStatus(manager, asIsStatusCode);
         manager.setUpdatedDate(now());
         managerRepository.save(manager);
+        // AS-IS 2·3: 회원 이름·이메일(updateUserSync)·휴대폰(updateUserDetailSync) 맞추기
+        memberClient.syncManagerProfile(userId, manager.getUserName(), manager.getEmail(), manager.getPhoneNumber(), null);
     }
 
     /**
@@ -298,6 +302,8 @@ public class OffPersonInChargeAdminService {
                 managerRepository.deleteById(userId);
             }
         }
+        // AS-IS deleteChargerTelNumber - 회원 계정은 남기고 지점 연락처만 비운다.
+        memberClient.clearTelNumber(userIdList);
     }
 
     /**
@@ -320,9 +326,15 @@ public class OffPersonInChargeAdminService {
         }
         String tempPassword = generateTempPassword();
         target.setPassword(passwordEncoder.encode(tempPassword));
+        // AS-IS updateManagerPassword/updateUserPassword - 유형 'T'(임시), 만료일 새로
+        target.setPasswordType("T");
+        target.setPasswordExpiredDate(java.time.LocalDate.now().plusDays(180).format(DATE_FORMAT));
         target.setLoginFailCount(0);
         target.setUpdatedDate(now());
         managerRepository.save(target);
+        // 회원 비밀번호도 같은 값으로, 회원 실패횟수도 초기화
+        memberClient.applyPasswordFromManager(target.getUserId(), target.getPassword(), "T",
+                target.getPasswordExpiredDate());
         return tempPassword;
     }
 

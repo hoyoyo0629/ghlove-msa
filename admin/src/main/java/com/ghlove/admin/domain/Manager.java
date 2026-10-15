@@ -18,9 +18,12 @@ import lombok.Setter;
 @NoArgsConstructor
 public class Manager {
 
+    /**
+     * 회원번호 - AS-IS처럼 같은 사람의 회원(OP_USER.USER_ID)과 같은 값이다. 자체 채번하지 않는다:
+     * 권한 승인은 신청 회원의 번호를, 오프라인 담당자 등록은 새로 만든 회원의 번호를, 관리자 직접 등록은
+     * 회원 시퀀스에서 받은 번호를 넣는다(AS-IS insertManagerByUserSync / insertOffPersonInCharge / insertManager).
+     */
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "opManagerUserIdSeq")
-    @SequenceGenerator(name = "opManagerUserIdSeq", sequenceName = "op_manager_user_id_seq", allocationSize = 1)
     @Column(name = "USER_ID")
     private Long userId;
 
@@ -52,6 +55,17 @@ public class Manager {
     @Column(name = "LOGIN_TRY_DATE")
     private String loginTryDate;
 
+    /**
+     * 비밀번호 유형(AS-IS N:정상 T:임시). 'T'면 로그인 때 비밀번호 변경 팝업(초기 설정/초기화)이 뜬다.
+     * NOT NULL DEFAULT 'N' 컬럼이라 새 관리자에도 'N'이 들어가게 초기값을 둔다(매핑하면 기본값 대신 null이 들어간다).
+     */
+    @Column(name = "PASSWORD_TYPE")
+    private String passwordType = "N";
+
+    /** 비밀번호 만료일(yyyyMMdd, AS-IS getPasswordExpiredDate = 오늘 + ISMS LIFE_TIME_PASSWORD일). 지나면 변경 팝업(3개월 안내). */
+    @Column(name = "PASSWORD_EXPIRED_DATE")
+    private String passwordExpiredDate;
+
     @Column(name = "CREATED_DATE")
     private String createdDate;
 
@@ -70,13 +84,6 @@ public class Manager {
      *  AS-IS 라이브 스캔에도 이미 있던 실제 컬럼(그동안 매핑만 안 돼 있었음). */
     @Column(name = "LOCGOV_CODE")
     private String locgovCode;
-
-    /** 인증서(금융인증서/공동인증서) 로그인용 Subject DN - 사전 등록 필요, 미등록 시 null
-     *  (AS-IS opmanager/user/login_main.jsp의 인증서 로그인 카드와 동일한 방식이지만,
-     *  MagicLine4Web 브라우저 SDK 대신 이 프로젝트는 CertLoginService와 동일하게 인증서
-     *  파일 업로드+로컬 X.509 파싱으로 DN을 얻는다 - SDK 없이도 실제로 동작하는 부분). */
-    @Column(name = "CERT_SUBJECT_DN")
-    private String certSubjectDn;
 
     /** D8 오프라인담당자(ROLE_ADMIN_7/8) 전용 확장 컬럼 - DB에는 이미 있었으나(라이브 스캔)
      *  그동안 매핑이 안 돼 있었다. 오프라인 기부접수 정산계좌 코드. */

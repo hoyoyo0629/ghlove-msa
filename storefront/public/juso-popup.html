@@ -5,8 +5,9 @@
      회원가입(SignupView.vue)·마이페이지 개인정보수정(ProfileView.vue)이 여는 공통 팝업이다.
      행정안전부 주소검색 API(business.juso.go.kr)를 JSONP로 직접 호출하는 클라이언트 전용
      위젯이라 서버 로직이 없다 - admin의 /admin/juso-popup(지자체관리용, 다른 AS-IS 화면)과
-     마크업/스크립트 구조는 같지만, confmKey는 이 화면(회원가입/정보수정) 쪽 AS-IS 원본 값을
-     그대로 쓴다(admin 쪽 키와 다르다 - 화면마다 다른 키를 쓰는 AS-IS 그대로).
+     마크업/스크립트 구조는 같다. confmKey는 AS-IS가 실제로 보내는 값 = 폼(#AKCFrm) 숨은 칸의 운영키다
+     (검색은 $("#AKCFrm").serialize()로 보낸다). AS-IS Vue initData의 개발키(devU01…)는 vm.param에만 넣고
+     어디서도 보내지 않는 죽은 값인데, 처음 이식 때 그걸 옮겨 2026-10 개발키 만료로 검색이 막혔다(10-15 교정).
      정적자산(content/modules/juso/addrlink.js, content/opmanager/css/juso/addrlink.css,
      content/opmanager/images/juso, content/modules/jquery/jquery-1.11.0.min.js)은 admin에
      이미 포팅돼 있던 것을 그대로 복사해왔다. -->
@@ -493,7 +494,7 @@
 <body onload="init();">
     <form name="AKCFrm" id="AKCFrm" method="post">
         <input type="hidden" name="iframe" value="" />
-        <input type="hidden" name="confmKey" value="devU01TX0FVVEgyMDIyMTAwNjE2MzkwNzExMzAzMTg=" />
+        <input type="hidden" name="confmKey" value="U01TX0FVVEgyMDIyMTEyNTE0MTUzMTExMzI1OTc=" />
         <input type="hidden" name="encodingType" value="" />
         <input type="hidden" name="cssUrl" value="" />
         <input type="hidden" name="resultType" value="4" />

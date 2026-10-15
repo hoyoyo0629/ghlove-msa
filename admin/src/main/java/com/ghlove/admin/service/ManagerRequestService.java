@@ -17,9 +17,8 @@ import java.util.List;
 
 /**
  * 관리자 권한 요청 (AS-IS G_MNGR_REQST + ManagerRequestController) - 이미 회원가입된
- * 사람이 운영관리 콘솔 접근을 신청하고, 시스템관리자(ROLE_ADMIN)가 승인/거절한다. AS-IS는
- * 로그인 화면에서 아이디/비번을 다시 입력해 신원을 확인하지만, 이 프로젝트는 SFR-010의
- * 공유 JWT로 이미 회원 로그인 상태를 알 수 있어 그걸로 신원을 대신한다.
+ * 사람이 관리자 로그인 화면에서 회원 아이디·비밀번호(또는 등록한 인증서)로 신원을 확인하고
+ * 신청하면, 승인관리(1406) 권한자가 승인/거절한다. 승인되면 그 회원 계정이 관리자 계정이 된다.
  */
 @Service
 @RequiredArgsConstructor
@@ -29,29 +28,28 @@ public class ManagerRequestService {
 
     private final ManagerRequestRepository managerRequestRepository;
     private final ManagerRepository managerRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final MemberClient memberClient;
     private final MailConfigService mailConfigService;
     private final com.ghlove.admin.service.integration.EmsMailClient emsMailClient;
     private final LocgovClient locgovClient;
 
+    /**
+     * 신청 등록 - AS-IS {@code insertManagerRequest}: 상태 200(대기), 등록자·수정자 = 신청 회원, 순번 = MAX+1.
+     * 화면이 보내는 지정기부 부서(dsgncntrPartId)·지점 연락처(phoneNumber)는 AS-IS도 저장하지 않는다
+     * (INSERT 컬럼에 없고 지점 연락처 저장은 주석 처리돼 있다).
+     */
     @Transactional
-    public ManagerRequest submit(Long userId, String loginId, String locgovCode, String reqstSeCode,
+    public ManagerRequest submit(Long userId, String loginId, String locgovCode, String reqstSeCode, String psitnCode,
                                   String psitnNm, String psitnDeptNm, String ofcpsNm, String cttpc) {
-        if (managerRepository.findByLoginId(loginId).isPresent()) {
-            throw new ManagerException("이미 관리자 계정이 있습니다. 관리자 로그인을 이용해 주세요.");
-        }
         List<ManagerRequest> existing = managerRequestRepository.findByUserIdOrderByReqstSnDesc(userId);
-        boolean hasPending = existing.stream().anyMatch(r -> ManagerRequest.STATUS_PENDING.equals(r.getConfmSttusCode()));
-        if (hasPending) {
-            throw new ManagerException("이미 심사 중인 신청이 있습니다.");
-        }
 
         ManagerRequest request = new ManagerRequest();
         request.setUserId(userId);
         request.setReqstSn(existing.isEmpty() ? 1 : existing.get(0).getReqstSn() + 1);
         request.setLoginId(loginId);
-        request.setLocgovCode(locgovCode);
+        request.setLocgovCode(blankToNull(locgovCode));
         request.setReqstSeCode(reqstSeCode);
+        request.setPsitnCode(blankToNull(psitnCode));
         request.setPsitnNm(psitnNm);
         request.setPsitnDeptNm(psitnDeptNm);
         request.setOfcpsNm(ofcpsNm);
@@ -59,7 +57,13 @@ public class ManagerRequestService {
         request.setConfmSttusCode(ManagerRequest.STATUS_PENDING);
         request.setFrstRegisterId(userId);
         request.setFrstRegistPnttm(now());
+        request.setLastUpdusrId(userId);
+        request.setLastUpdtPnttm(now());
         return managerRequestRepository.save(request);
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 
     /** AS-IS 승인관리 목록 조회 - 상태·등록일 범위로 거른다(아이디/이름/이메일은 컨트롤러에서). */
@@ -83,22 +87,32 @@ public class ManagerRequestService {
      * 그대로 쓴다. 예전 TO-BE가 폼에 넣었던 "부여 권한 드롭다운 / 소속 지자체 입력"은 AS-IS에 없는
      * 발명이라 제거했다([[no-invented-features-ask-first]]).
      *
-     * <p>AS-IS는 승인 시 member 계정을 manager로 동기화(기존 member 비밀번호 사용)하지만 TO-BE는
-     * op_manager가 member와 분리돼 있어 자격증명을 따로 만들어야 한다(사용자 결정: 메일 통지).
-     * 그래서 임시 비밀번호를 발급해 승인 메일에 실어 보낸다 - AS-IS 승인 메일에는 없던 항목이지만,
-     * 분리된 인증구조에서 메일 통지를 성립시키는 데 필요한 최소 추가다.
+     * <p>관리자 계정은 신청 회원을 그대로 복사한다(AS-IS insertManagerByUserSync) - 같은 회원번호·아이디·비밀번호(해시)·
+     * 이름·이메일·휴대폰·비밀번호 유형·만료일, 신청서의 소속 지자체·소속코드(→BANK_CODE)·소속명·부서·직위, 정보수정일 = 오늘.
+     * 그래서 승인된 사람은 회원 아이디·비밀번호로 관리자 로그인을 한다.
+     *
+     * <p>결과는 AS-IS 코드로 던진다: 신청 없음 ERR_NOT_FOUND, 대기 아님 ERR_SYNC_STTUS, 같은 아이디 관리자 있음 ERR_DUP_ID,
+     * 회원 없음 ERR_USER, 회원이 정상(9)이 아님 ERR_STS({@link ApprovalException#statusCode}).
      */
     @Transactional
     public void approve(Long userId, Integer reqstSn, Long approverManagerId, MemberClient.MemberInfo member) {
         ManagerRequest request = managerRequestRepository.findById(new com.ghlove.admin.domain.ManagerRequestId(userId, reqstSn))
-                .orElseThrow(() -> new ManagerException("신청 내역을 찾을 수 없습니다."));
+                .orElseThrow(() -> new ApprovalException("ERR_NOT_FOUND", null));
         // AS-IS 1-2: 현재 '대기' 상태인지 확인
         if (!ManagerRequest.STATUS_PENDING.equals(request.getConfmSttusCode())) {
-            throw new ManagerException("이미 처리된 신청입니다.");
+            throw new ApprovalException("ERR_SYNC_STTUS", null);
         }
         // AS-IS 1-3: 중복 아이디 체크
         if (managerRepository.findByLoginId(request.getLoginId()).isPresent()) {
-            throw new ManagerException("이미 관리자 계정이 존재합니다.");
+            throw new ApprovalException("ERR_DUP_ID", null);
+        }
+        // AS-IS 1-4/1-5: 요청 사용자 유효성·상태(9: 정상)
+        MemberClient.ManagerSyncInfo user = memberClient.managerSyncInfo(userId);
+        if (user == null) {
+            throw new ApprovalException("ERR_USER", null);
+        }
+        if (!"9".equals(user.asIsStatusCode())) {
+            throw new ApprovalException("ERR_STS", user.asIsStatusCode());
         }
         String authority = request.getReqstSeCode();   // AS-IS: 신청구분이 곧 부여 권한
 
@@ -109,23 +123,43 @@ public class ManagerRequestService {
         managerRequestRepository.save(request);
 
         // AS-IS 2-2/2-3: 사용자 정보를 관리자 테이블로 이관 + 권한 셋팅
-        String tempPassword = generateTempPassword();
         Manager manager = new Manager();
-        manager.setLoginId(request.getLoginId());
-        manager.setPassword(passwordEncoder.encode(tempPassword));
-        manager.setUserName(member != null ? member.userName() : null);
-        manager.setEmail(member != null ? member.email() : null);
+        manager.setUserId(user.userId());
+        manager.setLoginId(user.loginId());
+        manager.setPassword(user.password());
+        manager.setUserName(user.userName());
+        manager.setEmail(user.email());
+        manager.setPhoneNumber(user.phoneNumber());
         manager.setStatusCode("ACTIVE");
         manager.setLoginCount(0);
         manager.setLoginFailCount(0);
+        manager.setPasswordType(user.passwordType() == null ? "N" : user.passwordType());
+        manager.setPasswordExpiredDate(user.passwordExpiredDate());
         manager.setAuthority(authority);
-        manager.setLocgovCode(MenuService.LOCGOV_SCOPED_ROLES.contains(authority) ? request.getLocgovCode() : null);
+        manager.setLocgovCode(request.getLocgovCode());
+        manager.setBankCode(request.getPsitnCode());
+        manager.setPsitnNm(request.getPsitnNm());
+        manager.setPsitnDeptNm(request.getPsitnDeptNm());
+        manager.setOfcpsNm(request.getOfcpsNm());
+        manager.setInfoUpdtDe(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")));
         manager.setCreatedDate(now());
         manager.setUpdatedDate(now());
         managerRepository.save(manager);
 
         // AS-IS 3: 메일 발송(승인)
-        sendManagerRequestMail("manager_request_approval", request, member, null, tempPassword);
+        sendManagerRequestMail("manager_request_approval", request, member, null);
+    }
+
+    /** 승인 실패 - AS-IS ManagerRequestResult.code(+ ERR_STS일 때 회원 상태코드). */
+    public static class ApprovalException extends ManagerException {
+        public final String code;
+        public final String statusCode;
+
+        public ApprovalException(String code, String statusCode) {
+            super(code);
+            this.code = code;
+            this.statusCode = statusCode;
+        }
     }
 
     /** 거절 - AS-IS {@code updateManagerRequestReject} 이식. 대기 상태 + 거절사유 필수 검사 후 메일 통지. */
@@ -147,7 +181,7 @@ public class ManagerRequestService {
         managerRequestRepository.save(request);
 
         // AS-IS 3: 메일 발송(거절)
-        sendManagerRequestMail("manager_request_reject", request, member, reason, null);
+        sendManagerRequestMail("manager_request_reject", request, member, reason);
     }
 
     /**
@@ -158,7 +192,7 @@ public class ManagerRequestService {
      * 실제 발송은 EmsMailClient(ghlove.integrations.ems.enabled=false면 로그만)로 나간다.
      */
     private void sendManagerRequestMail(String templateId, ManagerRequest request,
-                                        MemberClient.MemberInfo member, String rejectResn, String tempPassword) {
+                                        MemberClient.MemberInfo member, String rejectResn) {
         try {
             if (member == null || member.email() == null || member.email().isBlank()) {
                 return;
@@ -170,10 +204,6 @@ public class ManagerRequestService {
             String adminRole = adminRoleText(request.getReqstSeCode(), request.getLocgovCode());
             String subject = renderTokens(config.getBuyerSubject(), request.getLoginId(), adminRole, rejectResn);
             String content = renderTokens(config.getBuyerContent(), request.getLoginId(), adminRole, rejectResn);
-            if (tempPassword != null) {
-                // 분리된 op_manager 인증구조 때문에 필요한 최소 추가(위 approve 주석 참고).
-                content = content + "\n\n임시 비밀번호: " + tempPassword;
-            }
             String recipients = member.email() + " " + (member.userName() != null ? member.userName() : "");
             emsMailClient.sendMail(subject, content, "D", "", recipients,
                     "관리자권한", "관리자권한", 0);
@@ -224,16 +254,6 @@ public class ManagerRequestService {
                 .replace("{loginId}", loginId != null ? loginId : "")
                 .replace("{adminRole}", adminRole != null ? adminRole : "")
                 .replace("{rejectResn}", rejectResn != null ? rejectResn : "");
-    }
-
-    private static String generateTempPassword() {
-        String chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
-        SecureRandom random = new SecureRandom();
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 12; i++) {
-            sb.append(chars.charAt(random.nextInt(chars.length())));
-        }
-        return sb.toString();
     }
 
     private static String now() {

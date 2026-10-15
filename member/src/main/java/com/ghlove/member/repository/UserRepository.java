@@ -42,4 +42,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     /** 휴면회원 조회(SleepUser) - 최종 로그인일 범위. */
     List<User> findByStatusCodeAndLoginDateBetweenOrderByLoginDateDesc(String statusCode, String from, String to);
+
+    /** 관리자 인증서 등록·로그인 - AS-IS getUserListByMberDn / getUserByMberDn(상태 조건 없음). */
+    List<User> findByMberDn(String mberDn);
+
+    List<User> findByMberFinDn(String mberFinDn);
+
+    /** 관리자 계정용 회원번호 채번 - AS-IS userMapper.selectNewUserId(OP_USER 시퀀스). */
+    @org.springframework.data.jpa.repository.Query(value = "select nextval('member.op_user_user_id_seq')", nativeQuery = true)
+    Long nextUserId();
 }

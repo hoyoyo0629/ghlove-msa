@@ -28,6 +28,7 @@ public class ManagerAdminService {
 
     private final ManagerRepository managerRepository;
     private final PasswordEncoder passwordEncoder;
+    private final MemberClient memberClient;
 
     /** 저트래픽 화면 - OffgiveController와 동일하게 인메모리 필터+페이지네이션. */
     public SearchResult search(String authority, String keyword, int page, int size) {
@@ -70,6 +71,8 @@ public class ManagerAdminService {
         }
         String tempPassword = generateTempPassword();
         Manager manager = new Manager();
+        // AS-IS insertManager - 회원 시퀀스(selectNewUserId)에서 번호를 받는다(회원 행은 만들지 않는다).
+        manager.setUserId(memberClient.nextUserId());
         manager.setLoginId(loginId);
         manager.setPassword(passwordEncoder.encode(tempPassword));
         manager.setUserName(userName);
@@ -120,12 +123,18 @@ public class ManagerAdminService {
         managerRepository.deleteById(userId);
     }
 
-    /** 임시비밀번호 재발급 - 계정 잠금(로그인 실패 초과)도 함께 풀어준다. */
+    /**
+     * 임시비밀번호 재발급 - 계정 잠금(로그인 실패 초과)도 함께 풀어준다. AS-IS updateTempPasswordForManager처럼 비밀번호 유형을
+     * 'T'(임시)로, 만료일을 새로 넣는다 - 그래서 다음 로그인 때 "관리자 비밀번호 초기화" 팝업이 뜬다.
+     */
     @Transactional
     public String resetPassword(Long userId) {
         Manager manager = get(userId);
         String tempPassword = generateTempPassword();
         manager.setPassword(passwordEncoder.encode(tempPassword));
+        manager.setPasswordType("T");
+        manager.setPasswordExpiredDate(java.time.LocalDate.now().plusDays(180)
+                .format(DateTimeFormatter.ofPattern("yyyyMMdd")));
         manager.setLoginFailCount(0);
         if (STATUS_LOCKED.equals(manager.getStatusCode())) {
             manager.setStatusCode(STATUS_ACTIVE);

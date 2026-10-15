@@ -177,6 +177,13 @@ public class MemberService {
         // SNS 연동 조회가 이 값을 기준으로 돈다(AS-IS userModifyDataSet:441~447).
         user.setMberCi(trimToNull(form.getMberCi()));
         user.setMberDi(trimToNull(form.getMberDi()));
+        // 로컬 우회("본인인증 없이 진행(테스트용)")로 CI 없이 온 가입이면 테스트용 CI/DI를 넣는다 - AS-IS는 CI 없는 가입이
+        // 불가능하므로, 비워 두면 그 계정으로 관리자 권한을 받았을 때 로그인이 본인인증(EMPTY_CI)에서 막힌다(2026-10-15).
+        // 회원정보수정의 테스트용 본인인증(/api/profile/mobile-auth/test-bypass)과 같은 값 규칙이다.
+        if (user.getMberCi() == null && devBypassSettings.isIdentityVerificationBypass()) {
+            user.setMberCi("TEST-CI-" + form.getLoginId());
+            user.setMberDi("TEST-DI-" + form.getLoginId());
+        }
         user.setCreatedDate(now());
         user.setUpdatedDate(now());
         User saved = userRepository.save(user);
@@ -561,6 +568,46 @@ public class MemberService {
         user.setUpdatedDate(now());
         userRepository.save(user);
         recordChangeLog(userId, "PASSWORD_RESET", null);
+        publishPasswordChanged(user);
+    }
+
+    /** AS-IS "관리자동기화" - 같은 아이디의 관리자 비밀번호도 바꾸고 실패횟수를 풀도록 admin에 알린다. */
+    private void publishPasswordChanged(User user) {
+        eventPublisher.publishPasswordChanged(user.getUserId(), user.getLoginId(), user.getPassword(),
+                user.getPasswordType(), user.getPasswordExpiredDate());
+    }
+
+    /** 본인인증(CI) 보유 여부 - AS-IS getUserInfo의 mberCiYN. */
+    public boolean hasMberCi(Long userId) {
+        return userRepository.findById(userId).map(u -> trimToNull(u.getMberCi()) != null).orElse(false);
+    }
+
+    /**
+     * 회원정보수정의 본인인증 결과 저장 - AS-IS {@code UserController.modifyMobileAuth}: 같은 CI의 정상 회원이 이미 있으면
+     * "기존 가입 정보가 있습니다."(DUPLICATION_CI), 아니면 OP_USER.MBER_CI·MBER_DI와 OP_USER_DETAIL.BIRTHDAY를 바꾸고
+     * GENDER는 비운다(modifyMobileAuth / modifyMobileAuthDetail). birthday가 null이면 생년월일은 그대로 둔다(로컬 우회용).
+     */
+    @Transactional
+    public void modifyMobileAuth(Long userId, String mberCi, String mberDi, String birthday) {
+        userRepository.findFirstByMberCiAndStatusCodeOrderByUserIdDesc(mberCi, STATUS_ACTIVE)
+                .filter(u -> !u.getUserId().equals(userId))
+                .ifPresent(u -> {
+                    throw new MemberException("기존 가입 정보가 있습니다.");
+                });
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new MemberException("회원 정보를 찾을 수 없습니다."));
+        user.setMberCi(mberCi);
+        user.setMberDi(mberDi);
+        user.setUpdatedDate(now());
+        userRepository.save(user);
+        userDetailRepository.findById(userId).ifPresent(detail -> {
+            if (birthday != null) {
+                detail.setBirthday(birthday);
+                detail.setGender(null);
+            }
+            userDetailRepository.save(detail);
+        });
+        recordChangeLog(userId, "MOBILE_AUTH", null);
     }
 
     public User byId(Long userId) {
@@ -573,6 +620,26 @@ public class MemberService {
             return "***";
         }
         return phoneNumber.replaceAll("(\\d{2,3})-?\\d{3,4}-?(\\d{4})", "$1-****-$2");
+    }
+
+    /** 회원 아이디·비밀번호 확인 결과 - result는 NOT_FOUND / WRONG_PASSWORD / OK. */
+    public record CredentialCheck(String result, Long userId) {
+    }
+
+    /**
+     * 관리자 로그인 화면의 "일반회원인지 확인"(AS-IS ManagerRequestServiceImpl.getLoginUserValid 3단계 -
+     * securityMapper.getUserByLoginId + passwordEncoder.matches)과 관리자 권한 요청 폼 진입
+     * (AS-IS ManagerRequestController.managerRequestForm) - 세션을 만들지 않고 확인만 한다.
+     */
+    public CredentialCheck checkCredential(String loginId, String rawPassword) {
+        User user = loginId == null ? null : userRepository.findByLoginId(loginId).orElse(null);
+        if (user == null) {
+            return new CredentialCheck("NOT_FOUND", null);
+        }
+        if (rawPassword == null || !passwordEncoder.matches(rawPassword, user.getPassword())) {
+            return new CredentialCheck("WRONG_PASSWORD", user.getUserId());
+        }
+        return new CredentialCheck("OK", user.getUserId());
     }
 
     /** 마이페이지 "비밀번호 변경"의 1단계 "인증" 버튼 - AS-IS checkPresentPwd()/
@@ -601,9 +668,12 @@ public class MemberService {
 
         user.setPassword(passwordEncoder.encode(newPassword));
         stampPasswordChanged(user);
+        // AS-IS updateUserPassword - 사용자 로그인 실패횟수 초기화
+        user.setLoginFailCount(0);
         user.setUpdatedDate(now());
         userRepository.save(user);
         recordChangeLog(userId, "PASSWORD_CHANGE", remoteAddr);
+        publishPasswordChanged(user);
     }
 
     /** AS-IS users/modify.html의 비밀번호 변경 규칙(checkPwd/isContinued) 서버측 재검증 -
@@ -1214,6 +1284,7 @@ public class MemberService {
         stampPasswordChanged(user);
         user.setUpdatedDate(now());
         recordChangeLog(userId, "PASSWORD_CHANGE_ON_LOGIN", remoteAddr);
+        publishPasswordChanged(user);
         return completeLogin(user, remoteAddr);
     }
 

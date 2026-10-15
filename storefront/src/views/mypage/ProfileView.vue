@@ -7,7 +7,8 @@ import { useAuthStore } from '../../stores/auth'
 
 // AS-IS users/modify.html(및 Thymeleaf 버전 profile.html) 재현. 이름/생년월일은 본인인증
 // 연계가 없어 읽기전용, "개인정보 수정"(정적 안내뿐이라 아직 옛 member 서비스(8081) 화면
-// 유지)과 달리 "비밀번호 변경"은 정식 라우트로 포팅됨.
+// 유지)과 달리 "비밀번호 변경"은 정식 라우트로 포팅됨. 본인인증(CI)이 없는 회원에게는 AS-IS처럼
+// [본인인증] 버튼과 "미완료" 문구를 보이고 비밀번호 변경을 막는다(2026-10-15 이식 - 관리자 로그인 EMPTY_CI가 이 화면으로 보낸다).
 const auth = useAuthStore()
 const router = useRouter()
 
@@ -144,6 +145,36 @@ async function removeInterestLocgov(locgovCode) {
   }
 }
 
+// AS-IS modify.html authLayer() - 본인인증(CI)이 없는 회원의 [본인인증]. AS-IS는 휴대폰 본인인증 레이어(layout-auth)를 열고
+// 결과로 /api/user/modifyMobileAuth(CI·DI·생년월일 저장)를 부른 뒤 화면을 다시 읽는다. 이 환경엔 본인인증 연계가 없어,
+// 로컬 우회 설정(ghlove.dev.identity-verification-bypass)이 켜져 있을 때만 테스트용 CI(TEST-CI-아이디)를 넣는다.
+// 가입 화면의 "본인인증 없이 진행(테스트용)"도 같은 설정으로 같은 테스트용 CI를 넣으므로, 이 버튼은 그 전에 CI 없이
+// 가입한 계정을 위한 것이다.
+async function authLayer() {
+  if (!profile.value.identityVerificationBypass) {
+    modalAlert('이 환경에는 실제 본인인증 연계가 열려있지 않습니다.')
+    return
+  }
+  if (!(await modalConfirm('이 환경에는 실제 본인인증 연계가 열려있지 않습니다.\n본인인증 없이 진행할까요? (테스트용)'))) {
+    return
+  }
+  try {
+    await api.post('member', '/api/profile/mobile-auth/test-bypass')
+    await load()
+  } catch (e) {
+    modalAlert(e.message || '오류가 발생했습니다.')
+  }
+}
+
+// AS-IS modify.html getMobileAuth('password') - 본인인증 미완료면 비밀번호 변경을 막는다.
+function goPasswordChange() {
+  if (profile.value.mberCiYN == 'N') {
+    modalAlert('본인인증 미완료 상태입니다.\n 본인인증 완료 후 비밀번호를 변경하시길 바랍니다.')
+    return
+  }
+  router.push('/mypage/password')
+}
+
 // AS-IS modify.html onepassCancel() 재현. MSA는 원패스 인증세션 쿠키(userKey/intfToken)가 없어
 // 그 가드 대신 가입경로(loginPathCode 300=원패스)로 판단한다 - 원패스 가입이면 연동해지=탈퇴
 // 화면으로 이동한다(부가연동 해제만 하는 경로는 MSA 모델상 발생하지 않음, audit §4).
@@ -207,6 +238,10 @@ async function kakaoLinkClear() {
                     <input type="text" id="memberLevel" :value="profile.userTypeLabel" readonly />
                     <button v-if="profile.userKeyYN === 'Y'" class="formBtn" type="button" style="width: 90px" @click="onepassCancel">디지털원패스<br />연동 해지</button>
                     <button v-if="profile.kakaoUserKeyYN === 'Y'" class="formBtn" type="button" id="kakaoUnlink" @click="kakaoLinkClear">카카오<br />연동 해지</button>
+                    <button class="formBtn" v-if="profile.mberCiYN == 'N'" type="button" @click="authLayer">본인인증</button>
+                  </div>
+                  <div class="m-field" v-if="profile.mberCiYN == 'N'">
+                    <span class="s-txt">본인 인증 <strong class="pointRed">미완료</strong>상태 입니다.</span>
                   </div>
                 </div>
               </div>
@@ -248,7 +283,7 @@ async function kakaoLinkClear() {
               </div>
               <div class="info-field-items password">
                 <label class="flied-title">비밀번호<span class="essential"> *</span></label>
-                <span class="form-field"><button type="button" class="formBtn" @click="router.push('/mypage/password')">비밀번호 변경</button></span>
+                <span class="form-field"><button type="button" class="formBtn" @click="goPasswordChange">비밀번호 변경</button></span>
               </div>
             </div>
 

@@ -92,8 +92,13 @@ public class User {
     @Column(name = "MBER_DI")
     private String mberDi;
 
+    /** 공동인증서 DN - 관리자 인증서 로그인·인증서 등록(AS-IS opmanager/user/pki/form)이 회원 계정에 저장한다. */
     @Column(name = "MBER_DN")
     private String mberDn;
+
+    /** 금융인증서 DN - 공동인증서 DN과 따로 둔다(AS-IS OP_USER.MBER_FIN_DN). 컬럼은 원래 있었고 매핑만 없었다. */
+    @Column(name = "MBER_FIN_DN")
+    private String mberFinDn;
 
     /**
      * 비밀번호 유효기간 만료일(yyyyMMdd) - AS-IS `UserServiceImpl.getPasswordExpiredDate()`가

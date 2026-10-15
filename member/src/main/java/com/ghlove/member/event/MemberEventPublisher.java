@@ -34,6 +34,7 @@ public class MemberEventPublisher {
     public static final String EVENT_LOGIN_FAILED = "LOGIN_FAILED";
     public static final String EVENT_MEMBER_WITHDRAWN = "MEMBER_WITHDRAWN";
     public static final String EVENT_MEMBER_DORMANT = "MEMBER_DORMANT";
+    public static final String EVENT_PASSWORD_CHANGED = "MEMBER_PASSWORD_CHANGED";
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
@@ -66,6 +67,14 @@ public class MemberEventPublisher {
         send(String.valueOf(userId),
                 new MemberEvents.MemberDormantEvent(userId, LocalDateTime.now()),
                 EVENT_MEMBER_DORMANT);
+    }
+
+    public void publishPasswordChanged(Long userId, String loginId, String passwordHash, String passwordType,
+                                       String passwordExpiredDate) {
+        send(String.valueOf(userId),
+                new MemberEvents.PasswordChangedEvent(userId, loginId, passwordHash, passwordType,
+                        passwordExpiredDate, LocalDateTime.now()),
+                EVENT_PASSWORD_CHANGED);
     }
 
     private void send(String key, Object event, String eventType) {

@@ -67,10 +67,18 @@ public class WebConfig implements WebMvcConfigurer {
                         "/admin/login", "/admin/login/**", "/admin/logout", "/admin/access-denied",
                         // 지자체 담당자 인증 로그인
                         "/auth/cert-login", "/auth/cert-login/**", "/auth-swap",
-                        // 관리자 신청(회원 로그인만 필요 - 아직 관리자가 아닌 사람이 쓰는 화면).
-                        // 같은 /admin/manager-requests 라도 승인 목록·approve/reject 는 보호된다.
-                        "/admin/manager-requests/new", "/admin/manager-requests/complete",
-                        "/admin/manager-requests/confirm",
+                        // 로그인 화면에서 관리자가 아닌 회원이 넘어오는 권한 요청(AS-IS isManagerPage 예외
+                        // manager-request/form·pkiForm·pkiFormFin·create·code-child/list, designated-donation/partList,
+                        // 행정복지센터 목록)과 계정 잠김 안내(AS-IS /opmanager/login-lock).
+                        // 같은 /admin/manager-requests 라도 승인 목록·승인/거절(confirm)은 보호된다(AS-IS도 로그인 필요).
+                        "/admin/manager-requests/form", "/admin/manager-requests/pkiForm",
+                        "/admin/manager-requests/pkiFormFin", "/admin/manager-requests/create",
+                        "/admin/manager-requests/code-child/list", "/admin/manager-requests/designated-part-list",
+                        "/admin/manager-requests/wlfr-cntr-mng-list", "/admin/login-lock",
+                        // 로그인 전 인증서 등록/삭제(AS-IS /opmanager/user/pki/form·form/valid·update·delete, isManagerPage 예외).
+                        "/admin/user/pki/**",
+                        // 관리자 공지 팝업 목록 - 로그인 화면에서도 부른다(AS-IS /common/manager/notice/list).
+                        "/common/manager/notice/list",
                         // 보안 로그아웃 콜백
                         "/op_security_logout",
 

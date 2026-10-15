@@ -10,8 +10,6 @@ public interface ManagerRepository extends JpaRepository<Manager, Long> {
 
     Optional<Manager> findByLoginId(String loginId);
 
-    Optional<Manager> findByCertSubjectDn(String certSubjectDn);
-
     /** D2 매니저계정관리 목록용 (AS-IS UserManagerController manager/list). */
     List<Manager> findAllByOrderByUserIdDesc();
 

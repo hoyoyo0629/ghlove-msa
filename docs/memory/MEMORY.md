@@ -98,7 +98,7 @@
 - [admin 공통코드 표가 둘(★해소됨)](admin-common-code-two-tables.md) — 2026-10-07 같은날 후속조율로 op_common_code 단일표 통합 확정, ADMIN_COMMON_CODE DROP. 과거 두표 상태는 기록으로 보존
 - [★구조적 결함은 보고할 것](report-structural-landmines-to-user.md) — 또 터질 뿌리를 찾으면 조용히 우회 금지. 범위를 수치로 재고 좁은수정/근본수정 선택지+추천 제시
 - [AS-IS JSP 꼬리의 <style> 누락](asis-jsp-tail-style-block.md) — JSP 끝 페이지전용 스타일 116화면. 2026-10-07 전수점검 완료, 실결함 2건(FAQ 탭 밑줄·로그인 disabled-div) 수정. 오탐 3건도 기록
-- [storefront 주소검색 juso.go.kr로 전환완료](storefront-address-widget-mismatch-deferred.md) — 회원가입·개인정보수정이 Daum으로 임의통일돼있던 것을 AS-IS대로 되돌림. "외부연계 필요해 보류"했다가 admin 기존 juso-popup이 이미 동작하는 걸 확인하고 같은날 번복/구현(2026-10-08)
+- [storefront 주소검색 juso.go.kr로 전환완료](storefront-address-widget-mismatch-deferred.md) — 회원가입·개인정보수정이 Daum으로 임의통일돼있던 것을 AS-IS대로 되돌림. "외부연계 필요해 보류"했다가 admin 기존 juso-popup이 이미 동작하는 걸 확인하고 같은날 번복/구현(2026-10-08) · ★10-15 개발키 만료로 막혀 AS-IS 실제 전송값(운영키)으로 교정
 - [탈퇴회원리스트·휴면회원관리·대시보드 날짜포맷 버그](admin-member-date-range-api-format-bug.md) — admin이 member 검색API에 yyyyMMdd 그대로 보내 500→빈결과로 삼켜짐(4101만 변환로직 있어 안 걸림), 3곳 전부 수정. admin 재기동 필요
 - [휴면회원관리 시드 25건](admin-sleep-user-seed-data.md) — member.op_user DORMANT 25건, 최종방문일 3~13개월전 분산(오늘 범위면 0건 정상, 날짜버튼 넓혀야 보임)
 - [지자체관리 검색+부서이력등록자 수정](admin-locgov-search-and-depthist-register-fix.md) — ①등록일 검색시 날짜포맷버그(같은클래스 4번째) ②등록/수정에 managerId 자체를 안보내 부서이력 등록자 항상 공백. 둘다 수정, admin 재기동 필요
@@ -120,6 +120,8 @@
 - [★AS-IS 관리자 인터셉터 예외경로는 TO-BE에도](admin-interceptor-asis-exempt-paths.md) — isManagerPage 예외 40개, 안 넣으면 권한없는 롤이 공통조회 시 권한없음 HTML→화면 깨짐(15102 시군구 undefined→부과요청 실패). sci-result·options-by-locgovCode 반영
 - [가입구분·회원지자체코드 AS-IS 정합(해결)](member-sbscrb-se-code-general-mismatch.md) — GENERAL→SBSCRB_SE 100/200, OP_USER.LOCGOV_CODE=admCd→G_INSTT_CODE(313건 적재)·즉석가입은 행정지. 회원구분 표시는 상수 '일반회원'(2026-10-14)
 - [g_cntr 수납일 채움·AS-IS 조건 복구](donation-sttemnt-pay-de-populated.md) — 수납완료면 수납일 있음(불변식), 기존 41건 백필, 집계 13곳 "수납일 있음" 복구(2026-10-14)
+- [관리자 로그인 AS-IS 재이식(10-14)](admin-login-asis-parity-2026-10-14.md) — 응답이 AS-IS 결과코드로 바뀜(curl 절차: check→email→verify, devCode 자동입력), 권한요청·잠김·비번변경팝업·공지팝업·로그인문자. 구조 문제는 같은 날 A안으로 해소
+- [★관리자=회원 계정 연결(A안, 10-14)](admin-manager-member-account-link.md) — 관리자는 같은 USER_ID 회원의 복사본(승인 복사·비번 이벤트 동기화·CI·인증서DN 회원기준), 테스트계정 번호 변경 admin01=1113·operator01=1114·locgovtest2=1015·hoyoyo0629=1016
 - [★서비스 로직 전수조사 예정(운영관리→답례품관리→대민)](service-logic-full-audit-planned.md) — 서비스 본문 블록 단위 대조, 갭원장 먼저, 미착수
 - [성인답례품 제한(완료)·주문대행 주문생성(대기)](adult-item-and-order-agency-unported.md) — 성인 제한 2026-10-14 이식(관리자 폼 칸은 임시 위치), 주문대행은 AS-IS 범위 조사 끝·이식 대기
 - [누락 배치 job은 일괄 이식](missing-batch-jobs-port-together.md) — 세외수입 수납내역 배치 포함, 그때 기탁서 상세 임시 "수납처리" 버튼 제거

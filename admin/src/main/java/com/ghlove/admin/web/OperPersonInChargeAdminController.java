@@ -133,15 +133,20 @@ public class OperPersonInChargeAdminController {
     @PostMapping("/admin/person-in-charge/oper/edit")
     @ResponseBody
     public Map<String, Object> edit(@RequestParam Long userId,
-                                    @RequestParam(required = false) String userName,
-                                    @RequestParam(required = false) String email,
                                     @RequestParam String authority,
                                     @RequestParam(required = false) String statusCode,
                                     @RequestParam(required = false) String psitnDeptNm,
                                     @RequestParam(required = false) String ofcpsNm) {
+        // AS-IS updatePersonInCharge는 소속부서·직위·사용여부(+권한)만 바꾸고 이름·이메일은 건드리지 않는다
+        // (화면도 이름을 읽기전용으로 보여줄 뿐 보내지 않는다). 예전엔 안 오는 이름·이메일을 null로 덮어써 지웠다(2026-10-15).
+        // 지자체담당자관리(4402)처럼 기존 값을 그대로 넘긴다.
         // 화면은 AS-IS 그대로 '9'/'2'를 보내고 컬럼값은 ACTIVE/LOCKED라 경계에서 바꾼다
-        return result(() -> service.update(PersonInChargeAdminService.SCOPE_OPERATOR, userId, userName, email,
-                authority, PersonInChargeAdminService.toStatusCode(statusCode), psitnDeptNm, ofcpsNm));
+        return result(() -> {
+            Manager target = service.get(userId);
+            service.update(PersonInChargeAdminService.SCOPE_OPERATOR, userId, target.getUserName(),
+                    target.getEmail(), authority, PersonInChargeAdminService.toStatusCode(statusCode),
+                    psitnDeptNm, ofcpsNm);
+        });
     }
 
     /**

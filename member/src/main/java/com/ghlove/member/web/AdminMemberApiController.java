@@ -105,6 +105,12 @@ public class AdminMemberApiController {
         return receiver == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(receiver);
     }
 
+    /** 회원 아이디·비밀번호 확인(세션 없음) - admin 관리자 로그인의 일반회원 확인·권한 요청 폼 진입용. */
+    @PostMapping("/members/credential-check")
+    public MemberService.CredentialCheck credentialCheck(@RequestParam String loginId, @RequestParam String password) {
+        return memberService.checkCredential(loginId, password);
+    }
+
     /** 성인 여부(AS-IS UserUtils.isAdult) - order 체크아웃의 성인 답례품 주문 제한이 쓴다. */
     @GetMapping("/members/{userId}/adult")
     public Map<String, String> adult(@PathVariable Long userId) {
