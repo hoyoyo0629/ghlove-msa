@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>카테고리 그룹 관리 - 고향사랑e음 (admin service)</title>
+    <!-- 공통 head(AS-IS inc_head verbatim: CSS 6 + JS 12) - csrf meta/폰트/op.* 전부 여기서 로드 -->
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/categories-team-group/list.jsp 이식 - 대그룹 + 하위 1차 카테고리 그룹 목록, jQuery UI sortable 드래그로 순서 바꾼 뒤 "정렬순서변경".
+     ★ AS-IS 특징(그대로 옮김)
+     - 상단 구분 select(전체/대그룹)는 AS-IS도 display:none 폼 안에 있어 화면에선 안 보인다(?categoryType=team|group 으로만 바뀜).
+     - 대그룹 행의 수정 버튼은 AS-IS가 주석처리 -> 대그룹은 보기만 된다.
+     - 등록·수정·순서변경은 시스템/행안부(adminRole == SYS)만 가능 - JS가 alert로 막는다(서버 검사는 AS-IS에도 없다). -->
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<div class="item_list">
+
+	<h3><span th:utext="${msg.get('M00584')}">팀별 그룹관리</span></h3>
+
+	<div class="board_list pt15">
+		<form id="searchForm" method="post" th:action="@{/categories-team-group/list}" style="display:none;">
+			<div class="count_title">
+				<h5>
+					<select id="categoryType" name="categoryType">
+						<option value="" th:selected="${categoryType == ''}" th:utext="${msg.get('M00039')}">전체</option>
+						<option value="team" th:selected="${categoryType == 'team'}">대그룹</option>
+					</select>
+				</h5>
+			</div>
+		</form>
+
+		<form id="listForm">
+		<table class="board_list_table group" style="width: 100%">
+			<colgroup>
+				<col style="width: 150px;">
+                <col style="width: 500px;">
+				<col style="width: 150px;">
+				<col style="width: 100px;">
+				<col style="width: 150px;">
+				<col style="width: 100px;">
+				<col style="width: 150px;">
+			</colgroup>
+			<thead>
+				<tr>
+					<th th:utext="${msg.get('M00588')}">레벨</th>
+					<th th:utext="${msg.get('M00394')}">타이틀</th>
+					<th th:utext="${msg.get('M01374')}">코드</th>
+					<th th:utext="${msg.get('M00191')}">공개유무</th>
+					<th th:utext="${msg.get('M01604')}">접속권한</th>
+					<th th:utext="${msg.get('M00190')}">순서</th>
+					<th th:utext="${msg.get('M00590')}">관리</th>
+				</tr>
+			</thead>
+				<th:block th:if="${categoryType == 'team'}">
+					<tbody class="sortable">
+					<tr class="back_color" th:each="list : ${categoriesTeamGroupList}">
+						<td>
+							대그룹
+							<input type="hidden" name="id" th:value="${list.categoryTeamId}"/>
+							<input type="hidden" name="ordering" />
+						</td>
+						<td class="tex_l" th:text="${list.name}"></td>
+						<td th:text="${list.code}"></td>
+						<td>
+							<th:block th:if="${list.flag == 'Y'}" th:utext="${msg.get('M00096')}"></th:block>
+							<th:block th:if="${list.flag == 'N'}" th:utext="${msg.get('M00097')}"></th:block>
+						</td>
+						<td></td>
+						<td th:text="${list.ordering}"></td>
+						<td>
+                            <div class="flex_box juc-center gap-08">
+                            </div>
+						</td>
+					</tr>
+					</tbody>
+				</th:block>
+				<th:block th:if="${categoryType == 'group'}">
+					<tr th:each="list : ${categoriesTeamGroupList}">
+						<td>1차</td>
+						<td class="tex_l">┗ <a th:href="@{/categories/list(categoryGroupId=${list.categoryGroupId})}" th:text="${list.name}"></a></td>
+						<td th:text="${list.code}"></td>
+						<td>
+							<th:block th:if="${list.flag == 'Y'}" th:utext="${msg.get('M00096')}"></th:block>
+							<th:block th:if="${list.flag == 'N'}" th:utext="${msg.get('M00097')}"></th:block>
+						</td>
+						<td>
+							<th:block th:if="${list.accessType == '1'}" th:utext="${msg.get('M00497')}"></th:block>
+							<th:block th:if="${list.accessType == '2'}" th:utext="${msg.get('M01679')}"></th:block>
+						</td>
+						<td th:text="${list.ordering}"></td>
+						<td>
+                            <div class="flex_box juc-center gap-08">
+                                <a th:href="|javascript:fn_categoriesGroupUpdate('${list.categoryGroupId}');|" class="btn btn-default btn-sm" title="수정" th:utext="${msg.get('M00087')}">수정</a>
+                            </div>
+						</td>
+					</tr>
+				</th:block>
+				<th:block th:if="${categoryType == ''}">
+					<th:block th:each="list : ${categoriesTeamGroupList}">
+						<tr class="back_color">
+							<td>대그룹</td>
+							<td class="tex_l" th:text="${list.name}"></td>
+							<td th:text="${list.code}"></td>
+							<td>
+								<th:block th:if="${list.flag == 'Y'}" th:utext="${msg.get('M00096')}"></th:block>
+								<th:block th:if="${list.flag == 'N'}" th:utext="${msg.get('M00097')}"></th:block>
+							</td>
+							<td></td>
+							<td th:text="${list.ordering}"></td>
+							<td>
+                                <div class="flex_box juc-center gap-08">
+                                </div>
+							</td>
+						</tr>
+						<tbody th:id="${list.code + '_groups'}" class="sortable">
+						<th:block th:each="list2 : ${list.groups}">
+							<tr th:if="${list2.name != null and list2.name != ''}">
+								<td>1차
+									<input type="hidden" name="id" th:value="${list2.categoryGroupId}"/>
+									<input type="hidden" name="ordering" />
+								</td>
+								<td class="tex_l">┗ <a th:href="@{/categories/list(categoryGroupId=${list2.categoryGroupId})}" th:text="${list2.name}"></a></td>
+								<td th:text="${list2.code}"></td>
+								<td>
+									<th:block th:if="${list2.flag == 'Y'}" th:utext="${msg.get('M00096')}"></th:block>
+									<th:block th:if="${list2.flag == 'N'}" th:utext="${msg.get('M00097')}"></th:block>
+								</td>
+								<td>
+									<th:block th:if="${list2.accessType == '1'}" th:utext="${msg.get('M00497')}"></th:block>
+									<th:block th:if="${list2.accessType == '2'}" th:utext="${msg.get('M01679')}"></th:block>
+								</td>
+                                <td th:text="${list2.ordering}"></td>
+                                <td>
+                                    <div class="flex_box juc-center gap-08">
+                                        <a th:href="|javascript:fn_categoriesGroupUpdate('${list2.categoryGroupId}');|" class="btn btn-default btn-sm" title="수정" th:utext="${msg.get('M00087')}">수정</a>
+                                    </div>
+                                </td>
+							</tr>
+						</th:block>
+						</tbody>
+					</th:block>
+				</th:block>
+		</table>
+
+		<div class="no_content" th:if="${#lists.isEmpty(categoriesTeamGroupList)}">
+			<p th:utext="${msg.get('M00591')}">등록된 데이터가 없습니다.</p>
+		</div>
+
+		<div class="btn_all btn_right">
+            <div class="flex_box gap-08">
+				<button type="button" th:attr="onclick=|changeOrdering('${categoryType}')|" class="btn btn-dark-gray btn-mini" th:utext="${msg.get('M00791')}">정렬순서변경</button>
+				<button type="button" onclick="categoryCreate()" class="btn btn-dark-gray btn-mini" th:utext="${msg.get('M00544')}">1차 카테고리 등록</button>
+			</div>
+		</div>
+		</form>
+	</div> <!-- // board_list -->
+
+</div> <!-- // item_list01 -->
+
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<!-- AS-IS ViewUtils.redirect(url, message) - 등록/수정 완료 안내를 alert으로 띄운다 -->
+<input type="hidden" id="redirectMessage" th:value="${redirectMessage}">
+<!-- AS-IS가 JSP에서 JS 문자열에 직접 박던 값 -->
+<input type="hidden" id="adminRole" th:value="${adminRole}">
+
+<style>
+td {background: #fff;}
+.sortable-placeholder td {
+	height: 50px;
+	background: #d6eafd url("/content/styles/ui-lightness/images/ui-bg_diagonals-thick_20_666666_40x40.png") 50% 50% repeat;
+	opacity: 0.5;
+}
+.back_color td {background:#ebe3d0}
+</style>
+
+<script type="text/javascript">
+var adminRole = $("#adminRole").val();
+
+$(function(){
+	var msg = $("#redirectMessage").val();
+	if (msg) {
+		alert(msg);
+	}
+
+	$('.sortable').sortable({
+        placeholder: "sortable-placeholder"
+    });
+    $('.sortable').disableSelection();
+
+	categoryChange();
+	teamGroupOrdering();
+
+});
+
+
+// 드레그 후 순서 변경.
+function changeOrdering(type) {
+
+	// 시스템/행안부 관리자만 권한있음
+	if(adminRole != 'SYS') {
+		alert("변경 권한이 없습니다.");
+		return false;
+	}
+
+	var $form = $('#listForm');
+
+	$('tbody').each(function() {
+		$(this).find('input[name=ordering]').each(function(index) {
+			$(this).val(index + 1);
+		});
+	});
+
+	if (type == '') {
+		type = 'group';
+	}
+
+	if (confirm("정렬 순서를 변경하시겠습니까?")) {		//  변경하시겠습니까?
+		$.post("/categories-team-group/change-ordering/" + type, $form.serialize(), function(response) {
+			Common.responseHandler(response, function(response){
+				location.reload();
+			});
+		});
+	}
+}
+
+function categoryCreate() {
+
+	// 시스템/행안부 관리자만 권한있음
+	if(adminRole != 'SYS') {
+		alert("등록 권한이 없습니다.");
+		return false;
+	}
+
+	location.href='/categories-team-group/group/create';
+
+}
+
+
+function categoryChange(){
+	$("#categoryType").on("change",function(){
+		$("#searchForm").submit();
+	});
+}
+
+function fn_categoriesTeamUpdate(teamId){
+	location.href="/categories-team-group/team/edit/"+teamId;
+}
+
+function fn_categoriesTeamDelete(teamId){
+	Common.confirm(Message.get("M00594"), function() {
+		location.href="/categories-team-group/team/delete/"+teamId;
+	});
+}
+
+function fn_categoriesGroupUpdate(groupId){
+
+	// 시스템/행안부 관리자만 권한있음
+	if(adminRole != 'SYS') {
+		alert("수정 권한이 없습니다.");
+		return false;
+	}
+
+	location.href="/categories-team-group/group/edit/"+groupId;
+}
+
+function fn_categoriesGroupDelete(groupId){
+	Common.confirm(Message.get("M00594"), function() {
+		location.href="/categories-team-group/group/delete/"+groupId;
+	});
+}
+
+function teamGroupOrdering(){
+	$(".team_ordering, .group_ordering").on("keydown",function(e){
+
+		var obj = $(this);
+
+		if (!(e.which && (e.which > 47 && e.which < 58) || (e.which > 95 && e.which < 106) || e.which ==8 || e.which == 13 || e.which == 37 || e.which == 39 || e.which == 46 || e.which ==9|| e.which ==0 || (e.ctrlKey && e.which ==86) ) ) {
+		 	e.preventDefault();
+	   	}
+
+	});
+
+	var orgTeamOrdering;
+	$(".team_ordering").on("focusin", function(){
+		orgTeamOrdering = $(this).val()
+	}).on("focusout", function() {
+		if ($.isNumeric($(this).val()) == false) {
+			$(this).val(orgTeamOrdering);
+			return false;
+		}
+
+		var changeOrdering = $(this).val();
+		var isSave = true;
+		$.each($('.team_ordering').not(this), function() {
+			if ($(this).val() == changeOrdering) {
+				isSave = false;
+			}
+		});
+
+		if (changeOrdering == orgTeamOrdering) {
+			return false;
+		}
+
+		if (isSave == false) {
+			$(this).val(orgTeamOrdering);
+		} else {
+
+			var param  = {
+				"ordering" : $(this).val(),
+				"categoryTeamId" : $(this).attr("rel")
+			};
+
+			$.post("/categories-team-group/ordering-edit/team", param, function(response) {
+				Common.responseHandler(response, function(){
+					location.reload();
+				});
+			});
+
+		}
+	});
+
+	var orgGroupOrdering;
+	$('.group_ordering').on("focusin", function(){
+		orgGroupOrdering = $(this).val();
+	}).on("focusout", function(){
+
+		if ($.isNumeric($(this).val()) == false) {
+			$(this).val(orgGroupOrdering);
+			return false;
+		}
+
+		var changeOrdering = $(this).val();
+		var isSave = true;
+		$.each($('.' + $(this).attr('id')).not(this), function(){
+			if ($(this).val() == changeOrdering) {
+				isSave = false;
+			}
+		});
+
+		if (changeOrdering == orgGroupOrdering) {
+			return false;
+		}
+
+		if (isSave == false) {
+			$(this).val(orgGroupOrdering);
+		} else {
+			var param  = {
+					"ordering" : $(this).val(),
+					"categoryGroupId" : $(this).attr("rel")
+			};
+
+			$.post("/categories-team-group/ordering-edit/group", param, function(response) {
+				Common.responseHandler(response, function(){
+					location.reload();
+				});
+			});
+		}
+
+	})
+
+}
+
+// 순서변경
+</script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

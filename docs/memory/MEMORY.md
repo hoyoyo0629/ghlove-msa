@@ -147,3 +147,5 @@
 - [통계>보고서 5화면 이식(총괄·누계·지자체별·지자체·연간)](admin-report-general-port.md) — 2026-10-15 전부 완료, 통계표 22종 신설·적재 통계표 14종을 AS-IS 이름 그대로 신설·적재(2,066행), 탭4+14시트 엑셀. ★엑셀 버튼은 lclgv/excel-download를 부름, 통계 배치는 TO-BE에 없음. admin 재기동 필요
 - [외국인 기부 현황(전체·지자체별) 이식](admin-foreigner-give-stat-all-port.md) — (지자체별·상세 2026-10-15 추가, 6712 이식 완료) 6711 menu_url 누락이 원인, 전체 화면에 foreigner 분기. ★AS-IS는 검색 POST 405(카드 안 채워짐)라 TO-BE는 GET 계산. 개발데이터 전부 내국인이라 0 표시. admin+donation 재기동 필요
 - [카테고리관리(16101) 이식](admin-categories-port.md) — OP_CATEGORY 1~4차 jsTree를 gift에 올림, 메뉴URL→/categories, ★PG 한글정렬은 collate "C"로 AS-IS와 맞춤, OP_ITEM_FILTER엔 category_id 없음, 한계: GNB는 gift_subcategory를 읽음. admin+gift 재기동 필요
+- [카테고리 그룹 관리(16102) 이식](admin-categories-team-group-port.md) — 대그룹+1차 그룹 목록/등록/수정/삭제/정렬, 메뉴URL→/categories-team-group, ★수정이 SEO NULL·비공개 1차 카테고리 그룹 0 처리(AS-IS 결함 그대로), 정렬저장은 tbody별 1부터. 테스트 로그인은 #op_username+idLogin()으로 바뀜. admin+gift 재기동 필요
+- [답례품제공자 관리(16151) 이식](admin-seller-manage-port.md) — 목록/등록/수정 + OP_SELLER_USER 계정 같이 저장(사용자 결정), 실데이터 9,229건 보류, BCrypt, shadow 로그인 미이식. migration-gift-seller-user-asis-columns.sql 적용 필요. admin+gift 재기동 필요

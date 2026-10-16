@@ -1,99 +1,1129 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <title>답례품제공자 관리 - 고향사랑e음 (admin service)</title>
+    <!-- 공통 head(AS-IS inc_head verbatim: CSS 6 + JS 12) - csrf meta/폰트/op.* 전부 여기서 로드 -->
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
-    <title>입점업체 등록/수정 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
+<!-- AS-IS opmanager/seller/form.jsp 이식 - 입점업체(답례품제공자) 등록/수정 폼(mode == create | edit).
+     ★ AS-IS 특징(그대로)
+     - 저장은 지자체 담당자(ROLE_ADMIN_5/6)만 된다 - 그 밖은 폼 id가 impossible-form 이라 저장 시 alert("수정 권한이 없습니다.").
+     - 담당자정보/주문 담당자/판매자 배송비 설정/관리항목, 정산 수수료율·정산주기 행은 AS-IS도 hidden 클래스로 숨겨 두지만 입력칸은 그대로
+       전송된다(등록 때 빈 팩스·담당자 전화가 "02--"처럼 이어 붙는 것까지 AS-IS 동작).
+     - 등록은 정산주기를 월정산(4)/8일로 고정하고 임시비밀번호 1111로 계정을 만든다. 수정에는 비밀번호 칸이 없고 "비밀번호 초기화" 버튼(1111)이 있다.
+     - 대표번호는 국번 select + "직접입력"(050 번호) 입력칸을 번갈아 쓴다. 주소찾기는 카카오(다음) 우편번호 서비스다. -->
+<style>
+span.require {color: #e84700; margin-left: 5px;}
+</style>
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <div class="location"><a th:href="@{/seller}">입점업체관리</a></div>
-    <h3><span th:text="${seller.sellerId()} != null ? '입점업체 수정' : '입점업체 등록'"></span></h3>
 
-    <h4>업체 정보</h4>
-    <div class="board_write">
-        <table class="board_write_table" summary="업체 정보">
-            <colgroup><col style="width:220px;"><col></colgroup>
-            <tbody>
-            <tr><td class="label"><span class="required_mark">*</span>업체명</td><td><input type="text" id="sellerName" name="sellerName" th:value="${seller.sellerName()}" required form="sellerForm"></td></tr>
-            <tr><td class="label">상호</td><td><input type="text" id="companyName" name="companyName" th:value="${seller.companyName()}" form="sellerForm"></td></tr>
-            <tr><td class="label">대표자명</td><td><input type="text" id="representativeName" name="representativeName" th:value="${seller.representativeName()}" form="sellerForm"></td></tr>
-            <tr><td class="label">사업자번호</td><td><input type="text" id="businessNumber" name="businessNumber" th:value="${seller.businessNumber()}" form="sellerForm"></td></tr>
-            <tr><td class="label">사업장소재지</td><td><input type="text" id="businessLocation" name="businessLocation" th:value="${seller.businessLocation()}" form="sellerForm"></td></tr>
-            <tr><td class="label">마을기업</td><td><input type="checkbox" name="communityBusinessYn" value="Y" th:checked="${seller.communityBusinessYn() == 'Y'}" form="sellerForm"></td></tr>
-            <!-- AS-IS seller/form.jsp는 이 체크박스를 '업종' 칸 입력란 옆에 둔다(form:checkbox label="성인답례품 등록권한" +
-                 hidden "!adultItemYn"=N). TO-BE 입점업체 폼에는 업태/업종 행 자체가 아직 없어(폼 전체 재이식은 서비스로직
-                 전수조사 답례품관리 단계) 임시로 별도 행에 둔다. 체크 안 하면 컨트롤러가 'N'으로 저장한다. -->
-            <tr><td class="label">성인답례품 등록권한</td><td>
-                <div class="checkbox">
-                    <input type="checkbox" id="adultItemYn1" name="adultItemYn" value="Y" th:checked="${seller.adultItemYn() == 'Y'}" form="sellerForm">
-                    <label for="adultItemYn1">성인답례품 등록권한</label>
-                </div>
-            </td></tr>
-            </tbody>
-        </table>
-    </div>
+			<form th:id="${canSave} ? 'seller' : 'impossible-form'" method="post" enctype="multipart/form-data" th:action="@{${action}}"
+			      th:attr="onsubmit=${canSave ? '' : 'return false'}">
+				<input type="hidden" name="idCheck" id="idCheck" value="0"/>
+				<input type="hidden" name="mode" id="mode" th:value="${mode}"/>
+				<div class="item_list">
+					<!--입점업체 등록/수정 시작-->
+					<h3><span th:utext="${msg.get('M00746')}">입점업체 등록/수정</span></h3>
 
-    <h4 style="margin-top:24px;">담당자 정보</h4>
-    <div class="board_write">
-        <table class="board_write_table" summary="담당자 정보">
-            <colgroup><col style="width:220px;"><col></colgroup>
-            <tbody>
-            <tr><td class="label">담당자명</td><td><input type="text" id="userName" name="userName" th:value="${seller.userName()}" form="sellerForm"></td></tr>
-            <tr><td class="label">전화번호</td><td><input type="text" id="telephoneNumber" name="telephoneNumber" th:value="${seller.telephoneNumber()}" form="sellerForm"></td></tr>
-            <tr><td class="label">휴대폰번호</td><td><input type="text" id="phoneNumber" name="phoneNumber" th:value="${seller.phoneNumber()}" form="sellerForm"></td></tr>
-            <tr><td class="label">이메일</td><td><input type="text" id="email" name="email" th:value="${seller.email()}" form="sellerForm"></td></tr>
-            <tr><td class="label">주소</td><td><input type="text" id="address" name="address" th:value="${seller.address()}" form="sellerForm"></td></tr>
-            <tr><td class="label">상세주소</td><td><input type="text" id="addressDetail" name="addressDetail" th:value="${seller.addressDetail()}" form="sellerForm"></td></tr>
-            </tbody>
-        </table>
-    </div>
+					<div th:if="${mode == 'edit'}" class="btn_all btn_right mb15">
+                        <div class="flex_box gap-08">
+                            <button type="submit" class="btn btn-dark-gray btn-mini"><span th:utext="${msg.get('M00087')}">수정</span></button>
+                            <button type="button" class="btn btn-defualt btn-mini" onclick="location.href='/seller/list'"><span th:utext="${msg.get('M00480')}">목록</span></button>
+                        </div>
+                    </div>
 
-    <h4 style="margin-top:24px;">계정/정산 정보</h4>
-    <div class="board_write">
-        <table class="board_write_table" summary="계정/정산 정보">
-            <colgroup><col style="width:220px;"><col></colgroup>
-            <tbody>
-            <tr><td class="label">로그인 아이디</td><td><input type="text" id="loginId" name="loginId" th:value="${seller.loginId()}" form="sellerForm"></td></tr>
-            <tr><td class="label">입금은행</td><td><input type="text" id="bankName" name="bankName" th:value="${seller.bankName()}" form="sellerForm"></td></tr>
-            <tr><td class="label">예금주</td><td><input type="text" id="bankInName" name="bankInName" th:value="${seller.bankInName()}" form="sellerForm"></td></tr>
-            <tr><td class="label">계좌번호</td><td><input type="text" id="bankAccountNumber" name="bankAccountNumber" th:value="${seller.bankAccountNumber()}" form="sellerForm"></td></tr>
-            <tr>
-                <td class="label">정산주기</td>
-                <td>
-                    <select id="remittanceType" name="remittanceType" form="sellerForm">
-                        <option value="1" th:selected="${seller.remittanceType() == '1'}">일정산</option>
-                        <option value="2" th:selected="${seller.remittanceType() == '2'}">주정산</option>
-                        <option value="3" th:selected="${seller.remittanceType() == '3'}">15일정산</option>
-                        <option value="4" th:selected="${seller.remittanceType() == '4'}">월정산</option>
-                    </select>
-                </td>
-            </tr>
-            <tr><td class="label">수수료율(%)</td><td><input type="number" step="0.1" id="commissionRate" name="commissionRate" th:value="${seller.commissionRate()}" form="sellerForm"></td></tr>
-            </tbody>
-        </table>
-    </div>
-    <form id="sellerForm" th:action="${seller.sellerId()} != null ? @{'/seller/' + ${seller.sellerId()}} : @{/seller}" method="post"></form>
-    <div class="btn_all btn_center">
-        <button type="submit" form="sellerForm" class="btn btn-dark-gray btn-small">저장</button>
-    </div>
+					<div class="board_write">
+						<table class="board_write_table">
+							<caption th:utext="${msg.get('M00746')}">입점업체 등록/수정</caption>
+							<colgroup>
+								<col style="width:220px;" />
+								<col style="width:auto;" />
+								<col style="width:220px;" />
+								<col style="width:auto;" />
+							</colgroup>
+							<tbody>
+                                <tr>
+                                    <td class="label">지자체</td>
+                                    <td colspan="3">
+                                    	<div th:if="${mode == 'create'}" th:text="${userLocgovCodeDetails.label}"></div>
+                                    	<div th:unless="${mode == 'create'}" th:text="${seller.locgovNm}"></div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="label"><span th:if="${mode == 'create'}" class="required_mark">*</span>아이디</td>
+									<th:block th:if="${mode == 'create'}">
+	                                    <td colspan="3">
+	                                        <div class="flex_box gap-08">
+	                                            <input type="text" id="loginId" name="loginId" th:title="${msg.get('M00081')}" class="input_txt required _filter wd-150" readonly="readonly" th:value="${seller.loginId}"/>
+	                                            <button type="button" id="makeloginId" class="btn btn-default btn-mini" onclick="makeSellerId()">아이디 생성</button>
+	                                        </div>
+	                                    </td>
+									</th:block>
+									<th:block th:unless="${mode == 'create'}">
+	                                    <td>
+	                                        <div class="flex_box gap-08">
+												<th:block th:text="${seller.loginId}"></th:block>
+												<input type="hidden" name="loginId" id="loginId" th:value="${seller.loginId}"/>
+	                                        </div>
+	                                    </td>
+									</th:block>
+									<th:block th:if="${mode == 'edit'}">
+										<td class="label">비밀번호</td>
+										<td>
+											<div class="input_wrap" style="display:flex;align-items: center;">
+												<button type="button" class="btn btn-dark-gray btn-sm btn-password">비밀번호 초기화</button>
+												<p style="white-space:pre;">   초기화된 비밀번호는 1111 입니다.</p>
+											</div>
+										</td>
+									</th:block>
+                                </tr>
+								<tr>
+									<td class="label"><span class="required_mark">*</span><th:block th:utext="${msg.get('M00005')}">이름</th:block></td>
+									<td colspan="3">
+										<div>
+											<input type="text" id="sellerName" name="sellerName" th:title="${msg.get('M00005')}" class="input_txt required _filter wd-150" maxlength="20" th:value="${seller.sellerName}"/>
+									    </div>
+									</td>
+								</tr>
+								<tr>
+									<td class="label"><span class="required_mark">*</span>휴대폰</td>
+									<td colspan="3">
+										<div class="flex_box gap-08 item-center">
+											<select name="phoneNumber1" class="choice3 wd-150">
+												<option th:each="code : ${phoneCodes}" th:value="${code.id}" th:text="${code.label}" th:selected="${code.id == phoneArr[0]}"></option>
+											</select>
+											<span class="wave">-</span>
+											<input type="text" name="phoneNumber2" th:value="${phoneArr[1]}" maxlength="4" class="required form-sm _number wd-150" title="휴대폰번호 가운데자리"/>
+											<span class="wave">-</span>
+											<input type="text" name="phoneNumber3" th:value="${phoneArr[2]}" maxlength="4" class="required form-sm _number wd-150" title="휴대폰번호 마지막자리"/>
+										</div>
+									</td>
+								</tr>
+								<tr>
+							        <td class="label" th:utext="${msg.get('M01111')}">이메일주소</td>
+							        <td colspan="3">
+										<div class="flex_box gap-08 item-center">
+											<input id="emailAddr" th:title="${msg.get('M01111')}" class="input_txt _filter wd-150 _first_email" type="text" th:value="${seller.emailBefore}">
+											<span class="wave">@</span>
+											<select id="email_choice" title="이메일 선택" class="wd-150" onchange="setEmail()">
+												<option value="">-선택-</option>
+												<option th:each="code : ${emailCodes}" th:value="${code.id}" th:text="${code.label}" th:selected="${seller.emailAfter == code.id}"></option>
+											</select>
+											<input id="directInput" title="직접입력" class="input_txt _filter wd-150 _first_email" type="text" th:value="${seller.emailAfter}" disabled>
+											<input type="text" id="email" name="email" class="input_txt _filter wd-500 _email hidden" title="담당자 이메일" th:value="${seller.email}"/>
+										</div>
+							        </td>
+								</tr>
+								<tr class="hidden" th:if="${mode == 'create'}">
+									<td class="label">
+										<th:block th:utext="${msg.get('M00150')}">패스워드</th:block>
+										<span class="require">*</span>
+									</td>
+									<td colspan="3">
+										<div>
+											<input type="password" name="password" id="password" th:title="${msg.get('M00150')}" class="required"  value="1111"/>
+									    </div>
+									</td>
+								</tr>
+                                <tr>
+                                    <td class="label" colspan="4">사업자 정보</td>
+                                </tr>
+								<tr>
+									<td class="label"><span class="required_mark">*</span><th:block th:utext="${msg.get('M01635')}">상호</th:block></td>
+									<td>
+										<div>
+											<input type="text" id="companyName" name="companyName" th:title="${msg.get('M01635')}" class="input_txt required _filter wd-150" th:value="${seller.companyName}"/>
+										</div>
+									</td>
+						        	<td class="label"><span class="required_mark">*</span><th:block th:utext="${msg.get('M01648')}">대표자명</th:block></td>
+									<td>
+										<div>
+											<input type="text" id="representativeName" name="representativeName" th:title="${msg.get('M01648')}" class="input_txt required _filter wd-150" th:value="${seller.representativeName}"/>
+										</div>
+									</td>
+						        </tr>
+                                <tr>
+                                    <td class="label">사업자등록증</td>
+                                    <td>
+                                        <div class="flex_box item-center">
+                                            <input type="file" name="uploadFile1" class="full input_file" title="사업자등록증" accept="image/png, image/jpeg, image/gif, .pdf" />
+                                        </div>
+                                        <div class="file_camera" id="attachedFile1" th:if="${mode == 'edit' and seller.fileNameCertificate1 != null}">
+                                        	<input type="hidden" name="fileNameCertificate1" th:value="${seller.fileNameCertificate1}" />
+                                            <div>
+                                            	<th:block th:text="${seller.fileNameCertificate1}"></th:block>
+                                            	<a th:href="|javascript:deleteFile('${seller.fileNameCertificate1}', '${seller.sellerId}', 'file1');|"><img src="/content/images/btn/file_close.gif" alt="close"></a>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="label">통신판매신고증</td>
+                                    <td>
+                                        <div class="flex_box item-center">
+                                            <input type="file" name="uploadFile2" class="full input_file" title="통신판매신고증" accept="image/png, image/jpeg, image/gif, .pdf" />
+                                        </div>
+                                        <div class="file_camera" id="attachedFile2" th:if="${mode == 'edit' and seller.fileNameCertificate2 != null}">
+                                        	<input type="hidden" name="fileNameCertificate2" th:value="${seller.fileNameCertificate2}" />
+                                            <div>
+                                            	<th:block th:text="${seller.fileNameCertificate2}"></th:block>
+                                            	<a th:href="|javascript:deleteFile('${seller.fileNameCertificate2}', '${seller.sellerId}', 'file2');|"><img src="/content/images/btn/file_close.gif" alt="close"></a>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+						        <tr>
+									<td class="label"><span class="required_mark">*</span><th:block th:utext="${msg.get('M00106')}">사업자등록번호</th:block></td>
+									<td>
+										<div class="flex_box gap-08 item-center">
+											<input type="text" name="businessNumber1" id="businessNumber1" th:value="${businessNumberArr[0]}" th:title="${msg.get('M01649')}" class=" _number form-sm required wd-150" maxlength="3"/>
+											<span class="wave">-</span>
+											<input type="text" name="businessNumber2" id="businessNumber2" th:value="${businessNumberArr[1]}" th:title="${msg.get('M01649')}" class=" _number form-sm required wd-150" maxlength="2"/>
+											<span class="wave">-</span>
+											<input type="text" name="businessNumber3" id="businessNumber3" th:value="${businessNumberArr[2]}" th:title="${msg.get('M01649')}" class=" _number form-sm required wd-150" maxlength="5"/>
+										</div>
+									</td>
+									<td class="label">통신판매신고번호</td>
+									<td>
+										<div class="flex_box gap-12">
+											<input type="text" id="mailOrderNumber" name="mailOrderNumber" title="통신판매신고번호" class="input_txt _filter wd-200" th:value="${seller.mailOrderNumber}"/>
+										</div>
+									</td>
+								</tr>
+                                <tr>
+                                    <td class="label">구매안전이용확인증</td>
+                                    <td>
+                                        <div class="flex_box item-center">
+                                            <input type="file" name="uploadFile3" class="full input_file" title="구매안전이용확인증" accept="image/png, image/jpeg, image/gif, .pdf" />
+                                        </div>
+                                        <div class="file_camera" id="attachedFile3" th:if="${mode == 'edit' and seller.fileNameCertificate3 != null}">
+                                        	<input type="hidden" name="fileNameCertificate3" th:value="${seller.fileNameCertificate3}" />
+                                            <div>
+                                            	<th:block th:text="${seller.fileNameCertificate3}"></th:block>
+                                            	<a th:href="|javascript:deleteFile('${seller.fileNameCertificate3}', '${seller.sellerId}', 'file3');|"><img src="/content/images/btn/file_close.gif" alt="close"></a>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="label">구매안전 이용확인번호</td>
+                                    <td>
+                                        <div>
+                                            <input type="text" id="buySafetyUseConfirmNumber" name="buySafetyUseConfirmNumber" title="구매안전 이용확인번호" class="input_txt _filter wd-200" th:value="${seller.buySafetyUseConfirmNumber}"/>
+                                        </div>
+                                    </td>
+                                </tr>
+						        <tr>
+									<td class="label"><span class="required_mark">*</span><th:block th:utext="${msg.get('M01651')}">업태</th:block></td>
+									<td>
+										<div>
+											<input type="text" id="businessType" name="businessType" th:title="${msg.get('M01651')}" class=" required wd-150" th:value="${seller.businessType}"/>
+										</div>
+									</td>
+									<td class="label"><span class="required_mark">*</span>업종</td>
+									<td>
+										<div class="flex_box gap-12">
+											<div>
+												<input type="text" id="businessItems" name="businessItems" title="업종" class=" required wd-200" th:value="${seller.businessItems}"/>
+											</div>
+	                                        <div class="checkbox">
+												<input id="adultItemYn1" name="adultItemYn" type="checkbox" value="Y" th:checked="${seller.adultItemYn == 'Y'}"/><label for="adultItemYn1">성인답례품 등록권한</label>
+												<input type="hidden" name="!adultItemYn" value="N" />
+	                                        </div>
+	                                    </div>
+									</td>
+						        </tr>
+								<tr>
+									<td class="label" rowspan="2"><span class="required_mark">*</span>대표번호</td>
+									<td rowspan="2">
+										<div class="flex_box gap-08 item-center">
+											<input type="text" id="iptTelNum1" th:value="${telFirst}" maxlength="4" th:class="'form-sm _number wd-150 telephoneNumber ' + (${manualNumberType} ? '' : 'hidden')" title="대표번호 첫번째자리" />
+											<select name="telephoneNumber1" id="selTelNum1" th:class="'choice3 wd-150 telephoneNumber ' + (${manualNumberType} ? 'hidden' : '')">
+												<!-- 국번이 없는 경우를 위해 추가 -->
+												<option value="미선택" th:selected="${!telMatched}">미선택</option>
+												<option th:each="code : ${telCodes}" th:value="${code.id}" th:text="${code.label}" th:selected="${code.id == telFirst}"></option>
+											</select>
+											<span class="wave">-</span>
+											<input type="text" name="telephoneNumber2" th:value="${telArr[1]}" maxlength="4" class="required form-sm _number wd-150" title="대표번호 가운데자리"/>
+											<span class="wave">-</span>
+											<input type="text" name="telephoneNumber3" th:value="${telArr[2]}" maxlength="4" class="required form-sm _number wd-150" title="대표번호 마지막자리"/>
+										</div>
+
+										<div class="checkbox">
+											<input id="manualNumberType1" name="manualNumberType" type="checkbox" value="true" th:checked="${manualNumberType}"/><label for="manualNumberType1">직접입력</label>
+										</div>
+									</td>
+                                    <td class="label"><span class="required_mark">*</span>과세구분</td>
+                                    <td>
+                                        <div class="flex_box gap-12">
+                                            <div class="input-form">
+												<input id="taxType1" name="taxType" type="radio" title="과세" class="required" value="1" th:checked="${seller.taxType != '2'}"/><label for="taxType1">과세</label>
+                                            </div>
+                                            <div class="input-form">
+												<input id="taxType2" name="taxType" type="radio" title="비과세" class="required" value="2" th:checked="${seller.taxType == '2'}"/><label for="taxType2">비과세</label>
+                                            </div>
+                                        </div>
+                                    </td>
+								</tr>
+								<tr>
+									<td class="label"> 마을기업 여부</td>
+									<td>
+										<div class="input-form">
+											<input id="communityBusinessYn1" name="communityBusinessYn" type="checkbox" value="Y" th:checked="${seller.communityBusinessYn == 'Y'}"/><label for="communityBusinessYn1">마을기업 여부</label>
+											<input type="hidden" name="!communityBusinessYn" value="N" />
+										</div>
+									</td>
+								</tr>
+						        <tr>
+									<td class="label"><th:block th:utext="${msg.get('M01650')}">사업장 소재지</th:block><span class="require">*</span></td>
+									<td colspan="3">
+	                                    <div class="flex_box gap-08">
+											<input type="hidden" name="newPost" value="">
+											<input type="text" name="post" id="post" th:value="${seller.post}" class="required wd-150" th:title="${msg.get('M01650')}" maxlength="5" required="required" readonly="readonly">
+											<a href="javascript:;" onclick="openDaumPostcode()" class="btn btn-default btn-mini"> 주소찾기</a>
+
+	                                    </div>
+	                                    <div class="flex_box gap-08">
+											<input type="text" id="businessLocation" name="businessLocation" th:title="${msg.get('M01646')}" class="input_txt required _filter wd-500" readonly="readonly" th:value="${seller.businessLocation}"/><br/>
+											<input type="text" id="addressDetail" name="addressDetail" th:title="${msg.get('M01647')}" class="input_txt required _filter wd-500" maxlength="100" th:value="${seller.addressDetail}"/>
+	                                    </div>
+									</td>
+						        </tr>
+						        <tr>
+									<td class="label" th:utext="${msg.get('M01476')}">영업상태</td>
+									<td colspan="3">
+										<div class="flex_box gap-12">
+											<div class="input-form">
+												<input id="statusCode1" name="statusCode" type="radio" th:title="${msg.get('M00083')}" class="required" value="2" th:checked="${seller.statusCode != '3' and seller.statusCode != '5'}"/><label for="statusCode1">사용</label>
+                                        	</div>
+                                        	<div class="input-form">
+                                        		<input id="statusCode2" name="statusCode" type="radio" th:title="${msg.get('M01639')}" class="required" value="3" th:checked="${seller.statusCode == '3'}"/><label for="statusCode2">중지</label>
+											</div>
+                                        	<div class="input-form">
+                                        		<input id="statusCode3" name="statusCode" type="radio" title="승인대기" class="required" value="5" th:checked="${seller.statusCode == '5'}"/><label for="statusCode3">승인대기</label>
+											</div>
+										</div>
+									</td>
+								</tr>
+								<tr>
+									<td class="label">상품승인설정</td>
+									<td colspan="3">
+										<div class="flex_box gap-12">
+											<div class="input-form">
+												<input id="itemApprovalType1" name="itemApprovalType" type="radio" class="required" value="1" th:checked="${seller.itemApprovalType != '2'}"/><label for="itemApprovalType1">관리자 승인</label>
+											</div>
+											<div class="input-form">
+												<input id="itemApprovalType2" name="itemApprovalType" type="radio" class="required" value="2" th:checked="${seller.itemApprovalType == '2'}"/><label for="itemApprovalType2">자동승인</label>
+											</div>
+										</div>
+									</td>
+						        </tr>
+								<tr>
+									<td class="label">SMS 수신동의</td>
+									<td colspan="3">
+										<div class="flex_box gap-12">
+											<div class="input-form">
+												<input id="receiveSms1" name="receiveSms" type="radio" class="required" value="0" th:checked="${seller.receiveSms != '1'}"/><label for="receiveSms1">동의</label>
+											</div>
+											<div class="input-form">
+												<input id="receiveSms2" name="receiveSms" type="radio" class="required" value="1" th:checked="${seller.receiveSms == '1'}"/><label for="receiveSms2">동의안함</label>
+											</div>
+										</div>
+									</td>
+						        </tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				<div class="item_list mt30 hidden">
+					<h3><span>담당자정보</span></h3>
+					<div class="board_write">
+						<table class="board_write_table">
+							<caption th:utext="${msg.get('M00746')}">입점업체 등록/수정</caption>
+							<colgroup>
+								<col style="width:170px;" />
+								<col style="width:auto;" />
+								<col style="width:170px;" />
+								<col style="width:auto;" />
+							</colgroup>
+							<tbody>
+								<tr>
+									<td class="label"><th:block th:utext="${msg.get('M01632')}">담당자명</th:block><span class="require">*</span></td>
+									<td colspan="3">
+										<div>
+											<input type="text" id="userName" name="userName" th:title="${msg.get('M01632')}" class=" " th:value="${seller.userName}"/>
+										</div>
+									</td>
+								</tr>
+								<tr>
+									<td class="label"><th:block th:utext="${msg.get('M01643')}">팩스번호</th:block><span class="require">*</span></td>
+									<td colspan="3">
+										<div>
+											<select name="faxNumber1" class="choice3">
+												<option th:each="code : ${telCodes}" th:value="${code.id}" th:text="${code.label}" th:selected="${faxArr[0] == code.id}"></option>
+											</select> -
+											<input type="text" name="faxNumber2" th:value="${faxArr[1]}" maxlength="4" class=" form-sm _number" title="팩스 가운데자리"/> -
+											<input type="text" name="faxNumber3" th:value="${faxArr[2]}" maxlength="4" class=" form-sm _number" title="팩스 마지막자리"/>
+										</div>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div> <!-- // board_write -->
+				</div>
+
+				<div class="item_list mt30 hidden">
+					<h3><span>주문 담당자</span>
+						<span class="text-info">
+							* <strong>주문안내 SMS발송</strong> 시간을 설정한 경우 설정된 시간에 주문 담당자에게 주문안내 SMS발송합니다.
+						</span>
+					</h3>
+					<div class="board_write">
+						<table class="board_write_table">
+							<caption th:utext="${msg.get('M00746')}">입점업체 등록/수정</caption>
+							<colgroup>
+								<col style="width:170px;" />
+								<col style="width:auto;" />
+								<col style="width:170px;" />
+								<col style="width:auto;" />
+							</colgroup>
+							<tbody>
+								<tr>
+									<td class="label" th:utext="${msg.get('M01632')}">담당자명</td>
+									<td colspan="3">
+										<div>
+											<input type="text" id="secondUserName" name="secondUserName" th:title="${msg.get('M01632')}" class="" th:value="${seller.secondUserName}"/>
+										</div>
+									</td>
+								</tr>
+								<tr>
+									<td class="label" th:utext="${msg.get('M01633')}">담당자 전화번호</td>
+									<td>
+										<div>
+											<select name="secondTelephoneNumber1" class="choice3">
+												<option th:each="code : ${telCodes}" th:value="${code.id}" th:text="${code.label}" th:selected="${code.id == secondTelArr[0]}"></option>
+											</select> -
+											<input type="text" name="secondTelephoneNumber2" th:value="${secondTelArr[1]}" maxlength="4" class="form-sm _number" title="전화번호 가운데자리"/> -
+											<input type="text" name="secondTelephoneNumber3" th:value="${secondTelArr[2]}" maxlength="4" class="form-sm _number" title="전화번호 마지막자리"/>
+										</div>
+									</td>
+									<td class="label" th:utext="${msg.get('M01634')}">담당자 휴대폰번호</td>
+									<td>
+										<div>
+											<select name="secondPhoneNumber1" class="choice3">
+												<option th:each="code : ${phoneCodes}" th:value="${code.id}" th:text="${code.label}" th:selected="${code.id == secondPhoneArr[0]}"></option>
+											</select> -
+											<input type="text" name="secondPhoneNumber2" th:value="${secondPhoneArr[1]}" maxlength="4" class="form-sm _number_masking" title="휴대폰번호 가운데자리"/> -
+											<input type="text" name="secondPhoneNumber3" th:value="${secondPhoneArr[2]}" maxlength="4" class="form-sm _number" title="휴대폰번호 마지막자리"/>
+										</div>
+									</td>
+								</tr>
+								<tr>
+									<td class="label" th:utext="${msg.get('M01644')}">담당자이메일</td>
+							        <td>
+										<div>
+											<input type="text" id="secondEmail" name="secondEmail" class="form-half optional _email" title="담당자 이메일" th:value="${seller.secondEmail}"/>
+										</div>
+							        </td>
+							        <td class="label">주문안내 SMS 발송</td>
+							        <td>
+										<div>
+											<select name="smsSendTime">
+												<option value="">미설정</option>
+												<option th:each="i : ${#numbers.sequence(1, 23)}" th:value="${i}"
+												        th:text="${(i >= 12 ? '오후' : '오전') + ' ' + (i > 12 ? i - 12 : i) + '시'}"
+												        th:selected="${seller.smsSendTime == #strings.toString(i)}"></option>
+											</select>
+										</div>
+							        </td>
+								</tr>
+
+							</tbody>
+						</table>
+					</div> <!-- // board_write -->
+				</div>
+
+
+
+				<div class="item_list mt30">
+					<h3 class="mt50 fs24"><span>정산정보</span></h3> <!-- 정산정보 -->
+					<div class="board_write">
+						<table class="board_write_table">
+							<caption>정산정보</caption>
+							<colgroup>
+								<col style="width:220px;" />
+								<col style="width:auto;" />
+								<col style="width:220px;" />
+								<col style="width:auto;" />
+							</colgroup>
+							<tbody>
+								<tr class="hidden">
+									<td class="label"><th:block th:utext="${msg.get('M01653')}">수수료율</th:block><span class="require">*</span></td>
+									<td colspan="3">
+										<div>
+											<input type="text" id="commissionRate" name="commissionRate" th:title="${msg.get('M01653')}" class=" amount _number_float _percent _min_0" maxlength="4" th:value="${seller.commissionRate}"/>%
+										</div>
+									</td>
+						        </tr>
+						        <tr class="hidden">
+									<td class="label"><th:block th:utext="${msg.get('M01654')}">정산주기</th:block><span class="require">*</span></td>
+									<td>
+										<div>
+											<select id="remittanceType" name="remittanceType" class="choice3" style="width:100px;">
+												<option value="">선택하세요</option>
+												<option th:each="code : ${remittanceTypeCodes}" th:value="${code.id}" th:text="${code.label}" th:selected="${code.id == seller.remittanceType}"></option>
+											</select>
+										</div>
+									</td>
+
+									<td th:class="'label remittanceDayTd ' + (${seller.remittanceType != '4'} ? 'hide' : '')">정산일</td>
+									<td th:class="'remittanceDayTd ' + (${seller.remittanceType != '4'} ? 'hide' : '')">
+										<div>
+											<select id="remittanceDay" name="remittanceDay">
+												<option value="">선택하세요</option>
+												<option value="1" th:selected="${seller.remittanceDay == '1'}">1일</option>
+												<option value="5" th:selected="${seller.remittanceDay == '5'}">5일</option>
+												<option value="10" th:selected="${seller.remittanceDay == '10'}">10일</option>
+												<option value="15" th:selected="${seller.remittanceDay == '15'}">15일</option>
+												<option value="20" th:selected="${seller.remittanceDay == '20'}">20일</option>
+												<option value="25" th:selected="${seller.remittanceDay == '25'}">25일</option>
+											</select>
+										</div>
+									</td>
+						        </tr>
+						        <tr>
+									<td class="label"><span class="required_mark">*</span><th:block th:utext="${msg.get('M01655')}">입금은행명</th:block></td>
+									<td>
+										<div>
+											<select id="bankName" name="bankName" th:title="${msg.get('M01655')}" class="choice3 required wd-150">
+												<option value="">-선택-</option>
+												<option th:each="code : ${bankCodes}" th:value="${code.label}" th:text="${code.label}" th:selected="${code.label == seller.bankName}"></option>
+											</select>
+										</div>
+									</td>
+									<td class="label"><span class="required_mark">*</span><th:block th:utext="${msg.get('M00167')}">예금주</th:block>명</td>
+									<td>
+										<div>
+											<input type="text" id="bankInName" name="bankInName" th:title="${msg.get('M00167') + '명'}" class=" required wd-150" maxlength="10" th:value="${seller.bankInName}"/>
+										</div>
+									</td>
+						        </tr>
+						        <tr>
+									<td class="label"><span class="required_mark">*</span><th:block th:utext="${msg.get('M01656')}">입금계좌번호</th:block></td>
+									<td colspan="3">
+										<div>
+											<input type="text" id="bankAccountNumber" name="bankAccountNumber" th:title="${msg.get('M01656')}" class=" _number required wd-500" maxlength="20" th:value="${seller.bankAccountNumber}"/>
+											<span class="tip">‘-’ 를 제외하고 입력해 주세요.</span>
+										</div>
+									</td>
+						        </tr>
+							</tbody>
+						</table>
+						<div class="check-all-item-notice-label hidden" style="display: block;">
+							* 정산주기 상세설명<br>
+							1. 일정산 : 구매확정일의 다음날 정산됩니다.<br>
+							2. 주정산 : 구매확정일 기준 차주 월요일에 정산됩니다. (일 ~ 토요일까지의 구매확정주문들이 차주 월요일에 정산)<br>
+							3. 15일주기 : 1 ~ 14일 구매확정주문 = 15일에 정산, 15 ~ 말일 구매확정주문 = 다음달 1일에 정산됩니다.<br>
+							4. 월정산 : 월정산의 정산일날 구매확정된 주문은 다음달에 정산됩니다. (ex. 설정한 정산일이 매달1일, 주문의 구매확정이 1월 1일인경우 2월1일에 정산.)<br>
+							* <strong>정산일이 휴일인 경우 다음날 정산됩니다.</strong>
+						</div>
+					</div>
+				</div>
+
+				<div class="item_list mt30 hidden">
+					<h3><span>판매자 배송비 설정</span></h3> <!-- 조건부배송비 -->
+					<div class="board_write">
+						<table class="board_write_table">
+							<colgroup>
+								<col style="width:170px;" />
+								<col style="width:auto;" />
+								<col style="width:170px;" />
+								<col style="width:auto;" />
+							</colgroup>
+							<tbody>
+								<tr>
+									<td class="label">설정 여부</td> <!-- 판매자 조건부 배송비 설정여부 -->
+									<td colspan="3">
+										<div>
+											<input id="shippingFlag1" name="shippingFlag" type="radio" th:title="${msg.get('M01658')}" class="required" value="N" th:checked="${seller.shippingFlag == 'N'}"/><label for="shippingFlag1">미설정</label>
+											<input id="shippingFlag2" name="shippingFlag" type="radio" th:title="${msg.get('M01658')}" class="required" value="Y" th:checked="${seller.shippingFlag == 'Y'}"/><label for="shippingFlag2">설정</label>
+
+										</div>
+									</td>
+						        </tr>
+
+						        <tr th:class="'shipping_tr ' + (${seller.shippingFlag == 'Y' or seller.shippingFlag == ''} ? '' : 'hide')">
+									<td class="label">배송비<span class="require">*</span></td> <!-- 판매자 조건부 배송비 -->
+									<td>
+										<div>
+											<input type="text" id="shipping" name="shipping" title="배송비" th:class="${(seller.shippingFlag == 'Y' or seller.shippingFlag == '') ? 'required ' : ''} + ' amount _number_comma shipping _min_0'" th:value="${seller.shipping}"/> 원
+										</div>
+									</td>
+									<td class="label">무료배송 조건별 금액<span class="require">*</span></td> <!-- 판매자 조건부 배송비 무료배송 금액 -->
+									<td>
+										<div>
+											<input type="text" id="shippingFreeAmount" name="shippingFreeAmount" title="조건별 무료배송 금액" th:class="${(seller.shippingFlag == 'Y' or seller.shippingFlag == '') ? 'required ' : ''} + ' amount _number_comma shipping _min_0'" th:value="${seller.shippingFreeAmount}"/> 원 이상 무료
+										</div>
+									</td>
+						        </tr>
+						        <tr th:class="'shipping_tr ' + (${seller.shippingFlag == 'Y' or seller.shippingFlag == ''} ? '' : 'hide')">
+									<td class="label"><th:block th:utext="${msg.get('M01660')}">추가배송비 - 제주도</th:block><span class="require">*</span></td> <!-- 추가배송비 - 제주도 -->
+									<td>
+										<div>
+											<input type="text" id="shippingExtraCharge1" name="shippingExtraCharge1" th:title="${msg.get('M01658')}" th:class="${(seller.shippingFlag == 'Y' or seller.shippingFlag == '') ? 'required ' : ''} + ' amount _number_comma shipping _min_0'" th:value="${seller.shippingExtraCharge1}"/> 원
+										</div>
+									</td>
+									<td class="label"><th:block th:utext="${msg.get('M01661')}">추가배송비 - 도서산간</th:block><span class="require">*</span></td> <!-- 추가배송비 - 도서산간 -->
+									<td>
+										<div>
+											<input type="text" id="shippingExtraCharge2" name="shippingExtraCharge2" th:title="${msg.get('M01659')}" th:class="${(seller.shippingFlag == 'Y' or seller.shippingFlag == '') ? 'required ' : ''} + ' amount _number_comma shipping _min_0'" th:value="${seller.shippingExtraCharge2}"/> 원
+										</div>
+									</td>
+						        </tr>
+							</tbody>
+						</table>
+					</div>
+
+					<div class="text-info" style="margin-top: 10px">
+						* 판매자 배송비를 설정한 경우 설정 값이 상품 등록 시 배송시 설정 항목 중 <strong>판매자조건부</strong>에 설정됩니다. <br />
+						* <strong>판매자조건부</strong>로 설정된 상품을 주문하는 경우 해당 설정 금액 기준으로 묶음 배송비가 부과됩니다.
+
+					</div>
+				</div>
+
+				<div class="item_list mt30 hidden">
+					<h3><span>관리항목</span></h3>
+					<div class="board_write">
+						<table class="board_write_table">
+							<colgroup>
+								<col style="width:170px;" />
+								<col style="width:auto;" />
+								<col style="width:170px;" />
+								<col style="width:auto;" />
+							</colgroup>
+							<tbody>
+						        <tr>
+									<td class="label">담당MD<span class="require">*</span></td> <!-- 담당MD -->
+									<td colspan="3">
+										<div>
+											<input type="hidden" name="currentMdId" th:value="${seller.mdId}" />
+											<input type="hidden" id="mdId" name="mdId" th:value="${seller.mdId}" />
+											<input type="text" id="mdName" name="mdName" title="담당MD" readonly="readonly" th:value="${seller.mdName}" />
+
+											<button type="button" onclick="findMd('mdId')" class="btn btn-dark-gray btn-sm"><span class="glyphicon glyphicon-search"></span> MD검색</button>
+											<button type="button" onclick="clearMd('mdId')" class="btn btn-gradient btn-sm"><span class="glyphicon glyphicon-remove"></span> 초기화</button>
+										</div>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div> <!-- // board_write -->
+				</div>
+				<div class="btn_all btn_center">
+					<div class="flex_box gap-08">
+						<th:block th:if="${mode == 'create'}">
+							<button type="submit" class="btn btn-dark-gray btn-small"><span th:utext="${msg.get('M00088')}">등록</span></button>
+							<button type="button" class="btn btn-defualt btn-small" onclick="location.href='/seller/list'"><span th:utext="${msg.get('M00037')}">취소</span></button>
+						</th:block>
+					</div>
+				</div>
+			</form>
+
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
+
+<!-- AS-IS가 JSP에서 JS 문자열에 직접 박던 값 -->
+<input type="hidden" id="adminRole" th:value="${adminRole}">
+<input type="hidden" id="sellerIdParam" th:value="${seller.sellerId}">
+<input type="hidden" id="loginIdParam" th:value="${seller.loginId}">
+<input type="hidden" id="locgovCodeParam" th:value="${userLocgovCodeDetails.id}">
+<input type="hidden" id="msgRegisterConfirm" th:value="${msg.get('M00159')}">
+<input type="hidden" id="msgModifyConfirm" th:value="${msg.get('M00365')}">
+
+<!-- 다음 주소검색 (AS-IS WEB-INF/tags/daum/address.tag) -->
+<script src="//t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script type="text/javascript">
+function openDaumAddress(tagNames, callBack) {
+
+	var defaultTagNames = {
+		'newZipcode'			: 'newZipcode',
+		'zipcode1' 				: 'zipcode1',
+		'zipcode2' 				: 'zipcode2',
+		'zipcode' 				: 'zipcode',
+		'sido'					: 'sido',
+		'sigungu'				: 'sigungu',
+		'eupmyeondong'			: 'eupmyeondong',
+		'jibunAddress'			: 'address',
+		'jibunAddressDetail' 	: 'addressDetail',
+		'roadAddress'			: 'address',
+		'buildingCode'			: 'buildingCode'
+	}
+
+	if (tagNames != undefined) {
+		$.each(defaultTagNames, function(key, value) {
+			if (tagNames[key] != undefined) {
+				defaultTagNames[key] = tagNames[key];
+			}
+		});
+	}
+
+	new daum.Postcode({
+	    oncomplete: function(data) {
+	    	try {
+
+	    		var post = data.postcode;
+	    		if (post == '') {
+	    			post = data.zonecode;
+	    		}
+
+		        $('input[name="'+ defaultTagNames.newZipcode +'"]').val(data.zonecode);
+		        $('input[name="'+ defaultTagNames.zipcode +'"]').val(post);
+		        $('input[name="'+ defaultTagNames.zipcode1 +'"]').val(data.postcode1);
+		        $('input[name="'+ defaultTagNames.zipcode2 +'"]').val(data.postcode2);
+
+		        $('input[name="'+ defaultTagNames.sido +'"]').val(data.sido);
+		        $('input[name="'+ defaultTagNames.sigungu +'"]').val(data.sigungu);
+		        $('input[name="'+ defaultTagNames.eupmyeondong +'"]').val(data.bname);
+
+		        var jibunAddress = data.jibunAddress;
+		        if (jibunAddress == '') {
+		        	jibunAddress = data.autoJibunAddress;
+		        }
+
+		        var roadAddress = data.roadAddress;
+		        if (roadAddress == '') {
+		        	roadAddress = data.autoRoadAddress;
+		        }
+
+		        var addr = jibunAddress;
+		        if(data.userSelectedType == 'R'){
+		        	addr = roadAddress;
+		        }
+
+                if(data.buildingName != ''){
+                    addr += ' ('+data.buildingName+')';
+                    roadAddress += ' ('+data.buildingName+')';
+                }
+
+		        $('input[name="'+ defaultTagNames.jibunAddress +'"]').val(addr);
+		        $('input[name="'+ defaultTagNames.jibunAddressDetail +'"]').val("");
+		        $('input[name="'+ defaultTagNames.jibunAddressDetail +'"]').focus();
+
+
+		        $('input[name="'+ defaultTagNames.roadAddress +'"]').val(roadAddress);
+		        $('input[name="'+ defaultTagNames.buildingCode +'"]').val(data.buildingCode);
+
+		        if ($.isFunction(callBack)) {
+		        	callBack(data);
+		        }
+
+
+
+	    	} catch (e) {
+				alert(e.message);
+			}
+
+	    }
+	}).open();
+}
+</script>
+
+<script type="text/javascript">
+var adminRole = $("#adminRole").val();
+
+$(function() {
+
+	// 수정일때 이메일 설정
+	if($('#mode').val() == 'edit'){
+
+		if($("#email_choice").val() != "") {
+			$("#directInput").hide();	// 직접입력이 아닌 경우 이메일 도메인값 숨기기
+		} else {
+			if($("#directInput").val() != "") {
+				$("#email_choice").val('0');	// 직접입력 선택
+				directInput.disabled = false;
+			}
+		}
+	} else {
+		$("#directInput").hide();
+	}
+
+	Common.addNumberComma();
+
+	$('#impossible-form').submit(function() {
+		alert('수정 권한이 없습니다. (지자체 권한 필요)');
+		Common.loading.hide();
+		return false;
+	});
+
+	//조회한 내용이 콤보에 없으면
+	if ($("#selTelNum1 option:checked").val() == "미선택") {
+		//input에 값이 있으면
+		if ($.trim($("#iptTelNum1").val()).length > 0) {
+			$("#manualNumberType1").prop("checked", true).trigger("change");
+			$("#selTelNum1").prop("selectedIndex", 0);
+		}else{
+			$("#manualNumberType1").prop("checked", false).trigger("change");
+			$("#iptTelNum1").val("");
+		}
+	}else{
+		$("#manualNumberType1").prop("checked", false).trigger("change");
+		$("#iptTelNum1").val("");
+	}
+
+
+	// validator
+	try {
+
+		$('#seller').validator(function() {
+			var loginId = $("#loginId").val();
+			 var params = {
+				'loginId' : loginId
+			};
+
+				if($("#emailAddr").val() != "") {
+					if (!$.validator.patterns._first_email.test($("#emailAddr").val())) {
+						alert($.validator.messages._first_email);
+						$("#emailAddr").focus();
+						return false;
+					}
+
+					if ($("#email_choice").val() == "" && $("#directInput").val() == "") {
+						alert("이메일 도메인을 선택하세요.");
+						$("#email_choice").focus();
+						return false;
+					}
+
+					if ($("#email_choice").val() == "0" && $("#directInput").val() == "") {
+						alert("이메일 도메인을 입력하세요.");
+						$("#directInput").focus();
+						return false;
+					}
+				}
+
+				if($("#directInput").val() != "") {
+					if (!$.validator.patterns._last_email.test($("#directInput").val())) {
+						alert($.validator.messages._last_email);
+						$("#directInput").focus();
+						return false;
+					}
+				}
+
+				// 사업자등록증 업로드파일 확장자 체크
+				if( $('input[name=uploadFile1]').val() != "" ){
+			      var ext = $('input[name=uploadFile1]').val().split('.').pop().toLowerCase();
+			  	  if($.inArray(ext, ['jpg', 'gif', 'png', 'pdf', 'jpeg']) == -1) {
+			  	     alert('등록할 수 없는 파일확장자입니다.');
+			  	     $('input[name=uploadFile1]').val(""); // input file 파일명을 다시 지워준다.
+			  	     return false;
+			 	  }
+			    }
+
+			    // 통신판매신고증 업로드파일 확장자 체크
+				if( $('input[name=uploadFile2]').val() != "" ){
+			      var ext = $('input[name=uploadFile2]').val().split('.').pop().toLowerCase();
+			  	  if($.inArray(ext, ['jpg', 'gif', 'png', 'pdf', 'jpeg']) == -1) {
+			  	     alert('등록할 수 없는 파일확장자입니다.');
+			  	     $('input[name=uploadFile2]').val(""); // input file 파일명을 다시 지워준다.
+			  	     return false;
+			 	  }
+			    }
+
+			    // 구매안전이용확인증 업로드파일 확장자 체크
+				if( $('input[name=uploadFile3]').val() != "" ){
+			      var ext = $('input[name=uploadFile3]').val().split('.').pop().toLowerCase();
+			  	  if($.inArray(ext, ['jpg', 'gif', 'png', 'pdf', 'jpeg']) == -1) {
+			  	     alert('등록할 수 없는 파일확장자입니다.');
+			  	     $('input[name=uploadFile3]').val(""); // input file 파일명을 다시 지워준다.
+			  	     return false;
+			 	  }
+			    }
+
+				// 사업자등록증 업로드파일 용량체크
+				if( $('input[name=uploadFile1]').val() != "" ){
+				    var fileSize = $('input[name=uploadFile1]')[0].files[0].size;
+				    var maxSize = 5 * 1024 * 1024;	// 5MB
+
+				    if(fileSize > maxSize){
+				       alert("첨부파일 사이즈는 5MB 이내로 등록 가능합니다. ");
+				        $('input[name=uploadFile1]').val("");
+				        return false;
+				     }
+				}
+
+				// 통신판매신고증 업로드파일 용량체크
+				if( $('input[name=uploadFile2]').val() != "" ){
+				    var fileSize = $('input[name=uploadFile2]')[0].files[0].size;
+				    var maxSize = 5 * 1024 * 1024;	// 5MB
+
+				    if(fileSize > maxSize){
+				       alert("첨부파일 사이즈는 5MB 이내로 등록 가능합니다. ");
+				        $('input[name=uploadFile2]').val("");
+				        return false;
+				     }
+				}
+
+				// 구매안전이용확인증 업로드파일 용량체크
+				if( $('input[name=uploadFile3]').val() != "" ){
+				    var fileSize = $('input[name=uploadFile3]')[0].files[0].size;
+				    var maxSize = 5 * 1024 * 1024;	// 5MB
+
+				    if(fileSize > maxSize){
+				       alert("첨부파일 사이즈는 5MB 이내로 등록 가능합니다. ");
+				        $('input[name=uploadFile3]').val("");
+				        return false;
+				     }
+				}
+
+				if($('#mode').val() == 'create') {
+					if (!confirm("정보를 " + $("#msgRegisterConfirm").val())) {
+		            	return false;
+	            	}
+	            } else if($('#mode').val() == 'edit') {
+					if (!confirm("정보를 " + $("#msgModifyConfirm").val())) {
+		            	return false;
+	            	}
+	            }
+
+
+			Common.removeNumberComma();
+		});
+	} catch(e) {
+		alert(e.message);
+	}
+
+	$('.emailSel').on("change", function(){
+		$('input[name=email2]').val($(this).val());
+	});
+
+	$('#remittanceType').on('change', function(){
+		if($(this).val()==4){
+			$('.remittanceDayTd').removeClass('hide');
+			$('#remittanceDay').attr('name', 'remittanceDay');
+		}else{
+			$('.remittanceDayTd').addClass('hide');
+			$('#remittanceDay').attr('name', '');
+		}
+
+	});
+
+	$('input[name=shippingFlag]').on('change', function(){
+		if($(this).val()=='Y'){
+			$('.shipping_tr').removeClass('hide');
+			$('.shipping').addClass('required');
+		}else{
+			$('.shipping_tr').addClass('hide');
+			$('.shipping').removeClass('required');
+		}
+
+
+	});
+
+	// 비밀번호 팝업
+	$('.btn-password').on('click', function(e) {
+		e.preventDefault();
+
+    	// 지자체 관리자만 비밀번호 초기화 가능
+    	if(adminRole == 'SYS') {
+    		alert("지자체관리자만 비밀번호 변경이 가능합니다.");
+    		return false;
+    	}
+
+		if (confirm("초기화된 아이디는 비밀번호 재설정을 통해 정상 이용이 가능합니다. 비밀번호를 초기화 하시겠습니까?")) {
+			let formData = new FormData();
+			formData.append("sellerId", $("#sellerIdParam").val());
+			formData.append("loginId", $("#loginIdParam").val());
+			formData.append("password", "1111");
+			$.ajax ({
+				url	: "/seller/init-seller-password",
+				type	: "POST",
+				data  : formData, // 요청 시 포함되어질 데이터
+				processData : false,
+				contentType : false,
+				success : function(resp, status, xhr) {
+					if ("S" == resp) {
+						alert(Message.get("초기화되었습니다."));
+					} else {
+						alert(Message.get("실패했습니다."));
+					}
+				},
+				error	: function(xhr, status, error) {
+					try {
+						popupWindow.openMsg(Message.get("실패했습니다."));		// 실패했습니다.
+					} catch (e) {
+						alert(Message.get("실패했습니다."));		// 실패했습니다.
+					}
+				},
+				complete : function(xhr, status) {
+					Common.loading.hide();
+				}
+			});
+		}
+	});
+
+});
+
+	function openDaumPostcode() {
+
+		var tagNames = {
+			'newZipcode'			: 'post',
+			'zipcode1' 				: 'post1',
+			'zipcode2' 				: 'post2',
+		}
+
+	    openDaumAddress(tagNames, function(data){
+			$('#businessLocation').val(data.address);	// 사업장소재지
+	    });
+
+	}
+
+	function findMd(targetId) {
+		Common.popup('/seller/find-md?targetId=' + targetId, 'find_md', 720, 800, 1);
+	}
+
+	function clearMd(targetId) {
+		var $target = $('#' + targetId);
+		$target.val('');
+		$target.closest('td').find('#mdName').val('');
+	}
+
+	// MD 검색 콜백
+	function handleFindMdCallback(response) {
+		var $target = $('#' + response.targetId);
+		$target.val(response.userId);
+		$target.closest('td').find('#mdName').val(response.userName);
+
+	}
+
+	// 아이디 생성
+	function makeSellerId() {
+
+		var locgovCode = "";	// 지자체 코드
+
+		if($("#locgovCodeParam").val() != ""){
+			locgovCode = $("#locgovCodeParam").val();
+		}
+
+		$.post('/seller/makeSellerId', {"locgovCode": locgovCode}, function(response) {
+			if(response.isSuccess && response.data) {
+				$("#loginId").val(response.data);
+			}
+		});
+
+	}
+
+	// 이메일 생성
+	function setEmail() {
+
+		var emailChoice = $("#email_choice").val();
+
+		// 이메일 도메인 직접입력
+		if(emailChoice == '0') {
+			$("#directInput").show();
+			directInput.disabled =  false;
+			$("#directInput").val('');
+			$("#email").val($("#emailAddr").val()+'@');
+		}
+		// 이메일 초기화
+		else if(emailChoice == '') {
+			$("#directInput").hide();
+			directInput.disabled =  true;
+			$("#email").val('');
+			$("#directInput").val('');
+		}
+		// 이메일 도메인 선택
+		else {
+			$("#directInput").hide();
+			directInput.disabled =  true;
+			$("#directInput").val('');
+
+			// 이메일주소 + 이메일도메인 최종결합
+			$("#email").val($("#emailAddr").val()+'@'+$("#email_choice").val());
+
+		}
+
+	}
+
+	// 이메일 도메인 직접입력시 이메일 주소 최종완성
+	$('#emailAddr').on('keyup', function(){
+		if($("#email_choice").val() == '0') {
+			$("#email").val($("#emailAddr").val()+'@'+$("#directInput").val());
+		} else {
+			$("#email").val($("#emailAddr").val()+'@'+$("#email_choice").val());
+		}
+
+		// 이메일 주소 지우면 초기화
+		if($("#emailAddr").val() == '') {
+			$("#email").val('');
+			$("#directInput").val('');
+		}
+	});
+
+	// 이메일 도메인 직접입력시 이메일 주소 최종완성
+	$('#directInput').on('keyup', function(){
+		$("#email").val($("#emailAddr").val()+'@'+$("#directInput").val());
+	});
+
+	// 파일 삭제
+	function deleteFile(fileName, sellerId, fileType) {
+
+		var message = Message.get("M00196");
+
+		var param = {
+			"fileName" : fileName,
+			"sellerId" : sellerId,
+			"fileType" : fileType
+		};
+
+		if (confirm(message)) {
+			$.post("/seller/deleteFile", param, function(resp){
+				Common.responseHandler(resp, function(){
+
+					alert(Message.get("M00205"));	// 삭제 되었습니다.
+
+					location.reload();
+				});
+			});
+		}
+
+	}
+	// 새로운 첨부파일을 선택할 경우 기존 파일 삭제처리 (화면에서 숨기고 수정시 삭제)
+	$('input[name=uploadFile1]').change(function(){
+	    $("#attachedFile1").hide();
+	 })
+
+	$('input[name=uploadFile2]').change(function(){
+	    $("#attachedFile2").hide();
+	 })
+
+	$('input[name=uploadFile3]').change(function(){
+	    $("#attachedFile3").hide();
+	 })
+	// 대표번호 직접입력으로 인한 추가기능
+ 	$('#manualNumberType1').change(function(){
+		if(this.checked){
+			$("#iptTelNum1").attr("name","telephoneNumber1");
+			$("#iptTelNum1").removeClass("hidden").addClass("required").prop("disabled" , false);
+
+			$("#selTelNum1").removeAttr("name").removeClass("required");
+			$("#selTelNum1").addClass("hidden").prop("disabled" , true);
+		}else{
+			$("#selTelNum1").attr("name","telephoneNumber1");
+			$("#selTelNum1").removeClass("hidden").addClass("required").prop("disabled" , false);
+
+			$("#iptTelNum1").removeAttr("name").removeClass("required");
+			$("#iptTelNum1").addClass("hidden").prop("disabled" , true);
+		}
+	})
+
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

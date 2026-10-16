@@ -33,6 +33,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.kafka:spring-kafka'
 
+    // 제공자(OP_SELLER/OP_SELLER_USER) 비밀번호 BCrypt 해시 - admin(OP_MANAGER)과 같은 방식. Spring Security 자동구성은 끌어오지 않는다(crypto만).
+    implementation 'org.springframework.security:spring-security-crypto'
+
     // SFR-010: member 서비스가 발급한 공유 JWT 쿠키를 검증하기 위한 라이브러리.
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'

@@ -1,65 +1,365 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <title>답례품제공자 관리 - 고향사랑e음 (admin service)</title>
+    <!-- 공통 head(AS-IS inc_head verbatim: CSS 6 + JS 12) - csrf meta/폰트/op.* 전부 여기서 로드 -->
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
-    <title>입점업체관리 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
-
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
 
+<!-- AS-IS opmanager/seller/list.jsp 이식 - 답례품제공자(입점업체) 목록.
+     ★ AS-IS 특징(그대로)
+     - GET 진입은 조회하지 않는다(빈 목록) - "검색" 버튼(POST)에서만 조회한다. 등록일 검색조건은 오늘로 채운다.
+     - 지자체 칸·시도/시군구 검색은 시스템/행안부(adminRole == SYS)에게만 보인다(지자체 담당자는 자기 지자체로 고정).
+     - 등록 버튼은 지자체 담당자만 쓸 수 있다 - 시스템/행안부는 alert로 막힌다. 삭제 버튼과 선택 삭제 JS는 AS-IS도 주석처리.
+     - 목록의 "로그인"(shadow-login) 버튼은 옮기지 않았다(제공자 포털 로그인 세션이 아직 없다). -->
 <div class="admin_wrap">
 <div id="container">
     <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <h3>입점업체관리</h3>
-    <p style="color:#666; margin-bottom:16px;">답례품을 제공하는 업체(마을기업 등)를 등록/승인/관리합니다.</p>
-    <p><a class="btn" th:href="@{/seller/new}">+ 업체 등록</a></p>
 
-    <table class="board_list_table">
-        <thead>
-        <tr><th>ID</th><th>업체명</th><th>상호</th><th>담당자</th><th>연락처</th><th>승인상태</th><th>처리</th></tr>
-        </thead>
-        <tbody>
-        <tr th:each="s : ${sellers}">
-            <td th:text="${s.sellerId()}"></td>
-            <td><a th:href="@{'/seller/' + ${s.sellerId()} + '/edit'}" th:text="${s.sellerName()}"></a></td>
-            <td th:text="${s.companyName()}"></td>
-            <td th:text="${s.userName()}"></td>
-            <td th:text="${s.phoneNumber()}"></td>
-            <td>
-                <!-- 상태코드는 AS-IS OP_SELLER 값: 2 사용 / 3 중지 / 5 승인대기(AS-IS seller/list.jsp 라벨). -->
-                <span class="pill" th:classappend="${s.statusCode() == '2'} ? 'on' : 'off'"
-                      th:text="${s.statusCode() == '2' ? '사용' : (s.statusCode() == '3' ? '중지' : (s.statusCode() == '5' ? '승인대기' : ''))}"></span>
-            </td>
-            <td>
-                <a class="small-btn" th:href="@{'/seller/' + ${s.sellerId()} + '/edit'}">수정</a>
-                <form th:if="${s.statusCode() != '2'}" th:action="@{'/seller/' + ${s.sellerId()} + '/status'}" method="post" class="inline-form">
-                    <input type="hidden" name="statusCode" value="2">
-                    <button type="submit" class="small-btn">승인</button>
-                </form>
-                <form th:if="${s.statusCode() == '2'}" th:action="@{'/seller/' + ${s.sellerId()} + '/status'}" method="post" class="inline-form"
-                      onsubmit="return confirm('중지하시겠습니까?')">
-                    <input type="hidden" name="statusCode" value="3">
-                    <button type="submit" class="small-btn ghost">중지</button>
-                </form>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(sellers)}">등록된 업체가 없습니다.</p>
+			<div class="item_list">
+				<h3><span>입점업체리스트</span></h3>
+				<form id="sellerParam" method="post" th:action="@{/seller/list}" enctype="multipart/form-data">
+					<div class="board_write">
+						<table class="board_write_table" summary="입점업체관리">
+							<caption>입점업체관리</caption>
+							<colgroup>
+								<col style="width:150px;" />
+								<col style="width:auto;" />
+								<col style="width:150px;" />
+								<col style="width:auto;" />
+							</colgroup>
+							<tbody>
+								<tr th:if="${adminRole == 'SYS'}">
+			                        <td class="label">지자체</td>
+			                        <td colspan="3">
+			                            <div class="flex_box gap-08">
+				                           <select id="shWdr" name="shWdr" class="wd-150" onChange="wdrChange(this.value)">
+							                    <option value="" th:selected="${sellerParam.shWdr == null or sellerParam.shWdr == ''}">-<th:block th:utext="${msg.get('M00039')}">전체</th:block>-</option>
+							                    <option th:each="w : ${wdr}" th:value="${w.id}" th:text="${w.label}" th:selected="${w.id == sellerParam.shWdr}"></option>
+							                </select>
+				                            <select id="shLocgovCode" name="shLocgovCode" class="wd-150">
+							                    <option value="">-시,군,구-</option>
+							                </select>
+			                            </div>
+			                        </td>
+			                    </tr>
+								<tr>
+									<td class="label"><th:block th:text="${msg.get('M00011')}">검색구분</th:block></td>
+								 	<td colspan="3">
+								 		<div class="flex_box gap-08">
+											<select id="where" name="where" th:title="${msg.get('M00468')}" class="wd-150">
+												<option value="COMPANY_NAME" th:text="${msg.get('M01635')}" th:selected="${sellerParam.where == 'COMPANY_NAME'}">상호명</option>
+												<option value="LOGIN_ID" th:text="${msg.get('M00081')}" th:selected="${sellerParam.where == 'LOGIN_ID'}">아이디</option>
+												<option value="REPRESENTATIVE_NAME" th:text="${msg.get('M00112')}" th:selected="${sellerParam.where == 'REPRESENTATIVE_NAME'}">대표자명</option>
+												<option value="PHONE_NUMBER" th:text="${msg.get('M00155')}" th:selected="${sellerParam.where == 'PHONE_NUMBER'}">휴대폰</option>
+											</select>
+											<input type="text" id="query" name="query" class="input_txt required _filter full" th:title="${msg.get('M00011')}" th:value="${sellerParam.query}" />
+										</div>
+								 	</td>
+								</tr>
+								<tr>
+								 	<td class="label"><th:block th:text="${msg.get('M00202')}">등록일</th:block></td>
+								 	<td colspan="3">
+								 		<div>
+								 			<span class="datepicker"><input type="text" id="startDate" name="startDate" class="term datepicker" maxlength="8" title="등록일 시작일" th:value="${sellerParam.startDate}" /></span>
+											<span class="wave">~</span>
+											<span class="datepicker"><input type="text" id="endDate" name="endDate" class="term datepicker" maxlength="8" title="등록일 종료일" th:value="${sellerParam.endDate}" /></span>
+											<span class="day_btns">
+												<a href="javascript:;" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>
+												<a href="javascript:;" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a>
+												<a href="javascript:;" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>
+												<a href="javascript:;" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>
+												<a href="javascript:;" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a>
+                                                <a href="javascript:;" class="btn_date all-1" th:text="${msg.get('M00039')}">전체</a>
+											</span>
+										</div>
+								 	</td>
+								</tr>
+								<tr>
+								 	<td class="label"><th:block th:text="${msg.get('M00082')}">사용여부</th:block></td>
+								 	<td>
+								 		<div class="flex_box gap-12">
+								 			<div class="input-form">
+									 			<input type="radio" id="statusCode1" name="statusCode" value="" th:checked="${sellerParam.statusCode == '' or sellerParam.statusCode == null}"/><label for="statusCode1">전체</label>
+									 		</div>
+									 		<div class="input-form">
+												<input type="radio" id="statusCode2" name="statusCode" value="2" th:checked="${sellerParam.statusCode == '2'}"/><label for="statusCode2">사용</label>
+											</div>
+											<div class="input-form">
+												<input type="radio" id="statusCode3" name="statusCode" value="3" th:checked="${sellerParam.statusCode == '3'}"/><label for="statusCode3">중지</label>
+											</div>
+											<div class="input-form">
+												<input type="radio" id="statusCode4" name="statusCode" value="5" th:checked="${sellerParam.statusCode == '5'}"/><label for="statusCode4">승인대기</label>
+											</div>
+										</div>
+								 	</td>
+								 	<td class="label">권한</td>
+								 	<td>
+								 		<div class="flex_box gap-12">
+								 			<div class="input-form">
+									 			<input type="radio" id="itemApprovalType1" name="itemApprovalType" value="" th:checked="${sellerParam.itemApprovalType == '' or sellerParam.itemApprovalType == null}"/><label for="itemApprovalType1">전체</label>
+									 		</div>
+									 		<div class="input-form">
+												<input type="radio" id="itemApprovalType2" name="itemApprovalType" value="2" th:checked="${sellerParam.itemApprovalType == '2'}"/><label for="itemApprovalType2">자동</label>
+											</div>
+											<div class="input-form">
+												<input type="radio" id="itemApprovalType3" name="itemApprovalType" value="1" th:checked="${sellerParam.itemApprovalType == '1'}"/><label for="itemApprovalType3">승인</label>
+											</div>
+										</div>
+								 	</td>
+								 </tr>
+							</tbody>
+						</table>
+					</div> <!-- // board_write -->
+					<div class="btn_all btn_left">
+						<ul class="list-bullet point">
+					        <li>
+					            검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.
+					        </li>
+				        </ul>
+				  	</div>
+
+					<!-- 버튼시작 -->
+					<div class="btn_all btn_right">
+						<div class="flex_box gap-08">
+							<button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/seller/list';"> <th:block th:text="${msg.get('M00047')}">초기화</th:block></button>
+							<button type="button" class="btn btn-dark-gray btn-mini" onclick="search();">검색</button>
+						</div>
+					</div>
+					<!-- 버튼 끝-->
+
+					<div class="count_title mt-40">
+						<h5>
+							<th:block th:text="${msg.get('M00045')}">총</th:block> <th:block th:text="${#numbers.formatInteger(totalCount, 1, 'COMMA')}">0</th:block> <th:block th:text="${msg.get('M00272')}">건</th:block>
+						</h5>
+						<span>
+							<select id="itemsPerPage" name="itemsPerPage" th:title="${msg.get('M00054') + msg.get('M00052')}"
+								onchange="$('form#sellerParam').submit();">
+								<option value="10" th:selected="${sellerParam.itemsPerPage == 10}">10<th:block th:text="${msg.get('M00053')}">개 출력</th:block></option>
+								<option value="20" th:selected="${sellerParam.itemsPerPage == 20}">20<th:block th:text="${msg.get('M00053')}">개 출력</th:block></option>
+								<option value="50" th:selected="${sellerParam.itemsPerPage == 50}">50<th:block th:text="${msg.get('M00053')}">개 출력</th:block></option>
+								<option value="100" th:selected="${sellerParam.itemsPerPage == 100}">100<th:block th:text="${msg.get('M00053')}">개 출력</th:block></option>
+							</select>
+						</span>
+					</div>
+				</form>
+				<div class="board_list">
+					<form id="listForm">
+						<table class="board_list_table" summary="전체업체리스트">
+							<caption>전체업체리스트</caption>
+							<colgroup>
+                                <col style="width:50px;">
+                                <col style="width:50px;">
+                                <col th:if="${adminRole == 'SYS'}" style="width:200px;">
+                                <col style="width:100px;">
+                                <col style="width:100px;">
+                                <col style="width:200px;">
+                                <col style="width:150px;">
+                                <col style="width:150px;">
+                                <col style="width:100px;">
+                                <col style="width:100px;">
+                                <col style="width:150px;">
+                                <col style="width:150px;">
+                                <col style="width:150px;">
+                                <col style="width:150px;">
+                                <col style="width:150px;">
+							</colgroup>
+							<thead>
+								<tr>
+									<th scope="col"><input type="checkbox" id="check_all" title="체크박스" /></th>
+									<th scope="col">No</th>
+									<th scope="col" th:if="${adminRole == 'SYS'}">지자체</th>
+									<th scope="col"><th:block th:text="${msg.get('M00088')}">등록</th:block><th:block th:text="${msg.get('M00001')}">상품</th:block></th>
+									<th scope="col"><th:block th:text="${msg.get('M00081')}">아이디</th:block></th>
+									<th scope="col"><th:block th:text="${msg.get('M00104')}">상호명</th:block></th>
+									<th scope="col"><th:block th:text="${msg.get('M00112')}">대표자명</th:block></th>
+									<th scope="col">휴대폰 </th>
+									<th scope="col"><th:block th:text="${msg.get('M01476')}">상태</th:block></th>
+									<th scope="col">권한 </th>
+									<th scope="col">공동인증서등록여부 </th>
+									<th scope="col">금융인증서등록여부 </th>
+									<th scope="col">본인인증등록여부 </th>
+									<th scope="col"><th:block th:text="${msg.get('M00202')}">등록일</th:block></th>
+									<th scope="col"><th:block th:text="${msg.get('M00796')}">로그인</th:block></th>
+								</tr>
+							</thead>
+							<tbody>
+
+							<tr style="background:#fff;" th:each="seller, i : ${list}">
+								<td><input type="checkbox" name="id" th:value="${seller.sellerId}"/></td>
+								<td><div th:text="${pagination.itemNumber - i.count}">1</div></td>
+								<td th:if="${adminRole == 'SYS'}"><div th:text="${locgovNames.get(seller.locgovCode)}"></div></td>
+                                <td>
+                                    <div class="flex_box juc-center gap-08">
+                                    	<a th:href="@{/admin/gift-items(sellerId=${seller.sellerId}, searchStartDate='20221001', searchEndDate=${#temporals.format(#temporals.createToday(), 'yyyyMMdd')})}" class="btn btn-default btn-sm">보기</a>
+                                    </div>
+                                </td>
+								<td>
+									<div>
+										<a th:href="@{/seller/edit/{id}(id=${seller.sellerId})}" th:text="${seller.loginId}"></a>
+									</div>
+								</td>
+								<td><div th:text="${seller.companyName}"></div></td>
+								<td><div th:text="${seller.representativeName}"></div></td>
+								<td><div th:text="${seller.phoneNumber}"></div></td>
+								<td>
+									<div>
+										<th:block th:if="${seller.statusCode == '2'}" th:text="${msg.get('M00083')}">사용</th:block>
+										<th:block th:if="${seller.statusCode == '3'}">중지</th:block>
+										<th:block th:if="${seller.statusCode == '5'}">승인대기</th:block>
+									</div>
+								</td>
+								<td>
+									<div>
+										<th:block th:if="${seller.itemApprovalType == '1'}">승인</th:block>
+										<th:block th:if="${seller.itemApprovalType == '2'}">자동</th:block>
+									</div>
+								</td>
+								<!-- 공동 인증서 등록 여부 -->
+								<td><div th:text="${seller.mberDn}"></div></td>
+								<!-- 금융인증서 등록 여부 -->
+								<td><div th:text="${seller.mberFinDn}"></div></td>
+								<!-- 본인인증 여부 -->
+								<td><div th:text="${seller.mberCi}"></div></td>
+								<td><div th:text="${@opDate.ymd(seller.createdDate)}"></div></td>
+								<td>
+									<div class="flex_box juc-center gap-08">
+									</div>
+								</td>
+							</tr>
+
+							</tbody>
+						</table>
+					</form>
+
+					<div class="no_content" th:if="${#lists.isEmpty(list)}">
+						<th:block th:text="${msg.get('M00473')}">데이터가 없습니다.</th:block>
+					</div>
+					<br />
+					<div class="btn_all btn_right">
+						<div class="flex_box gap-08">
+							<button type="button" id="insert_company" class="btn btn-dark-gray btn-mini"> <th:block th:text="${msg.get('M00088')}">등록</th:block> </button>
+						</div>
+					</div>
+
+					<div class="pagination-wrap">
+						<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+					</div>
+
+				</div> <!-- // board_list -->
+
+			</div>
+
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->
 </div><!-- /.admin_wrap -->
+
+<!-- AS-IS ViewUtils.redirect(url, message) - 등록/수정 완료 안내를 alert으로 띄운다 -->
+<input type="hidden" id="redirectMessage" th:value="${redirectMessage}">
+<!-- AS-IS가 JSP에서 JS 문자열에 직접 박던 값 -->
+<input type="hidden" id="adminRole" th:value="${adminRole}">
+<input type="hidden" id="shLocgovCodeParam" th:value="${sellerParam.shLocgovCode}">
+
+<style>
+td {background: #fff;}
+.sortable-placeholder td{height: 100px; background: #d6eafd url("/content/styles/ui-lightness/images/ui-bg_diagonals-thick_20_666666_40x40.png") 50% 50% repeat;
+opacity: .5;}
+</style>
+<script type="text/javascript">
+	var adminRole = $("#adminRole").val();
+
+	$(function(){
+		var msg = $("#redirectMessage").val();
+		if (msg) {
+			alert(msg);
+		}
+
+		Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="startDate"]' , 'input[name="endDate"]');
+		EventHandler.calendarStartDateAndEndDateVaild();
+
+        // 업체등록
+        $('#insert_company').on('click', function() {
+
+	    	// 지자체 관리자만 등록가능
+	    	if(adminRole == 'SYS') {
+	    		alert("업체등록권한이 없습니다.");
+	    		return false;
+	    	}
+
+        	location.href = "/seller/create";
+        });
+
+	});
+
+	$(function() {
+	    wdrChange($("#shWdr").val());
+	});
+
+	var changeYn = "N";
+
+	// 지차체 변경여부 체크
+	$("select[name='shWdr']").on('focus', function () {
+
+	}).change(function() {
+		changeYn = "Y";
+	});
+	 // 지자체 변경
+	function wdrChange(value) {
+		Common.loading.hide();
+
+		$("#shLocgovCode option").remove();
+		if ($("#shWdr").val() != "") {
+			$.post(url("/give-state/options-by-locgovCode"), {'code' : value}, function(response) {
+
+				for (var i = 0; i < response.length; i++) {
+		            var options = '<option value="' + response[i].LOCGOV_CODE + '">' + response[i].LOCGOV_NM + '</option>';
+		            $('#shLocgovCode').append(options);
+		        }
+
+				// 조회 된 값 유지
+				if ($("#shLocgovCodeParam").val() != "" && changeYn == 'N') {
+				    $("#shLocgovCode").val($("#shLocgovCodeParam").val()).prop("selected", true);
+				} else {
+					// 지차체 변경후 시,군,구 index 제일 처음으로 설정
+					$("#shLocgovCode option:eq(0)").attr("selected", "selected");
+				}
+
+		    });
+		} else {
+	        $('#shLocgovCode').append('<option value="">-시,군,구-</option>');
+		}
+	}
+
+	/**
+	 *	함 수 명 : search
+	 *	기	능  : 검색
+	 */
+	function search() {
+		var strStartDate = $("#startDate").val();
+		var strEndDate = $("#endDate").val();
+
+		if(strStartDate && strStartDate.length == 8 && strEndDate && strEndDate.length == 8) {
+			var startDate = new Date(strStartDate.substr(0, 4), strStartDate.substr(4, 2), strStartDate.substr(6, 2));
+			var endDate = new Date(strEndDate.substr(0, 4), strEndDate.substr(4, 2), strEndDate.substr(6, 2));
+
+			if(startDate > endDate) {
+				alert("종료일이 시작일보다 빠릅니다.");
+				$("#endDate").focus();
+				return false;
+			}
+			var searchChk = Common.searchDateMonth(startDate, endDate);
+			if(!searchChk) return false;
+		}
+
+		$("#sellerParam").submit();
+	}
+</script>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

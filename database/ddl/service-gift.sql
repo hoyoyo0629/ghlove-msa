@@ -2386,7 +2386,13 @@ CREATE TABLE IF NOT EXISTS OP_SELLER_USER (
     -- 등록일
     CREATED_DATE                 VARCHAR(14),
     -- 지차체 코드
-    LOCGOV_CODE                  VARCHAR(10)
+    LOCGOV_CODE                  VARCHAR(10),
+    -- 판매자 비밀번호 변경 여부 (Y:변경 필요(초기화됨), N:변경 완료) - migration-gift-seller-user-asis-columns.sql
+    PWD_CHG_SELLER_YN            VARCHAR(1),
+    -- 공동인증서 DN
+    MBER_DN                      VARCHAR(200),
+    -- 금융인증서 DN
+    MBER_FIN_DN                  VARCHAR(200)
 );
 
 -- 답례품 제공자 로그인

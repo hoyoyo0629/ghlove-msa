@@ -206,7 +206,7 @@ public class ManagerAuthService {
     }
 
     /** AS-IS getPasswordExpiredDate - 오늘 + ISMS 설정 LIFE_TIME_PASSWORD일(설정이 없으면 180일), yyyyMMdd. */
-    private String passwordExpiredDate() {
+    public String passwordExpiredDate() {
         int days = configIsmsRepository.findById("LIFE_TIME_PASSWORD")
                 .map(com.ghlove.admin.domain.ConfigIsms::getValue)
                 .filter(v -> v != null && v.trim().matches("\\d+"))
