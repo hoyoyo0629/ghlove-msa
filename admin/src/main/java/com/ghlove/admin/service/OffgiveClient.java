@@ -239,16 +239,6 @@ public class OffgiveClient {
         }
     }
 
-    /** 수납처리(AS-IS 수납확인 배치 대체 - 관리자 수동 트리거). */
-    public Donation confirm(String cntrSn) {
-        try {
-            return restClient.post().uri("/api/offgive/{cntrSn}/confirm", cntrSn)
-                    .retrieve().body(Donation.class);
-        } catch (RestClientResponseException e) {
-            throw new ManagerException(extractMessage(e, "수납처리에 실패했습니다."));
-        }
-    }
-
     private static String extractMessage(RestClientResponseException e, String fallback) {
         try {
             var body = e.getResponseBodyAs(Map.class);

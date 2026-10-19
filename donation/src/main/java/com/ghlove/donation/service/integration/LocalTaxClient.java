@@ -60,6 +60,8 @@ public class LocalTaxClient {
     private final RestClient contryClient;
     private final String nextBugaRequestUrl;
     private final String seoulBugaUrl;
+    private final String seoulSunapUrl;
+    private final String nextSunapInfoRequestUrl;
     private final String linkTrgtCd;
 
     public LocalTaxClient(
@@ -69,6 +71,8 @@ public class LocalTaxClient {
             @Value("${ghlove.integrations.local-tax.contry-base-url}") String contryBaseUrl,
             @Value("${ghlove.integrations.local-tax.next-buga-request-url}") String nextBugaRequestUrl,
             @Value("${ghlove.integrations.local-tax.seoul-buga-url}") String seoulBugaUrl,
+            @Value("${ghlove.integrations.local-tax.seoul-sunap-url}") String seoulSunapUrl,
+            @Value("${ghlove.integrations.local-tax.next-sunap-info-request-url}") String nextSunapInfoRequestUrl,
             @Value("${ghlove.integrations.local-tax.link-trgt-cd}") String linkTrgtCd) {
         this.enabled = enabled;
         this.serviceTypeLocal = environment.acceptsProfiles(Profiles.of("local"));
@@ -76,6 +80,8 @@ public class LocalTaxClient {
         this.contryClient = RestClient.create(contryBaseUrl);
         this.nextBugaRequestUrl = nextBugaRequestUrl;
         this.seoulBugaUrl = seoulBugaUrl;
+        this.seoulSunapUrl = seoulSunapUrl;
+        this.nextSunapInfoRequestUrl = nextSunapInfoRequestUrl;
         this.linkTrgtCd = linkTrgtCd;
     }
 
@@ -136,6 +142,65 @@ public class LocalTaxClient {
         // AS-IS String.valueOf(jsonObject.get("enapbuNo")) - 값이 없으면 문자열 "null"이 된다(그대로 둔다)
         return new SeoulResponse(String.valueOf(body.get("enapbuNo")), str(body.get("errorCode")),
                 str(body.get("errorMsg")));
+    }
+
+    /**
+     * 지방세외수입 차세대 수납이력 확인 (AS-IS {@code NgDonationRelayServiceImpl.localSunapConfirm}) - 응답 JSON을 Map으로.
+     * 호출측은 {@code status}가 FAIL(세외수입이 없는 수납자료)·ERROR가 아니면 납부된 것으로 본다.
+     * local 프로파일이면 AS-IS LOCAL 분기와 같이 {@code {"status":"SUCCESS"}}(납부됨)를 돌려준다.
+     */
+    public Map<String, Object> sendLocalSunapConfirm(String epayNo, String sgbCd, String linkMngKey) {
+        if (serviceTypeLocal) {
+            log.warn("[LOCAL DEV] localSunapConfirm relay skipped, fake SUCCESS epayNo={}", epayNo);
+            Map<String, Object> fake = new LinkedHashMap<>();
+            fake.put("status", "SUCCESS");
+            return fake;
+        }
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("epayNo", epayNo);
+        payload.put("linkTrgtCd", linkTrgtCd);
+        payload.put("sgbCd", sgbCd);
+        payload.put("linkMngKey", linkMngKey);
+        try {
+            return parseJson(postJson(nextSunapInfoRequestUrl, payload));
+        } catch (IOException | RuntimeException e) {
+            log.error("■■■API■■■ localSunapConfirm EXCEPTION : {} , {}", epayNo, e.toString());
+            Map<String, Object> error = new LinkedHashMap<>();
+            error.put("status", "ERROR");
+            error.put("errorMsg", e.getMessage());
+            return error;
+        }
+    }
+
+    /**
+     * 서울 이택스 수납 조회 (AS-IS {@code etaxSunapInfo}) - 응답 JSON 원문을 그대로 돌려준다(AS-IS api_response).
+     * 호출측은 {@code RST_CD=100} 이고 {@code ARR_RESULT[0].SUNAP_YN=Y}면 납부된 것으로 본다. 연계 실패면 빈 문자열.
+     * local 프로파일이면 AS-IS LOCAL 분기와 같은 수납완료 응답(RST_CD 100, SUNAP_YN Y, SUNAP_DT 오늘)을 만든다.
+     */
+    public String sendEtaxSunapInfo(String enapbuNo, String jijacheCd, String systemCd) {
+        if (serviceTypeLocal) {
+            log.warn("[LOCAL DEV] etaxSunapInfo relay skipped, fake SUNAP_YN=Y enapbuNo={}", enapbuNo);
+            return "{\"RST_CD\":\"100\",\"ARR_RESULT\":[{\"SUNAP_YN\":\"Y\",\"SUNAP_DT\":\""
+                    + java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE) + "\"}]}";
+        }
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("COM_REQ_MECHE", "GHLOVE");
+        payload.put("COM_REQ_DT", now.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd")));
+        payload.put("COM_REQ_TM", now.format(java.time.format.DateTimeFormatter.ofPattern("HHmmss")));
+        // AS-IS getMngNoEtax: to_char(sysdatetime,'hh24missFF') || lpad(random() % 1000, 3, 0)
+        payload.put("COM_PAY_MSG_NO", now.format(java.time.format.DateTimeFormatter.ofPattern("HHmmssSSS"))
+                + String.format("%03d", new SecureRandom().nextInt(1000)));
+        payload.put("DATA_CNT", 1);
+        payload.put("systemCd", systemCd);
+        payload.put("jijacheCd", jijacheCd);
+        payload.put("ARR_BU_INFO", java.util.List.of(Map.of("EPAY_NO", enapbuNo)));
+        try {
+            return postJson(seoulSunapUrl, payload);
+        } catch (IOException | RuntimeException e) {
+            log.error("■■■API■■■ etaxSunapInfo EXCEPTION : {} , {}", enapbuNo, e.toString());
+            return "";
+        }
     }
 
     /**

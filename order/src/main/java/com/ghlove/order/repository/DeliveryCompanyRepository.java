@@ -9,5 +9,6 @@ public interface DeliveryCompanyRepository extends JpaRepository<DeliveryCompany
     List<DeliveryCompany> findAllByOrderByDeliveryCompanyIdDesc();
 
     /** 송장 등록 등 선택용 - 사용중인 택배사만. */
-    List<DeliveryCompany> findByUseFlagOrderByDeliveryCompanyNameAsc(String useFlag);
+    /** AS-IS getActiveDeliveryCompanyListAll - 사용(Y) 업체를 ID 내림차순(송장 등록 배송업체 select 순서). */
+    List<DeliveryCompany> findByUseFlagOrderByDeliveryCompanyIdDesc(String useFlag);
 }

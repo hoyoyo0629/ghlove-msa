@@ -79,6 +79,10 @@ ghlove:
       # (admin 1413·1415 화면에서 확인).
       next-buga-request-url: https://192.168.84.55:4145/api/nextgnr/send
       seoul-buga-url: http://192.168.84.55:4142/api/seoul/epaymentno
+      # 수납확인(배치 fiveMinuteSunapCheckBatch·dayCompleteSunapCheckBatch) - AS-IS 운영 주소 그대로. local 프로파일이면 호출하지 않고
+      # AS-IS LOCAL 분기와 같은 "납부됨" 가짜 응답을 쓴다.
+      seoul-sunap-url: http://192.168.84.55:4141/api/etax/getSunapStatus
+      next-sunap-info-request-url: https://192.168.84.55:4145/api/nextgnr/sunapInfoConfirm
       # AS-IS NgDonationRelayServiceImpl 상수 LINK_TRGT_CD(연계대상코드) - 지방세외 차세대 부과요청 전문.
       link-trgt-cd: "1741000HLE01001"
     nts:
@@ -88,6 +92,11 @@ ghlove:
       key: ""
       id: ""
       password: ""
+      # 배치 sendNtsEreceiptOn/Off/BatchOld가 쓰는 AS-IS 전문 주소(outconn.korea-api 운영 값 그대로). key(공개키)·id·password는
+      # 비밀값이라 배포 설정으로 넣는다(저장소에 두지 않음). enabled=false면 배치가 호출하지 않는다.
+      relay-login-url: https://192.168.239.18:4141/jwtLoginAction.do
+      relay-action-url: https://192.168.239.18:4141/jwtAction.do?actionId=ATESFACA001C11
+      relay-login-ip: 152.99.104.11
 
 donation:
   upload:

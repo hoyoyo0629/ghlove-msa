@@ -46,6 +46,7 @@ public class OrderService {
     private final ShipmentSagaService shipmentSagaService;
     // 배송비 G4 - 우편번호로 제주/도서산간 판정(AS-IS OP_ISLAND)
     private final com.ghlove.order.repository.IslandRepository islandRepository;
+    private final com.ghlove.order.repository.DeliveryCompanyRepository deliveryCompanyRepository;
 
     public Map<String, String> codesOf(String codeType) {
         return commonCodeRepository.findByCodeTypeAndLanguageAndUseYnOrderByOrdering(codeType, "ko", "Y").stream()
@@ -301,6 +302,16 @@ public class OrderService {
         return DELIVERY_DELIVERED.equals(d) || DELIVERY_CONFIRMED.equals(d);
     }
 
+    /** 사용 중(USE_FLAG='Y') 배송업체 ID인가. */
+    private boolean isActiveDeliveryCompany(String id) {
+        try {
+            return deliveryCompanyRepository.findById(Integer.valueOf(id))
+                    .map(c -> "Y".equals(c.getUseFlag())).orElse(false);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
     /** 송장 등록 (발송 처리) - 확정된 주문에 대해서만, 1회만 가능. */
     @Transactional
     public Order registerInvoice(String orderId, String carrierCode, String invoiceNo) {
@@ -311,10 +322,16 @@ public class OrderService {
         if (order.getDeliveryStatus() != null) {
             throw new OrderException("이미 송장이 등록된 주문입니다.");
         }
-        if (carrierCode == null || carrierCode.isBlank() || invoiceNo == null || invoiceNo.isBlank()) {
+        // AS-IS 송장 등록(shipping-ready·change-shipping-number)은 택배사를 배송업체 ID(OP_DELIVERY_COMPANY)로 받고
+        // '-선택-'(0)이면 "배송업체를 선택해 주세요". carrier_code에도 그 ID를 저장한다(스마트택배 코드 매핑 키).
+        if (carrierCode == null || carrierCode.isBlank() || "0".equals(carrierCode.trim())
+                || !isActiveDeliveryCompany(carrierCode.trim())) {
+            throw new OrderException("배송업체를 선택해 주세요");
+        }
+        if (invoiceNo == null || invoiceNo.isBlank()) {
             throw new OrderException("택배사와 송장번호를 입력해 주세요.");
         }
-        order.setCarrierCode(carrierCode);
+        order.setCarrierCode(carrierCode.trim());
         order.setInvoiceNo(invoiceNo);
         order.setDeliveryStatus(DELIVERY_SHIPPED);
         order.setShippedDate(LocalDateTime.now());

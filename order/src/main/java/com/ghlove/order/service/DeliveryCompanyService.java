@@ -22,7 +22,7 @@ public class DeliveryCompanyService {
     }
 
     public List<DeliveryCompany> active() {
-        return repository.findByUseFlagOrderByDeliveryCompanyNameAsc(USE_Y);
+        return repository.findByUseFlagOrderByDeliveryCompanyIdDesc(USE_Y);
     }
 
     public DeliveryCompany get(Integer id) {

@@ -1,3 +1,4 @@
+-- ★2026-10-15 폐기: migration-admin-op-batch-job-asis-load.sql이 op_batch_job을 AS-IS 76행으로 교체했다. 다시 실행하지 말 것(TO-BE 전용 job_method 1001/1002가 되살아난다).
 -- 배치 작업 등록(OP_BATCH_JOB) - 실제로 도는 정기배치를 Batch Job 화면(1403)에 등록
 --
 -- "배치 실행로그 조회"(메뉴 7209)는 실행로그를

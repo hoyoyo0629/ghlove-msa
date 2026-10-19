@@ -20,6 +20,11 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
     /** AS-IS selectOffOrderList - 기부일련번호(FILLER9)로 아직 처리 안 된(OFF_PROC_YN='N') 오프라인 답례품. */
     List<OrderItem> findByCntrSnAndOffProcYn(String cntrSn, String offProcYn);
 
+    /** 배치 cntrSunapBatch - 아직 처리 안 된(OFF_PROC_YN='N') 오프라인 답례품의 기부일련번호들. */
+    @org.springframework.data.jpa.repository.Query(
+            "select distinct i.cntrSn from OrderItem i where i.cntrSn is not null and i.offProcYn = :offProcYn")
+    List<String> findDistinctCntrSnByOffProcYn(@org.springframework.data.repository.query.Param("offProcYn") String offProcYn);
+
     List<OrderItem> findByCntrSnAndItemStatus(String cntrSn, String itemStatus);
 
     List<OrderItem> findByCntrSnOrderByOrderItemIdAsc(String cntrSn);

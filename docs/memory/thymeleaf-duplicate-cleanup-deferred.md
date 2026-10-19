@@ -33,3 +33,6 @@ metadata:
 상세 매핑·정정 근거는 `docs/thymeleaf-decommission-map.md`. 관련 [[admin-frontend-is-thymeleaf-not-jsp]] [[scope-migration-not-greenfield]].
 
 **[2026-09-22 실측·3게이트 정리]** 서비스별 템플릿 수: **admin 225 / gift 12 / member 8 / order 6 / point 5 / donation 0**. starter-thymeleaf 의존성 보유: admin·gift·member·order·point(donation만 제거됨). "전면 제거" 시점을 못 박는 유일한 열쇠는 **admin(운영관리웹) Vue 전환 결정**인데 [[admin-frontend-is-thymeleaf-not-jsp]] 미정 → 225장이 실질 병목. 3게이트: ①🟩 도메인 중복 잔재(member/order/point+gift 구매자분 ≈30장)=지금 정리 가능, ②🟨 gift 판매자 포털=[[provider-portal-split-deferred]] 제공자웹 신설 시 걷힘, ③🟥 admin 225=Vue전환 결정 종속. 사용자 지시(2026-09-22): 이 로드맵은 저장만·이후 재결정, 지금은 gift 옵션작업 집중. "언제 다 걷어내나"에 날짜를 붙이려면 admin Vue전환을 별도 결정지점으로 올려야 함.
+
+**2026-10-19 추가 정리**: point `expire-batch`(무인증 POST로 포인트 소멸 실행 가능했음)·order `claims/queue`(admin `/admin/claims`로 대체) 화면·컨트롤러·fragments 삭제, 두 서비스 thymeleaf 의존성 제거.
+member `login.html`+fragments 5개 삭제 - 외부인증 실패는 `redirect:/login?externalError=`(storefront LoginView가 표시)로 전환. member에 남은 건 로컬 모의인증 화면 2개(external-login-mock/disabled)뿐, gift `/seller/*`(제공자 포털)는 유지.

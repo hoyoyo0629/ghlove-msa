@@ -97,15 +97,21 @@ ghlove:
       enabled: false
       api-url: https://ums.example.com
       client-id: ""
+    # 누리2 알림톡(배치 sendNuri2PresentOrder) - AS-IS ums.nuri2.sender-key. 운영 값은 배포 설정으로 넣는다(저장소에 두지 않음).
+    nuri2:
+      sender-key: ""
     nh:
       enabled: false
-      jdbc-url: jdbc:postgresql://nh-internal-host:5432/nhapi
+      # AS-IS ghlove-batch analysis 데이터소스(운영) 그대로 - 농협이 읽는 분석 DB(stat_cntr_mber·stat_cntr_mber_loc·stat_locgov).
+      jdbc-url: "jdbc:CUBRID:192.168.84.28:48000:ghlove_analysis:::?charset=utf-8"
       username: ""
       password: ""
     smart-delivery:
       enabled: false
       api-url: https://info.sweettracker.co.kr
       api-key: ""
+      # 배치 autoSmartDeliveryShippingCompleteBatch의 배송조회 - AS-IS sweettracker.url(운영 내부 연계서버) 그대로.
+      tracking-info-url: https://192.168.239.18:4141/api/v1/trackingInfo
     email:
       enabled: false
       smtp-host: ""
@@ -152,6 +158,13 @@ ghlove:
     domain: "https://business.juso.go.kr"
     # 1 도로명 / 2 +지번 / 3 +상세건물명 / 4 도로명+지번+상세건물명 (AS-IS는 4)
     result-type: "4"
+  # 배치 getNoBugaLocgovListBatch("3일 기부내역 없는 지자체" 메일, NoBugaLocgovMailService).
+  # 운영은 test-mode: false → AS-IS 코드의 운영 담당자 8명에게 발송. 로컬은 test-mode: true → 아래 테스트 수신자에게만
+  # ("이메일 이름" 쉼표 구분, 비어 있으면 OP_EMAIL 등록만 하고 발송하지 않는다).
+  batch:
+    no-buga-mail:
+      test-mode: true
+      test-recipients: ""
 
 admin:
   upload:

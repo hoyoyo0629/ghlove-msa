@@ -869,17 +869,16 @@ public class PointService {
      * 소멸 처리 배치 (SFR-004 "소멸 처리"). 매일 자동 실행(donation의
      * {@code DesignatedAdminService.closeExpiredProjects()}와 동일한 "기간이 그냥
      * 흘러서 발생하는 전환이라 어떤 이벤트에도 안 걸린다" 성격 - SFR-004 재검토
-     * 라운드에서 수동 트리거뿐이던 걸 자동화로 전환) - 운영자가 즉시 실행해보고 싶을
-     * 때를 위한 수동 실행 엔드포인트(`/batch/expire`)도 그대로 남겨둔다. 만료일이
+     * 라운드에서 수동 트리거뿐이던 걸 자동화로 전환). 만료일이
      * 지났는데 아직 안 쓰인 lot(EARN/RESTORE 잔여분)을 모두 찾아 EXPIRE 원장 행으로
      * 소멸시키고 잔액에서 차감한다.
      *
      * @return 소멸 처리된 lot 개수
      *
-     * <p>정기 실행 트리거는 {@link PointExpirationBatchScheduler}로 옮겼다(2026-10-03) -
+     * <p>정기 실행은 {@link PointBatchJobs}의 expirationPointBatch(관리 화면 설정대로, AS-IS처럼 중지 상태)가 맡는다 -
      * 배치 실행로그(admin 메뉴 7209)를 남기려면 트랜잭션 프록시 밖에서 결과를 보고해야 하는데,
-     * 같은 빈 안에서 호출하면 프록시를 타지 않아 @Transactional이 무효가 된다. 수동 실행
-     * 엔드포인트({@code /batch/expire})는 그대로 이 메서드를 쓴다.
+     * 같은 빈 안에서 호출하면 프록시를 타지 않아 @Transactional이 무효가 된다. 즉시 실행은 배치
+     * 수동 실행({@code POST /api/admin/batch/run/expirationPointBatch})으로 한다(무인증 /batch/expire 화면은 2026-10-19 제거).
      */
     @Transactional
     public int runExpirationBatch() {

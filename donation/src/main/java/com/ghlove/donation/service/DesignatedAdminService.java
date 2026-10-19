@@ -311,10 +311,8 @@ public class DesignatedAdminService {
     /** 모금 종료일이 지난 진행중(OPEN) 사업을 매일 자동 종료. 목표금액 초과와 달리 "기간이
      *  그냥 흘러서" 발생하는 전환이라 어떤 이벤트에도 걸리지 않으므로 배치가 필요하다.
      *
-     *  <p>정기 실행 트리거는 {@link DesignatedProjectBatchScheduler}로 옮겼다(2026-10-03) -
-     *  배치 실행로그(메뉴 7209)를 남기려면 트랜잭션 프록시 밖에서 시작·종료시각을 재고 결과를
-     *  보고해야 하는데, 같은 빈 안에서 호출하면 프록시를 타지 않아 @Transactional이 무효가 된다.
-     *  이 메서드는 그대로 공개 API({@code DesignatedAdminApiController}의 수동 실행)로도 쓰인다. */
+     *  <p>2026-10-15부터 정기배치는 AS-IS와 같은 {@link #updateDesignatedDonationStatus}(dsgnBizStatusUpdateBatch)가 맡고,
+     *  이 메서드는 {@code DesignatedAdminApiController}의 수동 실행에만 쓰인다. */
     @Transactional
     public int closeExpiredProjects() {
         String today = YMD.format(LocalDate.now());
@@ -326,6 +324,20 @@ public class DesignatedAdminService {
             closeProject(project, "모금 기간 종료로 자동 종료됨");
         }
         return expired.size();
+    }
+
+    /**
+     * 배치 dsgnBizStatusUpdateBatch - AS-IS {@code DesignatedDonationServiceImpl.updateDesinatedDonationStatus}.
+     * 진행중·공개 사업 중 목표금액 달성 또는 모금기간 종료된 것을 종료로 바꾼다. {@link #closeExpiredProjects}와 달리
+     * 목표 달성도 보고 공개여부를 따지며, AS-IS처럼 승인이력은 남기지 않는다.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public int updateDesignatedDonationStatus() {
+        List<Number> ids = designatedProjectRepository.findGoalReachedOrEnded(STATUS_OPEN, YMD.format(LocalDate.now()));
+        for (Number id : ids) {
+            designatedProjectRepository.updateStatus(id.longValue(), STATUS_CLOSED);
+        }
+        return ids.size();
     }
 
     private void closeProject(DesignatedProject project, String reasonForLog) {

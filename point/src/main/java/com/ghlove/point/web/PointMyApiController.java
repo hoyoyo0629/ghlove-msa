@@ -20,7 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** storefront(Vue3 SPA)용 "기부포인트 조회" JSON API - {@link PointController}(Thymeleaf)의
+/** storefront(Vue3 SPA)용 "기부포인트 조회" JSON API - PointController(제거됨)(Thymeleaf)의
  * `/` GET과 완전히 같은 조합. */
 @RestController
 @RequiredArgsConstructor
@@ -154,7 +154,7 @@ public class PointMyApiController {
                                         List<ReservationDto> reservations) {
     }
 
-    /** {@link PointController}(Thymeleaf) `/reservations` GET과 동일 조합. */
+    /** PointController(제거됨)(Thymeleaf) `/reservations` GET과 동일 조합. */
     @GetMapping("/api/my/reservations")
     public ResponseEntity<ReservationsResponse> myReservations(HttpServletRequest request) {
         var authUserId = jwtVerifier.currentUserId(request);
@@ -234,7 +234,7 @@ public class PointMyApiController {
     public record UsePointsRequest(long amount, String locgovCode, String orderCode) {
     }
 
-    /** 마이페이지 "기부포인트 조회"의 포인트 사용. Thymeleaf용 {@link PointController#usePoints}는
+    /** 마이페이지 "기부포인트 조회"의 포인트 사용. Thymeleaf용 PointController.usePoints(제거됨)는
      * `@RequestParam` + `redirect:`라 SPA가 그대로 호출하면 JSON 바디가 바인딩되지 않아 400이 나고,
      * 통과하더라도 응답이 HTML이라 프론트의 JSON 파싱에서 다시 실패한다 - 같은 서비스 호출을
      * 이 화면 전용 JSON 계약으로 노출한다. */

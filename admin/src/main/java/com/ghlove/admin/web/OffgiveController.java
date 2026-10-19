@@ -175,7 +175,6 @@ public class OffgiveController {
             offgive.put("rcvAddressDetail", order != null ? order.rcvAddressDetail() : null);
             model.addAttribute("offgive", offgive);
             model.addAttribute("today", LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE));
-            model.addAttribute("canConfirm", canRegister(viewer) && "REQUESTED".equals(d.cntrSttusCode()));
         } catch (ManagerException e) {
             model.addAttribute("errorMessage", e.getMessage());
         }
@@ -233,25 +232,6 @@ public class OffgiveController {
         model.addAttribute("ozUrl", ozUrl);
         model.addAttribute("cntrSn", cntrSn);
         return "offgive/form-apply";
-    }
-
-    /**
-     * 수납처리 - REQUESTED→COMPLETED. ★TO-BE 임시: AS-IS에는 이 화면/엔드포인트가 없고 세외수입 수납확인 배치
-     * (NgDonationBatchServiceImpl.cntrSunapBatch)가 처리한다. 그 배치가 미이식이라 기능확인용으로만 둔다
-     * (2026-10-14 사용자 결정) - 누락 배치 job 일괄 이식 때 상세화면 버튼·안내문과 함께 제거한다.
-     */
-    @PostMapping("/offgive/{cntrSn}/confirm")
-    public String confirm(@PathVariable String cntrSn, HttpSession session, Model model) {
-        Manager viewer = manager(session);
-        if (!canRegister(viewer)) {
-            return "redirect:/offgive/" + cntrSn;
-        }
-        try {
-            offgiveClient.confirm(cntrSn);
-        } catch (ManagerException e) {
-            model.addAttribute("errorMessage", e.getMessage());
-        }
-        return "redirect:/offgive/" + cntrSn;
     }
 
     // ==================== 실명인증 (AS-IS sci-call → iframe → parent.sciResponse) ====================

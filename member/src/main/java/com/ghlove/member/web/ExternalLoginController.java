@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
 
@@ -96,11 +98,9 @@ public class ExternalLoginController {
             ExternalIdentity identity = onePassClient.verifyCallback(params);
             return completeLogin(identity, session, response, request);
         } catch (ExternalAuthException e) {
-            model.addAttribute("errorMessage", e.getMessage());
-            return "login";
+            return loginError(e.getMessage());
         } catch (RuntimeException e) {
-            model.addAttribute("errorMessage", "디지털원패스 로그인에 실패했습니다: " + e.getMessage());
-            return "login";
+            return loginError("디지털원패스 로그인에 실패했습니다: " + e.getMessage());
         }
     }
 
@@ -185,8 +185,7 @@ public class ExternalLoginController {
                              HttpServletRequest request, Model model) {
         String label = MOCK_PROVIDER_LABELS.get(provider);
         if (label == null || isRealClientEnabled(provider)) {
-            model.addAttribute("errorMessage", "모의 인증을 사용할 수 없는 연계 수단입니다.");
-            return "login";
+            return loginError("모의 인증을 사용할 수 없는 연계 수단입니다.");
         }
         // 회원가입 경유는 매번 새 신원이어야 한다 - 고정 externalId를 쓰면 두 번째부터는
         // 기가입자로 붙어서 "회원가입 완료"가 아니라 그냥 로그인이 되어버린다(AS-IS의
@@ -256,12 +255,16 @@ public class ExternalLoginController {
             ExternalIdentity identity = client.exchange(code);
             return completeLogin(identity, session, response, request);
         } catch (ExternalAuthException e) {
-            model.addAttribute("errorMessage", e.getMessage());
-            return "login";
+            return loginError(e.getMessage());
         } catch (RuntimeException e) {
-            model.addAttribute("errorMessage", "SNS 로그인에 실패했습니다: " + e.getMessage());
-            return "login";
+            return loginError("SNS 로그인에 실패했습니다: " + e.getMessage());
         }
+    }
+
+    /** 외부 인증 실패는 storefront 로그인 화면(/login)으로 돌려보내 그 화면에 메시지를 띄운다 -
+     *  Location 헤더에 한글을 그대로 담으면 헤더가 유실되므로 인코딩해서 싣는다. */
+    private String loginError(String message) {
+        return "redirect:/login?externalError=" + URLEncoder.encode(message == null ? "" : message, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     private void rememberFlow(HttpSession session, String type) {

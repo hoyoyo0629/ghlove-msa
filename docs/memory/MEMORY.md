@@ -38,7 +38,7 @@
 - [AS-IS 테이블 덤프 경로](asis-table-dump-path.md) — Desktop\고향사랑e음\1.AS-IS\1.DB\db-dump\테이블dump\*.sql, 코드성데이터 verbatim 확인·갭화면 구현에 직접 사용
 - [검증대기: 휴면해제·영수증출력](pending-verify-dormancy-receipt.md) — 2026-09-18 donation·member 재기동 후 5173 확인, 그 전엔 영수증 404 정상
 - [정적에셋 스코핑](static-asset-scoping-2026-09-18.md) — 2026-09-18 CSS 전역누수 라우트별 스코핑 + 누락이미지 144개 복사, storefront 전용·시각확인 대기
-- [Thymeleaf 폐기 1차 완료·2차 착수](thymeleaf-duplicate-cleanup-deferred.md) — 1차 5개 서비스 완료, 2차로 donation 의존성 완전제거(1/5)·member reactivate 전환, 나머지 4개 유지
+- [Thymeleaf 폐기 1차 완료·2차 착수](thymeleaf-duplicate-cleanup-deferred.md) — 1차 5개 서비스 완료, 2차로 donation 의존성 완전제거(1/5)·member reactivate 전환, 나머지 4개 유지 · 10-19 point·order 잔여화면 삭제(thymeleaf 의존성 제거)+member login.html 제거(외부인증 실패→SPA /login?externalError)
 - [admin 프론트는 Thymeleaf](admin-frontend-is-thymeleaf-not-jsp.md) — Vue3 전환 미정, JSP 아님(Boot3 jar라 불가)
 - [admin 셸 AS-IS parity 복원](admin-shell-asis-parity-restored.md) — 정적자산 통째복사(modules 7→273)+inc_header 중첩(.admin_wrap>#container)+공통head조각+op.manager 브레드크럼, 210페이지 전환
 - [시스템관리 영역 이식 원장](admin-system-area-port-progress.md) — 25화면 AS-IS JSP 매핑표, **25/25 완료(2026-10-03)**, 화면별 AS-IS 결함·구조갭 기록
@@ -152,3 +152,6 @@
 - [대표배너관리(16251) 이식](admin-representative-banner-port.md) — G_REPRST_BANNER PROCESS_TYPE=ITEM, 지정기부 배너와 서비스 공유(일반화), 옛 /admin/main-banners 삭제, AS-IS 이미지 크기 맞춤 추가(지정기부에도 적용). 메뉴 migration 적용+admin 재기동 필요. ★uploads 폴더는 내가 만든 파일만 지울 것
 - [답례품관리(16301) 목록 이식](admin-item-manage-port.md) — 목록/일괄처리/삭제신청/변경사항팝업/대표·오프라인대표 실화면 검증 완료(2026-10-19). 상품코드 검색은 item_user_code가 전부 NULL이라 G2+9자리 계산식으로 고침. ★미이식: 엑셀 팝업(죽은 버튼)·업로드·등록/수정 폼(옛 TO-BE 폼으로 리다이렉트). 상태코드 숫자 전환 포함, gift/order/storefront/admin 재기동 필요
 - [admin 화면 실검증용 스페어 스택](spare-stack-needs-kafka-member-donation.md) — gift+donation+member+admin 스페어 4개, ★로컬 Kafka 없으면 gift 변경요청이 60초 블록돼 행잠금·커넥션풀 고갈, DB는 원격이라 docker run postgres 클라이언트, 실행 중 jar 덮어쓰기 금지
+- [★배치 일괄 이식 결정(10-15~10-19)](batch-job-port-decisions.md) — 화면(op_batch_job) 설정이 곧 스케줄(코드 고정 cron 금지), 76행 AS-IS 상태 등록, BIX5 보류, 포인트 소멸 중지, 5차까지 완료(중지 job 구현만). 휴면 2개는 결정 대기. 원장 docs/batch-job-port-ledger.md
+- [통계 보고서 분석DB 구조·DA 후 결정](report-statistics-analysis-db-pending-da.md) — 화면은 10-15 AS-IS방식 이식완료(통계표 22종 admin스키마+AS-IS데이터), 채우는 배치·표 위치는 DA 설계안 이후 결정(10-19), PL 공유문서 정정됨
+- [★표준프레임워크·화면 기술 검토(10-19)](frontend-tech-stack-review-2026-10-19.md) — 전자정부 표준프레임워크 적용수준(RFP 명시, TO-BE 미적용) 우선결정 대기 · 대민 Vue3+JS(TS 근거없음), 관리자 Thymeleaf 유지 제안, RFP 프론트/백 분리 해석은 PL·PM 확인 대기, 지자체 대시보드 신규 미착수. PL 공유문서 링크

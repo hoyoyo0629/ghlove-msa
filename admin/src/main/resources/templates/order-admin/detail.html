@@ -87,16 +87,19 @@
         <h4>배송관리</h4>
         <p>현재 배송상태:
             <strong th:text="${order.deliveryStatus() == null} ? '미발송' : (${order.deliveryStatus() == 'SHIPPED'} ? '발송완료' : (${order.deliveryStatus() == 'IN_TRANSIT'} ? '배송중' : (${order.deliveryStatus() == 'DELIVERED'} ? '배송완료' : '구매확정')))"></strong>
-            <span th:if="${order.carrierCode() != null}" th:text="'(' + ${order.carrierCode()} + ' ' + ${order.invoiceNo()} + ')'"></span>
+            <span th:if="${order.carrierCode() != null}"
+                  th:text="'(' + (${deliveryCompanyNames.get(order.carrierCode())} ?: ${order.carrierCode()}) + ' ' + ${order.invoiceNo()} + ')'"></span>
         </p>
 
+        <!--/* 택배사 = 배송업체 ID(AS-IS shipping-ready.jsp·change-shipping-number.jsp 배송업체 select와 같은 값):
+             '-선택-'(0) + 사용 중 배송업체(ID 내림차순). 0이면 AS-IS 문구 "배송업체를 선택해 주세요". */-->
         <form th:if="${order.orderStatus() == 'CONFIRMED' and order.deliveryStatus() == null}"
-              th:action="@{'/admin/orders/' + ${order.orderId()} + '/invoice'}" method="post" class="flex_box gap-08">
-            <select name="carrierCode">
-                <option value="CJ">CJ대한통운</option>
-                <option value="POST">우체국택배</option>
-                <option value="HANJIN">한진택배</option>
-                <option value="LOTTE">롯데택배</option>
+              th:action="@{'/admin/orders/' + ${order.orderId()} + '/invoice'}" method="post" class="flex_box gap-08"
+              onsubmit="if (this.carrierCode.value == '0') { alert('배송업체를 선택해 주세요'); return false; }">
+            <select name="carrierCode" title="배송업체">
+                <option value="0" selected="selected">-선택-</option>
+                <option th:each="deliveryCompany : ${deliveryCompanyList}"
+                        th:value="${deliveryCompany.deliveryCompanyId()}" th:text="${deliveryCompany.deliveryCompanyName()}"></option>
             </select>
             <input type="text" name="invoiceNo" placeholder="송장번호" required>
             <button type="submit" class="small-btn">송장등록(발송처리)</button>

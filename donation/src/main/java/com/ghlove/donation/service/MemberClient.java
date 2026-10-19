@@ -30,6 +30,15 @@ public class MemberClient {
                 .build();
     }
 
+    /** 회원번호→CI(CI 있는 회원만) - 국세청 전자기부영수증 배치가 AS-IS {@code (select mber_ci from op_user ...)}를 대신해 쓴다. */
+    public java.util.Map<Long, String> ciMap(java.util.List<Long> userIds) {
+        java.util.Map<Long, String> map = restClient.get()
+                .uri(u -> u.path("/api/admin/members/batch/ci-map").queryParam("userIds", userIds).build())
+                .retrieve().body(new org.springframework.core.ParameterizedTypeReference<java.util.Map<Long, String>>() {
+                });
+        return map != null ? map : java.util.Map.of();
+    }
+
     public MemberInfo fetch(Long userId) {
         try {
             return restClient.get()

@@ -165,17 +165,6 @@
 
 </form>
 
-<!--/* ★TO-BE 임시(AS-IS 화면에 없음): AS-IS 세외수입 수납확인 배치(NgDonationBatchServiceImpl.cntrSunapBatch)를
-     대신하는 관리자 수동 트리거. 그 배치가 아직 미이식이라 기능확인(수납완료 → 포인트 적립 → 답례품 결제)용으로만 둔다
-     (2026-10-14 사용자 결정). 누락된 배치 job들을 일괄 이식할 때 이 버튼·안내문과 POST /offgive/{cntrSn}/confirm을 함께 제거한다. */-->
-<div class="btn_all btn_center" style="margin-top:20px;" th:if="${canConfirm}">
-    <div class="tip" style="margin-bottom: 8px;">※ [개발 확인용] AS-IS에서는 세외수입시스템 수납내역 배치가 수납완료로 처리합니다. 배치 이식 전까지 기능확인을 위해 임시로 두는 버튼이며, 배치 이식 시 제거됩니다.</div>
-    <form th:action="@{'/offgive/' + ${offgive.cntrSn} + '/confirm'}" method="post" style="display:inline;">
-        <button type="submit" class="btn btn-dark-gray btn-small"
-                onclick="return confirm('수납처리(세외수입 수납확인) 하시겠습니까?');">수납처리</button>
-    </form>
-</div>
-
     </div><!-- /.contents_inner -->
     </div><!-- /.contents -->
 </div><!-- /#container -->

@@ -15,3 +15,7 @@ metadata:
 **How to apply:** 배치 일괄 이식 라운드에서 op_batch_job(AS-IS job_method)과 대조해 누락 job 전수 목록부터 만들고,
 cntrSunapBatch 이식 시 위 버튼·안내문·confirm 엔드포인트·admin OffgiveClient.confirm·donation `/api/offgive/{sn}/confirm`을 함께 제거한다.
 관련: [[offgive-15102-verbatim-port-data-gaps]], [[offgive-gift-order-asis-flow]]
+
+**2026-10-15 이식 완료**: fiveMinuteSunapCheckBatch·dayCompleteSunapCheckBatch(donation)·cntrSunapBatch(order) 이식,
+임시 "수납처리" 버튼·confirm 엔드포인트 전부 제거. 로컬은 AS-IS LOCAL 분기처럼 5분 안에 자동 수납처리된다.
+배치 전체 진행은 [[batch-job-port-decisions]]·docs/batch-job-port-ledger.md.

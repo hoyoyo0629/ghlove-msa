@@ -416,6 +416,30 @@ public class DonationService {
      * 성격). 두 연계 모두 ghlove.integrations.*.enabled=false(기본값, 방화벽 미개방)면
      * 모크 응답으로 즉시 성공 처리된다.
      */
+    /**
+     * 수납확인 배치(fiveMinuteSunapCheckBatch·dayCompleteSunapCheckBatch)의 수납처리 - AS-IS 변경신청 300 승인의
+     * {@code sunapUpdateY}: 상태 수납완료(AS-IS '200'), <b>수납일 = 기부일자</b>(AS-IS #{sttemntPayDe}=cntrDe), 삭제여부 'N'.
+     * 포인트(AS-IS cntr_point 계산)는 TO-BE에선 완료 이벤트로 point가 적립한다. {@link #completeDonation}과 달리
+     * 세외 연계는 배치가 이미 확인했으므로 다시 부르지 않고, AS-IS처럼 한도 재검증·국세청 영수증 등록도 하지 않는다.
+     */
+    @Transactional
+    public Donation completeBySunapCheck(String cntrSn) {
+        Donation donation = getDonationOrThrow(cntrSn);
+        if (!STATUS_REQUESTED.equals(donation.getCntrSttusCode())) {
+            return donation;
+        }
+        donation.setCntrSttusCode(STATUS_COMPLETED);
+        donation.setSttemntPayDe(donation.getCntrDe() != null && donation.getCntrDe().length() >= 8
+                ? donation.getCntrDe().substring(0, 8) : DE_FORMAT.format(LocalDateTime.now()));
+        donation.setDeleteAt("N");
+        Donation saved = donationRepository.save(donation);
+        Locgov locgov = locgovRepository.findById(donation.getCntrLocgovCode()).orElse(null);
+        upsertHonorTier(saved, locgov);
+        designatedAdminService.autoCloseIfGoalReached(saved.getDsgnDntnBizId());
+        donationEventPublisher.publishCompleted(saved);
+        return saved;
+    }
+
     @Transactional
     public Donation completeDonation(String cntrSn) {
         Donation donation = getDonationOrThrow(cntrSn);

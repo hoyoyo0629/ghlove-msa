@@ -157,6 +157,32 @@ public class CntrReqmngService {
         return cntrReqmngRepository.save(reqmng);
     }
 
+    /**
+     * 수납확인 배치의 변경신청 기록 - AS-IS {@code extractedSunapSuccess}: 요청분류 300(수납처리), 사유 "배치동작에 의해 처리됨",
+     * 수납일자=기부일자, 등록·수정자=기부자 회원번호로 신청(giveReqmngInsert)하고 바로 승인(giveReqmngApprove, 999)한다.
+     * 도메인 효과(수납완료)는 호출측이 {@link DonationService#completeBySunapCheck}로 함께 처리한다.
+     */
+    @Transactional
+    public CntrReqmng recordBatchSunap(Donation donation, String loginId, String userName) {
+        LocalDateTime now = LocalDateTime.now();
+        CntrReqmng reqmng = new CntrReqmng();
+        reqmng.setCntrSn(donation.getCntrSn());
+        reqmng.setLocgovCode(donation.getCntrLocgovCode());
+        reqmng.setCntrAmt(donation.getCntrAmt());
+        reqmng.setLoginId(loginId);
+        reqmng.setUserName(userName);
+        reqmng.setSttemntPayDe(truncate8(donation.getCntrDe()));
+        reqmng.setCntrReqmngCode("300");
+        reqmng.setDiscription("배치동작에 의해 처리됨");
+        reqmng.setFrstRegisterId(donation.getUserId());
+        reqmng.setFrstRegistPnttm(now);
+        reqmng.setReqStatusCode(STATUS_APPROVED);
+        reqmng.setApprDt(now);
+        reqmng.setLastUpdusrId(donation.getUserId());
+        reqmng.setLastUpdtPnttm(now);
+        return cntrReqmngRepository.save(reqmng);
+    }
+
     @Transactional
     public CntrReqmng approve(Long reqId, Long managerId) {
         CntrReqmng reqmng = findOrThrow(reqId);

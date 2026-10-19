@@ -50,6 +50,11 @@ public class DeliveryReturnClient {
         return get("/api/admin/delivery-companies", DeliveryCompanyDto[].class);
     }
 
+    /** 사용(Y) 배송업체, ID 내림차순 - AS-IS getActiveDeliveryCompanyListAll(송장 등록 배송업체 select). */
+    public List<DeliveryCompanyDto> activeDeliveryCompanies() {
+        return get("/api/admin/delivery-companies?useYn=Y", DeliveryCompanyDto[].class);
+    }
+
     public DeliveryCompanyDto deliveryCompany(Integer id) {
         try {
             return restClient.get().uri("/api/admin/delivery-companies/{id}", id)

@@ -98,6 +98,8 @@ onMounted(async () => {
   else if (route.query.passwordChanged != null) successMessage.value = '비밀번호가 변경되었습니다. 다시 로그인해 주세요.'
   else if (route.query.withdrawn != null) successMessage.value = '탈퇴 처리가 완료되었습니다. 그동안 이용해 주셔서 감사합니다.'
   else if (route.query.reactivated != null) successMessage.value = '휴면 해제가 완료되었습니다. 다시 로그인해 주세요.'
+  // 외부 인증(원패스/SNS/모의 인증) 실패 - member가 이 화면으로 돌려보내며 실어 보낸 메시지
+  if (typeof route.query.externalError === 'string') errorMessage.value = route.query.externalError
 
   const saved = window.localStorage.getItem('ghlove_saved_login_id')
   if (saved) {

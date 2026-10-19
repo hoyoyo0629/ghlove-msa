@@ -31,6 +31,7 @@ import java.util.Map;
 public class BatchJobController {
 
     private final BatchJobRepository batchJobRepository;
+    private final com.ghlove.admin.service.NoBugaLocgovMailService noBugaLocgovMailService;
 
     /** AS-IS batchJobList / searchBatchJobList - GET·POST 동일 동작. AS-IS는 페이저가 없고
      *  건수도 조회된 목록 크기를 그대로 보여준다(목록 전체를 뿌린다). */
@@ -84,6 +85,8 @@ public class BatchJobController {
             job.setTriggerRepeatSeconds(form.getTriggerRepeatSeconds());
             job.setTriggerCronExpression(form.getTriggerCronExpression());
             job.setBatchStatus(form.getBatchStatus());
+            // AS-IS updateBatchJob: BATCH_APPLY_FLAG='0' - 각 서비스 BatchJobScheduler가 다음 조회(15초) 때 다시 반영하고 '1'로 바꾼다.
+            job.setBatchApplyFlag("0");
             batchJobRepository.save(job);
         });
     }
@@ -100,18 +103,14 @@ public class BatchJobController {
     }
 
     /**
-     * AS-IS batchForNh - 목록의 "농협배치테스트" 버튼이 호출한다.
-     * AS-IS는 {@code ngDonationBatchService.getNoBugaLocgovList()}(농협 미부과 지자체 조회 배치)를
-     * 실행하는데 그 연계는 이 프로젝트에 아직 이식되지 않았다. 성공으로 꾸미지 않고 사유를 알린다
-     * (AS-IS에 있는 버튼이므로 화면에서는 그대로 노출한다).
+     * AS-IS batchForNh - 목록의 "농협배치테스트" 버튼이 호출한다. AS-IS는 이름과 달리
+     * {@code ngDonationBatchService.getNoBugaLocgovList()}(3일 기부내역 없는 지자체 메일)를 바로 실행한다 -
+     * 배치 getNoBugaLocgovListBatch와 같은 본문({@link NoBugaLocgovMailService}).
      */
     @PostMapping("/batch-job/batchForNh")
     @ResponseBody
     public Map<String, Object> batchForNh() {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("isSuccess", false);
-        result.put("errorMessage", "농협 배치 연계(미부과 지자체 조회)는 아직 이식되지 않았습니다.");
-        return result;
+        return run(noBugaLocgovMailService::send);
     }
 
     private Map<String, Object> run(Runnable action) {

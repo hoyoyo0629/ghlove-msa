@@ -16,7 +16,7 @@ import java.time.format.DateTimeParseException;
 import java.util.Map;
 import java.util.function.Function;
 
-/** storefront(Vue3 SPA)용 마이페이지 "취소반품교환" JSON API - {@link ClaimController}(Thymeleaf)와
+/** storefront(Vue3 SPA)용 마이페이지 "취소반품교환" JSON API - ClaimController(제거됨)(Thymeleaf)와
  *  완전히 같은 로직을 감싼다. */
 @RestController
 @RequiredArgsConstructor

@@ -191,6 +191,57 @@ public class AdminMainService {
         return s;
     }
 
+    /**
+     * 배치 confirmdonationForReportBatch(보고용대시보드, AS-IS 매일 18:00) - AS-IS {@code JobServiceImpl.confirmdonationForReportBatch}.
+     * 오늘 기준 하단표 집계(기부 10·답례품 신청 2) + 등록 답례품 수 + 오늘 콜 수 + 전체 회원 수를 REPORT_DASHBOARD에
+     * 오늘 날짜로 지우고 다시 넣는다(deleteDashBoardReport + confirmDonationForReportBatch). 메인 "기부현황 복사" 영역이 읽는다.
+     */
+    @Transactional
+    public String reportDashboardBatch() {
+        String today = LocalDate.now().format(YMD);
+        long gift = giftItemCount(today);
+        Map<String, Long> board = new java.util.HashMap<>();
+        for (CountRow row : tableInfo(today)) {
+            board.put(row.id(), row.count());
+        }
+        CallState call = callState(today);
+        long userAmt = client.subscribers().getOrDefault("allSubscribers", 0L);
+
+        entityManager.createNativeQuery("delete from report_dashboard where created_date = :d")
+                .setParameter("d", today).executeUpdate();
+        entityManager.createNativeQuery("""
+                        insert into report_dashboard (on_cntr_cnt, on_cntr_amt, off_cntr_cnt, off_cntr_amt,
+                            present_cnt, present_amt, call_kookmin, call_lov, call_giver, call_nhbank, call_amt,
+                            present, total_cntr, total_cntramt, total_user, created_date,
+                            on_cntr_prj_cnt, on_cntr_prj_amt, off_cntr_prj_cnt, off_cntr_prj_amt)
+                        values (:onCnt, :onAmt, :offCnt, :offAmt, :presentCnt, :presentAmt, :kookmin, :lov, :giver,
+                            :nhbank, :callAmt, :present, :totalCntr, :totalCntrAmt, :totalUser, :createdDate,
+                            :onPrjCnt, :onPrjAmt, :offPrjCnt, :offPrjAmt)
+                        """)
+                .setParameter("onCnt", board.getOrDefault("online-cntr", 0L))
+                .setParameter("onAmt", board.getOrDefault("online-cntramt", 0L))
+                .setParameter("offCnt", board.getOrDefault("offline-cntr", 0L))
+                .setParameter("offAmt", board.getOrDefault("offline-cntramt", 0L))
+                .setParameter("presentCnt", board.getOrDefault("total-present", 0L))
+                .setParameter("presentAmt", board.getOrDefault("total-presentamt", 0L))
+                .setParameter("kookmin", call.callKookmin)
+                .setParameter("lov", call.callLov)
+                .setParameter("giver", call.callGiver)
+                .setParameter("nhbank", call.callNhbank)
+                .setParameter("callAmt", call.callTotal)
+                .setParameter("present", gift)
+                .setParameter("totalCntr", board.getOrDefault("total-cntr", 0L))
+                .setParameter("totalCntrAmt", board.getOrDefault("total-cntramt", 0L))
+                .setParameter("totalUser", userAmt)
+                .setParameter("createdDate", today)
+                .setParameter("onPrjCnt", board.getOrDefault("online-prj-cntr", 0L))
+                .setParameter("onPrjAmt", board.getOrDefault("online-prj-cntramt", 0L))
+                .setParameter("offPrjCnt", board.getOrDefault("offline-prj-cntr", 0L))
+                .setParameter("offPrjAmt", board.getOrDefault("offline-prj-cntramt", 0L))
+                .executeUpdate();
+        return "기부 " + board.getOrDefault("total-cntr", 0L) + "건 / 회원 " + userAmt + "명";
+    }
+
     /** 답례품 미등록 지자체명(AS-IS opamanagerMainGift) - G_LOCGOV 중 답례품을 가진 지자체코드에 없는 곳. */
     public List<String> giftUnregisteredLocgovNames() {
         Set<String> withItems = new HashSet<>(client.giftItemLocgovCodes());

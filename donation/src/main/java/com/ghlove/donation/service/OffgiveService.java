@@ -19,8 +19,9 @@ import java.util.List;
  * <p><b>2단계 상태(2026-10-12 전환)</b>: AS-IS는 등록 시 {@code cntrSttusCode='100'}(신고)로만
  * 저장하고, 실제 {@code '200'}(수납완료) 전환은 세외수입시스템 수납이력을 폴링하는 별도
  * 배치({@code NgDonationBatchServiceImpl.cntrSunapBatch}등)가 비동기로 처리한다 - 등록
- * 즉시완료가 아니다. 이 배치가 없는 TO-BE는 관리자의 수동 "수납처리" 트리거({@link #confirm})로
- * 대체한다. 취소/변경은 이미 있는 give-reqmng 워크플로를 그대로 쓴다(CntrReqmngService).
+ * 즉시완료가 아니다. TO-BE도 같은 배치(fiveMinuteSunapCheckBatch·dayCompleteSunapCheckBatch, DonationBatchJobs)가
+ * 수납확인 후 처리한다(2026-10-15 이식, 그 전의 관리자 수동 "수납처리" 버튼은 제거). 취소/변경은 이미 있는
+ * give-reqmng 워크플로를 그대로 쓴다(CntrReqmngService).
  *
  * <p><b>전자납부번호(elctrnPayNo)</b>는 AS-IS form.jsp가 등록 제출 <b>전에</b> 먼저
  * {@code nextBugaRequest}/{@code getSdonationCharge}(세외수입 부과요청)로 받아와 hidden
@@ -145,13 +146,6 @@ public class OffgiveService {
         }
 
         return new Result(donation, walkIn);
-    }
-
-    /** 수납처리(AS-IS 수납확인 배치를 대체하는 관리자 수동 트리거) - REQUESTED→COMPLETED. */
-    @Transactional
-    public Donation confirm(String cntrSn) {
-        Donation donation = findOrThrow(cntrSn);
-        return donationService.completeDonation(donation.getCntrSn());
     }
 
     /** AS-IS getDateOfBirth - 주민번호 뒷자리 첫 숫자로 세기(18/19/20) 판정. */

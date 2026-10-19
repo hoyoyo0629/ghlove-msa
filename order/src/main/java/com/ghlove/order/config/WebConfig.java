@@ -29,7 +29,6 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/admin/shipment-returns", "/api/admin/shipment-returns/**",
                         "/api/admin/reconciliation", "/api/admin/reconciliation/**",
                         "/api/admin/offgive-orders", "/api/admin/offgive-orders/**",
-                        "/claims", "/claims/*/approve", "/claims/*/reject", "/claims/*/complete",
                         "/orders/*/invoice", "/orders/*/delivery-status");
         // SFR-006 재검토 라운드 - /api/admin/orders/all(SFR-009 StatsService ReadModel
         // 재동기화용)이 시크릿 헤더 없이 무인증으로 남아있던 잔존 gap을 닫았다(admin의

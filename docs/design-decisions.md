@@ -1062,7 +1062,7 @@ campaign 91건(비율 25/24/24/26=100), amountraised 모금액합 16,662,000(시
 | my.html | `/my` | `/mypage/points` | 삭제 |
 | reservations.html | `/reservations` | `/mypage/points/reservations` | 삭제 |
 | detail.html | `/detail` | `/mypage/points`? | **확인필요** (상세 vs 목록) |
-| expire-batch.html | `/batch/expire` | (배치) | **유지-범위밖** (배치) |
+| expire-batch.html | `/batch/expire` | (배치) | **제거(2026-10-19)** - 무인증으로 포인트 소멸 실행 가능, 배치 화면 수동 실행으로 대체 |
 | fragments/×4 | — | — | 페이지와 함께 삭제 |
 
 ### gift (17개: 페이지 12 + fragment 5)
@@ -1097,7 +1097,7 @@ campaign 91건(비율 25/24/24/26=100), amountraised 모금액합 16,662,000(시
 | coupon/claimable.html | `/coupons` | `/coupons` | 삭제 |
 | coupon/offline-claim.html | `/coupons/offline` | `/coupons/offline` | **확인필요** (대민 수령 vs 담당자) |
 | create.html | `/`,`/orders` | `/checkout`? | **확인필요** (주문생성 흐름) |
-| claims/queue.html | `/claims`(queue) | — | **유지-범위밖** (클레임 처리) |
+| claims/queue.html | `/claims`(queue) | — | **제거(2026-10-19)** - admin `/admin/claims`로 대체 |
 | fragments/×5 | — | — | 페이지와 함께 삭제 |
 
 ### 확인필요 9건 판정 확정 (2026-09-17, 화면 대조 완료)
@@ -1126,7 +1126,7 @@ campaign 91건(비율 25/24/24/26=100), amountraised 모금액합 16,662,000(시
 ### 유지 목록 (삭제 금지)
 
 - **유지-프린트**: donation/receipt-official-print (공식영수증 PDF)
-- **유지-범위밖(판매자/운영/배치)**: gift/register·edit·seller-dashboard·**my**, point/expire-batch, order/claims/queue
+- **유지-범위밖(판매자/운영/배치)**: gift/register·edit·seller-dashboard·**my** (point/expire-batch·order/claims/queue는 2026-10-19 제거)
 - **유지-미커버(대민이나 SPA 미구현)**: member/reactivate·coming-soon·external-login-disabled·external-login-mock
 - **fragments (24)**: **유지** — 위 "유지" 페이지들이 header/footer/floating/alert 프래그먼트를 계속 쓰므로 삭제 불가
 

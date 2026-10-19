@@ -18,6 +18,16 @@ public class PointClient {
         this.restClient = RestClient.create(pointServiceBaseUrl);
     }
 
+    /** 기부일련번호별 적립 포인트(point {@code /api/ledger/earned}) - 적립(EARN)된 것만 키로 온다 = 수납완료 처리된 기부. */
+    public java.util.Map<String, Long> earnedByCntrSn(java.util.List<String> cntrSns) {
+        java.util.Map<String, Long> body = restClient.get()
+                .uri(u -> u.path("/api/ledger/earned").queryParam("cntrSns", cntrSns).build())
+                .retrieve()
+                .body(new org.springframework.core.ParameterizedTypeReference<java.util.Map<String, Long>>() {
+                });
+        return body != null ? body : java.util.Map.of();
+    }
+
     public long balanceByLocgov(Long userId, String locgovCode) {
         try {
             PointBalanceInfo info = restClient.get()

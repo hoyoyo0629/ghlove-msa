@@ -1,6 +1,7 @@
 package com.ghlove.admin.web;
 
 import com.ghlove.admin.domain.Manager;
+import com.ghlove.admin.service.DeliveryReturnClient;
 import com.ghlove.admin.service.ManagerException;
 import com.ghlove.admin.service.MenuService;
 import com.ghlove.admin.service.OrderAdminClient;
@@ -42,6 +43,7 @@ public class OrderAdminController {
 
     private final OrderAdminClient orderAdminClient;
     private final OrderReadModelService orderReadModelService;
+    private final DeliveryReturnClient deliveryReturnClient;
 
     @GetMapping("/admin/orders")
     public String list(@RequestParam(required = false) String locgovCode,
@@ -81,6 +83,12 @@ public class OrderAdminController {
             OrderAdminClient.OrderDetail order = orderAdminClient.detail(manager, orderId);
             model.addAttribute("order", order);
             model.addAttribute("claims", orderAdminClient.claimsOf(manager, orderId));
+            // 송장 등록 배송업체 select(AS-IS getActiveDeliveryCompanyListAll) + 등록된 택배사(배송업체 ID)를 이름으로 보여주기 위한 표.
+            List<DeliveryReturnClient.DeliveryCompanyDto> companies = deliveryReturnClient.activeDeliveryCompanies();
+            model.addAttribute("deliveryCompanyList", companies);
+            model.addAttribute("deliveryCompanyNames", deliveryReturnClient.deliveryCompanies().stream()
+                    .collect(java.util.stream.Collectors.toMap(c -> String.valueOf(c.deliveryCompanyId()),
+                            DeliveryReturnClient.DeliveryCompanyDto::deliveryCompanyName, (a, b) -> a)));
             // errorMessage가 쿼리파라미터로 명시되지 않았으면 절대 덮어쓰지 않는다 - 처리
             // 실패 후 리다이렉트로 넘어온 RedirectAttributes flash "errorMessage"가 이미
             // Model에 채워져 있는데, 여기서 null을 다시 넣으면 그 메시지가 지워져 버린다

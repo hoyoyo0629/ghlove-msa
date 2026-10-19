@@ -174,16 +174,6 @@ public class OffgiveApiController {
         return unpaidDonationBatchRepository.deletedUnpaidOffline(cntrSns);
     }
 
-    /** 수납처리(AS-IS 수납확인 배치 대체 - 관리자 수동 트리거). */
-    @PostMapping("/api/offgive/{cntrSn}/confirm")
-    public ResponseEntity<?> confirm(@PathVariable String cntrSn) {
-        try {
-            return ResponseEntity.ok(DonationDto.of(offgiveService.confirm(cntrSn)));
-        } catch (DonationException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
-    }
-
     public record DonationDto(String cntrSn, String cntrDe, Long userId, String cntrLocgovCode, BigDecimal cntrAmt,
                                String cntrSttusCode, String cntrPathCode, String rceptBankCode, String rceptBankNm,
                                String rcepterNm, String elctrnPayNo, String psitnLocgovCode, String rtnpsntReqstCode,
