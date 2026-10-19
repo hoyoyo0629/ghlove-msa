@@ -238,7 +238,7 @@ public class ItemAdminController {
         } catch (ManagerException e) {
             redirect.addFlashAttribute("errorMessage", e.getMessage());
         }
-        return "redirect:/admin/gift-items?dataStatusCode=PENDING";
+        return "redirect:/admin/gift-items?dataStatusCode=20";
     }
 
     @PostMapping("/{id}/reject")
@@ -248,7 +248,7 @@ public class ItemAdminController {
         } catch (ManagerException e) {
             redirect.addFlashAttribute("errorMessage", e.getMessage());
         }
-        return "redirect:/admin/gift-items?dataStatusCode=PENDING";
+        return "redirect:/admin/gift-items?dataStatusCode=20";
     }
 
     /** 대표상품관리 (AS-IS opmanager/item/representative-item - 원래 gift 자체 무인증
@@ -256,7 +256,7 @@ public class ItemAdminController {
     @GetMapping("/representative")
     public String representative(Model model) {
         model.addAttribute("gifts", itemClient.representativeItems());
-        model.addAttribute("candidates", itemClient.search(null, null, null, "APPROVED"));
+        model.addAttribute("candidates", itemClient.search(null, null, null, "1"));
         return "gift-items/representative";
     }
 

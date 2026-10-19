@@ -10,11 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -32,6 +30,13 @@ import java.util.UUID;
 public class RepresentativeBannerService {
 
     private static final String PROCESS_TYPE = "DESIGNATED_DONATION";
+    /** 답례품관리 > 대표배너관리(AS-IS opmanager/representative-banner)의 PROCESS_TYPE. */
+    public static final String PROCESS_TYPE_ITEM = "ITEM";
+    /** AS-IS RepresentativeBanner 권장사이즈 - 업로드한 이미지는 이 크기로 다시 맞춰 저장된다(ThumbUtils.create). */
+    private static final int PC_WIDTH = 1280;
+    private static final int PC_HEIGHT = 400;
+    private static final int MOBILE_WIDTH = 768;
+    private static final int MOBILE_HEIGHT = 280;
     /** AS-IS 화면 validator와 같은 한도 - 20MB. */
     private static final long MAX_SIZE = 20L * 1024 * 1024;
     /** AS-IS 화면 validator의 허용 확장자 목록 그대로(pdf가 섞여 있는 것까지 동일). */
@@ -45,7 +50,12 @@ public class RepresentativeBannerService {
     private String uploadDir;
 
     public List<RepresentativeBanner> list() {
-        return repository.findByProcessTypeOrderByDisplayOrderAsc(PROCESS_TYPE);
+        return list(PROCESS_TYPE);
+    }
+
+    /** 같은 G_REPRST_BANNER를 PROCESS_TYPE별로 나눠 본다 - DESIGNATED_DONATION(지정기부) / ITEM(답례품 대표배너). */
+    public List<RepresentativeBanner> list(String processType) {
+        return repository.findByProcessTypeOrderByDisplayOrderAsc(processType);
     }
 
     public RepresentativeBanner get(Integer id) {
@@ -64,6 +74,12 @@ public class RepresentativeBannerService {
     @Transactional
     public RepresentativeBanner create(String title, String linkUrl, String bannerContent, String useYn,
                                         MultipartFile pcImage, MultipartFile mobileImage, Long managerId) {
+        return create(PROCESS_TYPE, title, linkUrl, bannerContent, useYn, pcImage, mobileImage, managerId);
+    }
+
+    @Transactional
+    public RepresentativeBanner create(String processType, String title, String linkUrl, String bannerContent, String useYn,
+                                        MultipartFile pcImage, MultipartFile mobileImage, Long managerId) {
         validateTitle(title);
         RepresentativeBanner banner = new RepresentativeBanner();
         banner.setTitle(title);
@@ -71,10 +87,10 @@ public class RepresentativeBannerService {
         banner.setBannerContent(bannerContent);
         banner.setDisplayOrder(repository.findMaxDisplayOrder() + 1);
         banner.setUseYn(normalizeUseYn(useYn));
-        banner.setProcessType(PROCESS_TYPE);
+        banner.setProcessType(processType);
         // AS-IS는 파일이 없으면 빈 문자열을 넣는다(검증은 화면 validator가 한다).
-        banner.setFileNamePc(hasFile(pcImage) ? store(pcImage) : "");
-        banner.setFileNameMobile(hasFile(mobileImage) ? store(mobileImage) : "");
+        banner.setFileNamePc(hasFile(pcImage) ? store(pcImage, PC_WIDTH, PC_HEIGHT) : "");
+        banner.setFileNameMobile(hasFile(mobileImage) ? store(mobileImage, MOBILE_WIDTH, MOBILE_HEIGHT) : "");
         banner.setFrstRegisterId(managerId);
         banner.setFrstRegistPnttm(LocalDateTime.now());
         banner.setLastUpdusrId(managerId);
@@ -103,10 +119,10 @@ public class RepresentativeBannerService {
             banner.setBannerContent(bannerContent);
         }
         if (hasFile(pcImage)) {
-            banner.setFileNamePc(store(pcImage));
+            banner.setFileNamePc(store(pcImage, PC_WIDTH, PC_HEIGHT));
         }
         if (hasFile(mobileImage)) {
-            banner.setFileNameMobile(store(mobileImage));
+            banner.setFileNameMobile(store(mobileImage, MOBILE_WIDTH, MOBILE_HEIGHT));
         }
         banner.setLastUpdusrId(managerId);
         banner.setLastUpdtPnttm(LocalDateTime.now());
@@ -189,7 +205,28 @@ public class RepresentativeBannerService {
         }
     }
 
-    private String store(MultipartFile file) {
+    /**
+     * AS-IS {@code uploadFile} + {@code ThumbUtils.create(file, dest, width, height)} - 저장 전에 이미지를 권장사이즈(PC 1280x400 /
+     * 모바일 768x280)로 <b>비율과 상관없이 맞춘다</b>(스케일 후 RGB로 저장, 투명 PNG는 검게 나온다). 읽을 수 없는 파일(pdf 등)은 원본 그대로 둔다.
+     */
+    private static byte[] fitToSize(MultipartFile file, String ext, int width, int height) throws IOException {
+        java.awt.image.BufferedImage src = javax.imageio.ImageIO.read(file.getInputStream());
+        if (src == null) {
+            return file.getBytes();
+        }
+        java.awt.Image scaled = src.getScaledInstance(width, height, java.awt.Image.SCALE_SMOOTH);
+        java.awt.image.BufferedImage dest = new java.awt.image.BufferedImage(width, height, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.awt.Graphics2D g = dest.createGraphics();
+        g.drawImage(scaled, 0, 0, null);
+        g.dispose();
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        if (!javax.imageio.ImageIO.write(dest, ext, out)) {
+            return file.getBytes();
+        }
+        return out.toByteArray();
+    }
+
+    private String store(MultipartFile file, int width, int height) {
         if (file.getSize() > MAX_SIZE) {
             throw new RepresentativeBannerException("첨부파일 사이즈는 20MB 이내로 등록 가능합니다. ");
         }
@@ -206,9 +243,7 @@ public class RepresentativeBannerService {
             Path dir = Paths.get(uploadDir, "rep-banner");
             Files.createDirectories(dir);
             Path target = dir.resolve(storedName);
-            try (InputStream in = file.getInputStream()) {
-                Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
-            }
+            Files.write(target, fitToSize(file, ext.toLowerCase().replace(".", ""), width, height));
         } catch (IOException e) {
             log.error("Failed to store banner image", e);
             throw new RepresentativeBannerException("이미지 저장에 실패했습니다.");

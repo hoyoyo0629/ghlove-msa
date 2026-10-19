@@ -54,7 +54,7 @@ class OrderAdminServiceManualOrderTest {
     @Test
     void createsConfirmedOrderWithAbCodeAndPublishesCreatedThenConfirmed() {
         when(orderRepository.nextAdminOrderSeqForDate(anyString())).thenReturn(1L);
-        GiftItemInfo gift = new GiftItemInfo(5L, "답례품5", 100L, 10000, 50, "0", "APPROVED",
+        GiftItemInfo gift = new GiftItemInfo(5L, "답례품5", 100L, 10000, 50, "0", "1",
                 "11110", "/uploads/5.jpg", "CJ", "1", 0, null, null, null, "Y", "N", null,
                 null, null, null, null, null);
         when(giftClient.fetch(5L)).thenReturn(gift);

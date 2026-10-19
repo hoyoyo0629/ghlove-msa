@@ -48,7 +48,7 @@ public class RankingAdminApiController {
             return List.of();
         }
         return giftRepository.findByDataStatusCodeAndDisplayFlagAndItemNameContainingIgnoreCaseOrderByItemIdDesc(
-                        "APPROVED", "Y", keyword.trim())
+                        Gift.STATUS_APPROVED, "Y", keyword.trim())
                 .stream().limit(20)
                 .map(g -> new ItemOption(g.getItemId(), g.getItemName(), g.getLocgovCode(), g.getSalePrice()))
                 .toList();

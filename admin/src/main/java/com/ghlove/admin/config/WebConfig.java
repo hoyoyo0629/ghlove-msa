@@ -94,6 +94,9 @@ public class WebConfig implements WebMvcConfigurer {
                         // 기부금관리(14101) 메뉴권한이 없는 롤도 부르는 공통 조회라, 권한검사를 태우면 오프라인 담당자에게
                         // 권한없음 화면(HTML)이 돌아가 시군구가 전부 undefined가 된다.
                         "/give-state/options-by-locgovCode",
+                        // 카테고리 select 옵션 조각(AS-IS 프론트 /categories/options·options-by-groupid) - 답례품관리 목록 등의 그룹→1~4차 연동 select가
+                        // 부른다. 프론트 경로라 관리자 메뉴 권한과 무관하게 열려 있다(16101 카테고리관리 권한이 없는 지자체 담당자도 쓴다).
+                        "/categories/options", "/categories/options-by-groupid",
                         // 개인정보 암호화 솔루션 설치 확인 페이지(AS-IS /offgive/pdbtest).
                         "/offgive/pdbtest",
 

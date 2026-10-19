@@ -2573,7 +2573,7 @@ SELECT setval('op_wishlist_wishlist_id_seq', 1004);
 -- only the columns you need" approach used for OP_USER/G_CNTR in the other
 -- services) rather than inventing a parallel table, but only maps/populates
 -- a small subset of columns relevant to 답례품 관리. DATA_STATUS_CODE is
--- repurposed here as the 지자체 승인 workflow status (PENDING/APPROVED/
+-- repurposed here as the 지자체 승인 workflow status (AS-IS 숫자코드: 20:승인대기 1:승인 21:반려 90:판매중지 99:폐지; 2026-10-16 이전엔 PENDING/APPROVED/
 -- REJECTED/STOPPED), sourced from OP_COMMON_CODE like everywhere else.
 -- OP_CATEGORY (also ~40 SEO-heavy legacy columns) is likewise not reused -
 -- 행안부 표준 카테고리 is modeled as a plain OP_COMMON_CODE list instead,
@@ -2604,10 +2604,10 @@ INSERT INTO OP_COMMON_CODE (CODE_TYPE, CODE_LANGUAGE, ID, LABEL, ORDERING, USE_Y
 ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
 
 INSERT INTO OP_COMMON_CODE (CODE_TYPE, CODE_LANGUAGE, ID, LABEL, ORDERING, USE_YN) VALUES
-('GIFT_STATUS', 'ko', 'PENDING',  '승인대기', 1, 'Y'),
-('GIFT_STATUS', 'ko', 'APPROVED', '승인',     2, 'Y'),
-('GIFT_STATUS', 'ko', 'REJECTED', '반려',     3, 'Y'),
-('GIFT_STATUS', 'ko', 'STOPPED',  '판매중지', 4, 'Y')
+('GIFT_STATUS', 'ko', '20', '승인대기', 1, 'Y'),
+('GIFT_STATUS', 'ko', '1',  '승인',     2, 'Y'),
+('GIFT_STATUS', 'ko', '21', '반려',     3, 'Y'),
+('GIFT_STATUS', 'ko', '90', '판매중지', 4, 'Y')
 ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
 
 -- New column: OP_ITEM has no single category-code column in the AS-IS schema
@@ -2631,10 +2631,10 @@ ALTER SEQUENCE op_item_item_id_seq OWNED BY OP_ITEM.ITEM_ID;
 INSERT INTO OP_ITEM (SELLER_ID, ITEM_NAME, ITEM_SUMMARY, DETAIL_CONTENT, CATEGORY_CODE, LOCGOV_CODE,
                       SALE_PRICE, STOCK_QUANTITY, SOLD_OUT, DISPLAY_FLAG, DATA_STATUS_CODE, CREATED_DATE)
 SELECT * FROM (VALUES
-    (9001::BIGINT, '강남구 한우 선물세트', '1++등급 한우 등심 선물세트 1kg', '엄선된 강남구 인증 한우입니다.', 'AGRI', '11230', 80000, 50, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
-    (9002::BIGINT, '해운대 건어물 세트', '멸치, 오징어채 등 건어물 모음', '해운대 앞바다에서 잡은 건어물입니다.', 'SEAFOOD', '26350', 35000, 30, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
-    (9003::BIGINT, '순천 지역사랑상품권 3만원권', '순천시 지역사랑상품권', '순천시 가맹점에서 사용 가능한 상품권입니다.', 'VOUCHER', '46150', 30000, 0, '1', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
-    (9004::BIGINT, '제주 감귤 생활용품 세트', '검수 전 신규 등록 상품', '제주 감귤로 만든 천연 비누 세트입니다.', 'LIVING', '50000', 25000, 100, '0', 'N', 'PENDING', to_char(now(), 'YYYYMMDDHH24MISS'))
+    (9001::BIGINT, '강남구 한우 선물세트', '1++등급 한우 등심 선물세트 1kg', '엄선된 강남구 인증 한우입니다.', 'AGRI', '11230', 80000, 50, '0', 'Y', '1', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9002::BIGINT, '해운대 건어물 세트', '멸치, 오징어채 등 건어물 모음', '해운대 앞바다에서 잡은 건어물입니다.', 'SEAFOOD', '26350', 35000, 30, '0', 'Y', '1', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9003::BIGINT, '순천 지역사랑상품권 3만원권', '순천시 지역사랑상품권', '순천시 가맹점에서 사용 가능한 상품권입니다.', 'VOUCHER', '46150', 30000, 0, '1', 'Y', '1', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9004::BIGINT, '제주 감귤 생활용품 세트', '검수 전 신규 등록 상품', '제주 감귤로 만든 천연 비누 세트입니다.', 'LIVING', '50000', 25000, 100, '0', 'N', '20', to_char(now(), 'YYYYMMDDHH24MISS'))
 ) AS seed(seller_id, item_name, item_summary, detail_content, category_code, locgov_code, sale_price, stock_quantity, sold_out, display_flag, data_status_code, created_date)
 WHERE NOT EXISTS (SELECT 1 FROM OP_ITEM);
 
@@ -2768,7 +2768,7 @@ ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
 ALTER TABLE OP_ITEM ALTER COLUMN DATA_STATUS_CODE TYPE VARCHAR(20);
 
 INSERT INTO OP_COMMON_CODE (CODE_TYPE, CODE_LANGUAGE, ID, LABEL, ORDERING, USE_YN) VALUES
-('GIFT_STATUS', 'ko', 'DISCONTINUED', '폐지', 5, 'Y')
+('GIFT_STATUS', 'ko', '99', '폐지', 5, 'Y')
 ON CONFLICT (CODE_TYPE, CODE_LANGUAGE, ID) DO NOTHING;
 
 -- 썸네일 자동생성(소/중/대 3종, 비동기) - 원본 이미지명은 그대로 두고 리사이즈된
@@ -2974,17 +2974,17 @@ ALTER SEQUENCE op_brand_brand_id_seq OWNED BY OP_BRAND.BRAND_ID;
 INSERT INTO OP_ITEM (SELLER_ID, ITEM_NAME, ITEM_SUMMARY, DETAIL_CONTENT, CATEGORY_CODE, LOCGOV_CODE,
                       SALE_PRICE, STOCK_QUANTITY, SOLD_OUT, DISPLAY_FLAG, DATA_STATUS_CODE, CREATED_DATE)
 SELECT * FROM (VALUES
-    (9005::BIGINT, '횡성한우 등심 선물세트', '1등급 이상 횡성한우 등심 1kg', '횡성군 인증 한우 브랜드입니다.', 'AGRI', '51730', 120000, 40, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
-    (9006::BIGINT, '청송 사과 선물세트', '당도 높은 청송 부사 사과 5kg', '해발 높은 청송에서 재배한 사과입니다.', 'AGRI', '47750', 45000, 60, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
-    (9007::BIGINT, '나주 배 선물세트', '과즙 가득한 나주 신고배 5kg', '나주시 특산 신고배입니다.', 'AGRI', '12170', 40000, 55, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
-    (9008::BIGINT, '보성 녹차 선물세트', '보성 다원 녹차잎으로 만든 프리미엄 녹차 세트', '보성 다원에서 재배한 녹차입니다.', 'PROCESSED', '12750', 38000, 70, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
-    (9009::BIGINT, '완도 전복 세트', '싱싱한 완도산 전복 1kg', '청정 완도 해역에서 양식한 전복입니다.', 'SEAFOOD', '12850', 90000, 25, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
-    (9010::BIGINT, '논산 딸기 세트', '달콤한 논산 설향 딸기 2kg', '논산시 특산 설향 딸기입니다.', 'AGRI', '44230', 32000, 45, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
-    (9011::BIGINT, '부여 밤 선물세트', '알이 굵은 부여 햇밤 3kg', '부여군에서 수확한 햇밤입니다.', 'AGRI', '44760', 28000, 50, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
-    (9012::BIGINT, '상주 곶감 세트', '자연건조로 만든 상주 곶감 30입', '상주시 특산 곶감입니다.', 'AGRI', '47250', 42000, 35, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
-    (9013::BIGINT, '고창 복분자즙 세트', '고창 복분자로 만든 건강즙 30포', '고창군 특산 복분자로 만들었습니다.', 'PROCESSED', '52790', 35000, 65, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
-    (9014::BIGINT, '강진 청자 머그컵 세트', '강진 청자 장인이 만든 머그컵 2p 세트', '강진 청자 도예가가 직접 제작했습니다.', 'LIVING', '12780', 48000, 20, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS')),
-    (9015::BIGINT, '제주 지역사랑상품권 5만원권', '제주 가맹점 사용 가능 상품권', '제주도 가맹점에서 사용 가능한 상품권입니다.', 'VOUCHER', '50000', 30000, 80, '0', 'Y', 'APPROVED', to_char(now(), 'YYYYMMDDHH24MISS'))
+    (9005::BIGINT, '횡성한우 등심 선물세트', '1등급 이상 횡성한우 등심 1kg', '횡성군 인증 한우 브랜드입니다.', 'AGRI', '51730', 120000, 40, '0', 'Y', '1', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9006::BIGINT, '청송 사과 선물세트', '당도 높은 청송 부사 사과 5kg', '해발 높은 청송에서 재배한 사과입니다.', 'AGRI', '47750', 45000, 60, '0', 'Y', '1', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9007::BIGINT, '나주 배 선물세트', '과즙 가득한 나주 신고배 5kg', '나주시 특산 신고배입니다.', 'AGRI', '12170', 40000, 55, '0', 'Y', '1', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9008::BIGINT, '보성 녹차 선물세트', '보성 다원 녹차잎으로 만든 프리미엄 녹차 세트', '보성 다원에서 재배한 녹차입니다.', 'PROCESSED', '12750', 38000, 70, '0', 'Y', '1', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9009::BIGINT, '완도 전복 세트', '싱싱한 완도산 전복 1kg', '청정 완도 해역에서 양식한 전복입니다.', 'SEAFOOD', '12850', 90000, 25, '0', 'Y', '1', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9010::BIGINT, '논산 딸기 세트', '달콤한 논산 설향 딸기 2kg', '논산시 특산 설향 딸기입니다.', 'AGRI', '44230', 32000, 45, '0', 'Y', '1', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9011::BIGINT, '부여 밤 선물세트', '알이 굵은 부여 햇밤 3kg', '부여군에서 수확한 햇밤입니다.', 'AGRI', '44760', 28000, 50, '0', 'Y', '1', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9012::BIGINT, '상주 곶감 세트', '자연건조로 만든 상주 곶감 30입', '상주시 특산 곶감입니다.', 'AGRI', '47250', 42000, 35, '0', 'Y', '1', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9013::BIGINT, '고창 복분자즙 세트', '고창 복분자로 만든 건강즙 30포', '고창군 특산 복분자로 만들었습니다.', 'PROCESSED', '52790', 35000, 65, '0', 'Y', '1', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9014::BIGINT, '강진 청자 머그컵 세트', '강진 청자 장인이 만든 머그컵 2p 세트', '강진 청자 도예가가 직접 제작했습니다.', 'LIVING', '12780', 48000, 20, '0', 'Y', '1', to_char(now(), 'YYYYMMDDHH24MISS')),
+    (9015::BIGINT, '제주 지역사랑상품권 5만원권', '제주 가맹점 사용 가능 상품권', '제주도 가맹점에서 사용 가능한 상품권입니다.', 'VOUCHER', '50000', 30000, 80, '0', 'Y', '1', to_char(now(), 'YYYYMMDDHH24MISS'))
 ) AS seed(seller_id, item_name, item_summary, detail_content, category_code, locgov_code, sale_price, stock_quantity, sold_out, display_flag, data_status_code, created_date)
 WHERE NOT EXISTS (SELECT 1 FROM OP_ITEM WHERE SELLER_ID = seed.seller_id);
 

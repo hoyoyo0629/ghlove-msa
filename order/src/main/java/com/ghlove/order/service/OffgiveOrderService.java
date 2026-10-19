@@ -48,7 +48,7 @@ public class OffgiveOrderService {
     /** AS-IS ORDER_STATUS '0' 입금대기 - 기부 수납완료 전의 오프라인 답례품 주문. */
     public static final String STATUS_WAITING_DEPOSIT = "WAITING_DEPOSIT";
 
-    private static final String STATUS_APPROVED = "APPROVED";
+    private static final String STATUS_APPROVED = "1";   // AS-IS OP_ITEM.DATA_STATUS_CODE 1:정상(2026-10-16부터 숫자코드)
     private static final String SOLD_OUT = "1";
     private static final String OFF_PROC_N = "N";
     private static final String OFF_PROC_Y = "Y";

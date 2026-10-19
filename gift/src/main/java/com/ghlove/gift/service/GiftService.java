@@ -43,11 +43,12 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GiftService {
 
-    private static final String STATUS_PENDING = "PENDING";
-    private static final String STATUS_APPROVED = "APPROVED";
-    private static final String STATUS_REJECTED = "REJECTED";
-    private static final String STATUS_STOPPED = "STOPPED";
-    private static final String STATUS_DISCONTINUED = "DISCONTINUED";
+    // 승인상태 - AS-IS OP_ITEM.DATA_STATUS_CODE 숫자코드 그대로(Gift.STATUS_*). 2026-10-16 이전엔 PENDING/APPROVED/REJECTED/STOPPED/DISCONTINUED 문자값이었다.
+    private static final String STATUS_PENDING = Gift.STATUS_PENDING;
+    private static final String STATUS_APPROVED = Gift.STATUS_APPROVED;
+    private static final String STATUS_REJECTED = Gift.STATUS_REJECTED;
+    private static final String STATUS_STOPPED = Gift.STATUS_STOPPED;
+    private static final String STATUS_DISCONTINUED = Gift.STATUS_DISCONTINUED;
     private static final String DISPLAY_TYPE_ALWAYS = "ALWAYS";
     private static final String DISPLAY_TYPE_LIMITED = "LIMITED";
     private static final String DISPLAY_ON = "Y";
@@ -1007,7 +1008,7 @@ public class GiftService {
 
     /**
      * 추가구성 자식 답례품(item_data_type=2)을 생성한다. 본품의 판매자/지자체/카테고리를 상속하고,
-     * 일반 답례품 목록·검색에는 뜨지 않게 displayFlag='N', 주문은 가능하게 dataStatusCode='APPROVED'로 둔다.
+     * 일반 답례품 목록·검색에는 뜨지 않게 displayFlag='N', 주문은 가능하게 dataStatusCode='1'(정상)로 둔다.
      */
     @Transactional
     public Gift createAdditionChild(Long parentItemId, String name, Integer price, Integer stockQuantity) {

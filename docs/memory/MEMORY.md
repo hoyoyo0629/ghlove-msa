@@ -149,3 +149,6 @@
 - [카테고리관리(16101) 이식](admin-categories-port.md) — OP_CATEGORY 1~4차 jsTree를 gift에 올림, 메뉴URL→/categories, ★PG 한글정렬은 collate "C"로 AS-IS와 맞춤, OP_ITEM_FILTER엔 category_id 없음, 한계: GNB는 gift_subcategory를 읽음. admin+gift 재기동 필요
 - [카테고리 그룹 관리(16102) 이식](admin-categories-team-group-port.md) — 대그룹+1차 그룹 목록/등록/수정/삭제/정렬, 메뉴URL→/categories-team-group, ★수정이 SEO NULL·비공개 1차 카테고리 그룹 0 처리(AS-IS 결함 그대로), 정렬저장은 tbody별 1부터. 테스트 로그인은 #op_username+idLogin()으로 바뀜. admin+gift 재기동 필요
 - [답례품제공자 관리(16151) 이식](admin-seller-manage-port.md) — 목록/등록/수정 + OP_SELLER_USER 계정 같이 저장(사용자 결정), 실데이터 9,229건 보류, BCrypt, shadow 로그인 미이식. migration-gift-seller-user-asis-columns.sql 적용 필요. admin+gift 재기동 필요
+- [대표배너관리(16251) 이식](admin-representative-banner-port.md) — G_REPRST_BANNER PROCESS_TYPE=ITEM, 지정기부 배너와 서비스 공유(일반화), 옛 /admin/main-banners 삭제, AS-IS 이미지 크기 맞춤 추가(지정기부에도 적용). 메뉴 migration 적용+admin 재기동 필요. ★uploads 폴더는 내가 만든 파일만 지울 것
+- [답례품관리(16301) 목록 이식](admin-item-manage-port.md) — 목록/일괄처리/삭제신청/변경사항팝업/대표·오프라인대표 실화면 검증 완료(2026-10-19). 상품코드 검색은 item_user_code가 전부 NULL이라 G2+9자리 계산식으로 고침. ★미이식: 엑셀 팝업(죽은 버튼)·업로드·등록/수정 폼(옛 TO-BE 폼으로 리다이렉트). 상태코드 숫자 전환 포함, gift/order/storefront/admin 재기동 필요
+- [admin 화면 실검증용 스페어 스택](spare-stack-needs-kafka-member-donation.md) — gift+donation+member+admin 스페어 4개, ★로컬 Kafka 없으면 gift 변경요청이 60초 블록돼 행잠금·커넥션풀 고갈, DB는 원격이라 docker run postgres 클라이언트, 실행 중 jar 덮어쓰기 금지

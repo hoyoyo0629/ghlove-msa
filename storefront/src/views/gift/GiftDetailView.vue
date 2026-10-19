@@ -447,12 +447,12 @@ async function likeReview(r) {
             <button v-if="!detail.restockRequested" type="button" class="formBtn" style="margin-left: 10px; padding: 2px 12px; font-size: 13px" @click="requestRestock">재입고 알림</button>
             <span v-else class="s-txt" style="margin-left: 10px; color: #1b6b3a">재입고 알림 신청됨</span>
           </div>
-          <div class="info_row warning" v-if="detail.gift.soldOut !== '1' && detail.gift.dataStatusCode !== 'APPROVED'">
+          <div class="info_row warning" v-if="detail.gift.soldOut !== '1' && detail.gift.dataStatusCode !== '1'">
             <img class="icon-img" src="/images/icon/donation-warning.png" alt="주의" />
             <span class="s-txt">현재 판매중지 상태인 답례품입니다.</span>
           </div>
 
-          <div class="buyBtn_box" v-if="detail.gift.dataStatusCode === 'APPROVED' && detail.gift.soldOut !== '1'">
+          <div class="buyBtn_box" v-if="detail.gift.dataStatusCode === '1' && detail.gift.soldOut !== '1'">
             <div class="btn_wrap">
               <button class="buyBtn addToCart" type="button" @click="addToCart">장바구니</button>
               <button class="buyBtn buyOrder" type="button" @click="buyNow">바로선택</button>

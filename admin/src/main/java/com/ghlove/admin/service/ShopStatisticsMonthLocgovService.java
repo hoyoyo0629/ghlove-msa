@@ -32,7 +32,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ShopStatisticsMonthLocgovService {
 
-    private static final String STATUS_APPROVED = "APPROVED";
+    private static final String STATUS_APPROVED = "1";   // AS-IS OP_ITEM.DATA_STATUS_CODE 1:정상
     private static final String DISPLAY_ON = "Y";
 
     /** AS-IS 표 헤더 노출 순서(합계 제외) - gift의 GIFT_CATEGORY 공통코드 ordering과도 같다. */

@@ -58,7 +58,7 @@ class OffgiveOrderServiceTest {
 
     private static GiftItemInfo gift(long itemId, int salePrice, int stock, String shippingType, int shipping,
                                      String mobileItemYn) {
-        return new GiftItemInfo(itemId, "답례품" + itemId, 9001L, salePrice, stock, "0", "APPROVED",
+        return new GiftItemInfo(itemId, "답례품" + itemId, 9001L, salePrice, stock, "0", "1",
                 "11230", null, "CJ", shippingType, shipping, null, null, null, "Y", mobileItemYn, null,
                 null, null, null, null, null);
     }

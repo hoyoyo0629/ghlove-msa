@@ -59,20 +59,20 @@ class CartServiceTest {
     // ==================== 픽스처 ====================
 
     private static GiftItemInfo gift(Long itemId, int salePrice, int stock, String locgovCode) {
-        return new GiftItemInfo(itemId, "답례품" + itemId, 100L, salePrice, stock, "0", "APPROVED",
+        return new GiftItemInfo(itemId, "답례품" + itemId, 100L, salePrice, stock, "0", "1",
                 locgovCode, "/uploads/" + itemId + ".jpg", "CJ", "1", 0, null, null, null, "Y", "N", null,
                 null, null, null, null, null);
     }
 
     /** 고정배송비(shippingType=6) 답례품 - 배송비 계산기가 shipping 값을 그대로 배송비로 잡는다. */
     private static GiftItemInfo giftFixed(Long itemId, int salePrice, int stock, String locgovCode, int fixedShipping) {
-        return new GiftItemInfo(itemId, "답례품" + itemId, 100L, salePrice, stock, "0", "APPROVED",
+        return new GiftItemInfo(itemId, "답례품" + itemId, 100L, salePrice, stock, "0", "1",
                 locgovCode, "/uploads/" + itemId + ".jpg", "CJ", "6", fixedShipping, null, null, null, "Y", "N", null,
                 null, null, null, null, null);
     }
 
     private static GiftItemInfo soldOut(Long itemId) {
-        return new GiftItemInfo(itemId, "품절품" + itemId, 100L, 1000, 0, "1", "APPROVED",
+        return new GiftItemInfo(itemId, "품절품" + itemId, 100L, 1000, 0, "1", "1",
                 LOCGOV_A, null, "CJ", "1", 0, null, null, null, "Y", "N", null,
                 null, null, null, null, null);
     }
@@ -297,7 +297,7 @@ class CartServiceTest {
         when(cartItemRepository.findByCartItemIdInAndUserIdOrderByCreatedDateDesc(List.of(10L), USER_ID))
                 .thenReturn(List.of(cartItem(10L, 1L, 2)));
         // 무료배송(type1) + 제주 추가배송비 3000 → 배송비 3000 (AS-IS Shipping.java: 무료도 제주/도서 추가는 붙음)
-        when(giftClient.fetch(1L)).thenReturn(new GiftItemInfo(1L, "답례품1", 100L, 1000, 10, "0", "APPROVED",
+        when(giftClient.fetch(1L)).thenReturn(new GiftItemInfo(1L, "답례품1", 100L, 1000, 10, "0", "1",
                 LOCGOV_A, null, "CJ", "1", 0, null, 3000, null, "Y", "N", null, null, null, null, null, null));
         when(couponService.previewDiscount(USER_ID, 500, 1L, 2000L, 2)).thenReturn(500L);
         when(orderService.islandTypeOf("63000")).thenReturn("JEJU");

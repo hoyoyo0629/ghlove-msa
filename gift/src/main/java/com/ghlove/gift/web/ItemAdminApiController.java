@@ -49,9 +49,8 @@ public class ItemAdminApiController {
      * 한 건을 찾아 붙이고(못 찾으면 changed_option=Y), 재고 1~9개인 건 뺀다(-1 무제한·0은 남긴다).
      * 남는 게 없으면 null(AS-IS와 같다).
      *
-     * <p>TO-BE 번역 두 가지: ① {@code load_image}는 AS-IS ShopUtils.loadImage 경로 대신 이
-     * 서비스의 대표이미지(/uploads/..) ② 승인상태는 화면이 AS-IS 코드("1")로 비교하므로
-     * APPROVED를 "1"로 바꿔 내려준다.
+     * <p>TO-BE 번역: {@code load_image}는 AS-IS ShopUtils.loadImage 경로 대신 이
+     * 서비스의 대표이미지(/uploads/..). 승인상태는 2026-10-16부터 TO-BE도 AS-IS 숫자코드("1")를 쓰므로 번역하지 않는다.
      */
     @GetMapping("/off-rprs")
     public List<Map<String, Object>> offRprs(@RequestParam("lclgv_cd") String lclgvCd) {
@@ -69,9 +68,6 @@ public class ItemAdminApiController {
             String option = (String) row.get("options");
             String thumbnail = thumbnails.get(((Number) row.get("gds_id")).longValue());
             row.put("load_image", thumbnail != null ? "/uploads/" + thumbnail : "");
-            if ("APPROVED".equals(row.get("data_status_code"))) {
-                row.put("data_status_code", "1");
-            }
             // AS-IS OP_ITEM.ITEM_OPTION_FLAG는 항상 Y/N인데 TO-BE는 옵션을 저장한 적 없는 상품이 NULL이다.
             // 화면 JS가 'N'일 때만 상품 재고로 최대주문수량을 그리므로(아니면 옵션 재고), NULL = 옵션 없음(N).
             if (row.get("item_option_flag") == null) {

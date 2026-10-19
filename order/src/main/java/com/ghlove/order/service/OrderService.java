@@ -115,7 +115,7 @@ public class OrderService {
         }
 
         Long itemId = gift.itemId();
-        if (!"APPROVED".equals(gift.dataStatusCode())) {
+        if (!"1".equals(gift.dataStatusCode())) {
             throw new OrderException("현재 주문할 수 없는 답례품입니다.");
         }
         if (gift.stockQuantity() == null || gift.stockQuantity() < quantity) {

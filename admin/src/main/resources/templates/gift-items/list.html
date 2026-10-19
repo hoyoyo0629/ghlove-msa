@@ -42,11 +42,11 @@
         </select>
         <select name="dataStatusCode">
             <option value="">전체 상태</option>
-            <option value="PENDING" th:selected="${dataStatusCode == 'PENDING'}">승인대기</option>
-            <option value="APPROVED" th:selected="${dataStatusCode == 'APPROVED'}">승인됨</option>
-            <option value="REJECTED" th:selected="${dataStatusCode == 'REJECTED'}">반려됨</option>
-            <option value="STOPPED" th:selected="${dataStatusCode == 'STOPPED'}">판매중지</option>
-            <option value="DISCONTINUED" th:selected="${dataStatusCode == 'DISCONTINUED'}">폐지</option>
+            <option value="20" th:selected="${dataStatusCode == '20'}">승인대기</option>
+            <option value="1" th:selected="${dataStatusCode == '1'}">승인됨</option>
+            <option value="21" th:selected="${dataStatusCode == '21'}">반려됨</option>
+            <option value="90" th:selected="${dataStatusCode == '90'}">판매중지</option>
+            <option value="99" th:selected="${dataStatusCode == '99'}">폐지</option>
         </select>
         <button type="submit" class="small-btn">검색</button>
         <a class="btn" style="float:right;" th:href="@{/admin/gift-items/new}">+ 답례품 직접 등록</a>
@@ -105,11 +105,11 @@
                 <td th:text="${#numbers.formatInteger(it.salePrice(), 0, 'COMMA')} + '원'"></td>
                 <td th:text="${it.stockQuantity()}"></td>
                 <td th:switch="${it.dataStatusCode()}">
-                    <span th:case="'PENDING'">승인대기</span>
-                    <span th:case="'APPROVED'">승인됨</span>
-                    <span th:case="'REJECTED'">반려됨</span>
-                    <span th:case="'STOPPED'">판매중지</span>
-                    <span th:case="'DISCONTINUED'">폐지</span>
+                    <span th:case="'20'">승인대기</span>
+                    <span th:case="'1'">승인됨</span>
+                    <span th:case="'21'">반려됨</span>
+                    <span th:case="'90'">판매중지</span>
+                    <span th:case="'99'">폐지</span>
                     <span th:case="*" th:text="${it.dataStatusCode()}"></span>
                 </td>
                 <td th:text="${it.displayFlag()} == 'Y' ? '노출' : '비노출'"></td>
@@ -127,7 +127,7 @@
                           onsubmit="return confirm('이 답례품을 복사하시겠습니까? 복사본은 승인대기 상태로 생성됩니다.')">
                         <button type="submit" class="small-btn">복사</button>
                     </form>
-                    <span th:if="${it.dataStatusCode() == 'PENDING'}">
+                    <span th:if="${it.dataStatusCode() == '20'}">
                         <form class="inline-form" style="display:inline;" th:action="@{/admin/gift-items/{id}/approve(id=${it.itemId()})}" method="post">
                             <button type="submit" class="small-btn">승인</button>
                         </form>

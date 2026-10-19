@@ -118,7 +118,7 @@ Manager.userDetails = function(userId) {
 
 
 Manager.itemLog = function(itemId) {
-    Common.popup('/opmanager/item/popup/log/' + itemId, "item-log", 1528, 750, 1, 0, 0);
+    Common.popup('/item/popup/log/' + itemId, "item-log", 1528, 750, 1, 0, 0);
 };
 
 Manager.sellerItemLog = function(itemId) {

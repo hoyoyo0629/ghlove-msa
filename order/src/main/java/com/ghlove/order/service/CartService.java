@@ -41,7 +41,7 @@ import java.util.Set;
 @Slf4j
 public class CartService {
 
-    private static final String STATUS_APPROVED = "APPROVED";
+    private static final String STATUS_APPROVED = "1";   // AS-IS OP_ITEM.DATA_STATUS_CODE 1:정상(2026-10-16부터 숫자코드)
     private static final String SOLD_OUT = "1";
 
     /** 한 답례품을 장바구니에 담을 수 있는 최대 수량 - 재고와 별개로 명백한 오입력을 막는 상한. */

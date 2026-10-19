@@ -58,7 +58,7 @@ public class GiftMyApiController {
         var rows = wishlist.stream().map(w -> {
             Gift g = w.gift();
             return new WishlistRowDto(w.wishlistId(), g.getItemId(), g.getItemName(), g.getSalePrice(),
-                    "1".equals(g.getSoldOut()), "APPROVED".equals(g.getDataStatusCode()), g.getLocgovCode(),
+                    "1".equals(g.getSoldOut()), Gift.STATUS_APPROVED.equals(g.getDataStatusCode()), g.getLocgovCode(),
                     locgovNames.get(g.getLocgovCode()), thumbnails.get(g.getItemId()));
         }).toList();
         return ResponseEntity.ok(rows);

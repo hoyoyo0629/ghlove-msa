@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>변경내역조회 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<!-- AS-IS layouts/opmanager/layout_log.jsp + opmanager/i18n/item/popup/log-list.jsp 이식 - 답례품 목록의 [변경사항 보기] 팝업(1528x750).
+     등록/수정자는 처리 위치가 관리자면 관리자 아이디(이름), 판매자면 판매자 아이디(이름)이다(AS-IS 그대로). -->
+<body>
+<div class="popup_wrap" style="min-width:1080px;">
+	<div id="pop_header">
+		<h1 class="popup_title">변경내역조회</h1>
+		<a href="javascript:self.close();" class="btn_close"><img src="/content/opmanager/images/btn/btn_close.png" alt="닫기"></a>
+	</div>
+	<div class="popup_contents02">
+
+<style>
+	.popup_contents02 {
+		width:1500px !important;
+		padding-right:7px;
+	}
+</style>
+
+<div class="popup_contents02">
+	<form method="post" id="listForm">
+		<input type="hidden" name="userId" value="" />
+		<div class="count_title">
+			<h5>
+					<th:block th:text="${msg.get('M00045')}">전체</th:block> <th:block th:text="${#numbers.formatInteger(pagination.totalItems, 1, 'COMMA')}">0</th:block> <th:block th:text="${msg.get('M00272')}">건 조회</th:block>
+			</h5>
+		</div>
+		<div class="board_write">
+			<table class="board_list_table">
+				<colgroup>
+	                <col style="width:50px;">
+	                <col style="width:400px;">
+	                <col style="width:100px;">
+	                <col style="width:150px;">
+	                <col style="width:200px;">
+	                <col style="width:200px;">
+	                <col style="width:150px;">
+	                <col style="width:150px;">
+				</colgroup>
+				<thead>
+					<tr>
+						<th scope="col">No</th>
+						<th scope="col">답례품명(답례품번호)</th>
+						<!-- <th scope="col">판매자</th> -->
+						<th scope="col">공개유무</th>
+						<th scope="col">품절여부</th>
+						<!-- <th scope="col">정가</th> -->
+						<th scope="col">판매가</th>
+						<!-- <th scope="col">공급가 설정</th> -->
+ 					<!-- <th scope="col">등록/수정위치</th> -->
+ 					<th scope="col">등록/수정자</th>
+ 					<th scope="col">처리 구분</th>
+ 					<th scope="col">등록/수정일</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="v, i : ${list}" th:with="item=${v.log}">
+						<td>
+							<th:block th:text="${pagination.itemNumber - i.count}">1</th:block>
+						</td>
+						<td class="text-left">
+							<th:block th:text="${item.itemName}"></th:block>
+							<br/>
+							(<th:block th:text="${item.itemUserCode}"></th:block>)
+						</td>
+						<td class="hidden">
+							<th:block th:text="${item.sellerName}"></th:block>
+						</td>
+						<td>
+							<th:block th:if="${item.displayFlag == 'Y'}">공개</th:block>
+							<th:block th:if="${item.displayFlag == 'N'}">비공개</th:block>
+							<th:block th:if="${item.displayFlag != 'Y' and item.displayFlag != 'N'}">-</th:block>
+						</td>
+						<td>
+							<th:block th:if="${item.soldOut == '0'}">판매가능</th:block>
+							<th:block th:if="${item.soldOut == '1'}">재고품절</th:block>
+							<th:block th:if="${item.soldOut != '0' and item.soldOut != '1'}">-</th:block>
+						</td>
+						<td>
+							<th:block th:text="${item.salePrice != null} ? ${#numbers.formatInteger(item.salePrice, 1, 'COMMA')} : ''"></th:block>
+						</td>
+						<td>
+							<th:block th:if="${item.processPage == 'manager'}"><th:block th:text="${v.managerLoginId}"></th:block> (<th:block th:text="${v.userName}"></th:block>)</th:block>
+							<th:block th:if="${item.processPage == 'seller'}"><th:block th:text="${item.sellerLoginId}"></th:block> (<th:block th:text="${item.sellerName}"></th:block>)</th:block>
+							<th:block th:if="${item.processPage != 'manager' and item.processPage != 'seller'}">-</th:block>
+						</td>
+						<td>
+							<th:block th:switch="${item.actionType}">
+								<th:block th:case="'insert'">등록</th:block>
+								<th:block th:case="'update'">수정</th:block>
+								<th:block th:case="'delete'">삭제대기</th:block>
+								<th:block th:case="'approval'">승인</th:block>
+								<th:block th:case="'insert-by-excel'">엑셀등록</th:block>
+								<th:block th:case="'apply-reg-by-excel'">엑셀등록신청</th:block>
+								<th:block th:case="'update-by-excel'">엑셀수정</th:block>
+								<th:block th:case="'apply-mod-by-excel'">엑셀수정신청</th:block>
+								<th:block th:case="*" th:text="${item.actionType}"></th:block>
+							</th:block>
+						</td>
+						<td><th:block th:text="${@opDate.ymdHms(item.createdDate)}"></th:block></td>
+					</tr>
+					<tr class="no_content" th:if="${#lists.isEmpty(list)}">
+						<td colspan="13">변경사항 내역이 없습니다.</td>
+					</tr>
+				</tbody>
+			</table>
+		</div> <!-- // board_write -->
+	</form>
+	<div class="pagination-wrap">
+		<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+	</div>
+    <p class="popup_btns">
+        <button type="button" class="btn btn-active" onclick="javascript:self.close();">확인</button>
+    </p>
+</div>
+
+	</div>
+</div>
+
+<script type="text/javascript" th:inline="none">
+    function pageChange() {
+        location.href="/item/popup/log/" + location.pathname.split('/').pop();
+    }
+</script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 package com.ghlove.gift.service;
 
+import com.ghlove.gift.domain.Gift;
 import com.ghlove.gift.domain.Seller;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +13,7 @@ import java.util.List;
  * AS-IS {@code main-mapper.xml}의 {@code opmanageMainAmountGiftA}(품절 아님) + {@code opmanageMainAmountGiftB}(품절)
  * 합계와 {@code opamanagerMainGift} 포팅.
  *
- * <p>판매자 사용 {@code STATUS_CODE '2'}는 AS-IS 값 그대로({@link Seller#STATUS_ACTIVE}). 코드 치환: 답례품 승인 AS-IS {@code DATA_STATUS_CODE '1'} → {@code 'APPROVED'}. AS-IS는 판매자의 지자체코드가 있어야 세는데
+ * <p>판매자 사용 {@code STATUS_CODE '2'}는 AS-IS 값 그대로({@link Seller#STATUS_ACTIVE}). 코드 치환: 답례품 승인 {@code DATA_STATUS_CODE '1'}(AS-IS 숫자코드 그대로, {@link Gift#STATUS_APPROVED}). AS-IS는 판매자의 지자체코드가 있어야 세는데
  * TO-BE 판매자에는 그 값이 없고 답례품이 직접 지자체코드를 가져서 답례품의 것을 본다(답례품 선호도와 같은 방식).
  * 등록일 조건은 AS-IS 그대로 문자열 비교 {@code created_date(yyyyMMddHHmmss) <= 기부일자(yyyyMMdd)} - 그래서 기부일자
  * 당일 등록분은 들어가지 않는다(AS-IS 동작).
@@ -21,7 +22,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminDashboardService {
 
-    private static final String ITEM_APPROVED = "APPROVED";
+    private static final String ITEM_APPROVED = Gift.STATUS_APPROVED;
 
     /** 품절 판정 - AS-IS GiftA의 CASE 식(품절이면 'Y'). */
     private static final String SOLD_OUT_CASE = """

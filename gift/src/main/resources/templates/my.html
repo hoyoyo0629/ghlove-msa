@@ -45,15 +45,15 @@
             <td th:text="${g.stockQuantity}"></td>
             <td th:text="${statusLabels.get(g.dataStatusCode)} ?: ${g.dataStatusCode}"></td>
             <td>
-                <a th:if="${g.dataStatusCode != 'DISCONTINUED'}" th:href="@{'/gifts/' + ${g.itemId} + '/edit'}" class="small-btn ghost">수정</a>
+                <a th:if="${g.dataStatusCode != '99'}" th:href="@{'/gifts/' + ${g.itemId} + '/edit'}" class="small-btn ghost">수정</a>
                 <form th:action="@{'/gifts/' + ${g.itemId} + '/stock'}" method="post" class="inline-form">
                     <input type="number" name="quantity" min="0" placeholder="재고" required>
                     <button type="submit" class="small-btn">재고 조정</button>
                 </form>
-                <form th:if="${g.dataStatusCode == 'APPROVED'}" th:action="@{'/gifts/' + ${g.itemId} + '/stop'}" method="post" class="inline-form" style="margin-top:4px;">
+                <form th:if="${g.dataStatusCode == '1'}" th:action="@{'/gifts/' + ${g.itemId} + '/stop'}" method="post" class="inline-form" style="margin-top:4px;">
                     <button type="submit" class="small-btn danger">판매중지</button>
                 </form>
-                <form th:if="${g.dataStatusCode != 'DISCONTINUED'}" th:action="@{'/gifts/' + ${g.itemId} + '/discontinue'}" method="post" class="inline-form" style="margin-top:4px;" onsubmit="return confirm('영구적으로 폐지합니다. 계속할까요?')">
+                <form th:if="${g.dataStatusCode != '99'}" th:action="@{'/gifts/' + ${g.itemId} + '/discontinue'}" method="post" class="inline-form" style="margin-top:4px;" onsubmit="return confirm('영구적으로 폐지합니다. 계속할까요?')">
                     <button type="submit" class="small-btn danger">폐지</button>
                 </form>
             </td>

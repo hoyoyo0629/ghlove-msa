@@ -8,10 +8,14 @@ import lombok.Setter;
 /**
  * 답례품. Maps a subset of the AS-IS OP_ITEM columns (a ~150-column generic
  * legacy shopping-mall product table) - only the columns this service
- * actually populates/reads. DATA_STATUS_CODE doubles as the 지자체 승인
- * workflow status (PENDING/APPROVED/REJECTED/STOPPED, see OP_COMMON_CODE
- * GIFT_STATUS) since the AS-IS schema has no dedicated approval-status
- * column. CATEGORY_CODE is a new column (added in the MVP DDL migration)
+ * actually populates/reads. DATA_STATUS_CODE is the AS-IS numeric status
+ * ({@link #STATUS_APPROVED 1:정상}, {@link #STATUS_PENDING 20:등록신청(승인대기)},
+ * {@link #STATUS_REJECTED 21:등록반려}, {@link #STATUS_STOPPED 90:판매종료},
+ * {@link #STATUS_DISCONTINUED 99:삭제}; AS-IS는 그 밖에 0:임시등록(이관), 30/31 수정신청·반려,
+ * 40/41 삭제신청·반려도 쓴다 - see OP_COMMON_CODE GIFT_STATUS). 2026-10-16 이전엔 이 칸에
+ * TO-BE가 지은 문자값(PENDING/APPROVED/REJECTED/STOPPED/DISCONTINUED)을 넣어 AS-IS
+ * 코드와 충돌했다 - 답례품관리 목록 이식 때 숫자코드로 전환했다.
+ * CATEGORY_CODE is a new column (added in the MVP DDL migration)
  * since OP_ITEM's own categorization goes through tables this service
  * doesn't use.
  */
@@ -21,6 +25,19 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class Gift {
+
+    /** 0:임시등록(AS-IS 이관 상품) - TO-BE는 만들지 않지만 AS-IS 목록 조건(ITEM_LIST_MIG)이 이 값을 본다. */
+    public static final String STATUS_MIGRATED = "0";
+    /** 1:정상 - 승인되어 판매 가능한 상태. */
+    public static final String STATUS_APPROVED = "1";
+    /** 20:등록신청 - 지자체 승인 대기. */
+    public static final String STATUS_PENDING = "20";
+    /** 21:등록반려. */
+    public static final String STATUS_REJECTED = "21";
+    /** 90:판매종료 - AS-IS 상세에서 다시 판매로 되돌릴 수 있다. */
+    public static final String STATUS_STOPPED = "90";
+    /** 99:삭제. */
+    public static final String STATUS_DISCONTINUED = "99";
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "itemIdSeq")

@@ -196,7 +196,7 @@
 								<td th:if="${adminRole == 'SYS'}"><div th:text="${locgovNames.get(seller.locgovCode)}"></div></td>
                                 <td>
                                     <div class="flex_box juc-center gap-08">
-                                    	<a th:href="@{/admin/gift-items(sellerId=${seller.sellerId}, searchStartDate='20221001', searchEndDate=${#temporals.format(#temporals.createToday(), 'yyyyMMdd')})}" class="btn btn-default btn-sm">보기</a>
+                                    	<a th:href="@{/item/list(sellerId=${seller.sellerId}, searchStartDate='20221001', searchEndDate=${#temporals.format(#temporals.createToday(), 'yyyyMMdd')})}" class="btn btn-default btn-sm">보기</a>
                                     </div>
                                 </td>
 								<td>
