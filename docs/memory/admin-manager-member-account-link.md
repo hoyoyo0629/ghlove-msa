@@ -34,7 +34,7 @@ locgovtest2·hoyoyo0629은 회원·관리자 비번이 서로 다른 채 남아 
 **로컬 Kong**: CUBRID 매니저가 8001을 써서 컨테이너를 `-p 8000:8000 -p 18001:8001`로 재생성(옛 경로 마운트 오류도 해소),
 admin은 `admin/config/application.yml`(git 제외, .git/info/exclude)로 `ghlove.kong.admin-url=http://localhost:18001` 덮어씀.
 
-관련 [[admin-login-asis-parity-2026-10-14]], [[admin-pwtest-manager-accounts]].
+관련 [[admin-port-progress]](원장: docs/as-is-parity.md 22절 admin-login-asis-parity-2026-10-14), [[tooling-and-local-env]].
 
 **2026-10-15 후속**: ①운영관리자(4501) 수정이 이름·이메일을 null로 덮어쓰던 버그 수정(AS-IS updatePersonInCharge는 안 건드림, guest01 복구). ②회원정보수정(ProfileView)에 AS-IS [본인인증] 버튼·"미완료" 문구·비밀번호변경 차단 이식 - 로컬은 `POST /api/profile/mobile-auth/test-bypass`(dev bypass 설정 켜졌을 때만 TEST-CI-아이디). 관리자 로그인 EMPTY_CI가 보내는 화면이라 막다른 길이었음. 로컬 가입("본인인증 없이 진행")한 회원은 CI가 없어 관리자 로그인 시 이 화면으로 감(AS-IS 흐름 그대로).
 ③가입 화면 "본인인증 없이 진행(테스트용)"도 이제 dev bypass 설정일 때 TEST-CI-아이디/TEST-DI-아이디를 넣는다(MemberService.signup) - 그 전 로컬 가입 계정(guest03 등)은 CI 없음, 회원정보수정 [본인인증]으로 채움.

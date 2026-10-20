@@ -44,7 +44,7 @@ TO-BE에 **아예 없어서** 버튼 세 개가 전부 오류였다. 메뉴 트�
 **How to apply - 화면 1개당 고정절차:**
 0. **메뉴 위치 확인(2026-10-08 추가)** - 코드만 보고 바로 들어가지 말고 `asis_dump.op_menu`로
    진짜 menu_id/부모/display_flag/status_code를 먼저 확인한다. 상위 체인이 비활성이면
-   기능은 만들되 네비게이션은 발명하지 않는다. 자세한 사고 경위: [[verify-menu-location-before-building]]
+   기능은 만들되 네비게이션은 발명하지 않는다. 자세한 사고 경위: [[asis-porting-principles]]
 1. **원본 확정 3종**: `.../opmanager/i18n/<영역>/<화면>.jsp` + `saleson/shop/<영역>/*ManagerController.java`
    + **`saleson/shop/<영역>/*ServiceImpl.java`** + `sqlmapper/cubrid/<영역>-mapper.xml`
 2. **로직**: 컨트롤러 메서드·파라미터명·검증·롤 스코프 분기·매퍼 SQL 컬럼까지 1:1 대조. 누락 0.
@@ -54,7 +54,7 @@ TO-BE에 **아예 없어서** 버튼 세 개가 전부 오류였다. 메뉴 트�
    문자·메일 발송, 이력 적재)를 체크리스트로 확인한다
 3. **마크업**: JSP의 div/table/colgroup/thead 구조·class·id·summary·caption을 **그대로** 옮긴다. `<c:forEach>`→`th:each`, `${}`→`th:text`만 치환
 4. **클래스**: `opmanager.css`·`bootstrap.css`에 정의된 것만. 새 클래스 발명 금지 - 필요하면 AS-IS에서 찾아라
-5. **문구**: `${op:message('M00730')}` → `${msg.get('M00730')}` ([[asis-message-catalog-loaded]]). 한글 직접 입력 금지
+5. **문구**: `${op:message('M00730')}` → `${msg.get('M00730')}` ([[asis-sources-and-data]]). 한글 직접 입력 금지
 6. **스크립트**: AS-IS `<script>` verbatim (`Common.updateListData`, `Message.get`, `page:pagination-manager` 마크업까지)
 7. **검증**: `scratchpad/class_audit.js`로 정의 없는 클래스 0 확인. `opmanager`(html 마커)와 AS-IS가 JS 셀렉터로 쓰는 클래스(`<tr class="content">`)는 정상 예외
 
@@ -65,11 +65,11 @@ TO-BE에 **아예 없어서** 버튼 세 개가 전부 오류였다. 메뉴 트�
   싣던 **컨트롤러 22개/53곳 + 템플릿 36개를 전수 전환**했다 - 새 화면에서 쿼리로 붙이지 말 것
 - `web/support/Pagination.java` + `fragments/pagination.html :: manager(${pagination})` = AS-IS `WEB-INF/tags/page/pagination-manager.tag` verbatim. `itemNumber = totalItems - (currentPage-1)*itemsPerPage + 1`(JSP 131곳 전부 `itemNumber - i.count` 형태), 기본 10건/페이지, 번호창 10개 단위. `.pagination`은 opmanager.css:629-645에 정의됨
 - `fragments/smarteditor.html :: init` / `:: editor('content')` = AS-IS `tags/modules/smarteditorInit.tag`·`smarteditor.tag` verbatim. 자산은 `/content/modules/smarteditor2_3_10`에 이미 있음
-- `${msg.get('코드')}` = `${op:message()}` ([[asis-message-catalog-loaded]])
+- `${msg.get('코드')}` = `${op:message()}` ([[asis-sources-and-data]])
 - 선택삭제는 AS-IS `Common.updateListData(url, Message.get("M00306"))` 그대로 + 서버는 `@RequestParam("id") List<Integer>` 받아 `{isSuccess:true}` 반환
 
 **완료: 팝업관리(1311)** - 검색 5조건·페이징·라벨치환(팝업상태/형태/타입)·선택삭제·이미지삭제 복원, 저장 시 버려지던 startTime/endTime/width/height/top/leftPosition/imageLink/backgroundColor 복구, `POPUP_CLOSE`를 "닫기버튼"으로 오해석해 노출판정을 발명한 `useYn`으로 하던 것 → AS-IS대로 `POPUP_CLOSE='1'`, 발명했던 `/toggle` 제거.
 
-**Thymeleaf 제거는 이 작업보다 뒤다(2026-10-02 판단).** 근거: th: 의존이 얇다(18,017줄 중 30%, 대부분 `th:text`/`href`/`replace`/`if`/`each`; 고유기능은 `#numbers` 185·`#lists` 178·`#strings` 80·`th:field` 15·`th:object` 2). 레이아웃 재작업 산출물(AS-IS와 동일한 HTML + opmanager.css 클래스)은 **엔진 중립**이라 나중에 안 버린다. 반대로 SPA를 먼저 하면 복사해온 jQuery 전역자산(op.common.js/op.manager.js/op.chart.js)이 무효화되고 AS-IS verbatim 전략 자체가 깨진다. 작업 중 "얇게 쓰기"는 적용(`#numbers`/`#lists`는 컨트롤러에서 포맷, `th:field`/`th:object`는 plain `name=`). 관련: [[thymeleaf-duplicate-cleanup-deferred]] [[admin-frontend-is-thymeleaf-not-jsp]]
+**Thymeleaf 제거는 이 작업보다 뒤다(2026-10-02 판단).** 근거: th: 의존이 얇다(18,017줄 중 30%, 대부분 `th:text`/`href`/`replace`/`if`/`each`; 고유기능은 `#numbers` 185·`#lists` 178·`#strings` 80·`th:field` 15·`th:object` 2). 레이아웃 재작업 산출물(AS-IS와 동일한 HTML + opmanager.css 클래스)은 **엔진 중립**이라 나중에 안 버린다. 반대로 SPA를 먼저 하면 복사해온 jQuery 전역자산(op.common.js/op.manager.js/op.chart.js)이 무효화되고 AS-IS verbatim 전략 자체가 깨진다. 작업 중 "얇게 쓰기"는 적용(`#numbers`/`#lists`는 컨트롤러에서 포맷, `th:field`/`th:object`는 plain `name=`). 관련: [[thymeleaf-duplicate-cleanup-deferred]] [[pl-shared-documents]]
 
-**작업 순서: 메뉴 영역별로 섞어서**(사용자 선택) - 시스템관리 → 회원관리 → … 순으로 한 영역씩, 신규/기존 구분 없이 그 영역 화면 전부를 AS-IS와 맞춘다. 관련: [[copy-asis-css-js-assets-verbatim]] [[copy-as-is-verbatim-never-invent]] [[admin-shell-asis-parity-restored]] [[menu-visibility-verify-against-live-asis]]
+**작업 순서: 메뉴 영역별로 섞어서**(사용자 선택) - 시스템관리 → 회원관리 → … 순으로 한 영역씩, 신규/기존 구분 없이 그 영역 화면 전부를 AS-IS와 맞춘다. 관련: [[asis-porting-principles]] [[asis-porting-principles]] [[admin-screen-pitfalls]] [[admin-screen-pitfalls]]

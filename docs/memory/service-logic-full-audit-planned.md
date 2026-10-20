@@ -9,8 +9,8 @@ metadata:
 
 계기: 화면·엔드포인트는 이식됐는데 AS-IS 서비스 메서드 **본문 안의 블록**이 빠진 것이 계속 나왔다.
 - 같은 날 발견: 온라인 주문의 국민비서 문자·모바일 분할·배송지 검사 5종·우편번호 저장, 기탁서 수납의 포인트 부분 차감,
-  성인 답례품 제한 전체, 주문대행 주문 생성([[adult-item-and-order-agency-unported]]).
-- 앞서 있던 것: 수납일·삭제여부 미기록([[donation-sttemnt-pay-de-populated]]), 기탁서 답례품 주문([[offgive-gift-order-asis-flow]]).
+  성인 답례품 제한 전체, 주문대행 주문 생성([[deferred-features]]).
+- 앞서 있던 것: 수납일·삭제여부 미기록([[domain-code-facts]]), 기탁서 답례품 주문([[offgive-gift-order-asis-flow]]).
 
 **Why:** 화면 기준 대조로는 서비스 본문 누락이 안 잡힌다. 매번 사용자 테스트에서 하나씩 드러나는 걸 끝내려는 것.
 
@@ -19,7 +19,7 @@ metadata:
 - 단위: AS-IS 컨트롤러 → 서비스 구현 메서드 본문을 **블록(주석 단위)마다** 목록화하고, TO-BE에서 그 블록이 어디서 실행되는지
   (동기 호출·SAGA 이벤트·배치)를 하나씩 대조한다. 매퍼 SQL 조건(예: STTEMNT_PAY_DE IS NOT NULL)까지.
 - 주석처리·죽은 코드(호출 없는 setter, 주석된 검증)는 AS-IS 실동작 기준으로 판정 - 죽은 건 이식 안 함, 기록만.
-- 산출물: 영역별 갭 원장(docs/)을 먼저 만들고 보고 → 사용자 확인 후 수정. [[as-is-parity-exhaustive-audit-method]], [[asis-screen-port-procedure]]
+- 산출물: 영역별 갭 원장(docs/)을 먼저 만들고 보고 → 사용자 확인 후 수정. [[asis-porting-principles]], [[asis-screen-port-procedure]]
 - 상태: **미착수(예정)**. 현재 진행 작업 끝난 뒤 사용자가 시작 지시.
 
 **이미 발견해 둔 항목(전수조사 때 원장에 넣을 것, 2026-10-14)**:

@@ -18,7 +18,7 @@ git 이력으로 원본을 찾을 수 있다.
 
 `archive/` 는 역할이 끝난 날짜 박힌 리포트다(`archive/README.md` 참고).
 
-## `memory/` - 통합 대상이 아니다
+## `memory/` - 세션 메모리 (주제별 파일)
 
 `docs/memory/` 는 **Claude Code 세션 메모리의 실제 저장소**다(2026-10-06에 저장소 안으로 옮겼다).
 원래 위치인
@@ -33,21 +33,20 @@ New-Item -ItemType Junction `
   -Target "C:\workspace\ghlove-msa\docs\memory"
 ```
 
-**이 폴더의 .md는 통합하지 않는다.** 위 6개 문서와 규칙이 정반대다:
+**2026-10-20부터 주제별 파일로 관리한다(158개 → 35개 통폐합).** 원문은 버리지 않고 옮겼다:
+주제 파일 9개(`asis-porting-principles`·`admin-screen-pitfalls`·`backend-db-pitfalls`·`tooling-and-local-env`·
+`asis-sources-and-data`·`domain-code-facts`·`da-design-pending`·`deferred-features`·`pl-shared-documents`)로 합치고,
+영역 이식 원장 23개는 `as-is-parity.md` §22, 완료된 수정 일지 25개는 `archive/memory-fix-log-2026-10.md`로 옮겼다.
 
-- `MEMORY.md` 는 세션마다 통째로 읽히는 **색인**이라 한 줄씩 짧게 유지해야 한다.
-- 나머지는 **사실 하나당 파일 하나**이고, 파일마다 frontmatter(`description`)로 "지금 필요한
-  메모리인가"를 판정한다. 하나로 합치면 그 선별이 불가능해져 **recall이 망가진다.**
-- 즉 파일 수가 많은 게 정상이다. 줄여야 할 건 틀린 메모리·중복 메모리뿐이다.
+- `MEMORY.md` 는 세션마다 통째로 읽히는 **색인** - 파일당 한 줄.
+- **완료된 수정·데이터 적재는 메모리에 쓰지 않는다**(git 커밋에 있다). 다시 쓸 교훈만 해당 함정 파일에 절로 덧붙인다.
+- **같은 주제는 기존 파일을 고친다.** 새 파일은 어느 파일에도 맞지 않는 새 주제일 때만.
 
 ## 정본이 어디인가 - 중요
 
-- **진척 상태**(어느 화면까지 이식했는지)는 이 문서들이 아니라 **메모리 원장**이 정본이다
-  (`admin-system-area-port-progress`, `admin-member-area-port-progress`,
-  `admin-customer-center-area-port-progress`, `admin-designated-donation-area-port-progress`,
-  `admin-small-areas-port-progress`). 문서에 적힌 "완료"는 작성 시점의 판정이다.
+- **진척 상태**(어느 화면까지 이식했는지)는 `as-is-parity.md` §22(영역별 이식 원장)가 정본이고, 메모리 `admin-port-progress`에 영역별 한 줄 요약이 있다(2026-10-20 메모리에서 이동). 다른 절에 적힌 "완료"는 작성 시점의 판정이다.
 - **기능 사양**은 AS-IS 소스(`C:\workspace\ghlove`)가 정본이다. 문서는 대조 결과일 뿐이다.
-- **보류·결정 사항**은 메모리의 `defer-*` / `*-decision` 항목이 정본이다.
+- **보류·결정 사항**은 메모리 `da-design-pending`·`deferred-features`·`pl-shared-documents`와 `*-decision` 항목이 정본이다.
 
 ## 통합 대조표 - 예전 파일이 어디로 갔나
 
@@ -71,10 +70,11 @@ New-Item -ItemType Junction `
 | `b5-designated-month-stats-spec.md` | `design-decisions.md` §6 |
 | `thymeleaf-decommission-map.md` | `design-decisions.md` §7 |
 | `isp-detailed-design-summary.md` | `requirements.md` 후반부 |
+| `batch-job-port-ledger.md`, `admin-invented-backlink-cleanup-ledger.md` (2026-10-20) | `as-is-parity.md` §23, §24 |
 | `cart-review-2026-09-09.md`, `{donation,member,order,point}-service-analysis-*.md`, `spa-static-defect-audit-*`, `static-asset-audit-*`, `feature-verification-2026-09-08-member.md` | `archive/` |
 
 ## 새 문서를 만들기 전에
 
 위 6개 중 **들어갈 자리가 있으면 거기에 절을 추가한다.** 날짜 박힌 새 파일을 만드는 것은
-또 46개로 가는 길이다. 일회성 점검 결과는 문서가 아니라 **메모리**에 남기는 쪽이 맞다 -
-다음 세션이 읽는 것은 메모리이기 때문이다.
+또 46개로 가는 길이다. 끝난 일회성 점검·수정 결과는 문서에도 메모리에도 새 파일로 남기지 않는다 -
+필요하면 해당 절이나 주제 메모리에 한 단락 덧붙인다.

@@ -28,4 +28,4 @@ metadata:
 - G6 반품배송비: AS-IS는 반품 클레임 회수비(collectionShippingAmount=shippingReturn) 차감. MSA ClaimService는 전액복원 단순모델 → 재현 시 클레임 환불 SAGA 재구성 필요.
 - G7 본사/업체 정산: AS-IS deliveryType=1이면 배송비 remittance를 운영자로 귀속(품목정산과 별개). MSA엔 판매자별 배송비 정산 레코드 없음 → OrderItem.sellerId에 얹으면 오귀속(부정확). 둘 다 실데이터 0건.
 
-관련 [[as-is-parity-includes-disabled-state]] [[gift-option-multiform-redesign]] [[order-single-item-vs-multiitem-decision]].
+관련 [[asis-porting-principles]] [[gift-option-multiform-redesign]] [[order-single-item-vs-multiitem-decision]].

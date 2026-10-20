@@ -22,6 +22,6 @@ metadata:
 
 **한마디:** "내가 지금 결과를 알아야 하나?"→API. "확정된 사실을 알리기만 하면 되나?"→Kafka.
 
-**탈퇴 크로스서비스 에러 처리(현재 설계):** SAGA 보상 없음. 대신 (1) 크로스 호출을 개인정보 삭제보다 앞에 배치(실패 시 회원 ACTIVE 유지→재시도 가능), (2) member 로컬은 @Transactional 롤백, (3) 크로스 작업이 전부 멱등(전량 삭제/소멸)이라 재탈퇴로 최종 수렴. 관련 [[as-is-logic-is-the-spec]].
+**탈퇴 크로스서비스 에러 처리(현재 설계):** SAGA 보상 없음. 대신 (1) 크로스 호출을 개인정보 삭제보다 앞에 배치(실패 시 회원 ACTIVE 유지→재시도 가능), (2) member 로컬은 @Transactional 롤백, (3) 크로스 작업이 전부 멱등(전량 삭제/소멸)이라 재탈퇴로 최종 수렴. 관련 [[asis-porting-principles]].
 
 **상세 참고 문서(2026-09-21 작성):** `docs/cross-service-transaction-patterns.md` — 연산 성격별 3패턴(삭제=순서+멱등재시도 / 더하기=멱등키 cntrSn / 차감·다단계=SAGA 보상)을 실제 코드(withdraw·creditForDonation·order SAGA)와 함께 정리한 팀 참고 문서. 크로스서비스 쓰기 기능 만들 때 이 문서부터 볼 것.

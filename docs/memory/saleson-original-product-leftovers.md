@@ -21,4 +21,4 @@ AS-IS `ghlove`는 온라인파워(주)의 커머스 패키지 **SalesOn + opfram
 
 **Why:** 이걸 모르면 "MSA에 없다 = 재현 누락"으로 잘못 세게 된다. 실제로는 AS-IS에서도 도달 불가라 재현 대상이 아닌 것이 도메인마다 수십~수백 건씩 있다. 반대로 원제품 경로만 보고 "AS-IS는 이렇게 한다"고 판단하면 실제 로직을 놓친다.
 
-**How to apply:** AS-IS에서 같은 기능의 경로가 둘 이상 보이면 먼저 어느 쪽이 실사용인지 가린다 — 프론트 호출부(`/tmp/live_grep.sh`), 뷰 존재 여부, 매퍼 호출부 3중으로 본다. 판정은 `죽은코드`로 목록에 남기되 재현 대상에서 뺀다. 단 `com.onlinepowers.framework.*` 네임스페이스 매퍼(77쿼리)는 인터페이스가 `libs/opframework-3.15.0.jar` 안에 있어 **소스 grep으로 사장 판정이 불가능하다** — 반드시 `보류`로 둔다. 절차는 [[as-is-inventory-procedure]], 기준은 [[scope-migration-not-greenfield]].
+**How to apply:** AS-IS에서 같은 기능의 경로가 둘 이상 보이면 먼저 어느 쪽이 실사용인지 가린다 — 프론트 호출부(`/tmp/live_grep.sh`), 뷰 존재 여부, 매퍼 호출부 3중으로 본다. 판정은 `죽은코드`로 목록에 남기되 재현 대상에서 뺀다. 단 `com.onlinepowers.framework.*` 네임스페이스 매퍼(77쿼리)는 인터페이스가 `libs/opframework-3.15.0.jar` 안에 있어 **소스 grep으로 사장 판정이 불가능하다** — 반드시 `보류`로 둔다. 절차는 [[asis-sources-and-data]], 기준은 [[asis-porting-principles]].

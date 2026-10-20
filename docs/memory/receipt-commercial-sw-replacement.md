@@ -26,4 +26,4 @@ metadata:
 
 **구현 상태(공식 영수증 PoC 완료):** donation `ReceiptPdfService`(Java2D 래스터+PDFBox), `GET /receipts/official/{cntrSn}/pdf`, 조회 템플릿은 직인 제거+PDF버튼(`location.pathname+'/pdf'`로 프록시 접두사 무관). testuser01 검증 완료.
 
-**남은 것:** ① 워터마크(발급일시·문서번호) 미적용 ② 확인증(`certificate-print.html`)도 직인 쓰므로 동일 패턴 확장 가능(별개 기능) ③ **최종 제거 전 발주처 「보안요구사항 정의서」 별첨에 출력물/화면 유출방지 항목 있는지 확인 필요**. 관련 [[saleson-original-product-leftovers]], [[check-as-is-source-when-analyzing]].
+**남은 것:** ① 워터마크(발급일시·문서번호) 미적용 ② 확인증(`certificate-print.html`)도 직인 쓰므로 동일 패턴 확장 가능(별개 기능) ③ **최종 제거 전 발주처 「보안요구사항 정의서」 별첨에 출력물/화면 유출방지 항목 있는지 확인 필요**. 관련 [[saleson-original-product-leftovers]], [[asis-porting-principles]].

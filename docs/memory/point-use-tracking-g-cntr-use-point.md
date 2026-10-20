@@ -17,6 +17,6 @@ metadata:
 
 **구성물:** 엔티티 `GCntrUsePoint`(USE_SN을 시퀀스 `SEQ_G_CNTR_USE_POINT`로 발번, DB PK는 (CNTR_SN,USE_SN) 복합이나 JPA엔 USE_SN 단독 @Id), `GCntrUsePointRepository`(findByCntrSnInAndUseSeCode, deleteByOrderCode). 상세 API `/api/my/points/detail?locgovCode=&year=`, 목록 API `/api/my/points`에 yearLocgovSummary·years 추가, SPA `MyPointDetailView.vue`(라우트 `/mypage/points/detail`)+`MyPointsView` 상세아이콘.
 
-**한계(의도됨):** 소멸(EXPIRE)은 `g_cntr_use_point`에 안 남는다(AS-IS도 동일). 그래서 상세의 기부건별 '사용'은 소멸분 미포함 - 요약카드의 '사용'(원장 usedOf, [[point-readmodel-paused-pending-db-design]] §9의 소멸=사용 처리)과 소멸 발생 시에만 차이. 정상/취소 경로에선 일치한다.
+**한계(의도됨):** 소멸(EXPIRE)은 `g_cntr_use_point`에 안 남는다(AS-IS도 동일). 그래서 상세의 기부건별 '사용'은 소멸분 미포함 - 요약카드의 '사용'(원장 usedOf, [[da-design-pending]] §9의 소멸=사용 처리)과 소멸 발생 시에만 차이. 정상/취소 경로에선 일치한다.
 
-이 테이블은 예전엔 스키마만 있고 비어 있던 레거시였다 - 이제 실제로 쓴다. 분석 기준은 [[check-as-is-source-when-analyzing]].
+이 테이블은 예전엔 스키마만 있고 비어 있던 레거시였다 - 이제 실제로 쓴다. 분석 기준은 [[asis-porting-principles]].

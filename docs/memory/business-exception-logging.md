@@ -21,4 +21,4 @@ AS-IS 재현 코드는 업무실패를 전부 커스텀 예외(`MemberException`
 - 예외가 아닌 **결과객체/플래그로 실패를 표현하면 로그에 안 남으니**, 그 경로엔 서비스에서 직접 `log.warn` 을 넣어야 한다.
 - 새 도메인 예외 클래스를 만들 때도 동일 패턴(생성자 WARN 로깅) 유지.
 - 스택은 노이즈라 메시지만. 원인 예외 있는 생성자(`ExternalAuthException(String,Throwable)`)만 cause 포함.
-- 관련: SQL은 P6Spy 인라인 로깅([[receipt-commercial-sw-replacement]] 아님), 로컬 실행/로그는 `docs/local-run-guide.md`. AS-IS 대조 원칙 [[as-is-logic-is-the-spec]].
+- 관련: SQL은 P6Spy 인라인 로깅([[receipt-commercial-sw-replacement]] 아님), 로컬 실행/로그는 `docs/local-run-guide.md`. AS-IS 대조 원칙 [[asis-porting-principles]].

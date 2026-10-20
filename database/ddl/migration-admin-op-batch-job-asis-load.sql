@@ -1,4 +1,4 @@
--- 2026-10-15 배치 일괄 이식: admin.op_batch_job을 AS-IS OP_BATCH_JOB 실데이터 78행으로 교체(사용자 결정 - docs/batch-job-port-ledger.md).
+-- 2026-10-15 배치 일괄 이식: admin.op_batch_job을 AS-IS OP_BATCH_JOB 실데이터 78행으로 교체(사용자 결정 - docs/as-is-parity.md 23절(배치 job 이식 원장)).
 -- 원본: Desktop/고향사랑e음/1.AS-IS/1. DB/_op_batch_job__202610071247.sql (값 그대로).
 -- 기존 TO-BE 전용 행 1000(DesignatedAdminService.closeExpiredProjects)·1001(PointService.runExpirationBatch)은
 -- AS-IS 3000000 dsgnBizStatusUpdateBatch·1 expirationPointBatch(중지)로 대체된다. 실행 DB: ghlove_core.

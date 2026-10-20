@@ -14,10 +14,10 @@ AS-IS가 목록으로 돌아가는 수단은 화면 하단 `.btn_all` 의 `목�
 목록으로 갈 길이 사라져, 조치가 화면마다 다르다(삭제만 / 삭제+하단 목록 버튼 추가 / AS-IS 실화면
 확인 먼저).
 
-**How to apply:** 해당 영역을 작업할 때 `docs/admin-invented-backlink-cleanup-ledger.md` 의
+**How to apply:** 해당 영역을 작업할 때 `docs/as-is-parity.md 24절(admin 발명 링크 정리 원장)` 의
 화면별 "조치" 한 줄만 수행한다. 원장에 AS-IS 짝 JSP·목록 버튼 줄번호·메뉴 등록 여부가 다 들어 있다.
 2026-10-08 기준 2화면(특정사업 지자체별통계·월별통계) 처리, 19화면 잔여.
 
 곁가지 발견: `designated/analysis.html`(`/designated-projects/analysis`, "지정기부 모금분석")은
 `op_menu`에 없고 AS-IS `designated-donation/analysis/` 에는 `locgov.jsp`·`month.jsp` 둘뿐이다.
-**AS-IS에 없는 TO-BE 전용 화면**이라 존치 여부를 물어야 한다([[no-invented-features-ask-first]]).
+**AS-IS에 없는 TO-BE 전용 화면**이라 존치 여부를 물어야 한다([[asis-porting-principles]]).

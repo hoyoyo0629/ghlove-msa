@@ -14,8 +14,8 @@
 | `{donation,gift,member,order,point}-service-analysis-*.md` (5) | 초기 서비스별 분석 | `as-is-parity.md` 서비스별 절 |
 | `service-difficulty-ranking.md` | 착수 순서 정하려고 만든 난이도 순위 | 작업 순서가 확정돼 불필요 |
 | `{gift,member,order,point}-parity-audit.md` (4) | 초기 서비스별 전수대조 | `as-is-parity.md` |
-| `cart-review-2026-09-09.md` | 장바구니 상세 리뷰 | 잔여과제는 메모리 `cart-review-remaining-tasks` |
-| `spa-static-defect-audit-2026-09-18.md` | SPA 정적요소 결함 배치수정 | 메모리 `static-asset-scoping-2026-09-18` |
+| `cart-review-2026-09-09.md` | 장바구니 상세 리뷰 | 잔여과제는 메모리 `deferred-features` |
+| `spa-static-defect-audit-2026-09-18.md` | SPA 정적요소 결함 배치수정 | `memory-fix-log-2026-10.md` |
 | `static-asset-audit-2026-09-18.md` | 정적 에셋 원인규명 | 동일 |
 
 **되돌리기**: `git mv docs/archive/<파일> docs/` 하면 끝이다(히스토리 유지됨).
@@ -24,3 +24,5 @@
 리포트는 여기로 옮기고, 나머지는 주제별로 합쳤다 - 어디로 갔는지는 `docs/README.md`의
 통합 대조표를 보면 된다. `cart-review-2026-09-09.md`는 코드 주석
 (`order/.../OrderService.java`)이 가리키고 있었으므로 그 주석의 경로도 함께 고쳤다.
+
+**2026-10-20 메모리 통폐합**: `memory-fix-log-2026-10.md` - 메모리에서 뺀 완료된 수정·데이터 적재 일지 25개(원문 그대로, 절 제목 = 원래 메모리 파일명). 다시 쓸 교훈은 메모리 함정 파일들에 남아 있다.

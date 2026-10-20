@@ -16,13 +16,13 @@ metadata:
 - 추가구성(op_item_addition) 데이터 0행.
 - 인벤토리 gift.tsv "옵션 미사용"은 매퍼 고아 한정이지 기능 전체 사장 아님(읽기+구매흐름 살아있음).
 
-**방침([[as-is-parity-includes-disabled-state]])**: 기능은 S/S2/S3/T+각인+추가구성 **전부 풀구현**, 단 판매자 화면에서 S2·T는 AS-IS처럼 숨김. 판매자/운영자(admin) 분리 유지. 옵션 재고는 **옵션단위**(AS-IS parity).
+**방침([[asis-porting-principles]])**: 기능은 S/S2/S3/T+각인+추가구성 **전부 풀구현**, 단 판매자 화면에서 S2·T는 AS-IS처럼 숨김. 판매자/운영자(admin) 분리 유지. 옵션 재고는 **옵션단위**(AS-IS parity).
 
 **DDL 불요**: gift DB에 스키마 이관 완료 — op_item_option(name1/2/3·price·cost·nonmember·stock_flag/quantity/code·soldout·hide·display), op_item(item_option_type·item_text_option_flag·title1/2/3), op_item_addition, op_item_option_soldout. 예외: OrderItem 각인/optionId 컬럼 부족 시 Phase4 최소 ALTER.
 
 **페이즈(docs/gift-option-redesign-plan.md)**: P1 gift 모델/서비스 · P2 판매자 등록화면(S2·T 숨김) · P3 구매자 storefront 상세 · P4 장바구니/체크아웃 배선 · P5 옵션단위 재고 SAGA · P6 조회/표시/포인트.
 
-**채널 결정(2026-09-22, A안)**: ISP는 프론트 3종(대민/운영/제공자)이나 현 MSA는 온전한 독립 프론트 2개(storefront=대민, admin=운영)뿐. 제공자웹 분리는 [[provider-portal-split-deferred]] 계속 보류. 옵션 판매자 등록화면은 **현행 gift 판매자 포털(Thymeleaf, SellerPortalController)에 API-first로** 얹고, 훗날 제공자웹 신설 시 백엔드 재사용·뷰만 이식.
+**채널 결정(2026-09-22, A안)**: ISP는 프론트 3종(대민/운영/제공자)이나 현 MSA는 온전한 독립 프론트 2개(storefront=대민, admin=운영)뿐. 제공자웹 분리는 [[deferred-features]] 계속 보류. 옵션 판매자 등록화면은 **현행 gift 판매자 포털(Thymeleaf, SellerPortalController)에 API-first로** 얹고, 훗날 제공자웹 신설 시 백엔드 재사용·뷰만 이식.
 
 **진행상태: P1(gift 모델/서비스/구매자DTO) 완료 — gift 컴파일 OK.**
 - 도메인: Gift에 itemOptionFlag/Type·itemTextOptionFlag·Title1~3·itemDataType·itemAdditionFlag; GiftOption 전 컬럼(name2/3·display_type·hide_flag·cost·nonmember·stock_code·schedule); GiftAddition+Id+Repository 신설.
