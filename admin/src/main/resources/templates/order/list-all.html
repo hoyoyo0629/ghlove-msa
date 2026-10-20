@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>전체주문관리 - 고향사랑e음 (admin service)</title>
+    <!-- 공통 head(AS-IS inc_head verbatim: CSS 6 + JS 12) - csrf meta/폰트/op.* 전부 여기서 로드 -->
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/order/list/all.jsp 이식 - 전체주문관리(메뉴 16401).
+     ★ AS-IS 특징(그대로)
+     - 처음 열면(GET) 조회하지 않고 검색 폼만 보인다(총 0건). [검색]을 눌러 POST할 때만 조회한다. 주문일 기본값은 오늘, 시간은 00시~23시.
+     - 목록은 "주문 품목 한 줄" 단위다. 처리구분 체크박스를 하나도 안 켜고 검색하면 상태 조건 없이 전부 나온다.
+       입금대기(0)는 체크박스가 없어서, 체크박스를 켠 채 검색하면 입금대기 주문은 빠진다.
+     - 지자체 칸·시도/시군구 검색은 시스템/행안부(SYS)에게만. 소속 지자체가 있는 관리자는 롤과 상관없이 그 지자체 주문만 본다.
+     - 이름·휴대폰·상세주소·생년월일은 지자체 담당자(ROLE_ADMIN_5/6)가 아니면 가려서 보인다(엑셀은 원문). "핸드폰번호"는 마스킹 때 수취인 휴대폰을 가린 값이다(AS-IS 오타 그대로).
+     - 배송정보 칸: 송장번호가 없으면 택배사명이 있어도 "택배사 정보 없음"으로 나온다(AS-IS 표현식 결함 그대로).
+     - 주문번호 링크는 주문 상세정보(order/detail-all.html, 읽기 화면)를 연다. 날짜 "전체" 버튼은 ROLE_ADMIN_CALL 전용이라 마크업만 둔다. -->
+<style type="text/css">
+	.board_list_table th{
+		text-align:center;
+	}
+	.order_return_layer {display: none;position: fixed; z-index: 100000; width:850px; left: 50%; margin-left: -425px; top:10px; padding-bottom: 20px; background: #fff}
+</style>
+
+<script type="text/javascript" src="/content/modules/netfunnel.js"></script>
+<script type="text/javascript" src="/content/modules/netfunnel_skin.js"></script>
+
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<h3><span>주문전체 목록</span></h3>
+
+<form id="orderParam" method="post" th:action="@{/order/list}">
+
+	<div class="board_write">
+
+		<table class="board_write_table" summary="">
+			<caption></caption>
+			<colgroup>
+				<col style="width:220px;" />
+				<col />
+			</colgroup>
+			<tbody>
+				<tr th:if="${adminRole == 'SYS'}">
+                    <td class="label">지자체</td>
+                    <td>
+                        <div class="flex_box gap-08">
+                            <select id="shWdr" name="shWdr" class="wd-150" onchange="wdrChange(this.value)">
+			                    <option value="" th:selected="${orderParam.shWdr == null or orderParam.shWdr == ''}">-시,도-</option>
+			                    <option th:each="w : ${wdr}" th:value="${w.id}" th:text="${w.label}" th:selected="${w.id == orderParam.shWdr}"></option>
+			                </select>
+                            <select id="shLocgovCode" name="shLocgovCode" class="wd-150">
+			                    <option value="">-시,군,구-</option>
+			                </select>
+                        </div>
+                    </td>
+                </tr>
+				 <tr>
+				 	<td class="label"><th:block th:text="${msg.get('M00011')}">검색구분</th:block> <!-- 검색구분 --> </td>
+				 	<td>
+				 		<div class="flex_box gap-08">
+							<select id="where" name="where" th:title="${msg.get('M00011')}" class="wd-150">
+								<option value="" th:selected="${orderParam.where == null or orderParam.where == ''}">구분</option>
+								<option value="ORDER_CODE" th:selected="${orderParam.where == 'ORDER_CODE'}">주문번호</option>
+								<option value="USER_NAME" th:selected="${orderParam.where == 'USER_NAME'}">주문자명</option>
+								<option value="RECEIVE_NAME" th:selected="${orderParam.where == 'RECEIVE_NAME'}">받는사람</option>
+								<option value="COMPANY_NAME" th:selected="${orderParam.where == 'COMPANY_NAME'}">상호명</option>
+								<option value="ITEM_NAME" th:selected="${orderParam.where == 'ITEM_NAME'}">답례품명</option>
+								<!-- <option value="ITEM_SELLER_CODE" label="고유코드" /> -->
+							</select>
+							<input type="text" id="query" name="query" class="input_txt required _filter" th:title="${msg.get('M00022')}" maxlength="20" th:value="${orderParam.query}" /><!-- 검색어 -->
+						</div>
+				 	</td>
+				 </tr>
+				 <tr>
+				 	<td class="label"><th:block th:text="${msg.get('M00023')}">주문일자</th:block></td><!-- 주문일자 -->
+				 	<td>
+				 		<div>
+				 			<select id="searchDateType" name="searchDateType" class="hidden">
+				 				<option value="OI.CREATED_DATE" selected="selected">주문일</option>
+				 			</select>
+							<span class="datepicker"><input type="text" id="searchStartDate" name="searchStartDate" class="datepicker" maxlength="8" th:title="${msg.get('M00024')}" th:value="${orderParam.searchStartDate}" /><!-- 주문일자 시작일 --></span>
+							<select id="searchStartDateTime" name="searchStartDateTime">
+								<option value="" th:selected="${orderParam.searchStartDateTime == null or orderParam.searchStartDateTime == ''}">-선택-</option>
+								<option th:each="h : ${#numbers.sequence(0, 23)}" th:value="${#numbers.formatInteger(h, 2)}" th:text="${#numbers.formatInteger(h, 2) + '시'}" th:selected="${orderParam.searchStartDateTime == #numbers.formatInteger(h, 2)}"></option>
+							</select>
+							<span class="wave">~</span>
+							<span class="datepicker"><input type="text" id="searchEndDate" name="searchEndDate" class="datepicker" maxlength="8" th:title="${msg.get('M00025')}" th:value="${orderParam.searchEndDate}" /><!-- 주문일자 종료일 --></span>
+							<select id="searchEndDateTime" name="searchEndDateTime">
+								<option value="" th:selected="${orderParam.searchEndDateTime == null or orderParam.searchEndDateTime == ''}">-선택-</option>
+								<option th:each="h : ${#numbers.sequence(0, 23)}" th:value="${#numbers.formatInteger(h, 2)}" th:text="${#numbers.formatInteger(h, 2) + '시'}" th:selected="${orderParam.searchEndDateTime == #numbers.formatInteger(h, 2)}"></option>
+							</select>
+							<span class="day_btns">
+								<a href="javascript:;" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a><!-- 오늘 -->
+								<a href="javascript:;" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a><!-- 1주일 -->
+								<a href="javascript:;" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a><!-- 한달 -->
+								<a href="javascript:;" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a><!-- 3개월 -->
+								<a href="javascript:;" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a><!-- 1년 -->
+                                <a th:if="${callRole}" href="javascript:;" class="btn_date all-1"><th:block th:text="${msg.get('M00039')}">전체</th:block></a><!-- 전체 -->
+							</span>
+						</div>
+				 	</td>
+				 </tr>
+				 <tr>
+				 	<td class="label" rowspan="2">처리구분</td>
+				 	<td>
+				 		<div class="flex_box gap-08">
+				 			<div class="checkbox">
+				 				<!-- <input type="checkbox" id="op-order-default" /><label>전체</label> -->
+				 				<input type="checkbox" id="op-order-default" name="opOrderDefault" value="Y" th:checked="${orderParam.opOrderDefault == 'Y'}" /><label for="op-order-default"> 전체</label><input type="hidden" name="_opOrderDefault" value="on" />
+				 			</div>
+				 			<div class="checkbox">
+								<input type="checkbox" id="status1" name="status" value="10" class="op-order-default" th:checked="${checkedStatus.contains('10')}" /><label for="status1">결제완료</label><input type="hidden" name="_status" value="on" />
+							</div>
+							<div class="checkbox">
+								<input type="checkbox" id="status2" name="status" value="20" class="op-order-default" th:checked="${checkedStatus.contains('20')}" /><label for="status2">배송준비중</label><input type="hidden" name="_status" value="on" />
+							</div>
+							<div class="checkbox">
+								<input type="checkbox" id="status3" name="status" value="30" class="op-order-default" th:checked="${checkedStatus.contains('30')}" /><label for="status3">배송중</label><input type="hidden" name="_status" value="on" />
+							</div>
+							<div class="checkbox">
+								<input type="checkbox" id="status4" name="status" value="35" class="op-order-default" th:checked="${checkedStatus.contains('35')}" /><label for="status4">배송완료</label><input type="hidden" name="_status" value="on" />
+							</div>
+							<div class="checkbox">
+								<input type="checkbox" id="status5" name="status" value="40" class="op-order-default" th:checked="${checkedStatus.contains('40')}" /><label for="status5">구매확정</label><input type="hidden" name="_status" value="on" />
+							</div>
+						</div>
+				 	</td>
+				 </tr>
+				 <tr>
+				 	<td>
+						<div class="flex_box gap-08">
+							<div class="checkbox">
+								<!-- <input type="checkbox" id="op-order-claim" /><label>클레임</label> -->
+								<input type="checkbox" id="op-order-claim" name="opOrderClaim" value="Y" th:checked="${orderParam.opOrderClaim == 'Y'}" /><label for="op-order-claim"> 클레임</label><input type="hidden" name="_opOrderClaim" value="on" />
+							</div>
+							<div class="checkbox">
+								<input type="checkbox" id="status6" name="status" value="50" class="op-order-claim" th:checked="${checkedStatus.contains('50')}" /><label for="status6"> 교환처리중</label><input type="hidden" name="_status" value="on" />
+							</div>
+							<div class="checkbox">
+								<input type="checkbox" id="status7" name="status" value="55" class="op-order-claim" th:checked="${checkedStatus.contains('55')}" /><label for="status7"> 교환배송중</label><input type="hidden" name="_status" value="on" />
+							</div>
+							<div class="checkbox">
+								<input type="checkbox" id="status8" name="status" value="58" class="op-order-claim" th:checked="${checkedStatus.contains('58')}" /><label for="status8"> 교환완료</label><input type="hidden" name="_status" value="on" />
+							</div>
+							<div class="checkbox">
+								<input type="checkbox" id="status9" name="status" value="59" class="op-order-claim" th:checked="${checkedStatus.contains('59')}" /><label for="status9"> 교환거절</label><input type="hidden" name="_status" value="on" />
+							</div>
+							<div class="checkbox">
+								<input type="checkbox" id="status10" name="status" value="60" class="op-order-claim" th:checked="${checkedStatus.contains('60')}" /><label for="status10"> 반품처리중</label><input type="hidden" name="_status" value="on" />
+							</div>
+							<div class="checkbox">
+								<input type="checkbox" id="status11" name="status" value="65" class="op-order-claim" th:checked="${checkedStatus.contains('65')}" /><label for="status11"> 반품완료</label><input type="hidden" name="_status" value="on" />
+							</div>
+							<div class="checkbox">
+								<input type="checkbox" id="status12" name="status" value="69" class="op-order-claim" th:checked="${checkedStatus.contains('69')}" /><label for="status12"> 반품거절</label><input type="hidden" name="_status" value="on" />
+							</div>
+							<div class="checkbox">
+								<input type="checkbox" id="status13" name="status" value="70" class="op-order-claim" th:checked="${checkedStatus.contains('70')}" /><label for="status13"> 취소처리중</label><input type="hidden" name="_status" value="on" />
+							</div>
+							<div class="checkbox">
+								<input type="checkbox" id="status14" name="status" value="75" class="op-order-claim" th:checked="${checkedStatus.contains('75')}" /><label for="status14"> 취소완료</label><input type="hidden" name="_status" value="on" />
+							</div>
+						</div>
+				 	</td>
+				 </tr>
+			</tbody>
+		</table>
+		<div class="btn_all btn_left">
+				<ul class="list-bullet point">
+			        <li>
+			            검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.
+			        </li>
+		        </ul>
+		  	</div>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/order/list'"> <th:block th:text="${msg.get('M00047')}">초기화</th:block><!-- 초기화 --></button>
+				<!-- <button type="submit" class="btn btn-dark-gray btn-mini"> 검색</button> -->
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="search_net();">검색</button>
+			</div>
+		</div>
+	</div>
+
+	<div class="count_title mt-40">
+		<h5>
+			<th:block th:text="${msg.get('M00045')}">전체</th:block> <th:block th:text="${#numbers.formatInteger(totalCount, 1, 'COMMA')}">0</th:block> <th:block th:text="${msg.get('M00272')}">건 조회</th:block>
+		</h5>
+		<span>
+			<select id="itemsPerPage" name="itemsPerPage" th:title="${msg.get('M00054') + msg.get('M00052')}"
+				onchange="$('form#orderParam').submit();"> <!-- 화면 출력수 -->
+				<option value="10" th:selected="${orderParam.itemsPerPage == 10}" th:text="${'10' + msg.get('M00053')}">10개 출력</option> <!-- 개 출력 -->
+				<option value="50" th:selected="${orderParam.itemsPerPage == 50}" th:text="${'50' + msg.get('M00053')}">50개 출력</option> <!-- 개 출력 -->
+				<option value="100" th:selected="${orderParam.itemsPerPage == 100}" th:text="${'100' + msg.get('M00053')}">100개 출력</option> <!-- 개 출력 -->
+				<option value="200" th:selected="${orderParam.itemsPerPage == 200}" th:text="${'200' + msg.get('M00053')}">200개 출력</option> <!-- 개 출력 -->
+				<option value="500" th:selected="${orderParam.itemsPerPage == 500}" th:text="${'500' + msg.get('M00053')}">500개 출력</option> <!-- 개 출력 -->
+			</select>
+		</span>
+	</div>
+</form>
+
+
+
+<div class="board_list">
+
+
+	<div class="btn_all">
+		<div class="btn_left mb0">
+
+		</div>
+		<div class="btn_right mb0">
+
+		</div>
+	</div>
+	<form id="listForm">
+		<table class="board_list_table" summary="주문내역 리스트">
+			<caption>주문내역 리스트</caption>
+			<colgroup>
+	            <col style="width:50px;">
+	            <col style="width:150px;">
+	            <col style="width:200px;">
+	            <col style="width:150px;">
+	            <col style="width:200px;">
+	            <col style="width:200px;">
+	            <col style="width:200px;">
+	            <col style="width:220px;">
+	            <col style="width:200px;">
+	            <col style="width:500px;">
+	            <col style="width:100px;">
+	            <col style="width:200px;">
+	            <col style="width:150px;">
+	            <col style="width:200px;">
+	            <col style="width:200px;">
+	            <col style="width:200px;">
+	            <col style="width:200px;">
+	            <col style="width:200px;">
+			</colgroup>
+			<thead>
+				<tr>
+					<th scope="col">No</th>
+					<th scope="col">지자체</th>
+					<th scope="col">주문일</th>
+					<th scope="col">주문번호</th>
+					<th scope="col">주문자</th>
+					<th scope="col">수취인</th>
+					<th scope="col">상호명</th>
+					<th scope="col">판매자 연락처</th>
+					<!-- <th scope="col">카테고리</th> -->
+					<th scope="col">답례품명</th>
+					<th scope="col">수량</th>
+					<th scope="col">판매가</th>
+					<th scope="col">주문상태</th>
+					<th scope="col">배송정보</th>
+					<th scope="col">핸드폰번호</th>
+					<th scope="col">우편번호</th>
+					<th scope="col">주소(도로명)</th>
+					<th scope="col">생년월일</th>
+				</tr>
+
+			</thead>
+			<tbody>
+
+				<tr th:each="v, index : ${list}" style="background:#fff;">
+					<td th:text="${#numbers.formatInteger(pagination.itemNumber - index.count, 1, 'COMMA')}">1</td>
+					<td><div th:text="${v.locgovNm}"></div></td>
+					<td>
+						<th:block th:text="${v.createdDateText}"></th:block>
+					</td>
+					<td>
+						<a th:href="@{/order/all/order-detail/{seq}/{code}(seq=${v.orderSequence}, code=${v.orderCode})}" th:text="${v.orderCode}"></a><br />
+					</td>
+					<td>
+						<th:block th:if="${v.guest()}">
+							<th:block th:text="${v.userName}"></th:block>
+							<p>[비회원]</p>
+						</th:block>
+
+						<th:block th:unless="${v.guest()}">
+							<th:block th:text="${v.userName}"></th:block>
+							<p>[<th:block th:text="${v.loginId}"></th:block>]</p>
+						</th:block>
+					</td>
+					<td th:text="${v.receiveName}"></td>
+					<td>
+						<span class="glyphicon glyphicon-user"></span><th:block th:text="${v.companyName}"></th:block>
+					</td>
+					<td>
+						<p th:text="${v.telephoneNumber}"></p>
+					</td>
+					<!-- <td><c:out value="${orderItem.categoryName}"/></td> -->
+					<td class="left break-word">
+						<th:block th:text="${v.itemName}"></th:block> [<th:block th:text="${v.itemUserCode}"></th:block>]
+						<p th:if="${v.optionText != ''}" th:text="${v.optionText}"></p>
+						<th:block th:if="${not #lists.isEmpty(v.textOptions)}">  <!-- 20260325 필수 추가정보 -->
+							<p th:each="t : ${v.textOptions}" th:text="${t}"></p>
+						</th:block>
+					</td>
+					<td><div><th:block th:text="${v.quantity}"></th:block>개</div></td>
+					<td><div th:text="${#numbers.formatInteger(v.saleAmount, 1, 'COMMA')}"></div></td>
+					<td>
+						<div>
+							<th:block th:text="${v.statusLabel}"></th:block>
+						</div>
+					</td>
+					<td>
+						<th:block th:text="${v.deliveryText}"></th:block>
+					</td>
+					<td><div th:text="${v.mobile}"></div></td>
+					<td><div th:text="${v.zipcode}"></div></td>
+					<td><div th:text="${v.address}"></div></td>
+					<td><div th:text="${v.birthday}"></div></td>
+				</tr>
+			</tbody>
+		</table>
+	</form>
+
+	<div class="no_content" th:if="${#lists.isEmpty(list)}">
+		<th:block th:text="${msg.get('M00473')}">데이터가 없습니다.</th:block> <!-- 데이터가 없습니다. -->
+	</div>
+
+	<div class="btn_all">
+		<div class="flex_box juc-sbt">
+			<div class="btn_all">
+				<div class="flex_box gap-08">
+					<button type="button" class="btn btn-dark-gray btn-mini" th:attr="onclick=|downloadOrderExcel(${totalCount})|">엑셀</button>
+				</div>
+			</div>
+		</div>
+		<div class="btn_right mb0">
+
+		</div>
+	</div>
+
+	<div class="pagination-wrap">
+		<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+	</div>
+</div>
+
+<!-- AS-IS ViewUtils.redirect(url, message) - 엑셀 다운로드 실패 안내("엑셀 다운로드 사유 정보가 없습니다." / "조회된 내역이 없습니다.")를 alert으로 띄운다 -->
+<input type="hidden" id="redirectMessage" th:value="${redirectMessage}" />
+
+<!-- 개인정보 엑셀 다운로드 사유 모달(AS-IS Shop.downloadExcelOrder가 띄우는 것) -->
+<div th:replace="~{fragments/privacy-access :: modal}"></div>
+
+<script type="text/javascript" th:inline="javascript">
+	var ORDER_PAGE = {
+		shLocgovCode: /*[[${orderParam.shLocgovCode}]]*/ ''
+	};
+</script>
+<script type="text/javascript" th:inline="none">
+
+	var checkAllCnt;	// 일반주문 전체 체크 카운트
+	var checkClaimCnt;	// 클레임주문 전체 체크 카운트
+
+	$(function(){
+		var redirectMessage = $("#redirectMessage").val();
+		if (redirectMessage) {
+			alert(redirectMessage);
+		}
+
+		Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="searchStartDate"]' , 'input[name="searchEndDate"]');
+		EventHandler.calendarStartDateAndEndDateVaild();
+
+		$('#op-order-default').on('click', function(){
+			$('.op-order-default').prop('checked', $(this).prop('checked'));
+		});
+
+		$('.op-order-default').on('click', function(){
+
+			checkAllCnt = 0;	// 초기화
+
+            $.each($('.op-order-default:checked'), function(i){
+            	checkAllCnt++;	// 일반주문 5단계 체크할떄마다 카운트 증가
+            });
+
+			if(checkAllCnt < 5) {	// 모두 체크하면 전체선택
+				$('#op-order-default').prop('checked', false);
+			} else {	// 한개라도 해제하면 전체해제
+				$('#op-order-default').prop('checked', true);
+			}
+		});
+
+		$('#op-order-claim').on('click', function(){
+			$('.op-order-claim').prop('checked', $(this).prop('checked'));
+		});
+
+		$('.op-order-claim').on('click', function(){
+
+			checkClaimCnt = 0;	// 초기화
+
+            $.each($('.op-order-claim:checked'), function(i){
+            	checkClaimCnt++;	// 클레임주문 7단계 체크할떄마다 카운트 증가
+            });
+
+			if(checkClaimCnt < 7) {	// 모두 체크하면 전체선택
+				$('#op-order-claim').prop('checked', false);
+			} else {	// 한개라도 해제하면 전체해제
+				$('#op-order-claim').prop('checked', true);
+			}
+		});
+	});
+
+	$(function() {
+	    wdrChange($("#shWdr").val());
+	});
+
+	var changeYn = "N";
+
+	// 지차체 변경여부 체크
+	$("select[name='shWdr']").on('focus', function () {
+
+	}).change(function() {
+		changeYn = "Y";
+	});
+
+	// 지자체 변경
+	function wdrChange(value) {
+		Common.loading.hide();
+		$("#shLocgovCode option").remove();
+		if ($("#shWdr").val() != "") {
+			$.post(url("/give-state/options-by-locgovCode"), {'code' : value}, function(response) {
+
+				for (var i = 0; i < response.length; i++) {
+		            var options = '<option value="' + response[i].LOCGOV_CODE + '">' + response[i].LOCGOV_NM + '</option>';
+		            $('#shLocgovCode').append(options);
+		        }
+
+				// 조회 된 값 유지
+				if (ORDER_PAGE.shLocgovCode != "" && changeYn == 'N') {
+				    $("#shLocgovCode").val(ORDER_PAGE.shLocgovCode).prop("selected", true);
+				} else {
+					// 지차체 변경후 시,군,구 index 제일 처음으로 설정
+					$("#shLocgovCode option:eq(0)").attr("selected", "selected");
+				}
+
+		    });
+		} else {
+	        $('#shLocgovCode').append('<option value="">-시,군,구-</option>');
+		}
+	}
+
+	function search_net() {
+		if(Common.useNetfunnel()){
+			NetFunnel_Action({ action_id: 'se_login' }, function (ev, ret) {
+	        	search();
+	        });
+		}else{
+			search();
+		}
+	}
+
+	/**
+	 *	함 수 명 : search
+	 *	기	능  : 검색
+	 */
+	function search() {
+		var strStartDate	= $("#searchStartDate").val();
+		var strEndDate		= $("#searchEndDate").val();
+
+		if(strStartDate && strStartDate.length == 8 && strEndDate && strEndDate.length == 8) {
+			var startDate 	= Number(strStartDate);
+			var endDate		= Number(strEndDate);
+
+			if(startDate > endDate) {
+				alert("종료일이 시작일보다 빠릅니다.");
+				$("#searchEndDate").focus();
+				return false;
+			}
+			var searchChk = Common.searchDateMonth(startDate, endDate);
+			if(!searchChk) return false;
+		}
+
+		$("#orderParam").submit();
+	}
+
+	/** 엑셀 - 2000건을 넘으면 확인을 받고(AS-IS), 개인정보 사유 모달을 띄워 접근로그를 남긴 뒤 내려받는다. */
+	function downloadOrderExcel(totalCount) {
+		if (totalCount <= 2000) {
+	        openPrivacyModal("/order/list/order-excel-download?" + $('#orderParam').serialize());
+		} else if (confirm('주문 내역이 많아 서버에 무리가 갈 수 있습니다. 진행하시겠습니까?')) {
+			openPrivacyModal("/order/list/order-excel-download?" + $('#orderParam').serialize());
+		}
+    }
+
+</script>
+    </div>
+    </div>
+</div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

@@ -24,8 +24,14 @@ public class ItemManageClient {
 
     public record Search(String locgov, String shLocgovCode, String where, String query, String srchDateType,
                          String searchStartDate, String searchEndDate, Integer categoryGroupId, String categoryClass,
-                         Integer categoryId, String saleStatus, String displayFlag, Long sellerId, String orderBy, String sort) {
+                         Integer categoryId, String saleStatus, String displayFlag, Long sellerId, String orderBy, String sort,
+                         String listType, String dataStatusCode) {
     }
+
+    /** 답례품승인관리 목록 구분(gift Search.listType). */
+    public static final String PENDING_LIST = "pending";
+    /** 상품검색 팝업(AS-IS item/find-item, FIND_ITEM_POPUP) - gift ItemManageService.FIND_LIST. */
+    public static final String FIND_LIST = "find";
 
     public record ItemRow(Long itemId, String itemCode, String itemUserCode, String itemName, String itemSellerCode,
                           Integer salePrice, String itemPrice, String displayFlag, String dataStatusCode,
@@ -33,7 +39,8 @@ public class ItemManageClient {
                           String stockFlag, Integer stockQuantity, String soldOut, String itemSoldOutFlag, String itemType,
                           String itemLabel, Long sellerId, String sellerName, String companyName, String sellerLocgovCode,
                           Integer hits, String brand, String createdDate, String updatedDate, String displayCommissionRate,
-                          Integer minusSpotDiscount, Integer exceptSpotDiscount, Integer presentPrice, String thumbnail) {
+                          Integer minusSpotDiscount, Integer exceptSpotDiscount, Integer presentPrice, String thumbnail,
+                          String dataStatusMessage) {
     }
 
     public record LogRow(Long itemLogId, Long itemId, String itemUserCode, String itemName, String displayFlag, String soldOut,
@@ -68,6 +75,17 @@ public class ItemManageClient {
     private record OffRprsRequest(String locgov, List<OffRprsInput> items, long userId) {
     }
 
+    /** 답례품ID별 대표 이미지 파일명 - 주문 상세가 품목 이미지를 그릴 때 쓴다(없는 ID는 빠진다). */
+    public Map<Long, String> thumbnails(List<Long> itemIds) {
+        if (itemIds == null || itemIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, String> body = restClient.post().uri(BASE + "/thumbnails").body(itemIds).retrieve()
+                .body(new ParameterizedTypeReference<Map<Long, String>>() {
+                });
+        return body != null ? body : Map.of();
+    }
+
     public int count(Search s) {
         Map<String, Integer> body = restClient.post().uri(BASE + "/count").body(s).retrieve()
                 .body(new ParameterizedTypeReference<Map<String, Integer>>() {
@@ -88,6 +106,61 @@ public class ItemManageClient {
 
     public void updateLabel(List<Long> ids, String flag, long managerId) {
         restClient.post().uri(BASE + "/update-label").body(new IdsRequest(ids, flag, managerId)).retrieve().toBodilessEntity();
+    }
+
+    /** 답례품승인관리 처리 결과 - 문자(승인/거절)를 만들 때 쓴다. deleted=삭제신청 승인(문자 없음). */
+    public record ProcessedItem(Long itemId, String itemUserCode, Long sellerId, boolean deleted) {
+    }
+
+    private record ApprovalRequest(List<Long> ids, String message, long managerId) {
+    }
+
+    /** AS-IS list/update(processType=approval). */
+    public List<ProcessedItem> approve(List<Long> ids, long managerId) {
+        List<ProcessedItem> rows = restClient.post().uri(BASE + "/approval").body(new ApprovalRequest(ids, null, managerId)).retrieve()
+                .body(new ParameterizedTypeReference<List<ProcessedItem>>() {
+                });
+        return rows != null ? rows : List.of();
+    }
+
+    /** AS-IS list/update(processType=reject). */
+    public List<ProcessedItem> reject(List<Long> ids, String message, long managerId) {
+        List<ProcessedItem> rows = restClient.post().uri(BASE + "/reject").body(new ApprovalRequest(ids, message, managerId)).retrieve()
+                .body(new ParameterizedTypeReference<List<ProcessedItem>>() {
+                });
+        return rows != null ? rows : List.of();
+    }
+
+    public record PreviewImage(String imageName, Integer ordering) {
+    }
+
+    public record PreviewOption(Long itemOptionId, String optionName1, String optionName2, String optionName3, Integer optionPrice,
+                                String optionHideFlag, String optionDisplayFlag, String optionStockFlag, Integer optionStockQuantity,
+                                String optionSoldOutFlag) {
+    }
+
+    public record PreviewInfo(String title, String description) {
+    }
+
+    public record PreviewSeller(String companyName, String telephoneNumber, String businessNumber, String businessLocation, String addressDetail) {
+    }
+
+    public record Preview(Long itemId, String itemUserCode, String itemName, String itemSummary, String originCountry, Integer salePrice,
+                          String locgovCode, String deliveryCompanyName, String itemOptionFlag, String itemOptionType,
+                          String itemOptionTitle1, String itemOptionTitle2, String itemOptionTitle3,
+                          String itemTextOptionFlag, String itemTextOptionTitle1, String itemTextOptionTitle2, String itemTextOptionTitle3,
+                          Integer orderMinQuantity, Integer orderMaxQuantity, String itemReturnFlag, String detailContent,
+                          String teamName, String groupName, String categoryName,
+                          List<PreviewImage> images, List<PreviewOption> options, List<PreviewInfo> infos, PreviewSeller seller) {
+    }
+
+    /** AS-IS item/seller/preview 데이터 - 상품이 없으면 null. */
+    public Preview preview(String itemUserCode) {
+        try {
+            return restClient.get().uri(BASE + "/preview?itemUserCode={c}", itemUserCode).retrieve().body(Preview.class);
+        } catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
+            return null;
+        }
     }
 
     public void delete(List<Long> ids, long managerId) {

@@ -51,6 +51,18 @@ public class SellerManageApiController {
         return service.list(new SellerManageService.Search(statusCode, where, query, startDate, endDate, itemApprovalType, locgov), offset, limit);
     }
 
+    /** 판매자 계정(OP_SELLER_USER) 번호로 아이디·지자체 - 관리자 문의(AS-IS qna-admin) 목록이 작성자 칸과 지자체 칸에 쓴다. */
+    @PostMapping("/users")
+    public List<SellerManageService.UserBrief> users(@org.springframework.web.bind.annotation.RequestBody List<Long> userIds) {
+        return service.usersByIds(userIds);
+    }
+
+    /** 지자체 판매자 목록 - 상품검색 팝업(AS-IS item/find-item)의 판매자 select. */
+    @GetMapping("/by-locgov")
+    public List<SellerManageService.SellerOption> sellersByLocgov(@RequestParam(required = false) String locgov) {
+        return service.sellersByLocgov(locgov);
+    }
+
     @GetMapping("/{sellerId}")
     public Map<String, Object> detail(@PathVariable long sellerId) {
         Map<String, Object> d = service.detail(sellerId);

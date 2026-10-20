@@ -88,6 +88,18 @@ public class AdminMemberApiController {
         return adminMemberService.userLoginIds(userIds);
     }
 
+    /** 주문자 정보(이름·아이디·휴대폰·생년월일) 일괄조회 - admin 전체주문관리 목록이 주문 줄에 붙인다. */
+    @GetMapping("/members/order-infos")
+    public List<com.ghlove.member.service.AdminMemberService.OrderInfo> orderInfos(@RequestParam List<Long> userIds) {
+        return adminMemberService.orderInfos(userIds);
+    }
+
+    /** 이름이 정확히 같은 회원ID 목록 - admin 전체주문관리의 검색구분 '주문자명'용. */
+    @GetMapping("/members/ids-by-name")
+    public List<Long> userIdsByName(@RequestParam String name) {
+        return adminMemberService.userIdsByName(name);
+    }
+
     /** 로그인ID 부분일치 회원ID 목록. admin Q&A 관리(5112)의 검색구분 '아이디'용. */
     @GetMapping("/members/ids-by-login")
     public List<Long> userIdsByLoginIdLike(@RequestParam String keyword) {

@@ -50,7 +50,7 @@ import java.util.Map;
  *
  * <p><b>★ 이름 충돌 주의</b>: TO-BE에는 Q&A 계열 화면이 셋이다 -
  * {@code /admin/inquiries}(1:1문의 5102, 여기) · {@code /qna-admin}(공개 Q&A 5112) ·
- * {@code /admin/internal-inquiry}(내부문의 5120, {@code g_qna_admin}).
+ * {@code /admin/internal-inquiry}(관리자 문의 16651, {@code g_qna_admin}).
  *
  * <p>AS-IS 동작·결함은 {@link QnaIndividualAdminService} 주석에 적어 두었다. 삭제·첨부
  * 엔드포인트는 AS-IS가 두 화면에서 같은 서비스 메서드를 부르므로 {@link QnaOpenAdminService}를 쓴다.

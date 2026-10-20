@@ -38,7 +38,8 @@ Shop.url = function(url) {
  * 상품검색
  */
 Shop.findItem = function(targetId) {
-    Common.popup("/opmanager/item/find-item?targetId=" + targetId, 'find-item', 1000, 600, 1);
+    // TO-BE 운영관리 경로에는 /opmanager 접두가 없다(AS-IS /opmanager/item/find-item)
+    Common.popup("/item/find-item?targetId=" + targetId, 'find-item', 1000, 600, 1);
 };
 
 

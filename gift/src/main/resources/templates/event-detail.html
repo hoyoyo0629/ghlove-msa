@@ -42,7 +42,7 @@
 
 <section id="contents" class="center">
     <div class="event_visual" th:if="${event.featuredImage != null and !#strings.isEmpty(event.featuredImage)}">
-        <img th:src="@{'/uploads/' + ${event.featuredImage}}" th:alt="${event.featuredName}" style="max-width:100%;">
+        <img th:src="@{'/uploads/featured/' + ${event.featuredId} + '/' + ${event.featuredImage}}" th:alt="${event.featuredName}" style="max-width:100%;">
     </div>
 
     <!-- 이벤트 본문은 운영자가 등록한 HTML이다 (AS-IS featuredContent와 동일). -->

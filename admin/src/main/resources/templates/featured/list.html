@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>이벤트 관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/featured/list.jsp 이식 - 이벤트 관리(메뉴 16601).
+     ★ AS-IS 그대로
+     - GET은 조회하지 않는다(총 0건) - [검색]을 눌러야 나온다.
+     - 지자체 select·지자체 칸은 시스템/행안부(ROLE_ADMIN_1~4)에게만, 체크박스·[등록]·[삭제]는 ROLE_ADMIN_5/6에게만.
+     - 진행상태 라디오에 "미진행"은 없다(주석). 목록의 진행상태는 미진행/진행중/진행완료를 다 보여준다.
+     - 건수 문구: AS-IS 소스는 "총 {건수}{M00272}"인데 개발서버 실화면은 "총 1063총 n,nnn,nnn건"으로 나온다 - 실화면 그대로 둔다. -->
+
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+	<!-- 상단 타이틀 영역 -->
+    <!-- 20221114 수정 -->
+    <h3><span><!-- 이벤트 관리 --></span></h3>
+    <!-- // 20221114 수정 -->
+    <!-- // 상단 타이틀 영역 -->
+
+    <!-- 조회 영역 -->
+   	<form id="featuredParam" th:action="@{/featured/list}" method="post">
+    	<div class="item_list">
+		    <div class="board_write">
+		        <table class="board_write_table" summary="이벤트 등록">
+		            <colgroup>
+		                <col style="width:220px;">
+		                <col>
+		                <col style="width:220px;">
+		                <col>
+		            </colgroup>
+		            <tbody>
+		                <!-- 20221114 수정 -->
+		                <tr th:if="${roleSystem}"><!-- 시스템/행안부 관리자만 보임 -->
+		                    <td class="label" th:text="${msg.get('지자체')}">지자체</td>
+		                    <td colspan="3">
+		                        <div class="flex_box gap-08">
+		                            <select id="selectSidoCode" name="upperLocgovCode" th:title="${msg.get('지자체')}" class="wd-150" onchange="javascript:searchSigungu(this);"><!-- 지자체 -->
+		                                <option value="">-시,도-</option><!-- -시,도- -->
+		                                	<option th:each="data : ${sido}" th:value="${data.value}" th:text="${data.label}"></option>
+		                            </select>
+		                            <select id="selectSigungu" name="locgovCode" th:title="${msg.get('지자체')}" class="wd-150"><!-- 지자체 -->
+		                                <option value="">-시,군,구-</option>
+		                            </select>
+		                        </div>
+		                    </td>
+		                </tr>
+		                <!-- // 20221114 수정 -->
+		                <tr>
+		                    <td class="label" th:text="${msg.get('M00011')}">검색구분</td><!-- 검색구분 -->
+		                    <td colspan="3">
+		                        <div class="flex_box gap-08">
+									<select id="where" name="where" th:title="${msg.get('M01186')}" class="wd-150"><!-- 상세검색 선택 -->
+										<option value="FEATURED_NAME" th:selected="${featuredParam.where == 'FEATURED_NAME'}" th:text="${msg.get('이벤트명')}">이벤트명</option><!-- 제목 --><!-- 이벤트명 -->
+										<!-- URL -->
+									</select>
+									<input id="query" name="query" th:title="${msg.get('M00022')}" class="input_txt required _filter full" type="text" th:value="${featuredParam.query}"> <!-- 검색어 -->
+		                        </div>
+		                    </td>
+		                </tr>
+		                <tr>
+		                    <td class="label" th:text="${msg.get('M00032')}">진행상태</td><!-- 진행상태 -->
+		                    <td>
+		                        <div class="flex_box gap-12">
+									<input id="progression1" name="progression" checked="checked" type="radio" value=""><label for="progression1" th:text="${msg.get('M00039')}">전체</label><!-- 전체 -->
+									<input id="progression2" name="progression" type="radio" value="2" th:checked="${featuredParam.progression == '2'}"><label for="progression2">진행중</label><!-- 진행중 -->
+									<input id="progression3" name="progression" type="radio" value="3" th:checked="${featuredParam.progression == '3'}"><label for="progression3">진행완료</label><!-- 진행완료 -->
+		                        </div>
+		                    </td>
+		                    <td class="label" th:text="${msg.get('M00191')}">공개유무</td><!-- 공개유무 -->
+		                    <td>
+		                        <div class="flex_box gap-12">
+									<input id="displayListFlag1" name="displayListFlag" checked="checked" type="radio" value=""><label for="displayListFlag1" th:text="${msg.get('M00039')}">전체</label> <!-- 전체 -->
+									<input id="displayListFlag2" name="displayListFlag" type="radio" value="Y" th:checked="${featuredParam.displayListFlag == 'Y'}"><label for="displayListFlag2" th:text="${msg.get('M00096')}">공개</label> <!-- 공개 -->
+									<input id="displayListFlag3" name="displayListFlag" type="radio" value="N" th:checked="${featuredParam.displayListFlag == 'N'}"><label for="displayListFlag3" th:text="${msg.get('M00097')}">비공개</label> <!-- 비공개 -->
+		                        </div>
+		                    </td>
+		                </tr>
+		            </tbody>
+		        </table>
+				<div class="btn_all btn_left">
+					<ul class="list-bullet point">
+						<li>
+					    	검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.
+					    </li>
+				</ul></div>
+		        <div class="btn_all btn_right">
+		            <div class="flex_box gap-08">
+		                <button type="button" class="btn btn-dark-gray btn-mini" th:attr="onclick=|location.href='/${featuredTypeUri}/list';|" th:text="${msg.get('M00047')}">초기화</button><!-- 초기화 -->
+		                <button type="submit" class="btn btn-dark-gray btn-mini" th:text="${msg.get('M00048')}">검색</button><!-- 검색 -->
+		            </div>
+		        </div>
+		    </div>
+	    </div>
+	    <!-- // 조회 영역 -->
+
+	    <!-- 결과 영역 -->
+	    <div class="count_title mt-40">
+	        <h5>총 <th:block th:text="${featuredCount}">0</th:block>총 n,nnn,nnn건</h5>	<!-- 총 n,nnn,nnn건 -->
+	        <span>
+	            <select id="itemsPerPage" name="itemsPerPage" title="화면출력수">
+	                <option value="10" th:selected="${itemsPerPage == '10'}" th:text="${msg.get('M00240')}">10개 출력</option><!-- 10개 출력 -->
+	                <option value="20" th:selected="${itemsPerPage == '20'}" th:text="${msg.get('M00241')}">20개 출력</option><!-- 20개 출력 -->
+	                <option value="50" th:selected="${itemsPerPage == '50'}" th:text="${msg.get('M00242')}">50개 출력</option><!-- 50개 출력 -->
+	                <option value="100" th:selected="${itemsPerPage == '100'}" th:text="${msg.get('M00243')}">100개 출력</option><!-- 100개 출력 -->
+	            </select>
+	        </span>
+	    </div>
+    </form>
+
+	<form id="listForm" method="post" th:action="@{|/${featuredTypeUri}/checked-delete|}">
+		<input type="hidden" name="featuredCode" th:value="${featuredParam.featuredCodeChecked}" />
+	    <div class="board_list">
+	        <table class="board_list_table">
+	            <colgroup>
+	                <col style="width:50px;" th:if="${roleLocgovCharger}">
+	                <col style="width:50px;">
+	                <col style="width:200px;" th:if="${roleSystem}"><!-- 시스템/행안부 관리자만 보임 -->
+	                <col style="width:500px;">
+	                <col style="width:150px;">
+	                <col style="width:150px;">
+	                <col style="width:200px;">
+	                <col style="width:200px;">
+	            </colgroup>
+	            <thead>
+	                <tr>
+	                    <th scope="col" th:if="${roleLocgovCharger}"><input type="checkbox" id="check_all"></th>
+	                    <th scope="col">No.</th><!-- No. -->
+	                    <th scope="col" th:if="${roleSystem}" th:text="${msg.get('지자체')}">지자체</th><!-- 지자체 -->
+	                    <th scope="col" th:text="${msg.get('이벤트명')}">이벤트명</th><!-- 이벤트명 -->
+	                    <th scope="col" th:text="${msg.get('M00032')}">진행상태</th><!-- 진행상태 -->
+	                    <th scope="col" th:text="${msg.get('M01431')}">공개여부</th><!-- 공개여부 -->
+	                    <th scope="col">진행기간</th><!-- 진행기간 -->
+	                    <th scope="col" th:text="${msg.get('M00202')}">등록일</th><!-- 등록일 -->
+	                </tr>
+	            </thead>
+	            <tbody>
+	                <tr th:each="list, i : ${featuredList}" style="background:#fff;">
+	                    <td th:if="${roleLocgovCharger}">
+	                       <div>
+	                           <input type="checkbox" name="featuredIds" id="check" th:value="${list.row.featuredId}">
+	                       </div>
+	                    </td>
+	                    <td>
+	                        <div th:text="${pagination.itemNumber - i.count}">0</div>
+	                    </td>
+	                    <td th:if="${roleSystem}">
+	                        <div th:text="${list.locgovName}"></div>
+	                    </td>
+	                    <td>
+	                        <div>
+	                            <a th:href="|/${featuredTypeUri}/edit/${list.row.featuredId}|" th:text="${list.row.featuredName}"></a>
+	                        </div>
+	                    </td>
+	                    <td>
+	                        <div>
+	                        	<th:block th:switch="${list.row.progression}">
+									<th:block th:case="'1'">미진행</th:block><!-- 미진행 -->
+									<th:block th:case="'2'">진행중</th:block><!-- 진행중 -->
+									<th:block th:case="'3'">진행완료</th:block><!-- 진행완료 -->
+								</th:block>
+							</div>
+	                    </td>
+	                    <td>
+	                        <!-- AS-IS fn:replace(fn:replace(displayListFlag,'Y',공개),'N',비공개) -->
+	                        <div th:text="${list.row.displayListFlag == null ? '' : #strings.replace(#strings.replace(list.row.displayListFlag, 'Y', msg.get('M00096')), 'N', msg.get('M00097'))}"></div><!-- 공개 --><!-- 비공개 -->
+	                    </td>
+	                    <td>
+	                        <div>
+	                        	<th:block th:if="${list.row.startDate != '99999999' and list.row.endDate == '99999999'}" th:text="|${@opDate.ymd(list.row.startDate)} ~ |"></th:block>
+	                        	<th:block th:if="${list.row.startDate == '99999999' and list.row.endDate == '99999999'}">상시 게시</th:block><!-- 상시 게시 -->
+	                        	<th:block th:if="${!(list.row.endDate == '99999999') and list.row.startDate != null and list.row.startDate != ''}" th:text="|${@opDate.ymd(list.row.startDate)} ~ ${@opDate.ymd(list.row.endDate)}|"></th:block>
+	                        	<th:block th:if="${!(list.row.endDate == '99999999') and (list.row.startDate == null or list.row.startDate == '')}">-</th:block>
+                        	</div>
+	                    </td>
+	                    <td>
+	                        <div th:text="${@opDate.ymd(list.row.createdDate)}"></div>
+	                    </td>
+	                </tr>
+	            </tbody>
+	        </table>
+			<div class="no_content" th:if="${#lists.isEmpty(featuredList)}">
+				<th:block th:text="${msg.get('M00473')}">데이터가 없습니다.</th:block> <!-- 데이터가 없습니다. -->
+			</div>
+
+	        <!-- 하단 버튼 -->
+	        <div class="btn_all btn_right" th:if="${roleLocgovCharger}">
+	            <div class="flex_box gap-08">
+	                <button type="button" class="btn btn-dark-gray btn-mini" th:attr="onclick=|document.location.href='/${featuredTypeUri}/create';|" th:text="${msg.get('M00088')}">등록</button><!-- 등록 -->
+	                <button id="deleteBtn" type="button" class="btn btn-default btn-mini" th:text="${msg.get('M00074')}">삭제</button><!-- 삭제 -->
+	            </div>
+	        </div>
+	        <!-- // 하단 버튼 -->
+
+	        <div class="pagination-wrap">
+	        	<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+	        </div>
+	    </div>
+    </form>
+    <!-- // 결과 영역 -->
+
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<!-- AS-IS ViewUtils.redirect(url, message) - 등록/수정/삭제 뒤 안내 -->
+<input type="hidden" id="redirectMessage" th:value="${redirectMessage}" />
+
+<script type="text/javascript" th:inline="javascript">
+	var FEATURED_LIST = {
+		upperLocgovCode: /*[[${param.upperLocgovCode != null ? param.upperLocgovCode[0] : ''}]]*/ '',
+		locgovCode: /*[[${param.locgovCode != null ? param.locgovCode[0] : ''}]]*/ ''
+	};
+</script>
+<script type="text/javascript">
+$(function(){
+	var redirectMessage = $("#redirectMessage").val();
+	if (redirectMessage) {
+		alert(redirectMessage);
+	}
+
+	$("#deleteBtn").on("click",function(){
+		//if($("input[name='id']:checked").size() > 0){
+			Common.confirm(Message.get("M00196"),function(){	// 삭제하시겠습니까?
+				if($("input[name='featuredIds']:checked").size() > 0){
+					$("#listForm").submit();
+				} else {
+	                alert(Message.get("M00308"));
+	            }
+	        });
+	});
+
+
+	// 화면 로딩 후 시도, 시군구 정보 세팅
+	if (FEATURED_LIST.upperLocgovCode != "") {		// 세팅된 시도 값 있을 경우
+    	$("#selectSidoCode").val(FEATURED_LIST.upperLocgovCode).prop("selected", true);		// 시도 값 세팅
+        searchSigungu(document.getElementById("selectSidoCode"));		// 시군구 목록 조회
+    }
+});
+
+
+// 페이지 당 조회수 파라미터 세팅
+function setItemPerPage() {
+	let form = document.getElementById("featuredParam");
+	let itemCntPerPage = document.getElementById("perPageCntStr");
+	let pageElement = document.getElementById("selectItemPerPage");
+	if (itemCntPerPage) {
+		itemCntPerPage.value = pageElement.value;
+	} else {
+		itemCntPerPage = document.createElement("input");
+		itemCntPerPage.setAttribute("id", "perPageCntStr");
+		itemCntPerPage.setAttribute("type", "hidden");
+		itemCntPerPage.setAttribute("name", "itemsPerPage");
+		itemCntPerPage.setAttribute("value", pageElement.value);
+	}
+
+	form.appendChild(itemCntPerPage);
+}
+
+
+// 시군구 목록 조회
+function searchSigungu(sidoElement) {
+	let sidoValue = sidoElement.value;
+	$("#selectSigungu option").remove();
+    $('#selectSigungu').append('<option value="">-시,군,구-</option>');
+    if (sidoValue) {
+        $.post(
+        		url("/common/getLocgovCode")
+        		, {'code' : sidoValue}
+        		, function(response) {
+        			Common.responseHandler(response, function(){
+        				let data = response.data;
+			            for (var i = 0; i < data.length; i++) {
+			                var options = '<option value="' + data[i].LOCGOV_CODE + '">' + data[i].LOCGOV_NM + '</option>';
+			                $('#selectSigungu').append(options);
+			            }
+
+			            // 조회 된 값 유지
+			            if (FEATURED_LIST.locgovCode != "") {
+			            	$("#selectSigungu").val(FEATURED_LIST.locgovCode).prop("selected", true);
+
+			            	if (!$("#selectSigungu").val()) {		// 선택된 값이 없으면 제일 첫 번째 값 기본 세팅
+			            		$("#selectSigungu option:eq(0)").prop("selected", true);
+			            	}
+			            }
+        			});
+	            }
+        )
+        .always(function () {
+        	Common.loading.hide();
+        });
+    } else {
+    	Common.loading.hide();
+    }
+}
+
+</script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

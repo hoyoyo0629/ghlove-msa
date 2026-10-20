@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>제철식품관 관리 - 고향사랑e음 (admin service)</title>
+    <!-- 공통 head(AS-IS inc_head verbatim: CSS 6 + JS 12) - csrf meta/폰트/op.* 전부 여기서 로드 -->
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/seasonal-food/list.jsp 이식 - 제철식품관 관리(메뉴 16751).
+     ★ AS-IS 특징(그대로)
+     - 1~12월 표. 데이터가 없는 달도 빈 키워드로 나온다. 한 달의 키워드는 쉼표로 이어 한 칸에 보인다.
+     - [관리] 칸·[수정] 버튼·[등록] 버튼은 시스템/행안부(ROLE_ADMIN_1~4)에게만 보인다. 저장용 JS는 ROLE_ADMIN_5/6만 빼고 모두 받는다.
+     - 수정/등록은 팝업(700x310). 팝업이 부모에게 postMessage로 저장을 맡기고, 부모가 ajax(/seasonal-food/saveSeasonalFood)로 저장한 뒤 표를 다시 그린다.
+     - 저장 뒤 다시 그리는 표에는 [관리] 칸이 항상 들어간다(AS-IS 그대로). -->
+
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+        <h3><span th:text="${msg.get('제철식품관 관리')}">제철식품관 관리</span></h3><!-- 제철식품관 관리 -->
+        <!-- // 상단 타이틀 영역 -->
+		<form id="seasonFoodData" method="post" th:action="@{/seasonal-food/list}">
+	        <div class="board_list">
+	            <table class="board_list_table" th:summary="${msg.get('제철식품관 관리')}"><!-- 제철식품관 관리 -->
+	                <caption th:text="${msg.get('제철식품관 관리')}">제철식품관 관리</caption><!-- 제철식품관 관리 -->
+	                <colgroup>
+	                    <col style="width:100px;">
+	                    <col style="width:500px;">
+		                <col style="width:100px;" th:if="${canManage}"><!-- 시스템/행안부 관리자만 보임 -->
+	                </colgroup>
+	                <thead>
+	                    <tr>
+	                        <th scope="col" th:text="${msg.get('M01379')}">월별</th><!-- 월별 -->
+	                        <th scope="col" th:text="${msg.get('키워드')}">키워드</th><!-- 키워드 -->
+		                    <th scope="col" th:if="${canManage}" th:text="${msg.get('M00590')}">관리</th><!-- 관리 -->
+	                    </tr>
+	                </thead>
+	                <tbody id="seasonFoodTable">
+	                	<tr th:each="seasonFood : ${seasonFoodData}" style="background:#fff;">
+	                        <td>
+	                            <div><th:block th:text="${seasonFood.seasonalFoodMonth}"></th:block><th:block th:text="${msg.get('M01077')}">월</th:block></div><!-- 월 -->
+	                        </td>
+	                        <td>
+	                            <div class="text-left" th:id="|data${seasonFood.seasonalFoodMonth}|" th:text="${seasonFood.seasonalFoodKeyword}"></div>
+	                        </td>
+	                        <td th:if="${canManage}"><!-- 시스템/행안부 관리자만 보임 -->
+	                            <div class="flex_box juc-center gap-08">
+	                                <button type="button" class="btn btn-dark-gray btn-sm" th:text="${msg.get('M00087')}"
+	                                        th:attr="onclick=|javascript:modSeasonalFoodKeyword('${seasonFood.seasonalFoodMonth}', '${seasonFood.seasonalFoodKeyword}');|">수정</button><!-- 수정 -->
+	                            </div>
+	                        </td>
+	                    </tr>
+	                </tbody>
+	            </table>
+	        </div>
+		</form>
+        <div class="btn_all btn_right mt20" th:if="${canManage}"><!-- 시스템/행안부 관리자만 보임 -->
+	        <div class="flex_box gap-08">
+	            <button type="button" class="btn btn-default btn-small" onclick="javascript:regSeasonalFoodKeyword();" th:text="${msg.get('M00088')}">등록</button><!-- 등록 -->
+	        </div>
+	    </div>
+
+<!-- AS-IS EL(${op:message("M01077")} / ${op:message("M00087")})을 서버에서 풀어 JS 문자열로 넘긴다 -->
+<script type="text/javascript" th:inline="javascript">
+var MSG_MONTH = /*[[${msg.get('M01077')}]]*/ '월';
+var MSG_MODIFY = /*[[${msg.get('M00087')}]]*/ '수정';
+</script>
+
+<script type="text/javascript" th:if="${canScript}">
+
+const receiveMsg = async (e) => {
+	if (e.data.hasOwnProperty('fnName')) {
+		if (e.data.fnName == 'saveSeasonalFoodMonthData') {
+			saveSeasonalFoodMonthData(e.data.month, e.data.keyword);
+		} else if (e.data.fnName == 'regSeasonalFoodData') {
+			regSeasonalFoodData(e.data.startMonth, e.data.endMonth, e.data.keyword);
+		} else if (e.data.fnName == 'getSeasonalFoodMonthData') {
+			getSeasonalFoodMonthData();
+		}
+	}
+}
+
+
+$(function() {
+	window.addEventListener("unload", (event) => {		// 화면 닫을 때 팝업 같이 닫기(화면 이동시 팝업만 남아있는 상황 방지)
+		if (popupMonth) {
+			popupMonth.close();
+		}
+		if (popupKeyword) {
+			popupKeyword.close();
+		}
+	});
+
+	window.addEventListener("message", receiveMsg, false);			// 팝업 통신용
+});
+
+let popupType = "toolbar=no,width=700,height=310,top=150px,left=250px,directories=no,menubar=no,scrollbars=yes,location=no";
+let popupMonth;
+let popupKeyword;
+
+let clickMonth;
+
+// 수정버튼 클릭시
+function modSeasonalFoodKeyword(month, keyword) {
+	clickMonth = month;
+	popupMonth = window.open('/seasonal-food/popup-month', 'seasonalFoodPopupMonth', popupType);
+}
+
+// 수정버튼 팝업에서 데이터 가져오기 위해 호출
+function getSeasonalFoodMonthData() {
+	if (popupMonth) {
+		popupMonth.setData(clickMonth, $("#data" + clickMonth).html());
+	} else {
+		popupMonth = window.open('/seasonal-food/popup-month', 'seasonalFoodPopupMonth', popupType);
+	}
+	//clickMonth = "";
+}
+
+// 등록버튼 클릭시
+function regSeasonalFoodKeyword() {
+	popupKeyword = window.open('/seasonal-food/popup-keyword', 'seasonalFoodPopupKeyword', popupType);
+}
+
+// 수정버튼 팝업에서 호출, 데이터 저장 후 화면 갱신
+function saveSeasonalFoodMonthData(month, keyword) {
+	if (month) {
+		Common.loading.show();
+		sendSaveData(popupMonth, {'seasonalFoods' : [{seasonalFoodMonth : month
+													, seasonalFoodKeyword : keyword}]});
+	} else {
+		try {
+			popupMonth.openMsg(Message.get("M00473"));
+		} catch(e) {
+			alert(Message.get("M00473"));	// 데이터가 없습니다.
+		}
+	}
+}
+
+// 등록버튼 팝업에서 호출, 데이터 저장 후 화면 갱신
+function regSeasonalFoodData(startMonthStr, endMonthStr, keyword) {
+	let startMonth = Number(startMonthStr);
+	let endMonth = Number(endMonthStr);
+
+	if (startMonth > 0 && startMonth < 13 && endMonth > 0 && endMonth < 13) {
+		let months = [];
+		if (startMonth > endMonth) {		// 시작월이 클 때
+			endMonth += 12;
+		}/* else if (startMonth < endMonth) {		// 시작월이 작을 때
+
+		} else {		// 같을 때
+
+		}*/
+
+		for (let i = 0 ; i <= (endMonth - startMonth) ; i++) {
+			months.push(makeSeasonalKeywordData(startMonth + i, keyword));
+		}
+
+		Common.loading.show();
+		sendSaveData(popupKeyword, {'seasonalFoods' : months});
+	} else {
+		try {
+			popupKeyword.openMsg(Message.get("M00473"));
+		} catch(e) {
+			alert(Message.get("M00473"));	// 데이터가 없습니다.
+		}
+	}
+}
+
+// null, undefine 값 empty 로 변환
+function nullToEmpty(value) {
+	if (!value) {
+		return "";
+	}
+	return value;
+}
+
+// 등록 팝업에서 입력한 키워드를 기존 키워드와 합치기(중복안되는 거만)
+function makeSeasonalKeywordData(month, inputKeyword) {
+	if (month > 12) {
+		month -= 12;
+	}
+	let savedDatas = $("#data" + month).html();
+	let savedDatasArr = savedDatas.split(",");
+	const savedDatasArrCopy = savedDatas.split(",");
+	let inputKeywordArr = inputKeyword.split(",");
+
+	let savedDatasLength = savedDatasArrCopy.length;
+	let inputKeywordLength = inputKeywordArr.length;
+
+	for (let i = 0 ; i < inputKeywordLength ; i++) {
+		let isDupl = false;
+		dupCheck: for (let j = 0 ; j < savedDatasLength ; j++) {
+			if (inputKeywordArr[i] == savedDatasArrCopy[j]) {
+				isDupl = true;
+				break dupCheck;
+			}
+		}
+		if (!isDupl) {
+			if (inputKeywordArr[i]) {
+				savedDatasArr.push(inputKeywordArr[i]);
+			}
+		}
+	}
+
+	return {seasonalFoodMonth : month, seasonalFoodKeyword : savedDatasArr.join(",")};
+}
+
+function sendSaveData(popupWindow, dataList) {
+	//if (confirm("정보를 저장하시겠습니까?")) {
+	if (popupWindow.confirmMsg("정보를 저장하시겠습니까?")) {
+		$.ajax ({
+			url	: "/seasonal-food/saveSeasonalFood",
+			type	: "POST",
+			//timeout : 3000, // 요청 제한 시간 안에 완료되지 않으면 요청을 취소하거나 error 콜백을 호출.(단위: ms)
+			data  : JSON.stringify(dataList), // 요청 시 포함되어질 데이터
+			processData : true,
+			contentType : "application/json",
+			dataType    : "json",
+			success : function(resp, status, xhr) {
+				Common.responseHandler(resp, function(response){
+					$("#seasonFoodTable").empty();
+		 			if (response.data) {
+		 				let data = response.data;
+		 				let length = data.length;
+		 				for(let i = 0; i < length ; i++) {
+		 					let tr = "";
+		 					tr += '<tr style="background:#fff;">';
+		 					tr += '    <td>';
+							tr += '        <div>' + nullToEmpty(data[i].seasonalFoodMonth) + MSG_MONTH + '</div>';
+							tr += '    </td>';
+							tr += '    <td>';
+							tr += '        <div class="text-left" id="data' + nullToEmpty(data[i].seasonalFoodMonth) + '">' + nullToEmpty(data[i].seasonalFoodKeyword) + '</div>';
+							tr += '    </td>';
+							tr += '    <td>';
+							tr += '        <div class="flex_box juc-center gap-08">';
+							tr += '            <button type="button" class="btn btn-dark-gray btn-sm" onclick="javascript:modSeasonalFoodKeyword(\'' + nullToEmpty(data[i].seasonalFoodMonth) + '\', \'' + nullToEmpty(data[i].seasonalFoodKeyword) + '\');">' + MSG_MODIFY + '</button>';
+							tr += '        </div>';
+							tr += '    </td>';
+							tr += '</tr>';
+		 					$('#seasonFoodTable').append(tr);
+		 				}
+		 			}
+	 				try {
+	 					popupWindow.openMsg(Message.get("M00406"));	//저장되었습니다.
+	 				} catch (e) {
+
+	 					alert(Message.get("M00406"));	//저장되었습니다.
+	 				}
+				});
+			},
+			error	: function(xhr, status, error) {
+
+				try {
+					popupWindow.openMsg(Message.get("실패했습니다."));		// 실패했습니다.
+				} catch (e) {
+
+					alert(Message.get("실패했습니다."));		// 실패했습니다.
+				}
+			},
+			complete : function(xhr, status) {
+				Common.loading.hide();
+			}
+		});
+	}
+}
+</script>
+    </div>
+    </div>
+</div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

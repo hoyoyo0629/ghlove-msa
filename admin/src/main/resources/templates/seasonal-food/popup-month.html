@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>제철식품관 관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<!-- AS-IS opmanager/i18n/seasonal-food/popup-month.jsp 이식 - 제철식품관 관리의 [수정] 팝업(layout=base, 700x310).
+     부모 창에 postMessage로 현재 월·키워드를 요청해 setData()로 받고, [저장]도 부모 창에 postMessage로 맡긴다(부모가 ajax 저장). -->
+<body>
+
+	<!-- 키워드 수정 popup -->
+    <div class="popup_wrap">
+        <div id="pop_header">
+            <h1 class="popup_title" th:text="${msg.get('키워드 수정')}">키워드 수정</h1><!-- 키워드 수정 -->
+			<a href="javascript:self.close();" class="btn_close"><img src="../../content/opmanager/images/btn/btn_close.png" th:alt="${msg.get('M00569')}" alt="닫기"></a><!-- 닫기 -->
+		</div>
+
+        <div class="popup_contents" style="padding-bottom:30px;">
+            <div class="board_write">
+                <table class="board_write_table" summary="">
+                    <colgroup>
+                        <col style="width:150px;">
+                        <col />
+                    </colgroup>
+                    <tbody>
+                        <tr>
+                            <td class="label" th:text="${msg.get('M01347')}">기간</td><!-- 기간 -->
+                            <td>
+                                <div id="month">
+
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label" th:text="${msg.get('키워드')}">키워드</td><!-- 키워드 -->
+                            <td>
+                                <div>
+                                    <span class="placeholder_wrap">
+                                        <!-- <span class="placeholder">키워드를 입력해주세요.</span> -->
+                                        <textarea id="comments" name="comments" cols="30" rows="10" maxlength="140" class="required _filter" th:title="${msg.get('키워드')}"
+                                        	oninput="javascript:inputCheck(this);"></textarea><!-- 키워드 -->
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="popup_btns">
+                <button type="button" class="btn btn-active" onclick="javascript:save();" th:text="${msg.get('M00101')}">저장</button><!-- 저장 -->
+                <button type="button" class="btn btn-default" onclick="javascript:self.close();" th:text="${msg.get('M00569')}">닫기</button><!-- 닫기 -->
+            </p>
+        </div>
+    </div>
+    <!-- // 키워드 수정 popup -->
+
+    <form id="seasonalFoodMonthData" >
+	    <input type="hidden" id="month">
+	    <input type="hidden" id="keyword">
+    </form>
+
+<!-- AS-IS EL(${op:message(..)})을 서버에서 풀어 JS 문자열로 넘긴다 -->
+<script type="text/javascript" th:inline="javascript">
+var MSG_NOT_IN_PARENT = /*[[${msg.get('제철식품관 관리 화면에서 진행해주세요.')}]]*/ '제철식품관 관리 화면에서 진행해주세요.';
+var MSG_NO_DATA = /*[[${msg.get('M00473')}]]*/ '데이터가 없습니다.';
+var MSG_MONTH = /*[[${msg.get('M01077')}]]*/ '월';
+</script>
+
+<script type="text/javascript">
+
+let seasonalFoodMonth;
+
+$(function() {
+	try {
+		// window.opener.getSeasonalFoodMonthData();		// 화면 오픈 후 부모화면 함수 호출(기존 데이터 가져오기..)
+		window.opener.postMessage({fnName: 'getSeasonalFoodMonthData'}, '*');
+	} catch (e) {
+		let errorBoolean = true;
+		alert(MSG_NOT_IN_PARENT);		//제철식품관 관리 화면에서 진행해주세요.
+		// self.close();
+	}
+});
+
+// 저장버튼 클릭시
+function save() {
+	try {
+		let keyword = $("#comments").val();
+		//window.opener.saveSeasonalFoodMonthData(seasonalFoodMonth, keyword);		// parent window 에서 개발자 도구 띄우지 않으면 호출 안됨....
+		window.opener.postMessage({fnName: 'saveSeasonalFoodMonthData', month : seasonalFoodMonth, keyword: keyword}, '*');
+	} catch (e) {
+		let errorBoolean = true;
+		alert(MSG_NOT_IN_PARENT);		// 제철식품관 관리 화면에서 진행해주세요.
+	}
+}
+
+// 부모화면에서 넘겨준 데이터 요소에 세팅
+function setData(month, keyword) {		// 부모화면에서 호출하여 데이터 세팅
+	if (!month) {
+		alert(MSG_NO_DATA);		// 데이터가 없습니다.
+		self.close();
+	}
+	seasonalFoodMonth = month;
+	$("#month").text("" + month + MSG_MONTH);		// 월
+	$("#comments").text(keyword);
+}
+
+// 입력 제한
+function inputCheck(inputElement) {
+	let beforePosition = inputElement.selectionStart - 1;		// 키 입력 후 위치 - 1 => 입력 전 위치
+	let beforeLength = inputElement.value.length;			// 입력 후 길이
+//	inputElement.value = inputElement.value.replace(/[^0-9.]/g, '');		// 숫자만
+	inputElement.value = inputElement.value.replace(/[^a-zA-Z|ㄱ-ㅎ|ㅏ-ㅣ|가-힣|0-9|,|]/g, '');		// 알파벳 한글 숫자 , 만 입력 가능
+	let afterLength = inputElement.value.length;			// 입력 전 길이
+	if (beforeLength > afterLength) {		// 다르면 가능한 입력 값이 아님
+		inputElement.setSelectionRange(beforePosition, beforePosition);		// 기존 위치로 커서 이동
+	}
+}
+
+//부모화면에서 알림 호출
+function openMsg(msg) {
+	alert(msg);
+}
+
+//부모화면에서 알림 호출
+function confirmMsg(msg) {
+	return confirm(msg);
+}
+
+
+</script>
+</body>
+</html>

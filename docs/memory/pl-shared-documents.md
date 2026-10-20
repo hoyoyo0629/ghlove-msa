@@ -45,6 +45,11 @@ PL 문서 통합(10-20): 옛 "통계 보고서 메뉴 분석DB 구조 분석" �
 **Why:** 사용자가 PL 공유 요청(2026-10-19). 문서: https://claude.ai/code/artifact/13347c46-107a-48d5-b338-2e3e1995a220
 **How to apply:** 결정 나기 전엔 관리자 화면을 SPA로 바꾸는 작업 제안·착수 금지, Thymeleaf 이식 그대로. 관련 [[pl-shared-documents]], [[thymeleaf-duplicate-cleanup-deferred]].
 
+**10-20 재검토에서 찾은 빠진 근거**: ISP 컨테이너 용량산정표(원본 p.511, docs/requirements.md Ⅲ.5.4.5)가 이미 FE 프로젝트 `gohyang-fe-www`(대민)·`gohyang-fe-work`(업무WEB)·`gohyang-fe-operation`(운영관리WEB)과
+BE `gohyang-be-operation` 등 6개를 나눠 설계했다 - 운영관리가 FE/BE 2개 파드라는 뜻이라 "admin 한 덩어리(화면+업무로직+DB)" 유지(A안)와 어긋난다. 문서의 "배치가 아직 정해지지 않았다"는 문장은 이 근거를 놓친 것.
+Thymeleaf를 살리려면 화면층을 fe-operation(서버 렌더링 BFF)으로, 업무로직·DB를 be-operation으로 가르는 중간안이 있다. 같은 문서의 수치(native 278·템플릿 315·테스트 19·JPQL 표 42 vs 본문 63)는 작성 시점 값.
+**Claude Docs 문서를 VS Code 세션에서 읽는 법**: Claude Docs 커넥터가 없어 Artifact read로는 제목만 나온다. 사용자가 브라우저에서 탭별로 "다른 이름으로 저장"한 HTML을 주면 본문은 `<이름>_files/saved_resource(2).html`에 있다(스크립트 실행 없이 태그만 벗겨 읽음). 문서 수정도 이 세션에서는 못 하니 고칠 문안을 만들어 넘긴다.
+
 **같은 날 추가 - 전자정부 표준프레임워크(★우선 결정)**: RFP 기술표준 부록 체크표 "개발프레임워크: 전자정부 표준프레임워크", 빌드환경 "표준프레임워크 빌드 시 프라이빗 레파지토리", ISP 아키텍처 Pod에 "표준프레임워크" 표기 → TO-BE 전제. 현재 6개 서비스 egov 의존성 0(Boot 3.3.4/JDK17).
 eGovFrame 5.0 = Boot 3.5·Spring 6.2·Jakarta·JDK17+ 라 적용 가능. 선택지 A 핵심적용(제안, Boot 3.5 업그레이드+rte 핵심모듈+서비스 기반클래스+프라이빗 저장소) / B 부분적용(사유 기재, 감리 불확실) / C 전면(MyBatis 등 데이터접근까지). 같은 문서에 절 추가, 결정 대기.
 **How to apply(추가):** 결정 전에 Boot 버전 올리거나 egov 도입 착수 금지. 결정 나면 6개 서비스 일괄 작업.

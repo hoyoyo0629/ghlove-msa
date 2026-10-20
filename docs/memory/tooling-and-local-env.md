@@ -1,6 +1,6 @@
 ---
 name: tooling-and-local-env
-description: 도구·로컬 환경 메모 - perl 한글 이중인코딩·AskUserQuestion 한글 그대로·Playwright SmartEditor submit·VS Code JDK 경로·내 PC 설정 푸시 금지(skip-worktree/exclude)·개발DB 교차 권한·스페어 스택(Kafka)·admin 테스트 계정 pwtest
+description: 도구·로컬 환경 메모 - perl 한글 이중인코딩·AskUserQuestion 한글 그대로·Playwright SmartEditor submit·VS Code JDK 경로·내 PC 설정 푸시 금지(skip-worktree/exclude)·개발DB 교차 권한·스페어 스택(Kafka)·admin 테스트 계정 pwtest·AS-IS opmanager 실화면 Playwright 접속(hosts 매핑·testadmin 로그인·지자체 묶임·1920폭·픽셀 diff·팝업 실클릭)
 metadata:
   type: reference
 ---
@@ -196,6 +196,34 @@ git 인덱스 조작(`update-index --skip-worktree`)은 막히지 않는다.
 - **실행 중인 스페어의 jar를 `bootJar`로 덮어쓰지 말 것**: donation 스페어가 "Error setting socket options"로 망가졌다. 빌드 전에 스페어를 내릴 것.
 - Playwright: PC에 playwright 모듈이 없어 스크래치패드에 `playwright-core`를 설치하고 캐시된 Chromium(`~/AppData/Local/ms-playwright/chromium-1248/chrome-win64/chrome.exe`)을 `executablePath`로 쓴다. 로그인은 `#op_username`·`#op_password` 채우고 `idLogin()` 호출(개발 프로파일은 devCode 자동입력), 계정은 [[tooling-and-local-env]].
 - 끝나면 `Get-CimInstance Win32_Process`로 `server.port=1xxxx` 잔여 확인. Docker Desktop과 Kafka 컨테이너도 재부팅 뒤엔 꺼져 있다(컨테이너는 `ghlove-cubrid`만 자동 기동).
+- 주문 화면을 볼 땐 order 18085도 띄우고 admin에 `--ghlove.order-service.base-url=…`을 더한다(2026-10-19 전체주문관리).
+
+## asis-opmanager-playwright-access
+
+> AS-IS opmanager 실화면을 Playwright로 열어 TO-BE와 대조하는 방법 - 호스트(hosts 파일 매핑), 로그인 절차, testadmin 지자체 묶임, 같은 조건 캡처·픽셀 diff·요소 수치 비교 요령
+
+
+2026-10-19 답례품승인관리 이식에서 확인, 이후 전체주문관리·주문 상세·제철식품관·관리자 문의에서 같은 방법으로 대조했다.
+사용자가 준 URL `http://192.168.ghlove.test:8080/opmanager/...`의 호스트는 **hosts 파일(`C:\Windows\System32\drivers\etc\hosts`)에서 `10.0.120.52`로 매핑**된 사내 AS-IS 개발서버다(DNS로는 안 풀림 - `ghlove.test` 단독은 실패).
+접속 가능 여부는 `Test-NetConnection 10.0.120.52 -Port 8080`. (CUBRID 직접 조회용 `10.0.120.51:30000`은 다른 서버 - [[asis-sources-and-data]].)
+
+**로그인(Playwright)**: `/opmanager/login-main` → `#op_username`·`#op_password` 채우고 `idLogin()` 호출 → 3초 뒤 `#op_auth_num`에 로컬 우회 인증번호(250324, AS-IS IS_LOCAL_DEV)를 넣고 `authCheck()` → 약 12초 대기하면 `/opmanager`로 이동.
+테스트 계정은 `testadmin`(ROLE_ADMIN_1, 비밀번호는 메모리에 적지 않는다 - 과거 세션 스크래치패드의 `pw/asis-lib.js`나 사용자에게 확인). 로그인 뒤 `ctx.storageState`를 저장해 두면 다음 스크립트가 재로그인 없이 쓴다.
+playwright 모듈이 PC에 없어 스크래치패드에 `playwright-core`+`pngjs`+`pixelmatch`를 설치하고 캐시된 Chromium을 `executablePath`로 쓴다(위 spare-stack-needs-kafka-member-donation).
+
+**★testadmin은 지자체 28155에 묶여 있다**: 롤은 시스템 관리자인데 `OP_MANAGER.LOCGOV_CODE`가 있어 "소속 지자체 강제" 화면(주문 목록·주문 상세 등)은 0건으로 나온다. 2026-10-19 주문 상세 대조 때 **사용자 승인을 받고** CUBRID 개발DB에서 그 값을 잠깐 NULL로 풀어 캡처한 뒤 원래 값으로 복구했다 - 다시 필요하면 또 묻고, 끝나면 반드시 복구.
+
+**대조 요령(효과 있었던 것)**:
+- 뷰포트는 **1920x1080** 고정. 1400처럼 페이지 최소폭(1536)보다 좁으면 TO-BE 셸 헤더 메뉴가 두 줄로 꺾여 전체가 어긋나 보인다(이 화면과 무관한 셸 차이).
+- 같은 쿼리(예: `?searchStartDate=20260101&searchEndDate=20260102`로 "데이터 없음")로 둘 다 캡처 → 내용 영역(x≥190)만 잘라 `pixelmatch`. LNB 길이가 달라 페이지 전체 높이는 다르니 영역을 지정할 것. 헤더의 접속자명 차이는 정상.
+- 데이터가 달라 이미지 diff가 안 되는 화면(미리보기 등)은 같은 셀렉터 40여 개의 `getBoundingClientRect`+`getComputedStyle`(폭·높이·글꼴·색·여백)을 두 쪽에서 뽑아 표로 대조 - 값이 다른 요소가 내용 차이로 설명되는지 본다.
+- AS-IS에 데이터가 없는 상태(승인 대기 0건 등)는 AS-IS 쪽 행을 못 본다 - 같은 JSP를 쓰는 인접 화면이나 JSP 소스로 갈음하고 그 사실을 보고한다. **AS-IS 개발서버 데이터를 마음대로 바꾸지 말 것**(위 testadmin 예외도 승인 받고).
+  ★저장·삭제 엔드포인트(checked-delete 등)는 "리다이렉트만 확인"하려는 목적이라도 **요청 자체를 보내지 말 것** - 2026-10-20 이벤트 관리의 checked-delete를 빈 값으로 보냈다가 500(지워진 것 없음)이 났다. 리다이렉트 확인은 GET 화면 진입까지만.
+- **개발서버 실화면이 `C:\workspace\ghlove` 소스 JSP와 다를 수 있다**(이벤트 관리: 소스는 "총 {N}{M00272}"인데 실화면은 "총 1063총 n,nnn,nnn건", "목록 {M00752}"인데 "목록 목록 이미지" - 같은 서버의 다른 화면은 M00272="건"이라 배포 판 차이로 보임).
+  소스와 실화면 HTML을 둘 다 떠서 비교하고, 다르면 실화면 기준으로 맞춘 뒤 템플릿 주석·원장에 적는다.
+- `window.open`은 사용자 동작이 없으면 두 번째부터 막힌다 - 팝업은 `page.evaluate`로 직접 열지 말고 버튼을 주입해 **실제 클릭**으로 열 것. 팝업 안 `window.opener` 의존 스크립트도 이렇게 열어야 돈다.
+- 탭 화면처럼 클릭 상태를 여러 번 봐야 하는 AS-IS 페이지는 HTML을 저장해 `<base href="http://192.168.ghlove.test:8080/">`를 끼워 넣고 오프라인으로 열면 CSS·JS를 그대로 받아 탭 클릭 캡처가 된다.
+- AS-IS JSP의 중복 id(예: 제철식품관 팝업의 `id="month"` 두 개)는 verbatim으로 옮기므로 Playwright strict 모드에서 `#month`가 실패한다 - `div#month`처럼 태그로 좁힐 것.
 
 ## admin-pwtest-manager-accounts
 

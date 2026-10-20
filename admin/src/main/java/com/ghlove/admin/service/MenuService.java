@@ -54,11 +54,26 @@ public class MenuService {
         return menuRepository.findByStatusCodeOrderByMenuSeq(STATUS_IN_USE);
     }
 
+    /**
+     * 메뉴 URL의 하위 경로가 아닌 상세 화면 URL - AS-IS 전체주문관리(메뉴 /order/list)의 주문 상세는 {@code /order/all/order-detail/..}이라
+     * 접두 일치로는 메뉴를 못 찾아 LNB 하이라이트·경로(breadcrumb)·권한 검사가 모두 빠진다. 같은 메뉴로 취급한다.
+     * 이벤트 관리(메뉴 /featured/list)의 등록·수정(/featured/create, /featured/edit/{번호})도 같은 경우다.
+     */
+    private static final Map<String, String> URI_ALIASES = Map.of("/order/all/", "/order/list", "/featured/", "/featured/list");
+
     /** 등록된 메뉴 중 요청 URI와 가장 길게 일치하는 것을 찾는다(하위 경로도 같은 메뉴로 취급). */
     public Optional<Menu> resolve(String requestUri) {
+        String uri = requestUri;
+        for (Map.Entry<String, String> alias : URI_ALIASES.entrySet()) {
+            if (requestUri.startsWith(alias.getKey())) {
+                uri = alias.getValue();
+                break;
+            }
+        }
+        final String target = uri;
         return visibleMenus().stream()
                 .filter(m -> m.getMenuUrl() != null
-                        && (requestUri.equals(m.getMenuUrl()) || requestUri.startsWith(m.getMenuUrl() + "/")))
+                        && (target.equals(m.getMenuUrl()) || target.startsWith(m.getMenuUrl() + "/")))
                 .max(Comparator.comparingInt(m -> m.getMenuUrl().length()));
     }
 

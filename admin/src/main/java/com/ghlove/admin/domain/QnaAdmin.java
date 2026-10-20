@@ -8,9 +8,10 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 /**
- * 내부문의(지자체담당자 → 본사 운영자) 문의 본문. AS-IS G_QNA_ADMIN / QnaAdminManagerController.
- * 지자체 담당자(ROLE_ADMIN_5/6)가 자기 지자체 명의로 본사에 문의를 등록하고, 본사(ROLE_ADMIN_1~4)가
- * 답변한다. 일반 1:1문의(OP_QNA, {@code QnaAdminController})와는 별개 테이블·별개 도메인이다.
+ * 관리자 문의(AS-IS G_QNA_ADMIN) - <b>답례품 제공자(판매자)가 자기 지자체에 남기는 문의</b>. 판매자 포털의 "지자체 문의"
+ * (AS-IS /seller/qna-locgov)에서 쓰고, 운영관리 "관리자 문의"(메뉴 16651, AS-IS /opmanager/qna-admin)에서 그 지자체 담당자가 답한다.
+ * USER_ID는 판매자 계정 번호(OP_SELLER_USER), LOCGOV_CODE는 문의 받은 지자체.
+ * 상태: DATA_STATUS_CODE '0' 정상 / '1' 삭제, DISPLAY_FLAG 'Y'만 목록에 나온다(AS-IS insert 고정값).
  */
 @Entity
 @Table(name = "G_QNA_ADMIN")

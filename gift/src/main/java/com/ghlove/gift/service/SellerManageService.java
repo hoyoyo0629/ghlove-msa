@@ -56,6 +56,53 @@ public class SellerManageService {
                           String mberDn, String mberFinDn, String mberCi) {
     }
 
+    /** 판매자 계정 한 명 - 번호·아이디·계정 지자체코드(OP_SELLER_USER.LOCGOV_CODE). */
+    public record UserBrief(Long userId, String loginId, String locgovCode) {
+    }
+
+    /** 판매자 계정 번호로 아이디·지자체코드. 없는 번호는 빠진다. */
+    @Transactional(readOnly = true)
+    @SuppressWarnings("unchecked")
+    public List<UserBrief> usersByIds(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+        List<UserBrief> result = new java.util.ArrayList<>();
+        for (Object[] r : (List<Object[]>) em.createNativeQuery(
+                        "select user_id, login_id, locgov_code from public.op_seller_user where user_id in (:ids)")
+                .setParameter("ids", userIds).getResultList()) {
+            result.add(new UserBrief(((Number) r[0]).longValue(), r[1] == null ? null : r[1].toString(), r[2] == null ? null : r[2].toString()));
+        }
+        return result;
+    }
+
+    public record SellerOption(Long sellerId, String sellerName) {
+    }
+
+    /**
+     * AS-IS getSellerListByParam(지자체 조건만) - 상품검색 팝업(item/find-item)의 판매자 select. 판매자 계정(OP_SELLER_USER)과
+     * 아이디로 이어지는 판매자만, 상태 구분 없이 등록일 최근순.
+     */
+    @Transactional(readOnly = true)
+    @SuppressWarnings("unchecked")
+    public List<SellerOption> sellersByLocgov(String locgov) {
+        StringBuilder sql = new StringBuilder("select s.seller_id, s.seller_name from public.op_seller s "
+                + "inner join public.op_seller_user su on s.login_id = su.login_id");
+        if (locgov != null && !locgov.isEmpty()) {
+            sql.append(" where s.locgov_code = :locgov");
+        }
+        sql.append(" order by s.created_date desc");
+        var q = em.createNativeQuery(sql.toString());
+        if (locgov != null && !locgov.isEmpty()) {
+            q.setParameter("locgov", locgov);
+        }
+        List<SellerOption> result = new java.util.ArrayList<>();
+        for (Object[] r : (List<Object[]>) q.getResultList()) {
+            result.add(new SellerOption(((Number) r[0]).longValue(), r[1] == null ? null : r[1].toString()));
+        }
+        return result;
+    }
+
     /** AS-IS getSellerCount - OP_SELLER만 센다(계정 join 없음). */
     @Transactional(readOnly = true)
     public int count(Search s) {

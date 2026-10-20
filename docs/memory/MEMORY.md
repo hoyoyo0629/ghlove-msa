@@ -3,11 +3,11 @@
 - [★빌드는 내가·재기동은 사용자](build-is-mine-restart-is-users.md) — bootJar까지, EXIT=0은 기동 보증 아님 → 여분 포트 확인 후 반드시 내릴 것
 - [★★AS-IS 이식 원칙 모음](asis-porting-principles.md) — 발명 금지·문구/CSS/JS verbatim·대체 금지·비활성까지 parity·서비스로직이 정본·전수대조·메뉴위치 먼저·구조적 결함 보고
 - [★화면 이식 고정절차](asis-screen-port-procedure.md) — JSP+매퍼SQL+서비스로직 3종 기준, 발명 금지
-- [admin 화면 이식 함정](admin-screen-pitfalls.md) — th:onclick·인라인JS·count_title·h3·푸터·전역·csrf·라디오·JSP style·인터셉터 예외·로그인 게이트·@opDate·메뉴노출·엑셀 No·년도 select
+- [admin 화면 이식 함정](admin-screen-pitfalls.md) — th:onclick·인라인JS·count_title·h3·푸터·전역·csrf·라디오·JSP style·인터셉터 예외·로그인 게이트·@opDate·메뉴노출·엑셀 No·년도 select·상세 URL 메뉴 별칭·쿼크스 팝업
 - [백엔드·DB 함정](backend-db-pitfalls.md) — LIKE cast·null 바인딩 500·varchar(1)=Character·NOT NULL DEFAULT·PG 나눗셈 스케일·날짜포맷 API·세션 쿠키 이름
-- [도구·로컬 환경](tooling-and-local-env.md) — perl 인코딩·AskUserQuestion 한글·Playwright·JDK 경로·내 PC 설정 푸시 금지·DB 권한·스페어 스택·테스트 계정
+- [도구·로컬 환경](tooling-and-local-env.md) — perl 인코딩·AskUserQuestion 한글·Playwright·JDK 경로·내 PC 설정 푸시 금지·DB 권한·스페어 스택·테스트 계정·AS-IS 실화면 Playwright 대조(실화면≠소스 주의)
 - [AS-IS 소스·데이터 위치](asis-sources-and-data.md) — CUBRID 개발DB 직접조회·덤프 경로·실행 소스 C:\workspace\ghlove·인벤토리·문구사전
-- [도메인 코드·데이터 사실](domain-code-facts.md) — 가입구분 100/200·수신동의 0=수신·판매자 2/3/5·주문번호 K+10·op_qna 분할·FAQ 정본·S옵션·수납일 불변식
+- [도메인 코드·데이터 사실](domain-code-facts.md) — 가입구분 100/200·수신동의 0=수신·판매자 2/3/5·주문번호 K+10·op_qna 분할·FAQ 정본·S옵션·수납일 불변식·G_QNA_ADMIN·주문 상태코드 도출·item_type NULL
 - [admin 영역별 이식 진척](admin-port-progress.md) — 영역별 한 줄 상태, 상세 원장은 docs/as-is-parity.md 22절
 - [★관리자=회원 계정 연결(A안, 10-14)](admin-manager-member-account-link.md) — 관리자는 같은 USER_ID 회원의 복사본, 테스트계정 번호
 - [★배치 이식 결정·현황](batch-job-port-decisions.md) — 화면 설정이 곧 스케줄, 76행 AS-IS 상태, 중지 job 구현만, 남은 10건은 docs/as-is-parity.md 23절

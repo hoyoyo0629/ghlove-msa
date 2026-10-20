@@ -204,11 +204,12 @@ public class GiftService {
     }
 
     /** 제철식품관 첫 화면의 월별 키워드 카드(1~12월). AS-IS는 데이터가 있는 월만 내려주지만, 화면이
-     *  12개월 카드를 그리므로 없는 달은 빈 키워드로 채워 1~12월을 모두 반환한다. */
+     *  12개월 카드를 그리므로 없는 달은 빈 키워드로 채워 1~12월을 모두 반환한다.
+     *  한 달의 키워드는 키워드마다 한 행(등록순번)이라 AS-IS getSeasonalFoodDisplay(GROUP_CONCAT)처럼 쉼표로 이어 준다. */
     public List<SeasonFoodKeyword> seasonFoodKeywords() {
         Map<Integer, String> byMonth = new java.util.HashMap<>();
         for (SeasonFood sf : seasonFoodRepository.findAllByOrderBySeasonFoodMonthAscRegSeqAsc()) {
-            byMonth.putIfAbsent(sf.getSeasonFoodMonth(), sf.getSeasonFoodKeyword());
+            byMonth.merge(sf.getSeasonFoodMonth(), sf.getSeasonFoodKeyword() == null ? "" : sf.getSeasonFoodKeyword(), (a, b) -> a + "," + b);
         }
         List<SeasonFoodKeyword> result = new java.util.ArrayList<>();
         for (int m = 1; m <= 12; m++) {

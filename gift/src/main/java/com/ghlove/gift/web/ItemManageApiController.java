@@ -34,10 +34,19 @@ public class ItemManageApiController {
     public record IdsRequest(List<Long> ids, String flag, long managerId) {
     }
 
+    public record ApprovalRequest(List<Long> ids, String message, long managerId) {
+    }
+
     public record RprsRequest(String locgov, List<Long> itemIds, long userId) {
     }
 
     public record OffRprsRequest(String locgov, List<ItemManageService.OffRprsInput> items, long userId) {
+    }
+
+    /** 주문 상세가 품목 이미지를 그리려고 부른다 - 답례품ID별 대표 이미지 파일명(없으면 키가 빠진다). */
+    @PostMapping("/thumbnails")
+    public Map<Long, String> thumbnails(@RequestBody List<Long> itemIds) {
+        return service.thumbnails(itemIds);
     }
 
     @PostMapping("/count")
@@ -71,6 +80,38 @@ public class ItemManageApiController {
     @PostMapping("/delete")
     public Map<String, Integer> delete(@RequestBody IdsRequest request) {
         return Map.of("updated", service.delete(request.ids(), request.managerId()));
+    }
+
+    // ---- 답례품승인관리 ----
+
+    /** AS-IS list/update(processType=approval) - 승인처리. 삭제신청(40)은 삭제 승인. */
+    @PostMapping("/approval")
+    public List<ItemManageService.ProcessedItem> approval(@RequestBody ApprovalRequest request) {
+        try {
+            return service.approve(request.ids(), request.managerId());
+        } catch (GiftException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    /** AS-IS list/update(processType=reject) - 등록보류. */
+    @PostMapping("/reject")
+    public List<ItemManageService.ProcessedItem> reject(@RequestBody ApprovalRequest request) {
+        try {
+            return service.reject(request.ids(), request.message(), request.managerId());
+        } catch (GiftException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    /** AS-IS item/seller/preview 데이터 - 화면에 보이는 상품코드로 찾는다. */
+    @GetMapping("/preview")
+    public ItemManageService.Preview preview(@RequestParam String itemUserCode) {
+        try {
+            return service.preview(itemUserCode);
+        } catch (GiftException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
     }
 
     @GetMapping("/{itemId}/log/count")

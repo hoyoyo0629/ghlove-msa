@@ -6,137 +6,140 @@ import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
 
-/** admin이 gift 서비스의 기획전/이벤트 관리 API(FeaturedAdminApiController)를 호출하는 클라이언트. */
+/** 관리자 > 답례품관리 > 이벤트 관리(AS-IS opmanager/featured) - gift 서비스 FeaturedAdminApiController 호출. */
 @org.springframework.stereotype.Service
 public class FeaturedAdminClient {
 
+    private static final String BASE = "/api/admin/featured";
+
     private final RestClient restClient;
-    private final String giftServiceBaseUrl;
 
     public FeaturedAdminClient(@Value("${ghlove.gift-service.base-url}") String giftServiceBaseUrl,
-            @Value("${ghlove.internal.admin-secret}") String adminSecret) {
+                               @Value("${ghlove.internal.admin-secret}") String adminSecret) {
         this.restClient = RestClient.builder().baseUrl(giftServiceBaseUrl)
                 .defaultHeader("X-Internal-Secret", adminSecret).build();
-        this.giftServiceBaseUrl = giftServiceBaseUrl;
     }
 
-    public record FeaturedDto(Integer featuredId, Integer featuredClass, String featuredType, String featuredUrl,
-                               String featuredCode, String featuredName, String featuredSimpleContent,
-                               String featuredContent, String featuredImage, String thumbnailImage,
-                               String featuredFlag, String link, String displayListFlag, Integer ordering,
-                               String createdDate, String startDate, String endDate, String locgovCode) {
-        public String imageUrl(String baseUrl) {
-            return featuredImage != null ? baseUrl + "/uploads/" + featuredImage : null;
+    /** AS-IS FeaturedParam 중 목록이 쓰는 것. locgovCodes는 시도만 골랐을 때 그 시도에 속한 지자체 코드. */
+    public record Search(String featuredType, String where, String query, String progression, String displayListFlag,
+                         String locgovCode, String upperLocgovCode, List<String> locgovCodes) {
+    }
+
+    public record Row(Integer featuredId, String featuredName, String progression, String displayListFlag, String startDate,
+                      String endDate, String createdDate, String locgovCode) {
+    }
+
+    public record Item(Long itemId, String itemUserCode, String itemName, Integer salePrice, String thumbnail) {
+    }
+
+    public record Detail(Integer featuredId, Integer featuredClass, String featuredType, String featuredUrl, String featuredName,
+                         String featuredContent, String featuredImage, String featuredImageMobile, String featuredListImage,
+                         String featuredFlag, String displayListFlag, String link, String prodState, String startDate,
+                         String startTime, String endDate, String endTime, String featuredHost, String featuredPhoneNo1,
+                         String featuredPhoneNo2, String featuredPhoneNo3, String locgovCode, String createdDate, List<Item> items,
+                         List<String> userGroups) {
+    }
+
+    private record ListRequest(Search search, int offset, int limit) {
+    }
+
+    private record IdsRequest(List<Integer> ids) {
+    }
+
+    public int count(Search search) {
+        Integer n = restClient.post().uri(BASE + "/count").contentType(MediaType.APPLICATION_JSON).body(search)
+                .retrieve().body(Integer.class);
+        return n == null ? 0 : n;
+    }
+
+    public List<Row> list(Search search, int offset, int limit) {
+        List<Row> rows = restClient.post().uri(BASE + "/list").contentType(MediaType.APPLICATION_JSON)
+                .body(new ListRequest(search, offset, limit)).retrieve().body(new ParameterizedTypeReference<List<Row>>() {
+                });
+        return rows == null ? List.of() : rows;
+    }
+
+    /** @return 없으면 null */
+    public Detail detail(int featuredId) {
+        try {
+            return restClient.get().uri(BASE + "/{id}", featuredId).retrieve().body(Detail.class);
+        } catch (RestClientResponseException e) {
+            if (e.getStatusCode().value() == 404) {
+                return null;
+            }
+            throw e;
         }
     }
 
-    public record FeaturedItemRow(Integer itemId, String itemName, Integer displayOrder) {
-    }
-
-    public String giftServiceBaseUrl() {
-        return giftServiceBaseUrl;
-    }
-
-    public List<FeaturedDto> list(String featuredType, String featuredName) {
+    /** 폼 칸 그대로 + 첨부 3개. 확장자 오류 등 업무 오류는 ManagerException(문구)으로 올린다. */
+    public int create(Map<String, String> params, String locgovCode, MultipartFile featuredFile, MultipartFile featuredFileMobile,
+                      MultipartFile featuredListFile) {
+        MultiValueMap<String, Object> body = multipart(params, featuredFile, featuredFileMobile, featuredListFile);
+        body.add("locgovCode", locgovCode);
         try {
-            List<FeaturedDto> list = restClient.get()
-                    .uri(uriBuilder -> uriBuilder.path("/api/admin/featured")
-                            .queryParam("featuredType", featuredType)
-                            .queryParamIfPresent("featuredName", java.util.Optional.ofNullable(blankToNull(featuredName)))
-                            .build())
-                    .retrieve().body(new ParameterizedTypeReference<List<FeaturedDto>>() {
+            Map<String, Object> res = restClient.post().uri(BASE).contentType(MediaType.MULTIPART_FORM_DATA).body(body).retrieve()
+                    .body(new ParameterizedTypeReference<Map<String, Object>>() {
                     });
-            return list != null ? list : List.of();
-        } catch (RestClientException e) {
-            return List.of();
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> get(Integer id) {
-        try {
-            return restClient.get().uri("/api/admin/featured/{id}", id).retrieve().body(Map.class);
+            return res != null && res.get("featuredId") instanceof Number n ? n.intValue() : 0;
         } catch (RestClientResponseException e) {
-            throw new ManagerException(extractMessage(e, "기획전을 찾을 수 없습니다."));
+            throw new ManagerException(message(e));
         }
     }
 
-    public void create(Map<String, Object> fields, MultipartFile image, MultipartFile thumbnailImage) {
+    public void update(int featuredId, Map<String, String> params, MultipartFile featuredFile, MultipartFile featuredFileMobile,
+                       MultipartFile featuredListFile) {
         try {
-            restClient.post().uri("/api/admin/featured")
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(toMultipart(fields, image, thumbnailImage))
-                    .retrieve().toBodilessEntity();
+            restClient.post().uri(BASE + "/{id}", featuredId).contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(multipart(params, featuredFile, featuredFileMobile, featuredListFile)).retrieve().toBodilessEntity();
         } catch (RestClientResponseException e) {
-            throw new ManagerException(extractMessage(e, "기획전 등록에 실패했습니다."));
+            throw new ManagerException(message(e));
         }
     }
 
-    public void update(Integer id, Map<String, Object> fields, MultipartFile image, MultipartFile thumbnailImage) {
-        try {
-            restClient.put().uri("/api/admin/featured/{id}", id)
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(toMultipart(fields, image, thumbnailImage))
-                    .retrieve().toBodilessEntity();
-        } catch (RestClientResponseException e) {
-            throw new ManagerException(extractMessage(e, "기획전 수정에 실패했습니다."));
-        }
+    public boolean deleteImage(int featuredId, int fileType) {
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("fileType", String.valueOf(fileType));
+        Map<String, Object> res = restClient.post().uri(BASE + "/{id}/delete-image", featuredId)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED).body(form).retrieve()
+                .body(new ParameterizedTypeReference<Map<String, Object>>() {
+                });
+        return res != null && Boolean.TRUE.equals(res.get("isSuccess"));
     }
 
-    public void delete(Integer id) {
-        try {
-            restClient.delete().uri("/api/admin/featured/{id}", id).retrieve().toBodilessEntity();
-        } catch (RestClientResponseException e) {
-            throw new ManagerException(extractMessage(e, "기획전 삭제에 실패했습니다."));
-        }
+    public void delete(List<Integer> featuredIds) {
+        restClient.post().uri(BASE + "/delete").contentType(MediaType.APPLICATION_JSON).body(new IdsRequest(featuredIds))
+                .retrieve().toBodilessEntity();
     }
 
-    public void replaceItems(Integer id, List<Long> itemIds) {
-        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        itemIds.forEach(i -> body.add("itemIds", String.valueOf(i)));
-        try {
-            restClient.put().uri("/api/admin/featured/{id}/items", id)
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                    .body(body).retrieve().toBodilessEntity();
-        } catch (RestClientResponseException e) {
-            throw new ManagerException(extractMessage(e, "기획전 답례품 구성 저장에 실패했습니다."));
-        }
-    }
-
-    private static MultiValueMap<String, Object> toMultipart(Map<String, Object> fields, MultipartFile image, MultipartFile thumbnailImage) {
-        var multipart = new LinkedMultiValueMap<String, Object>();
-        fields.forEach((k, v) -> {
-            if (v != null && !(v instanceof String s && s.isBlank())) {
-                multipart.add(k, v);
+    private static MultiValueMap<String, Object> multipart(Map<String, String> params, MultipartFile... files) {
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        params.forEach((k, v) -> {
+            if (v != null) {
+                body.add(k, v);
             }
         });
-        if (image != null && !image.isEmpty()) {
-            multipart.add("image", image.getResource());
+        String[] names = {"featuredFile", "featuredFileMobile", "featuredListFile"};
+        for (int i = 0; i < files.length; i++) {
+            if (files[i] != null && files[i].getSize() > 0) {
+                body.add(names[i], files[i].getResource());
+            }
         }
-        if (thumbnailImage != null && !thumbnailImage.isEmpty()) {
-            multipart.add("thumbnailImage", thumbnailImage.getResource());
-        }
-        return multipart;
+        return body;
     }
 
-    private static String blankToNull(String s) {
-        return (s == null || s.isBlank()) ? null : s;
-    }
-
-    private static String extractMessage(RestClientResponseException e, String fallback) {
+    private static String message(RestClientResponseException e) {
         try {
-            var body = e.getResponseBodyAs(Map.class);
+            Map<?, ?> body = e.getResponseBodyAs(Map.class);
             Object msg = body != null ? body.get("message") : null;
-            return msg != null ? msg.toString() : fallback;
+            return msg != null ? msg.toString() : "실패했습니다.";
         } catch (RuntimeException ex) {
-            return fallback;
+            return "실패했습니다.";
         }
     }
 }

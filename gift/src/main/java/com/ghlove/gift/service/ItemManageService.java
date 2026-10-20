@@ -56,6 +56,11 @@ public class ItemManageService {
         return "[" + statusText(code) + " " + LocalDateTime.now().format(MSG_TS) + "] " + message + "\n";
     }
 
+    /** 답례품승인관리 목록 구분(Search.listType). */
+    public static final String PENDING_LIST = "pending";
+    /** 상품검색 팝업(AS-IS item/find-item, conditionType FIND_ITEM_POPUP) 구분(Search.listType). */
+    public static final String FIND_LIST = "find";
+
     /** 화면에 보이는 상품코드 - {@link #userCode}와 같은 식. 저장값이 비어 있는 TO-BE 답례품도 보이는 코드로 검색되게 한다. */
     private static final String USER_CODE_EXPR = "coalesce(nullif(i.item_user_code, ''), 'G2' || lpad(cast(i.item_id as varchar), 9, '0'))";
 
@@ -78,7 +83,8 @@ public class ItemManageService {
     /** 목록 조회 조건 - AS-IS ItemParam 중 이 화면이 쓰는 것. locgov는 지자체 담당자의 소속 지자체(서버가 강제). */
     public record Search(String locgov, String shLocgovCode, String where, String query, String srchDateType,
                          String searchStartDate, String searchEndDate, Integer categoryGroupId, String categoryClass,
-                         Integer categoryId, String saleStatus, String displayFlag, Long sellerId, String orderBy, String sort) {
+                         Integer categoryId, String saleStatus, String displayFlag, Long sellerId, String orderBy, String sort,
+                         String listType, String dataStatusCode) {
     }
 
     public record ItemRow(Long itemId, String itemCode, String itemUserCode, String itemName, String itemSellerCode,
@@ -87,10 +93,17 @@ public class ItemManageService {
                           String stockFlag, Integer stockQuantity, String soldOut, String itemSoldOutFlag, String itemType,
                           String itemLabel, Long sellerId, String sellerName, String companyName, String sellerLocgovCode,
                           Integer hits, String brand, String createdDate, String updatedDate, String displayCommissionRate,
-                          Integer minusSpotDiscount, Integer exceptSpotDiscount, Integer presentPrice, String thumbnail) {
+                          Integer minusSpotDiscount, Integer exceptSpotDiscount, Integer presentPrice, String thumbnail,
+                          String dataStatusMessage) {
     }
 
     private record Built(String from, String where, Map<String, Object> params, boolean orderingJoin) {
+    }
+
+    /** 주문 상세 등 다른 화면이 품목 이미지를 그리려고 쓴다 - 답례품ID별 대표 이미지 파일명. */
+    @Transactional(readOnly = true)
+    public Map<Long, String> thumbnails(List<Long> itemIds) {
+        return itemIds == null || itemIds.isEmpty() ? Map.of() : giftService.thumbnailsOf(itemIds);
     }
 
     @Transactional(readOnly = true)
@@ -197,23 +210,41 @@ public class ItemManageService {
             w.add("s.locgov_code = :locgov");
             p.put("locgov", s.locgov());
         }
-        w.add("i.data_status_code in ('0', '1', '90')");
+        // 답례품승인관리(AS-IS conditionType ITEM_LIST_PENDING_APPROVAL): 상태 라디오를 고르면 그 상태만, 아니면 승인 대기 계열 6종 전부.
+        boolean pending = PENDING_LIST.equals(s.listType());
+        // 상품검색 팝업(AS-IS FIND_ITEM_POPUP): 컨트롤러가 dataStatusCode 1·displayFlag Y를 넣는다. ITEM_DATA_TYPE 조건은 없다(추가구성도 나온다).
+        boolean find = FIND_LIST.equals(s.listType());
+        if (pending) {
+            if (!nz(s.dataStatusCode()).isEmpty()) {
+                w.add("i.data_status_code = :dataStatusCode");
+                p.put("dataStatusCode", s.dataStatusCode());
+            } else {
+                w.add("i.data_status_code in ('20', '21', '30', '31', '40', '41')");
+            }
+        } else if (find) {
+            w.add("i.data_status_code = :dataStatusCode");
+            p.put("dataStatusCode", nz(s.dataStatusCode()));
+        } else {
+            w.add("i.data_status_code in ('0', '1', '90')");
+        }
         if (!nz(s.displayFlag()).isEmpty()) {
             w.add("i.display_flag = :displayFlag");
             p.put("displayFlag", s.displayFlag());
         }
-        w.add("i.item_data_type = '1'");
+        if (!find) {
+            w.add("i.item_data_type = '1'");
+        }
         if (s.sellerId() != null && s.sellerId() > 0) {
             w.add("i.seller_id = :sellerId");
             p.put("sellerId", s.sellerId());
         }
         if (!nz(s.searchStartDate()).isEmpty()) {
-            w.add(("update".equals(s.srchDateType()) ? "i.updated_date" : "i.created_date")
+            w.add((pending || "update".equals(s.srchDateType()) ? "i.updated_date" : "i.created_date")
                     + " >= concat(cast(:startDate as varchar), '000000')");
             p.put("startDate", s.searchStartDate());
         }
         if (!nz(s.searchEndDate()).isEmpty()) {
-            w.add(("update".equals(s.srchDateType()) ? "i.updated_date" : "i.created_date")
+            w.add((pending || "update".equals(s.srchDateType()) ? "i.updated_date" : "i.created_date")
                     + " <= concat(cast(:endDate as varchar), '235959')");
             p.put("endDate", s.searchEndDate());
         }
@@ -259,7 +290,8 @@ public class ItemManageService {
                        coalesce(i.item_option_flag, 'N'), coalesce(i.item_text_option_flag, 'N'), i.stock_flag, i.stock_quantity,
                        i.sold_out, %s, i.item_type, i.item_label, i.seller_id, s.seller_name, s.company_name, s.locgov_code,
                        i.hits, i.brand, i.created_date, i.updated_date, i.commission_type, i.commission_rate, i.supply_price,
-                       s.commission_rate, i.seller_discount_amount, i.spot_discount_amount, i.seller_discount_flag, i.spot_flag
+                       s.commission_rate, i.seller_discount_amount, i.spot_discount_amount, i.seller_discount_flag, i.spot_flag,
+                       i.data_status_message
                   from public.op_item i
                        inner join public.op_seller s on s.seller_id = i.seller_id
                        left join public.op_item_option_soldout iost on iost.item_id = i.item_id
@@ -279,7 +311,7 @@ public class ItemManageService {
                     i(r[9]), i(r[10]), s(r[11]), s(r[12]), s(r[13]), i(r[14]), s(r[15]), s(r[16]), s(r[17]), s(r[18]),
                     r[19] == null ? null : ((Number) r[19]).longValue(), s(r[20]), s(r[21]), s(r[22]), i(r[23]), s(r[24]), s(r[25]),
                     s(r[26]), commissionRate(s(r[17]), s(r[27]), r[28], r[29], r[30], salePrice), minus, except, minus,
-                    thumbs.get(itemId)));
+                    thumbs.get(itemId), s(r[35])));
         }
         return rows;
     }
@@ -376,16 +408,21 @@ public class ItemManageService {
 
     /** AS-IS insertItemLogForApproval - OP_ITEM 현재값을 스냅샷으로 OP_ITEM_LOG에 쌓는다. */
     private void insertLog(Long itemId, long managerId, String actionType) {
+        insertLog(itemId, managerId, actionType, 0L);
+    }
+
+    /** createdSellerId - AS-IS는 승인처리 때만 상품의 SELLER_ID를 넣고(item이 조회된 Item), 그 밖에는 새 Item이라 0이다. */
+    private void insertLog(Long itemId, long managerId, String actionType, long createdSellerId) {
         em.createNativeQuery("""
                 insert into public.op_item_log (item_id, item_user_code, item_name, display_flag, sold_out, cost_price, item_price,
                        sale_price, commission_type, commission_rate, price_criteria, process_page, created_manager_id, created_seller_id,
                        created_date, action_type)
                 select i.item_id, coalesce(nullif(i.item_user_code, ''), 'G2' || lpad(cast(i.item_id as varchar), 9, '0')), i.item_name,
                        i.display_flag, i.sold_out, i.cost_price, i.item_price, i.sale_price, i.commission_type, i.commission_rate,
-                       i.price_criteria, 'manager', :managerId, 0, :d, :action
+                       i.price_criteria, 'manager', :managerId, :sellerId, :d, :action
                   from public.op_item i where i.item_id = :id
-                """).setParameter("managerId", managerId).setParameter("d", now()).setParameter("action", actionType)
-                .setParameter("id", itemId).executeUpdate();
+                """).setParameter("managerId", managerId).setParameter("sellerId", createdSellerId).setParameter("d", now())
+                .setParameter("action", actionType).setParameter("id", itemId).executeUpdate();
     }
 
     /** 통계 ReadModel(admin)이 쓰는 답례품 이벤트 - 상태/공개 변경 뒤 다시 보낸다. */
@@ -395,6 +432,163 @@ public class ItemManageService {
         for (Gift g : giftRepository.findAllById(ids)) {
             lifecyclePublisher.publish(g);
         }
+    }
+
+    // ================= 답례품승인관리 - 승인처리 / 등록보류 =================
+
+    /** 처리된 답례품 - admin이 국민비서 문자(승인/거절)를 만들 때 쓴다. deleted=삭제신청 승인(문자 없음). */
+    public record ProcessedItem(Long itemId, String itemUserCode, Long sellerId, boolean deleted) {
+    }
+
+    /**
+     * AS-IS ItemServiceImpl.updateListData(processType=approval) - 삭제신청(40)은 삭제 승인(deleteItemApproval: 상품코드에 _시각을 붙여
+     * 코드를 비우고 99로), 그 밖에는 정상(1)으로 바꾸고 승인 로그를 남긴다(updateItemApproval). 서버는 현재 상태를 검사하지 않는다(AS-IS 그대로).
+     */
+    public List<ProcessedItem> approve(List<Long> ids, long managerId) {
+        List<ProcessedItem> processed = new ArrayList<>();
+        for (Long id : ids) {
+            Object[] head = itemHead(id);
+            String status = String.valueOf(head[0]);
+            Long sellerId = head[1] == null ? null : ((Number) head[1]).longValue();
+            String userCode = String.valueOf(head[2]);
+            if ("40".equals(status)) {
+                // AS-IS item-mapper deleteItem - 상품코드를 풀어 주려고 "코드_시각"으로 바꾸고 99(삭제)로. 로그·문자는 없다.
+                em.createNativeQuery("update public.op_item i set item_user_code = " + USER_CODE_EXPR + " || '_' || :d, data_status_code = '99', "
+                                + "data_status_message = coalesce(i.data_status_message, '') || :msg, updated_user_id = :u, updated_date = :d where i.item_id = :id")
+                        .setParameter("msg", statusMessage("99", "운영자 승인처리."))
+                        .setParameter("u", managerId).setParameter("d", now()).setParameter("id", id).executeUpdate();
+                processed.add(new ProcessedItem(id, userCode, sellerId, true));
+            } else {
+                em.createNativeQuery("update public.op_item set data_status_code = '1', data_status_message = coalesce(data_status_message, '') || :msg, "
+                                + "updated_user_id = :u, updated_date = :d where item_id = :id")
+                        .setParameter("msg", statusMessage("1", "운영자 승인처리."))
+                        .setParameter("u", managerId).setParameter("d", now()).setParameter("id", id).executeUpdate();
+                insertLog(id, managerId, "approval", sellerId == null ? 0L : sellerId);
+                processed.add(new ProcessedItem(id, userCode, sellerId, false));
+            }
+        }
+        publish(ids);
+        return processed;
+    }
+
+    /** AS-IS updateListData(processType=reject) - 등록보류(21), 사유를 상태 메시지에 쌓고 로그를 남긴다. 상태는 검사하지 않는다(AS-IS 그대로). */
+    public List<ProcessedItem> reject(List<Long> ids, String message, long managerId) {
+        List<ProcessedItem> processed = new ArrayList<>();
+        for (Long id : ids) {
+            Object[] head = itemHead(id);
+            em.createNativeQuery("update public.op_item set data_status_code = '21', data_status_message = coalesce(data_status_message, '') || :msg, "
+                            + "updated_user_id = :u, updated_date = :d where item_id = :id")
+                    .setParameter("msg", statusMessage("21", message == null ? "" : message))
+                    .setParameter("u", managerId).setParameter("d", now()).setParameter("id", id).executeUpdate();
+            insertLog(id, managerId, "reject");
+            processed.add(new ProcessedItem(id, String.valueOf(head[2]), head[1] == null ? null : ((Number) head[1]).longValue(), false));
+        }
+        publish(ids);
+        return processed;
+    }
+
+    /** [상태, 판매자 번호, 화면 상품코드] - 없으면 AS-IS는 NPE(500)라서 업무 예외로 알린다. */
+    private Object[] itemHead(Long id) {
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = em.createNativeQuery("select i.data_status_code, i.seller_id, " + USER_CODE_EXPR + " from public.op_item i where i.item_id = :id")
+                .setParameter("id", id).getResultList();
+        if (rows.isEmpty()) {
+            throw new GiftException("답례품 정보가 없습니다.");
+        }
+        return rows.get(0);
+    }
+
+    // ================= 답례품승인관리 - 미리보기 =================
+
+    public record PreviewImage(String imageName, Integer ordering) {
+    }
+
+    public record PreviewOption(Long itemOptionId, String optionName1, String optionName2, String optionName3, Integer optionPrice,
+                                String optionHideFlag, String optionDisplayFlag, String optionStockFlag, Integer optionStockQuantity,
+                                String optionSoldOutFlag) {
+    }
+
+    public record PreviewInfo(String title, String description) {
+    }
+
+    public record PreviewSeller(String companyName, String telephoneNumber, String businessNumber, String businessLocation, String addressDetail) {
+    }
+
+    public record Preview(Long itemId, String itemUserCode, String itemName, String itemSummary, String originCountry, Integer salePrice,
+                          String locgovCode, String deliveryCompanyName, String itemOptionFlag, String itemOptionType,
+                          String itemOptionTitle1, String itemOptionTitle2, String itemOptionTitle3,
+                          String itemTextOptionFlag, String itemTextOptionTitle1, String itemTextOptionTitle2, String itemTextOptionTitle3,
+                          Integer orderMinQuantity, Integer orderMaxQuantity, String itemReturnFlag, String detailContent,
+                          String teamName, String groupName, String categoryName,
+                          List<PreviewImage> images, List<PreviewOption> options, List<PreviewInfo> infos, PreviewSeller seller) {
+    }
+
+    /**
+     * AS-IS getItemByItemUserCodePreview(getItemByParamPreview + bindItemAdditionInfo) + getSellerByIdPreview. 상품코드는 화면에 보이는 코드
+     * (G2+9자리 포함)로 찾는다. 이미지는 큰 사이즈(L = thumbnail_large, 없으면 원본), 옵션은 OPTION_DISPLAY_FLAG='Y'만 ITEM_OPTION_ID 순.
+     * 빵부스러기는 AS-IS getBreadcrumbListByCollection의 첫 상품 카테고리 - 1차 카테고리와 그 그룹·팀. 지자체명은 지자체 표가 admin/donation 소관이라
+     * 코드(locgovCode)만 내려주고 admin이 AS-IS CASE(시도=시군구면 시도만)대로 만든다.
+     */
+    @Transactional(readOnly = true)
+    @SuppressWarnings("unchecked")
+    public Preview preview(String itemUserCode) {
+        List<Object[]> heads = em.createNativeQuery("""
+                select i.item_id, %s, i.item_name, i.item_summary, i.origin_country, i.sale_price,
+                       s.locgov_code,
+                       i.delivery_company_name, i.item_option_flag, i.item_option_type, i.item_option_title1, i.item_option_title2,
+                       i.item_option_title3, i.item_text_option_flag, i.item_text_option_title1, i.item_text_option_title2,
+                       i.item_text_option_title3, i.order_min_quantity, i.order_max_quantity, i.item_return_flag, i.detail_content,
+                       s.company_name, s.telephone_number, s.business_number, s.business_location, s.address_detail
+                  from public.op_item i inner join public.op_seller s on s.seller_id = i.seller_id and s.status_code = '2'
+                 where %s = :code
+                """.formatted(USER_CODE_EXPR, USER_CODE_EXPR)).setParameter("code", itemUserCode).getResultList();
+        if (heads.isEmpty()) {
+            throw new GiftException("답례품정보가 없습니다.");
+        }
+        Object[] h = heads.get(0);
+        long itemId = ((Number) h[0]).longValue();
+
+        List<PreviewImage> images = new ArrayList<>();
+        for (Object[] r : (List<Object[]>) em.createNativeQuery("select coalesce(nullif(thumbnail_large, ''), image_name), ordering "
+                + "from public.op_item_image where item_id = :id order by item_image_id").setParameter("id", itemId).getResultList()) {
+            images.add(new PreviewImage(s(r[0]), i(r[1])));
+        }
+        List<PreviewOption> options = new ArrayList<>();
+        for (Object[] r : (List<Object[]>) em.createNativeQuery("select item_option_id, option_name1, option_name2, option_name3, option_price, "
+                + "option_hide_flag, option_display_flag, option_stock_flag, option_stock_quantity, option_sold_out_flag "
+                + "from public.op_item_option where item_id = :id and option_display_flag = 'Y' order by item_option_id").setParameter("id", itemId).getResultList()) {
+            options.add(new PreviewOption(l(r[0]), s(r[1]), s(r[2]), s(r[3]), i(r[4]), s(r[5]), s(r[6]), s(r[7]), i(r[8]), s(r[9])));
+        }
+        List<PreviewInfo> infos = new ArrayList<>();
+        for (Object[] r : (List<Object[]>) em.createNativeQuery("select title, description from public.op_item_info where item_id = :id order by item_info_id")
+                .setParameter("id", itemId).getResultList()) {
+            infos.add(new PreviewInfo(s(r[0]), s(r[1])));
+        }
+
+        // 빵부스러기 - 첫 상품 카테고리(OP_ITEM_CATEGORY 등록순)의 1차 카테고리와 그 그룹·팀
+        String teamName = null;
+        String groupName = null;
+        String categoryName = null;
+        List<Object[]> crumbs = em.createNativeQuery("""
+                select ct.name, cg.name, c1.category_name
+                  from public.op_item_category ic
+                       inner join public.op_category c on c.category_id = ic.category_id and c.category_flag = 'Y'
+                       left join public.op_category c1 on c1.category_code = concat(c.category_class1, '000000000')
+                       left join public.op_category_group cg on cg.category_group_id = c1.category_group_id
+                       left join public.op_category_team ct on ct.category_team_id = cg.category_team_id
+                 where ic.item_id = :id
+                 order by ic.item_category_id
+                 limit 1
+                """).setParameter("id", itemId).getResultList();
+        if (!crumbs.isEmpty()) {
+            teamName = s(crumbs.get(0)[0]);
+            groupName = s(crumbs.get(0)[1]);
+            categoryName = s(crumbs.get(0)[2]);
+        }
+
+        return new Preview(itemId, s(h[1]), s(h[2]), s(h[3]), s(h[4]), i(h[5]), s(h[6]), s(h[7]), s(h[8]), s(h[9]), s(h[10]), s(h[11]), s(h[12]),
+                s(h[13]), s(h[14]), s(h[15]), s(h[16]), i(h[17]), i(h[18]), s(h[19]), s(h[20]), teamName, groupName, categoryName,
+                images, options, infos, new PreviewSeller(s(h[21]), s(h[22]), s(h[23]), s(h[24]), s(h[25])));
     }
 
     // ================= 변경사항 로그 =================

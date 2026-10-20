@@ -134,6 +134,48 @@ public class MemberAdminClient {
         }
     }
 
+    /** 주문자 정보 - 전체주문관리 목록이 주문 줄에 붙인다(이름·아이디·휴대폰·생년월일, 회원 상태 무관). */
+    public record OrderInfo(Long userId, String loginId, String userName, String phoneNumber, String birthday, String email) {
+    }
+
+    public Map<Long, OrderInfo> orderInfos(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        try {
+            List<OrderInfo> rows = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/members/order-infos")
+                            .queryParam("userIds", userIds).build())
+                    .retrieve()
+                    .body(new org.springframework.core.ParameterizedTypeReference<List<OrderInfo>>() {
+                    });
+            Map<Long, OrderInfo> byId = new java.util.LinkedHashMap<>();
+            if (rows != null) {
+                rows.forEach(r -> byId.put(r.userId(), r));
+            }
+            return byId;
+        } catch (RestClientException e) {
+            return Map.of();
+        }
+    }
+
+    /** 이름이 정확히 같은 회원ID - 전체주문관리의 검색구분 '주문자명'(AS-IS 일치 비교)용. 호출 실패는 빈 목록(= 결과 0건). */
+    public List<Long> userIdsByName(String name) {
+        if (name == null || name.isBlank()) {
+            return List.of();
+        }
+        try {
+            List<Long> ids = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/members/ids-by-name").queryParam("name", name).build())
+                    .retrieve()
+                    .body(new org.springframework.core.ParameterizedTypeReference<List<Long>>() {
+                    });
+            return ids != null ? ids : List.of();
+        } catch (RestClientException e) {
+            return List.of();
+        }
+    }
+
     /**
      * 로그인ID 부분일치 회원ID 목록 - Q&A 관리(5112)의 검색구분 '아이디'용.
      * AS-IS는 목록 SQL에서 {@code U.LOGIN_ID LIKE}로 걸지만 TO-BE는 회원ID를 먼저 받아 걸러야 한다.

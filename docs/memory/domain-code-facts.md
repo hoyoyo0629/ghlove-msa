@@ -1,6 +1,6 @@
 ---
 name: domain-code-facts
-description: 도메인 코드·데이터 사실 - 가입구분 100/200·수신동의 0=수신·판매자 2/3/5·주문번호 K+10·op_qna QNA_TYPE·FAQ 정본 op_faq·S옵션 name1/name2·수납완료면 수납일 있음·가입축하포인트 0·명예등급 0·쿠폰 미사용
+description: 도메인 코드·데이터 사실 - 가입구분 100/200·수신동의 0=수신·판매자 2/3/5·주문번호 K+10·op_qna QNA_TYPE·FAQ 정본 op_faq·S옵션 name1/name2·수납완료면 수납일 있음·가입축하포인트 0·명예등급 0·쿠폰 미사용·G_QNA_ADMIN=판매자→지자체 문의·주문 AS-IS 상태코드 도출/point_outcome DEDUCTED·FAILED/클레임 처리코드·TO-BE op_item.item_type 전부 NULL(=1로 읽기)
 metadata:
   type: project
 ---
@@ -140,7 +140,7 @@ TO-BE에 포팅하고 7210(포인트사용 정합성검증)이 AS-IS처럼 "AB%"
 비밀글이 아니면 id만 바꿔 본문까지 열람할 수 있었다.
 
 **관련 주의**
-- 내부문의(5120)는 이 표가 아니라 **`g_qna_admin`**이다(`/admin/internal-inquiry`).
+- 관리자 문의(16651, 예전 TO-BE 전용 메뉴 5120 "내부문의"는 없어짐)는 이 표가 아니라 **`g_qna_admin`**이다(`/admin/internal-inquiry`, 아래 g-qna-admin-is-seller-to-locgov).
 - 1:1문의 목록은 작성자명을 **마스킹하지 않고**, 공개 Q&A(5112) 목록은 **마스킹한다** - 화면마다 다르다.
 - 답변 저장 시 **5112만** 국민비서 문자를 보낸다([[ips-sms-sender-lives-in-admin]]). 5102는 안 보낸다.
 - 삭제·첨부 로직은 AS-IS가 두 화면에서 같은 서비스 메서드를 부르므로 TO-BE도
@@ -265,3 +265,41 @@ TO-BE는 수납일을 donation_levy에만 남기고 g_cntr엔 안 넣어(Donatio
 **의도적으로 안 막은 것:** admin 관리 API `/api/admin/coupons**`(`CouponApiController`). admin `CouponAdminController`가 `OrderClient`로 실제 호출해서 막으면 admin 쿠폰 화면이 500이 된다. 그 화면들은 `admin-nav.html`에 링크가 없어 원래부터 메뉴 도달 불가라 그대로 뒀다. 상세 표는 `docs/cart-review-2026-09-09.md` §4-5.
 
 관련: [[deferred-features]]
+
+## g-qna-admin-is-seller-to-locgov
+
+> G_QNA_ADMIN(관리자 문의 16651)은 "답례품 제공자(판매자) → 자기 지자체" 문의다 - 지자체 담당자가 운영관리에서 답하고, 시스템·행안부(ROLE_ADMIN_1~4)는 보기만. 예전 TO-BE는 "지자체 → 본사 문의"로 거꾸로 읽었다 (2026-10-20 확인)
+
+
+AS-IS 흐름: 판매자가 판매자 포털 `/seller/qna-locgov`('지자체 문의')로 글을 쓰면 `G_QNA_ADMIN`(+`_FILE`)에 들어가고, 운영관리 `/opmanager/qna-admin`(TO-BE `/admin/internal-inquiry`)에서
+그 지자체 담당자가 `G_QNA_ADMIN_ANSWER`(+`_FILE`)로 답한다. 작성자는 `OP_SELLER_USER`(판매자 계정)이고, 목록의 "지자체" 칸은 **판매자 계정의 지자체코드**다(문의 행의 지자체 아님).
+
+**How to apply:** 운영관리 쪽에서 문의를 "새로 쓰는" 기능을 만들지 말 것(예전 발명 화면이 그랬다). 판매자 포털의 작성 화면은 TO-BE에 아직 없어서(판매자 포털 이식 때)
+첨부 저장 위치(`{admin.upload.dir}/qnaadmin/{문의번호}/`)를 그쪽과 공유해야 한다. op_qna(QNA_TYPE 0/1/2)와는 별개 표 - 위 op-qna-split-by-qna-type.
+
+## order-status-derivation-for-asis-codes
+
+> TO-BE 주문 모델(od_order·od_shipment·od_order_item·od_claim)에서 AS-IS 주문 상태 숫자코드·결제상태·클레임 처리코드를 도출하는 규칙 - 전체주문관리(16401) 목록·상세에서 확정, 남은 주문 메뉴(16402~16409)도 같은 규칙을 쓸 것 (2026-10-19)
+
+
+**AS-IS 주문 상태 숫자코드**(품목 줄 단위, `OrderLineListService` SQL의 CASE): 그 품목의 **최신 클레임 우선** -
+CANCEL 요청/승인 70·완료 75 / RETURN 요청/승인 60·완료 65·거절 69 / EXCHANGE 요청/승인 50·완료 58·거절 59 (CANCEL 거절은 클레임 무시하고 아래로)
+→ 주문 WAITING_DEPOSIT·PENDING 0 → CANCELLED 75 → 구매확정일 있음·배송 CONFIRMED 40 → DELIVERED 35 → SHIPPED·IN_TRANSIT 30 → 그 밖 10.
+**배송준비중(20)·교환배송중(55)에 대응하는 TO-BE 상태가 없다** - 그 체크박스·탭은 항상 0건(발명해서 채우지 말 것).
+
+**포인트 차감 결과 값**: `point_outcome`은 `DEDUCTED`/`FAILED`(`SUCCESS` 아님). 멀티아이템 주문은 헤더 `od_order.point_outcome`이 NULL이고 **출고(`od_shipment.point_outcome`)에** 들어 있다 →
+"결제취소" 판정은 헤더 FAILED **또는** 출고 중 FAILED가 하나라도 있을 때. 그 밖은 취소완료·입금대기 주문도 AS-IS 실화면처럼 "결제완료"(처음 `!= SUCCESS`로 짰다가 반품완료 주문이 결제취소로 나와 교정).
+
+**클레임 처리코드(상세 클레임 탭)**: REQUESTED→01 신청, APPROVED→03(취소 환불대기·반품 환불승인 대기)/교환은 10 회수중, COMPLETED→04(취소 완료·반품 환불 완료)/교환은 03 교환상품 발송, REJECTED→99 거절.
+처리 대기 = 취소·반품은 01, 교환은 01·10. 출고번호(AS-IS ORDER_SEQUENCE, 0부터)는 TO-BE에서 같은 주문 안 출고 ID 순서의 **1부터**.
+원장: docs/as-is-parity.md 22절 admin-order-list-all-port.
+
+## tobe-op-item-item-type-null
+
+> TO-BE 답례품(gift.op_item)은 ITEM_TYPE이 전부 NULL이다(AS-IS 기본값 '1' 일반상품). AS-IS SQL의 `ITEM_TYPE IN ('1','3')`(defaultOnSaleWhereQuery 등)을 그대로 옮기면 상품이 0건이 된다 - NULL을 '1'로 읽을 것 (2026-10-20)
+
+
+이벤트 관리(16601) 수정 화면의 편성 상품 조회(AS-IS getFeaturedItemListByParam = defaultOnSaleWhereQuery + FRONT_DISPLAY_FLAG + 판매자 상태 2)를 옮기다 발견했다. 개발DB 26건 전부 `item_type` NULL, `front_display_flag` Y.
+
+**How to apply:** AS-IS 판매중 조건(`DATA_STATUS_CODE='1' AND DISPLAY_FLAG='Y' AND ITEM_DATA_TYPE='1' AND ITEM_TYPE IN ('1','3')`)을 옮길 때 `coalesce(i.item_type, '1') in ('1', '3')`로 쓴다.
+상품코드(ITEM_USER_CODE)가 비어 있는 것과 같은 계열의 TO-BE 데이터 공백이다(그쪽은 `G2`+9자리로 계산 - 22절 admin-item-manage-port).

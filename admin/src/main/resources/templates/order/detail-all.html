@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>주문 상세정보 - 고향사랑e음 (admin service)</title>
+    <!-- 공통 head(AS-IS inc_head verbatim: CSS 6 + JS 12) - csrf meta/폰트/op.* 전부 여기서 로드 -->
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/order/detail/order-detail.jsp + include/item-detail.jsp·order-default-info.jsp·order-shipping-info.jsp·
+     order-item-cancel/return/exchange.jsp·order-log.jsp 이식 - 전체주문관리(16401) 주문 상세정보. 읽기 화면이다.
+     ★ AS-IS 특징(그대로)
+     - 상단 표: 주문번호/주문일시/회원정보/발송인/구매자 휴대폰/구매자 이메일. 이름·휴대폰·이메일은 지자체 담당자(ROLE_ADMIN_5/6)가 아니면 가려서 보인다.
+     - 고객상담 내역·상담메모·관리자 메모 3블록과 결제내역 표는 AS-IS도 hidden으로만 있고, 결제정보 제목의 [결제정보변경] 링크는 주석이다(그대로 뺀다).
+     - 결제정보 판매가·결제포인트는 둘 다 주문 품목 합계(AS-IS 표현식 그대로). 할인금액·배송비 칸은 AS-IS도 주석.
+     - 탭은 일반/취소/반품/교환/이력. 취소·반품·교환 탭 제목 옆 (N)은 처리 대기 건수. 이력 탭은 이력이 있을 때만 표가 나온다.
+     ★ 아직 옮기지 않은 것(TO-BE 클레임 모델 설계 결정 뒤 - docs/as-is-parity.md 22절 admin-order-list-all-port 단계 C·D)
+     - "취소/반품/교환 신청"(관리자 접수) 폼, 클레임 처리 폼(승인·거절·회수 라디오와 [주문 처리]), 반품·교환 내역 [상세] 팝업, 이력 기록. -->
+<style type="text/css">
+	td {
+		padding-left: 5px;
+	}
+	.no_content {
+		padding:10px;
+	}
+	.order_return_layer {
+		display: none;
+		position: fixed;
+		z-index: 100000;
+		width:850px;
+		left: 50%;
+		margin-left: -425px;
+		top:0px;
+		padding-bottom: 20px;
+		background: #fff
+	}
+</style>
+
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<div class="board_write">
+
+	<div class="board_list">
+
+		<h3 class="mt10">주문 상세정보</h3>
+		<table class="board_write_table">
+			<colgroup>
+				<col style="width: 220px" />
+				<col />
+				<col style="width: 220px" />
+				<col />
+			</colgroup>
+			<tbody>
+			<tr>
+				<td class="label">주문번호</td>
+				<td><div th:text="${d.orderCode}"></div></td>
+				<td class="label">주문일시</td>
+				<td><div th:text="${d.createdDateText}"></div></td>
+			</tr>
+			<tr>
+				<td class="label">회원정보</td>
+				<td>
+					<div th:text="${d.memberText}"></div>
+				</td>
+				<td class="label">발송인</td>
+				<td>
+					<div th:text="${d.buyerName}"></div>
+				</td>
+			</tr>
+			<tr>
+				<td class="label">구매자 휴대폰</td>
+				<td>
+					<div th:text="${d.mobile}"></div>
+				</td>
+				<td class="label">구매자 이메일</td>
+				<td>
+					<div th:text="${d.email}"></div>
+				</td>
+			</tr>
+			</tbody>
+		</table>
+	</div>
+
+	<div class="op-item-detail-area">
+
+	<div class="jq_tabonoff comm_tab1">
+		<ul class="jq_tab tabs">
+			<li class="active"><a href="javascript:;">일반</a></li>
+			<li>
+				<a href="javascript:;">취소
+					<th:block th:if="${not #lists.isEmpty(d.cancelActive)}">(<th:block th:text="${#lists.size(d.cancelActive)}"></th:block>)</th:block>
+				</a>
+			</li>
+			<li>
+				<a href="javascript:;">반품
+					<th:block th:if="${not #lists.isEmpty(d.returnActive)}">(<th:block th:text="${#lists.size(d.returnActive)}"></th:block>)</th:block>
+				</a>
+			</li>
+			<li>
+				<a href="javascript:;">교환
+					<th:block th:if="${not #lists.isEmpty(d.exchangeActive)}">(<th:block th:text="${#lists.size(d.exchangeActive)}"></th:block>)</th:block>
+				</a>
+			</li>
+			<li>
+				<a href="javascript:;">이력</a>
+			</li>
+		</ul>
+		<div class="jq_cont tab_container" >
+			<!-- //탭1 일반 -->
+			<div class="tab_content" style="display:block">
+				<div class="board_list">
+					<h3 class="mt70">결제정보</h3>
+					<table class="board_list_table">
+						<caption>table list</caption>
+						<colgroup>
+							<col style="width:200px;">
+							<col style="width:200px;">
+							<col style="width:200px;">
+							<col style="width:200px;">
+						</colgroup>
+						<thead>
+							<tr>
+								<th scope="col" class="none_left">판매가</th>
+								<th scope="col" class="none_left">결제포인트</th>
+								<th scope="col" class="none_left">결제상태</th>
+								<th scope="col" class="none_left">결제일</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td>
+									<div th:text="${d.totalAmount}"></div>
+								</td>
+								<td>
+									<div th:text="${d.totalAmount}"></div>
+								</td>
+								<td>
+									<div th:text="${d.paymentStatus}"></div>
+								</td>
+								<td>
+									<div th:text="${d.payDateText}"></div>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<h3 class="mt70"><span>배송 정보</span></h3>
+				<div>
+					<div id="order-info-area">
+						<table class="board_write_table">
+							<caption>주문상품정보 - 주문자정보</caption>
+							<colgroup>
+								<col style="width:180px;">
+								<col>
+							</colgroup>
+							<tbody>
+							<tr>
+								<td class="label" scope="row">배송정보</td>
+								<td>
+									<div>
+										<ul style="margin-bottom:0px;">
+											<li th:text="${d.receiveName}"></li>
+											<li th:text="${d.receiveMobile}"></li>
+											<li>
+												[<th:block th:text="${d.zipcode}"></th:block>]&nbsp;<span>&nbsp;<th:block th:text="${d.address}"></th:block>&nbsp;</span>&nbsp;<span th:text="${d.addressDetail}"></span>
+											</li>
+										</ul>
+									</div>
+								</td>
+							</tr>
+
+							<tr th:if="${d.memo != ''}">
+								<td class="label" scope="row">배송시(발송) 요구사항</td>
+								<td>
+									<div th:text="${d.memo}"></div>
+								</td>
+							</tr>
+
+							<tr>
+								<td class="label" scope="row">상품정보</td>
+								<td>
+									<div>
+										<table class="board_list_table">
+											<caption>주문정보</caption>
+											<colgroup>
+												<col style="width:150px;">
+												<col style="width:320px;">
+												<col style="width:160px;">
+												<col style="width:160px;">
+												<col style="width:100px;">
+												<col style="width:200px;">
+												<col style="width:200px;">
+												<col style="width:150px;">
+											</colgroup>
+											<thead>
+											<tr>
+												<th scope="col" class="none_left">이미지</th>
+												<th scope="col" class="none_left">답례품정보</th>
+												<th scope="col" class="none_left">판매자</th>
+												<th scope="col" class="none_left">대표번호</th>
+												<th scope="col" class="none_left">수량</th>
+												<th scope="col" class="none_left">판매가</th>
+												<th scope="col" class="none_left">결제포인트</th>
+												<th scope="col" class="none_left">상태</th>
+											</tr>
+											</thead>
+											<tbody id="order_items">
+											<tr th:each="it : ${d.items}">
+												<td>
+													<div>
+														<a th:href="${it.previewUrl}" target="_blank">
+															<img th:src="${it.imageSrc}" th:alt="${it.itemName}" class="item_image"/>
+														</a>
+													</div>
+												</td>
+												<td class="text-left">
+													<div>
+														<div>[<th:block th:text="${it.itemUserCode}"></th:block>]</div>
+														<div th:text="${it.itemName}"></div>
+														<p th:if="${it.optionText != ''}" th:text="${it.optionText}"></p>
+														<th:block th:if="${not #lists.isEmpty(it.textOptions)}">  <!-- 20260325 필수 추가정보 -->
+															<p th:each="t : ${it.textOptions}" th:text="${t}"></p>
+														</th:block>
+														<div th:if="${it.shipped}">
+															<th:block th:if="${it.invoiceNo == ''}">
+																<th:block th:text="${it.carrierLabel}"></th:block> [송장정보 없음]
+															</th:block>
+															<th:block th:unless="${it.invoiceNo == ''}">
+																<a th:href="${it.trackingUrl}" target="_blank" class="break-word bg-info">배송추적</a>
+																<th:block th:text="${it.carrierName}"></th:block> [<th:block th:text="${it.invoiceNo}"></th:block>] (<th:block th:text="${it.shippedDate}"></th:block>)
+															</th:block>
+														</div>
+													</div>
+												</td>
+												<td class="text-center">
+													<span class="glyphicon glyphicon-user"></span><th:block th:text="${it.sellerName}"></th:block>
+												</td>
+												<td class="text-center" th:text="${it.telephoneNumber}"></td>
+												<td class="text-center"><th:block th:text="${it.quantity}"></th:block>개</td>
+												<td class="text-center" th:text="${it.itemAmount}"></td>
+												<td class="text-center" th:text="${it.saleAmount}"></td>
+												<td class="text-center" th:text="${it.statusLabel}"></td>
+											</tr>
+											</tbody>
+										</table>
+									</div>
+								</td>
+							</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+			<!-- 탭2 취소 -->
+			<div class="tab_content" id="order-cancel-form" style="display:none">
+<style type="text/css">
+.inDiv {
+	width:100%;
+	margin:2px 0;
+	padding:0;
+	float:left;
+}
+</style>
+
+				<th:block th:if="${not #lists.isEmpty(d.cancelHistory)}">
+					<h3 class="mt70">취소 내역 (완료, 환불대기)</h3>
+					<div class="board_list">
+						<table class="board_list_table">
+							<caption>주문정보</caption>
+							<colgroup>
+								<col style="width:400px;">
+								<col style="width:150px;">
+								<col style="width:100px;">
+								<col style="width:200px;">
+								<col style="width:200px;">
+								<col style="width:200px;">
+							</colgroup>
+							<thead>
+								<tr>
+									<th scope="col" class="none_left">답례품정보</th>
+									<th scope="col" class="none_left">상호명</th>
+									<th scope="col" class="none_left">수량</th>
+									<th scope="col" class="none_left">판매가</th>
+									<th scope="col" class="none_left">상태</th>
+									<th scope="col" class="none_left">취소 신청일</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr th:each="h : ${d.cancelHistory}">
+									<td class="text-left">
+										<div>[<th:block th:text="${h.item.itemUserCode}"></th:block>] <th:block th:text="${h.item.itemName}"></th:block>
+											<p th:if="${h.item.optionText != ''}" th:text="${h.item.optionText}"></p>
+											<th:block th:if="${not #lists.isEmpty(h.item.textOptions)}">
+												<p th:each="t : ${h.item.textOptions}" th:text="${t}"></p>
+											</th:block>
+										</div>
+									</td>
+									<td>
+										<div>
+											<span class="glyphicon glyphicon-user"></span><th:block th:text="${h.item.sellerName}"></th:block>
+										</div>
+									</td>
+									<td class="text-center"><div th:text="${h.item.quantity}"></div></td>
+									<td class="text-center"><div th:text="${h.item.saleAmount}"></div></td>
+									<td class="text-center"><div th:text="${h.statusLabel}"></div></td>
+									<td class="text-center"><div th:text="${h.createdDateText}"></div></td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</th:block>
+
+				<form id="cancelForm">
+					<h3 class="mt70">취소 처리</h3>
+					<th:block th:each="c : ${d.cancelActive}">
+						<div class="board_list">
+							<table class="board_list_table">
+								<caption>주문정보</caption>
+								<colgroup>
+									<col style="width:50px;">
+									<col style="width:150px;">
+									<col style="width:400px;">
+									<col style="width:200px;">
+									<col style="width:100px;">
+									<col style="width:200px;">
+									<col style="width:100px;">
+									<col style="width:200px;">
+								</colgroup>
+								<thead>
+									<tr>
+										<th scope="col" class="none_left"><input type="checkbox" id="cancel_all" title="체크박스" /></th>
+										<th scope="col" class="none_left">이미지</th>
+										<th scope="col" class="none_left">답례품정보</th>
+										<th scope="col" class="none_left">상호명</th>
+										<th scope="col" class="none_left">수량</th>
+										<th scope="col" class="none_left">판매가</th>
+										<th scope="col" class="none_left">상태</th>
+										<th scope="col" class="none_left">취소 신청일</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td></td>
+										<td>
+											<div>
+												<a th:href="${c.item.previewUrl}" target="_blank">
+													<img th:src="${c.item.imageSrc}" th:alt="${c.item.itemName}" width="50"/>
+												</a>
+											</div>
+										</td>
+										<td>
+											[<th:block th:text="${c.item.itemUserCode}"></th:block>] <th:block th:text="${c.item.itemName}"></th:block>
+											<p th:if="${c.item.optionText != ''}" th:text="${c.item.optionText}"></p>
+											<th:block th:if="${not #lists.isEmpty(c.item.textOptions)}">
+												<p th:each="t : ${c.item.textOptions}" th:text="${t}"></p>
+											</th:block>
+										</td>
+										<td class="text-center">
+											<span class="glyphicon glyphicon-user"></span><th:block th:text="${c.item.sellerName}"></th:block>
+										</td>
+										<td class="text-right"><th:block th:text="${c.item.quantity}"></th:block>개</td>
+										<td class="text-right"><th:block th:text="${c.item.saleAmount}"></th:block>원</td>
+										<td class="text-center" th:text="${c.statusLabel}"></td>
+										<td class="text-center" th:text="${c.createdDateText}"></td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+						<div class="board_write mt20">
+							<table class="board_write_table">
+								<colgroup>
+									<col style="width: 220px" />
+									<col>
+								</colgroup>
+								<tbody>
+									<tr>
+										<td class="label">신청사유</td>
+										<td><div th:text="${c.reason}"></div></td>
+									</tr>
+									<tr>
+										<td class="label">처리구분</td>
+										<td colspan="3" th:text="${c.statusLabel}"></td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</th:block>
+
+					<th:block th:if="${#lists.isEmpty(d.cancelActive)}">
+						<div class="board_list">
+							<table class="board_list_table">
+								<caption>주문정보</caption>
+								<colgroup>
+									<col style="width:50px;">
+									<col style="width:150px;">
+									<col style="width:400px;">
+									<col style="width:200px;">
+									<col style="width:100px;">
+									<col style="width:200px;">
+									<col style="width:100px;">
+									<col style="width:200px;">
+								</colgroup>
+								<thead>
+									<tr>
+										<th scope="col" class="none_left"><input type="checkbox" id="cancel_all" title="체크박스" /></th>
+										<th scope="col" class="none_left">이미지</th>
+										<th scope="col" class="none_left">답례품정보</th>
+										<th scope="col" class="none_left">상호명</th>
+										<th scope="col" class="none_left">수량</th>
+										<th scope="col" class="none_left">판매가</th>
+										<th scope="col" class="none_left">상태</th>
+										<th scope="col" class="none_left">취소 신청일</th>
+									</tr>
+								</thead>
+							</table>
+						</div>
+						<div class="no_content">
+							데이터가 없습니다.
+						</div>
+					</th:block>
+				</form>
+			</div>
+
+			<!-- 탭3 반품 -->
+			<div class="tab_content" id="order-return-form" style="display:none">
+<style type="text/css">
+.inDiv {
+	width:100%;
+	margin:2px 0;
+	padding:0;
+	float:left;
+}
+</style>
+				<th:block th:if="${not #lists.isEmpty(d.returnHistory)}">
+					<h3 class="mt70"><span>반품 내역 (거절, 완료, 환불대기)</span></h3>
+					<div class="board_list">
+						<table class="board_list_table">
+							<caption>주문정보</caption>
+							<colgroup>
+								<col style="width:400px;">
+								<col style="width:200px;">
+								<col style="width:100px;">
+								<col style="width:150px;">
+								<col style="width:200px;">
+								<col style="width:100px;">
+							</colgroup>
+							<thead>
+								<tr>
+									<th>상품정보</th>
+									<th>상호명</th>
+									<th>수량</th>
+									<th>상태</th>
+									<th>반품 신청일</th>
+									<th></th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr th:each="h : ${d.returnHistory}">
+									<td class="text-left">
+										[<th:block th:text="${h.item.itemUserCode}"></th:block>] <th:block th:text="${h.item.itemName}"></th:block>
+										<div th:if="${h.item.optionText != ''}" th:text="${h.item.optionText}"></div>
+										<th:block th:if="${not #lists.isEmpty(h.item.textOptions)}">
+											<p th:each="t : ${h.item.textOptions}" th:text="${t}"></p>
+										</th:block>
+									</td>
+									<td>
+										<div>
+											<span class="glyphicon glyphicon-user"></span><th:block th:text="${h.item.sellerName}"></th:block>
+										</div>
+									</td>
+									<td><div th:text="${h.item.quantity}"></div></td>
+									<td><div th:text="${h.statusLabel}"></div></td>
+									<td><div><span th:text="${h.createdDateText}"></span></div></td>
+									<td><div class="flex_box juc-center gap-08"></div></td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</th:block>
+
+				<form id="returnForm">
+					<h3 class="mt70"><span>반품 처리</span></h3>
+					<div class="board_list">
+						<table class="board_list_table">
+							<caption>주문정보</caption>
+							<colgroup>
+								<col style="width:50px;">
+								<col style="width:150px;">
+								<col style="width:400px;">
+								<col style="width:200px;">
+								<col style="width:100px;">
+								<col style="width:200px;">
+								<col style="width:100px;">
+								<col style="width:200px;">
+							</colgroup>
+							<thead>
+								<tr>
+									<th scope="col"><input type="checkbox" id="return_all"></th>
+									<th>이미지</th>
+									<th>상품정보</th>
+									<th>상호명</th>
+									<th>수량</th>
+									<th>환불금액(상품)</th>
+									<th>상태</th>
+									<th>반품 신청일</th>
+								</tr>
+							</thead>
+							<tbody>
+								<th:block th:each="r : ${d.returnActive}">
+									<tr>
+										<td rowspan="2"><div></div></td>
+										<td class="border_left">
+											<div>
+												<a th:href="${r.item.previewUrl}" target="_blank">
+													<img th:src="${r.item.imageSrc}" th:alt="${r.item.itemName}" width="50"/>
+												</a>
+											</div>
+										</td>
+										<td class="text-left">
+											<div>
+												[<th:block th:text="${r.item.itemUserCode}"></th:block>] <th:block th:text="${r.item.itemName}"></th:block>
+												<p th:if="${r.item.optionText != ''}" th:text="${r.item.optionText}"></p>
+												<th:block th:if="${not #lists.isEmpty(r.item.textOptions)}">
+													<p th:each="t : ${r.item.textOptions}" th:text="${t}"></p>
+												</th:block>
+											</div>
+										</td>
+										<td>
+											<div>
+												<span class="glyphicon glyphicon-user"></span><th:block th:text="${r.item.sellerName}"></th:block>
+											</div>
+										</td>
+										<td><div th:text="${r.item.quantity}"></div></td>
+										<td><div th:text="${r.item.saleAmount}"></div></td>
+										<td><div th:text="${r.statusLabel}"></div></td>
+										<td><div><span th:text="${r.createdDateText}"></span></div></td>
+									</tr>
+									<tr>
+										<td colspan="7" class="border_left">
+											<div class="board_write">
+												<table class="board_write_table">
+													<colgroup>
+														<col style="width: 220px" />
+														<col>
+													</colgroup>
+													<tbody>
+														<tr>
+															<td class="label">신청사유</td>
+															<td><div class="text-left" th:text="${r.reason}"></div></td>
+														</tr>
+													</tbody>
+												</table>
+											</div>
+										</td>
+									</tr>
+								</th:block>
+							</tbody>
+						</table>
+					</div>
+					<div class="no_content" th:if="${#lists.isEmpty(d.returnActive)}">
+						데이터가 없습니다.
+					</div>
+				</form>
+			</div>
+
+			<!-- 탭4 교환 -->
+			<div class="tab_content" id="order-exchange-form" style="display:none">
+				<th:block th:if="${not #lists.isEmpty(d.exchangeHistory)}">
+					<h3 class="mt70"><span>교환 내역 (완료, 발송)</span></h3>
+					<div class="board_list">
+						<table class="board_list_table">
+							<caption>주문정보</caption>
+							<colgroup>
+								<col style="width:400px;">
+								<col style="width:200px;">
+								<col style="width:100px;">
+								<col style="width:150px;">
+								<col style="width:200px;">
+								<col style="width:100px;">
+							</colgroup>
+							<thead>
+								<tr>
+									<th>답례품정보</th>
+									<th>상호명</th>
+									<th>수량</th>
+									<th>상태</th>
+									<th>교환 신청일</th>
+									<th></th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr th:each="h : ${d.exchangeHistory}">
+									<td class="text-left">
+										[<th:block th:text="${h.item.itemUserCode}"></th:block>] <th:block th:text="${h.item.itemName}"></th:block>
+										<div th:if="${h.item.optionText != ''}" th:text="${h.item.optionText}"></div>
+										<th:block th:if="${not #lists.isEmpty(h.item.textOptions)}">
+											<p th:each="t : ${h.item.textOptions}" th:text="${t}"></p>
+										</th:block>
+									</td>
+									<td>
+										<div th:text="${h.item.sellerName}"></div>
+									</td>
+									<td>
+										<div><th:block th:text="${h.item.quantity}"></th:block>개</div>
+									</td>
+									<td>
+										<div th:text="${h.statusLabel}"></div>
+									</td>
+									<td>
+										<div>
+											<div th:text="${h.createdDate}"></div>
+											<div th:text="${h.createdTime}"></div>
+										</div>
+									</td>
+									<td>
+										<div class="flex_box juc-center gap-08"></div>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</th:block>
+
+				<form id="exchangeForm">
+					<h3 class="mt70"><span>교환 처리</span></h3>
+					<div class="board_list">
+						<table class="board_list_table">
+							<colgroup>
+								<col style="width:50px;">
+								<col style="width:150px;">
+								<col style="width:400px;">
+								<col style="width:200px;">
+								<col style="width:100px;">
+								<col style="width:200px;">
+								<col style="width:200px;">
+							</colgroup>
+							<thead>
+								<tr>
+									<th scope="col"><input type="checkbox" id="exchange_all" title="체크박스"/></th>
+									<th>이미지</th>
+									<th>답례품정보</th>
+									<th>판매자</th>
+									<th>수량</th>
+									<th>상태</th>
+									<th>교환 신청일</th>
+								</tr>
+							</thead>
+							<tbody>
+								<th:block th:each="e : ${d.exchangeActive}">
+									<tr>
+										<td></td>
+										<td>
+											<a th:href="${e.item.previewUrl}" target="_blank">
+												<img th:src="${e.item.imageSrc}" th:alt="${e.item.itemName}" width="50"/>
+											</a>
+										</td>
+										<td>
+											[<th:block th:text="${e.item.itemUserCode}"></th:block>] <th:block th:text="${e.item.itemName}"></th:block>
+											<p th:if="${e.item.optionText != ''}" th:text="${e.item.optionText}"></p>
+											<th:block th:if="${not #lists.isEmpty(e.item.textOptions)}">
+												<p th:each="t : ${e.item.textOptions}" th:text="${t}"></p>
+											</th:block>
+										</td>
+										<td th:text="${e.item.sellerName}"></td>
+										<td><th:block th:text="${e.item.quantity}"></th:block>개</td>
+										<td th:text="${e.statusLabel}"></td>
+										<td th:text="${e.createdDateText}"></td>
+									</tr>
+									<tr>
+										<td colspan="7">
+											<div class="board_write">
+												<table class="board_write_table">
+													<colgroup>
+														<col style="width: 220px" />
+														<col>
+													</colgroup>
+													<tbody>
+														<tr>
+															<td class="label">신청사유</td>
+															<td><div class="text-left" th:text="${e.reason}"></div></td>
+														</tr>
+													</tbody>
+												</table>
+											</div>
+										</td>
+									</tr>
+								</th:block>
+							</tbody>
+						</table>
+					</div>
+					<div class="no_content" th:if="${#lists.isEmpty(d.exchangeActive)}">
+						데이터가 없습니다.
+					</div>
+				</form>
+			</div>
+
+			<!-- 탭5 이력 - 이력이 있을 때만 표가 나온다(AS-IS order-log.jsp). TO-BE는 상태 변경 이력을 아직 기록하지 않는다. -->
+			<div class="tab_content" id="order-log" style="display:none">
+			</div>
+		</div>
+	</div>
+
+	</div>
+
+        <div class="btn_all btn_center">
+            <div class="flex_box gap-08">
+                <button type="button" onclick="Link.list('/order/list')" class="btn btn-default btn-small">목록</button>
+            </div>
+        </div>
+
+</div>
+
+<script type="text/javascript">
+    // AS-IS order-detail.jsp showTab() - 탭을 누르면 그 순서의 내용만 보인다
+    $(function() {
+        $('.jq_tabonoff').delegate('.jq_tab>li', 'click', function() {
+            var index = $(this).parent().children().index(this);
+            $(this).siblings().removeClass();
+            $(this).addClass('active');
+            $(this).parent().next('.jq_cont').children().hide().eq(index).show();
+        });
+    });
+</script>
+    </div>
+    </div>
+</div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

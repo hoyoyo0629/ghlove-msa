@@ -1,6 +1,6 @@
 ---
 name: admin-port-progress
-description: admin 영역·화면별 이식 진척 한 줄 요약(시스템관리·회원관리·고객센터·소규모영역·특정사업·기부금관리·통계 매출/보고서/외국인/접속/관심지자체·답례품관리 카테고리/그룹/제공자/대표배너/답례품·이벤트·메인·로그인·주문 수기등록·ISMS·전수 parity). 상세 원장은 docs/as-is-parity.md 22절
+description: admin 영역·화면별 이식 진척 한 줄 요약(시스템관리·회원관리·고객센터·소규모영역·특정사업·기부금관리·통계 매출/보고서/외국인/접속/관심지자체·답례품관리 카테고리/그룹/제공자/대표배너/답례품/승인/전체주문·주문상세/제철식품관/관리자문의·이벤트·메인·로그인·주문 수기등록·ISMS·전수 parity). 상세 원장은 docs/as-is-parity.md 22절
 metadata:
   type: project
 ---
@@ -24,7 +24,11 @@ metadata:
 - **admin-seller-manage-port** — 답례품관리>답례품제공자 관리(16151) AS-IS 이식 - 목록/등록/수정 + 계정(OP_SELLER_USER) 같이 저장, 사용자 결정 2건(계정 AS-IS처럼·실데이터 9,229건 보류), 안 옮긴 것(shadow 로그인 등), 알려진 한계
 - **admin-representative-banner-port** — 답례품관리>대표배너관리(16251) AS-IS 이식 - G_REPRST_BANNER PROCESS_TYPE=ITEM, 지정기부 배너와 서비스 공유, 옛 /admin/main-banners 삭제, 이미지 크기 맞춤(ThumbUtils) 추가
 - **admin-item-manage-port** — 답례품관리>답례품관리(16301) 목록 AS-IS 이식 - 목록/일괄처리/삭제신청/변경사항팝업/지자체 대표·오프라인 대표 답례품. 등록·수정 폼과 엑셀은 미이식, 상태코드 숫자 전환 포함
-- **admin-featured-event-port-progress** — 이벤트 관리(featured, 메뉴 16601 /admin/featured) AS-IS 이식 진척 - OP_FEATURED=지자체별 이벤트(class0/type1). 목록 완료, 등록/수정 폼 잔여
+- **admin-item-approval-port** — 답례품관리>답례품승인관리(16351 /item/seller/list) 이식(2026-10-19) - 목록/승인/등록보류+국민비서 문자/미리보기, 16301 확장. 상품 상세·수정 폼 미이식
+- **admin-order-list-all-port** — 주문관리>전체주문관리(16401 /order/list) 목록+엑셀+주문 상세 읽기(A+B) 이식(2026-10-19). 클레임 처리·이력(C·D)은 설계 결정 대기, 16402~16406·16409 미이식
+- **admin-seasonal-food-port** — 답례품관리>제철식품관 관리(16751 /seasonal-food/list) 이식 완료(2026-10-19) - G_SEASON_FOOD AS-IS 284행
+- **admin-qna-admin-port** — 답례품관리>관리자 문의(16651 /admin/internal-inquiry) 재이식(2026-10-20) - 판매자→지자체 문의 답변 화면. 판매자 쪽 작성 화면은 판매자 포털 이식 때
+- **admin-featured-event-port-progress** — 이벤트 관리(16601 /featured/list) 재이식 완료(2026-10-20) - 목록/등록/수정/삭제 + 상품검색 팝업(/item/find-item). AS-IS 1,063건 미적재(본문 41MB), 대민 화면은 admin.op_event를 읽어 등록분이 안 나옴
 - **admin-main-dashboard-asis-port** — 관리자 메인(/admin) AS-IS main/index.jsp 재이식(2026-10-15) - 발명 위젯 제거, 권한별 위젯·5개 서비스 집계 API·콜 등록 팝업·로그인 직후 오프라인 담당자 안내. REPORT_DASHBOARD는 배치 미이식이라 0
 - **admin-login-asis-parity-2026-10-14** — 관리자 로그인(/admin/login) AS-IS login_main.jsp 재이식 - 결과코드 응답·로컬 인증번호 자동입력·권한요청 진입·잠김화면·비밀번호 변경 팝업·관리자 공지 팝업·로그인 국민비서 문자. 남은 판단(EMPTY_CI) 포함
 - **admin-order-manual-registration-port-progress** — AS-IS '관리자 주문 수기/엑셀 등록'(OrderAdminServiceImpl) 기능을 TO-BE에 포팅, 7210 정합성검증이 보는 AB코드 주문 생성경로 확보(2026-10-08)

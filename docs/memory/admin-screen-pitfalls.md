@@ -1,6 +1,6 @@
 ---
 name: admin-screen-pitfalls
-description: admin(Thymeleaf) 화면 이식 함정 모음 - th:onclick 문자열·인라인JS 대괄호·count_title span·h3 덮어쓰기·푸터 조각·공통 전역·csrf meta·라디오 label·JSP 꼬리 style·인터셉터 예외·로그인 게이트 exclude·@opDate·메뉴 노출 규칙·엑셀 No 방향·년도 select·크럼/LNB 스크립트·공통JS가 끼우는 DOM
+description: admin(Thymeleaf) 화면 이식 함정 모음 - th:onclick 문자열·인라인JS 대괄호·count_title span·h3 덮어쓰기·푸터 조각·공통 전역·csrf meta·라디오 label·JSP 꼬리 style·인터셉터 예외·로그인 게이트 exclude·@opDate·메뉴 노출 규칙·엑셀 No 방향·년도 select·크럼/LNB 스크립트·공통JS가 끼우는 DOM·접두 안 맞는 상세 URL 메뉴 별칭(URI_ALIASES)·DOCTYPE 없는 쿼크스 팝업
 metadata:
   type: feedback
 ---
@@ -678,3 +678,24 @@ privacy-access-log` 엔드포인트도 `reasonType` 파라미터를 이미 받�
 같은 동작이었다.
 
 **상태**: admin `compileJava+test+bootJar` EXIT=0. **재기동 필요: admin.**
+
+## menu-uri-alias-for-non-prefix-url
+
+> 메뉴 URL 접두 일치로 안 잡히는 AS-IS 하위 URL(예: 전체주문관리 /order/list의 상세 /order/all/order-detail/...)은 LNB·경로·권한이 통째로 빠진다 → MenuService.URI_ALIASES에 별칭 추가 (2026-10-19)
+
+
+`MenuService.resolve()`는 요청 URI를 메뉴 URL로 **접두 일치**해 현재 메뉴를 찾는다. 목록 하위(`/item/seller/edit/...`처럼 `/item/seller/...`)면 알아서 잡히지만,
+AS-IS가 목록과 다른 경로에 둔 상세(전체주문관리 목록 `/order/list` ↔ 상세 `/order/all/order-detail/{seq}/{code}`)는 아무 메뉴에도 안 걸려
+LNB 펼침·브레드크럼·메뉴 권한 판정이 모두 빠진다(화면은 열리는데 셸이 비어 보임).
+
+**How to apply:** 목록 하위가 아닌 AS-IS 상세·팝업 URL을 옮길 땐 `MenuService.URI_ALIASES`(`Map.of("/order/all/", "/order/list")` 형태 - 접두 → 대표 메뉴 URL)에 한 줄 추가하고,
+화면을 띄워 LNB 활성·브레드크럼이 목록과 같은지 본다. AS-IS 경로를 TO-BE 편의로 바꿔 접두를 맞추는 건 하지 않는다(경로도 verbatim).
+
+## asis-quirks-mode-popup-no-doctype
+
+> AS-IS 팝업 중 DOCTYPE 없이 그려지는 것(답례품승인관리 미리보기 preview.jsp)은 쿼크스 모드라 TO-BE 템플릿도 DOCTYPE을 빼야 같은 모양이 나온다 (2026-10-19)
+
+
+표준 모드로 그리면 표 셀 높이·이미지 아래 여백·글꼴 상속이 달라져 요소 수치 대조에서 어긋난다. 팝업·미리보기를 옮길 땐 AS-IS JSP 첫 줄에 `<!DOCTYPE`이 있는지 먼저 보고
+없으면 TO-BE 템플릿도 `<html>`부터 시작한다(Thymeleaf는 DOCTYPE 없이도 렌더링한다). 반대로 일반 화면은 opmanager-head 조각이 DOCTYPE을 넣으니 건드리지 않는다.
+같은 화면처럼 `window.opener.Common...`을 쓰는 팝업은 목록 창에서 실제 버튼으로 열어야 검증이 된다([[tooling-and-local-env]] asis-opmanager-playwright-access).

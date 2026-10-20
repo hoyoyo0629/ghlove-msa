@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <title>관리자 문의 - 고향사랑e음 (admin service)</title>
+    <!-- 공통 head(AS-IS inc_head verbatim: CSS 6 + JS 12) - csrf meta/폰트/op.* 전부 여기서 로드 -->
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
-    <title>내부문의 관리 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/qna-admin/list.jsp 이식 - 관리자 문의(메뉴 16651).
+     답례품 제공자가 판매자 포털 "지자체 문의"로 남긴 문의 목록. ★ AS-IS 특징(그대로)
+     - 처음 열면(GET) 조회하지 않고 빈 목록, [검색](POST)할 때만 조회. 등록일 기본값은 오늘~오늘.
+     - 지자체 검색·지자체 칸은 시스템/행안부(ROLE_ADMIN_1~4)에게만. 그 밖은 소속 지자체 문의만 본다.
+     - 검색구분이 "전체"면 검색어 칸이 숨고, "문의유형"이면 문의유형 select가 검색어(query) 자리를 대신한다.
+     - 작성자 이름은 지자체 담당자가 아니면 가려서 보인다. h3 문구는 op.manager.js가 메뉴명("관리자 문의")으로 바꾼다.
+     - 페이지 링크(list?page=N)는 op.manager.js가 검색 폼(query 입력칸이 있는 폼)에 page를 실어 POST로 바꾼다. -->
 
 <div class="admin_wrap">
 <div id="container">
@@ -19,57 +22,413 @@
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <h3>내부문의 관리</h3>
-    <p style="color:#666; margin-bottom:16px;">지자체 담당자가 본사(운영자)에 올린 문의입니다. 지자체 담당자는 자기 지자체 문의만, 본사는 전체를 조회하고 답변합니다.</p>
 
-    <p th:if="${message}" style="color:#1a7f37;" th:text="${message}"></p>
-    <p th:if="${errorMessage}" style="color:#c00;" th:text="${errorMessage}"></p>
+        <h3><span>지자체 문의 게시판</span></h3>
+		<form id="qnaAdminParam" th:action="@{/admin/internal-inquiry/list}" method="post">
+	        <div class="board_write">
+	            <table class="board_write_table" summary="">
+	                <colgroup>
+	                    <col style="width:220px;">
+                        <col>
+	                </colgroup>
+	                <tbody>
+		            	<tr th:if="${upperAdmin}">
+                            <td class="label">지자체</td>
+                            <td>
+                                <div class="flex_box gap-08">
+		                            <select id="upperLocgovCode" name="upperLocgovCode" th:title="${msg.get('지자체')}" class="wd-150" onchange="javascript:searchSigungu(this);"><!-- 지자체 -->
+		                                <option value="">-시,도-</option><!-- -시,도- -->
+		                                <option th:each="data : ${sido}" th:value="${data.value}" th:text="${data.label}"
+		                                        th:selected="${data.value == qnaAdminParam.upperLocgovCode}"></option>
+		                            </select>
+		                            <select id="locgovCode" name="locgovCode" th:title="${msg.get('지자체')}" class="wd-150"><!-- 지자체 -->
+		                                <option value="">-시,군,구-</option>
+		                            </select>
+		                        </div>
+                            </td>
+                        </tr>
+	                    <tr>
+	                        <td class="label" th:text="${msg.get('M00011')}">검색구분</td> <!-- 검색구분 -->
+	                        <td>
+	                            <div class="flex_box gap-08">
+	                                <select id="where" name="where" th:title="${msg.get('M00011')}" class="wd-150"> <!-- 검색구분 -->
+										<option value="" th:text="${msg.get('M00039')}" th:selected="${qnaAdminParam.where == ''}">전체</option><!-- 전체 -->
+										<option value="QNA_GROUP" th:text="${msg.get('M00460')}" th:selected="${qnaAdminParam.where == 'QNA_GROUP'}">문의유형</option>
+										<!-- 2014.12.28 -->
+										<option value="SUBJECT" th:text="${msg.get('M00275')}" th:selected="${qnaAdminParam.where == 'SUBJECT'}">제목</option> <!-- 제목 -->
+										<option value="QUESTION" th:text="${msg.get('M00006')}" th:selected="${qnaAdminParam.where == 'QUESTION'}">내용</option> <!-- 내용 -->
+									</select>
+									<input id="query" name="query" th:title="${msg.get('M00011')}" type="text" class="input_txt required _filter full" th:value="${qnaAdminParam.query}" />  <!-- 검색구분 -->
+									<select id="query" name="query" th:title="${msg.get('M00460')}" class="wd-150"><!-- 문의유형 -->
+	 									<option th:each="group : ${qnaGroups}" th:value="${group.id}" th:text="${group.label}"
+	 									        th:selected="${group.id == qnaAdminParam.query}"></option>
+									</select>
+	                            </div>
+	                        </td>
+	                    </tr>
+	                    <tr>
+	                        <td class="label" th:text="${msg.get('M00202')}">등록일</td> <!-- 등록일 -->
+	                        <td>
+	                            <div>
+	                                <span class="datepicker">
+	                                    <input id="searchStartDate" name="searchStartDate" th:title="${msg.get('M00507')}"
+	                                        class="datepicker _number" type="text" th:value="${qnaAdminParam.searchStartDate}" maxlength="8"
+	                                        autocomplete="off" /><!-- 시작일 -->
+	                                    <!-- <button type="button" class="ui-datepicker-trigger">
+	                                        <span class="icon_calendar">날짜 선택</span>
+	                                    </button> -->
+	                                </span>
+	                                <span class="wave">~</span>
+	                                <span class="datepicker">
+	                                    <input id="searchEndDate" name="searchEndDate" th:title="${msg.get('M00509')}"
+	                                        class="datepicker _number" type="text" th:value="${qnaAdminParam.searchEndDate}" maxlength="8"
+	                                        autocomplete="off" /><!-- 종료일 -->
+	                                    <!-- <button type="button" class="ui-datepicker-trigger">
+	                                        <span class="icon_calendar">날짜 선택</span>
+	                                    </button> -->
+	                                </span>
+	                                <span class="day_btns">
+	                                    <a href="javascript:;" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a>   <!-- 오늘 -->
+	                                    <a href="javascript:;" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a> <!-- 1주일 -->
+	                                    <a href="javascript:;" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a>  <!-- 한달 -->
+	                                    <a href="javascript:;" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a>  <!-- 3개월 -->
+	                                    <a href="javascript:;" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a> <!-- 1년 -->
+	                                    <!-- AS-IS: [전체] 버튼은 ROLE_ADMIN_CALL 전용 - TO-BE 관리자에는 그 권한이 없어 보이는 사람이 없다 -->
+	                                </span>
+	                            </div>
+	                        </td>
+	                    </tr>
+	                </tbody>
+	            </table>
+				<div class="btn_all btn_left">
+					<ul class="list-bullet point">
+						<li>
+					    	검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.
+					    </li>
+					</ul>
+				</div>
+	            <div class="btn_all btn_right">
+	                <div class="flex_box gap-08">
+	                    <button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/admin/internal-inquiry/list'" th:text="${msg.get('M00047')}">초기화</button><!-- 초기화 -->
+	                    <button type="button" class="btn btn-dark-gray btn-mini" onclick="search();">검색</button>
+	                </div>
+	            </div>
+	        </div>
 
-    <form method="get" th:action="@{/admin/internal-inquiry}" class="board_search" style="margin-bottom:12px;">
-        <select name="qnaGroup">
-            <option value="">문의유형 전체</option>
-            <option th:each="e : ${qnaGroups}" th:value="${e.key}" th:text="${e.value}" th:selected="${e.key == qnaGroup}"></option>
-        </select>
-        <input type="text" name="startDate" placeholder="시작(YYYYMMDD)" th:value="${startDate}" size="10">
-        <input type="text" name="endDate" placeholder="종료(YYYYMMDD)" th:value="${endDate}" size="10">
-        <button type="submit" class="small-btn">검색</button>
-    </form>
+	        <div class="count_title mt-40">
+	            <h5>총 <th:block th:text="${qnaCount}">0</th:block>건</h5><!-- 총 545,423건 -->
+	            <span>
+	                <select id="itemsPerPage" name="itemsPerPage" th:title="${msg.get('M00239')}"> <!-- 화면출력 -->
+						<option value="10" th:text="${msg.get('M00240')}" th:selected="${itemsPerPage == '10'}">10개 출력</option>  <!-- 10개 출력 -->
+						<option value="20" th:text="${msg.get('M00241')}" th:selected="${itemsPerPage == '20'}">20개 출력</option>  <!-- 20개 출력 -->
+						<option value="50" th:text="${msg.get('M00242')}" th:selected="${itemsPerPage == '50'}">50개 출력</option>  <!-- 50개 출력 -->
+						<option value="100" th:text="${msg.get('M00243')}" th:selected="${itemsPerPage == '100'}">100개 출력</option> <!-- 100개 출력 -->
+	                </select>
+	            </span>
+	        </div>
+		</form>
 
-    <!-- 문의 작성은 지자체 담당자(자기 지자체 명의) 전용. 본사는 답변만. -->
-    <p th:if="${scoped}">
-        <a class="btn" th:href="@{/admin/internal-inquiry/new}">+ 문의 작성</a>
-    </p>
+		<form th:action="@{/admin/internal-inquiry/list}" method="post" id="listForm">
+	        <div class="admin_wrap board_list">
+	            <table class="board_list_table" summary="">
+	                <colgroup>
+	                    <col style="width:50px;">
+                        <col style="width:50px;">
+                        <col style="width:200px;" th:if="${upperAdmin}">
+                        <col style="width:150px;">
+                        <col style="width:500px;">
+                        <col style="width:200px;">
+                        <col style="width:100px;">
+                        <col style="width:200px;">
+	                </colgroup>
+	                <thead>
+	                    <tr>
+	                        <th scope="col"><input type="checkbox" id="check_all" th:title="${msg.get('M00169')}"></th>
+	                        <th scope="col" th:text="${msg.get('No.')}">No.</th><!-- No. -->
+	                        <th scope="col" th:if="${upperAdmin}">지자체</th>
+	                        <th scope="col" th:text="${msg.get('M00460')}">문의유형</th><!-- 문의유형 -->
+	                        <th scope="col" th:text="${msg.get('M00275')}">제목</th><!-- 제목 -->
+	                        <th scope="col">작성자(아이디)</th>
+	                        <th scope="col" th:text="${msg.get('M01476')}">상태</th><!-- 상태 -->
+	                        <th scope="col" th:text="${msg.get('M00202')}">등록일</th><!-- 등록일 -->
+	                    </tr>
+	                </thead>
+	                <tbody>
+						<tr style="background:#fff;" th:each="list, i : ${qnaAdminList}">
+							<td>
+								<div>
+									<input type="checkbox" name="id" th:value="${list.qnaAdminId}" th:title="${msg.get('M00169')}" />
+								</div>
+							</td>
+							<td th:text="${pagination.itemNumber - i.count}"></td>
+							<td th:if="${upperAdmin}">
+								<div th:text="${list.locgovName}"></div>
+							</td>
+							<td>
+								<div th:text="${list.qnaGroupName}"></div>
+							</td>
+							<td class="tleft">
+								<div>
+									<a th:href="@{/admin/internal-inquiry/edit/{id}(id=${list.qnaAdminId})}" th:text="${list.subject}"></a> <!-- 제목 -->
+								</div>
+							</td>
+							<td>
+								<div>
+									<th:block th:text="${list.userName}"></th:block><br>
+									(<th:block th:text="${list.loginId}"></th:block>)
+								</div>
+							</td>
+							<td>
+								<div th:text="${list.answered ? msg.get('M00463') : msg.get('M00464')}"></div><!-- 답변완료 --> <!-- 답변대기 -->
+							</td>
+							<td>
+								<div th:text="${list.createdDateStr}"></div>
+							</td>
+						</tr>
+	                </tbody>
+	            </table>
 
-    <table class="board_list_table">
-        <thead>
-        <tr><th>유형</th><th>제목</th><th>지자체</th><th>등록자</th><th>답변</th><th>등록일</th><th>처리</th></tr>
-        </thead>
-        <tbody>
-        <tr th:each="q : ${inquiries}">
-            <td th:text="${qnaGroups.get(q.qnaGroup)} ?: ${q.qnaGroup}"></td>
-            <td><a th:href="@{'/admin/internal-inquiry/' + ${q.qnaAdminId}}" th:text="${q.subject}"></a></td>
-            <td th:text="${locgovNames.get(q.locgovCode)} ?: ${q.locgovCode}"></td>
-            <td th:text="${q.userName}"></td>
-            <td>
-                <span class="pill" th:classappend="${q.answerCount != null and q.answerCount > 0} ? 'on' : 'off'"
-                      th:text="${q.answerCount != null and q.answerCount > 0} ? '답변완료' : '미답변'"></span>
-            </td>
-            <td th:text="${q.createdDate != null ? #temporals.format(q.createdDate, 'yyyy-MM-dd HH:mm') : ''}"></td>
-            <td>
-                <a class="small-btn" th:href="@{'/admin/internal-inquiry/' + ${q.qnaAdminId}}">보기</a>
-                <form th:action="@{'/admin/internal-inquiry/' + ${q.qnaAdminId} + '/delete'}" method="post" class="inline-form"
-                      onsubmit="return confirm('삭제하시겠습니까?')">
-                    <button type="submit" class="small-btn danger">삭제</button>
-                </form>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-    <p class="empty" th:if="${#lists.isEmpty(inquiries)}">등록된 문의가 없습니다.</p>
-    </div><!-- /.contents_inner -->
-    </div><!-- /.contents -->
-</div><!-- /#container -->
-</div><!-- /.admin_wrap -->
+				<div class="no_content" th:if="${#lists.isEmpty(qnaAdminList)}" th:text="${msg.get('M00473')}">
+					데이터가 없습니다.
+				</div>
+
+                <div class="btn_all btn_right">
+                    <div class="flex_box gap-08">
+                        <button type="button" id="delete_list_data" class="btn btn-dark-gray btn-mini" th:text="${msg.get('M00074')}">삭제</button> <!-- 삭제 -->
+                    </div>
+                </div>
+
+	            <div class="pagination-wrap">
+	                <div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+	            </div>
+	        </div>
+		</form>
+
+<!-- AS-IS EL(${fn:escapeXml(param.where)} 등 요청 파라미터)을 서버에서 풀어 JS 문자열로 넘긴다 -->
+<script type="text/javascript" th:inline="javascript">
+var PARAM_WHERE = /*[[${paramWhere}]]*/ '';
+var PARAM_UPPER_LOCGOV_CODE = /*[[${paramUpperLocgovCode}]]*/ '';
+var PARAM_LOCGOV_CODE = /*[[${paramLocgovCode}]]*/ '';
+</script>
+
+<script type="text/javascript">
+var $qnaTypeOptions;
+$(function() {
+	$qnaTypeOptions = $('<select />').append($('#qnaType option').clone());
+	//목록데이터 - 삭제처리
+	$('#delete_list_data').on('click', function() {
+		Common.updateListData("/admin/internal-inquiry/qnaAdmin/delete", "삭제하시겠습니까?"
+				, function () {
+					alert('삭제되었습니다.');
+					location.reload();
+				}
+				, function (response) {
+					alert(response.errorMessage);
+					location.reload();
+		});// 삭제하시겠습니까?
+	});
+
+	/*$('#itemsPerPage').on("change", function() {
+		$('#qna').submit();
+	});*/
+
+	$(".btn_date").on('click',function() {
+
+		var $id = $(this).attr('class').replace('btn_date ','');		// id[0] : type, id[1] : value
+
+		if ($id == 'all') {
+
+			$("input[type=text]",$(this).parent().parent()).val('');
+
+		} else {
+
+			var today = $("#today").text();
+
+			var date1 = '';
+			var date2 = '';
+
+			if ($id == 'today') {
+				date1 = today;
+				date2 = today;
+			} else {
+				date1 = $("#"+$id).text();
+				date2 = today;
+			}
+
+			$("input[type=text]", $(this).parent().parent()).eq(0).val(date1);
+			$("input[type=text]", $(this).parent().parent()).eq(1).val(date2);
+
+		}
+	});
+
+	/* $('#qnaGroup').on('change', function() {
+		var type = $(this).val();
+		$('#qnaType').find('option').not(':first-child').remove();
+		$option = $qnaTypeOptions.find('.qna_type_' + type).show().clone();
+		$('#qnaType').append($option).val("0");
+	}); */
+
+	controlInputElement(PARAM_WHERE, false);
+
+	$('#where').on('change', function() {
+		let value = $(this).val();
+		controlInputElement(value, true);
+	});
+
+	// 화면 로딩 후 시도, 시군구 정보 세팅
+	if (PARAM_UPPER_LOCGOV_CODE != "") {		// 세팅된 시도 값 있을 경우
+    	$("#upperLocgovCode").val(PARAM_UPPER_LOCGOV_CODE).prop("selected", true);		// 시도 값 세팅
+        searchSigungu(document.getElementById("upperLocgovCode"));		// 시군구 목록 조회
+    }
+
+});
+
+// 검색구분 UI 및 검색 키값 제어
+function controlInputElement(value, isChangeEvent) {
+	let inputQueryElement = $('#where').parent().children("input")[0];		// 검색어 입력 인풋박스
+	let selectQueryElement = $('#where').parent().children("select")[1];	// 문의유형 항목 셀렉트박스
+	if (value === "QNA_GROUP") {		// 문의 유형 선택했을 경우
+		inputQueryElement.setAttribute("id", "temp");
+		inputQueryElement.setAttribute("name", "temp");
+		if (isChangeEvent) {
+			//inputQueryElement.value = "";
+		}
+
+		selectQueryElement.setAttribute("id", "query");
+		selectQueryElement.setAttribute("name", "query");
+
+		$("#query").val("1").prop("selected", true);
+	} else {
+		if (value) {
+			if (isChangeEvent) {
+				//inputQueryElement.value = "";
+				//$("#temp").val("1").prop("selected", true);
+				$("#temp").val("");
+			}
+			inputQueryElement.setAttribute("id", "query");
+			inputQueryElement.setAttribute("name", "query");
+
+			selectQueryElement.setAttribute("id", "temp");
+			selectQueryElement.setAttribute("name", "temp");
+
+		} else {
+			inputQueryElement.setAttribute("id", "temp1");
+			inputQueryElement.setAttribute("name", "temp1");
+
+			selectQueryElement.setAttribute("id", "temp2");
+			selectQueryElement.setAttribute("name", "temp2");
+
+			inputQueryElement.value = "";
+
+			$("#temp1").hide();
+			$("#temp2").hide();
+			return;
+		}
+	}
+	$("#query").show();
+	$("#temp").hide();
+}
+
+function checkKeyword(event) {
+	/* let keyword = $("#query").val();
+	if (!keyword) {
+		alert("검색어를 입력해주세요.");
+		event.preventDefault();
+		return;
+	} */
+}
+
+//시군구 목록 조회
+function searchSigungu(sidoElement) {
+	let sidoValue = sidoElement.value;
+	$("#locgovCode option").remove();
+    $('#locgovCode').append('<option value="">-시,군,구-</option>');
+    if (sidoValue) {
+        $.post(
+        		url("/common/getLocgovCode")
+        		, {'code' : sidoValue}
+        		, function(response) {
+        			Common.responseHandler(response, function(){
+        				let data = response.data;
+			            for (var i = 0; i < data.length; i++) {
+			                var options = '<option value="' + data[i].LOCGOV_CODE + '">' + data[i].LOCGOV_NM + '</option>';
+			                $('#locgovCode').append(options);
+			            }
+
+			            // 조회 된 값 유지
+			            if (PARAM_LOCGOV_CODE != "") {
+			            	$("#locgovCode").val(PARAM_LOCGOV_CODE).prop("selected", true);
+
+			            	if (!$("#locgovCode").val()) {		// 선택된 값이 없으면 제일 첫 번째 값 기본 세팅
+			            		$("#locgovCode option:eq(0)").prop("selected", true);
+			            	}
+			            }
+        			});
+	            }
+        )
+        .always(function () {
+        	Common.loading.hide();
+        });
+    } else {
+    	Common.loading.hide();
+    }
+}
+
+/**
+ *	함 수 명 : search
+ *	기	능  : 검색
+ */
+function search() {
+	var strStartDate = $("#searchStartDate").val();
+	var strEndDate = $("#searchEndDate").val();
+
+	if(strStartDate && strStartDate.length == 8 && strEndDate && strEndDate.length == 8) {
+		var startDate = new Date(strStartDate.substr(0, 4), strStartDate.substr(4, 2), strStartDate.substr(6, 2));
+		var endDate = new Date(strEndDate.substr(0, 4), strEndDate.substr(4, 2), strEndDate.substr(6, 2));
+
+		if(startDate > endDate) {
+			alert("종료일이 시작일보다 빠릅니다.");
+			$("#searchEndDate").focus();
+			return false;
+		}
+		var searchChk = Common.searchDateMonth(startDate, endDate);
+		if(!searchChk) return false;
+	}
+
+	$("#qnaAdminParam").submit();
+}
+
+</script>
+
+<script type="text/javascript">
+$(function() {
+	Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="searchStartDate"]' , 'input[name="searchEndDate"]');
+
+	EventHandler.calendarStartDateAndEndDateVaild();
+});
+
+$(function() {
+	var openerReload = '';
+	if (openerReload == '-after-login') {
+		opener.location.reload();
+	}
+	$('#itemReview').validator();
+});
+</script>
+
+<input type="hidden" id="redirectMessage" th:value="${redirectMessage}" />
+<script type="text/javascript">
+	$(function() {
+		var redirectMessage = $("#redirectMessage").val();
+		if (redirectMessage) {
+			alert(redirectMessage);
+		}
+	});
+</script>
+    </div>
+    </div>
+</div>
+</div>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

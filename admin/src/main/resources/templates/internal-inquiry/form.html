@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
 <head>
+    <title>관리자 문의 - 고향사랑e음 (admin service)</title>
+    <!-- 공통 head(AS-IS inc_head verbatim: CSS 6 + JS 12) - csrf meta/폰트/op.* 전부 여기서 로드 -->
     <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
-    <meta charset="UTF-8">
-    <title>내부문의 - 고향사랑e음 (admin service)</title>
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/ui-lightness/jquery-ui-1.10.3.custom.min.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/bootstrap/css/bootstrap.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager.css}">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/opmanager_print.css}" media="print">
-    <link rel="stylesheet" type="text/css" th:href="@{/content/opmanager/css/fileUploadModal.css}">
 </head>
 <body>
 <div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/qna-admin/form.jsp 이식 - 관리자 문의 답변 화면(edit/{번호}).
+     ★ AS-IS 특징(그대로)
+     - 위 표는 판매자가 쓴 문의(상태·문의유형·작성일·제목·내용·첨부), 아래 표는 답변(작성자·답변일은 답변이 있을 때만).
+     - 답변 전이면 버튼이 위에(답변·삭제·목록), 답변 뒤면 아래에(답변 수정·답변 삭제·목록). 답변/삭제 계열 버튼은 시스템/행안부(ROLE_ADMIN_1~4)에게 안 보인다.
+     - 답변 첨부가 있으면 파일 칸 대신 첨부 목록(지우기 X 아이콘은 시스템/행안부 제외)이 나오고, 다 지우면 파일 칸이 다시 생긴다.
+       X로 지운 뒤 다시 그리는 링크는 AS-IS가 /seller/qna-locgov/downloadQnaAdminFile/로 잘못 만든다 - 그대로 둔다.
+     - AS-IS JSP는 문의 표를 감싼 폼이 답변 폼 안에 한 번 더 중첩돼 있어 브라우저가 안쪽 폼 태그를 버린다 - 결과 DOM과 같게 바깥 폼 하나로 둔다. -->
 
 <div class="admin_wrap">
 <div id="container">
@@ -19,109 +22,261 @@
     <div class="contents">
     <div class="contents_inner">
         <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
-    <div class="location"><a th:href="@{/admin/internal-inquiry}">내부문의 관리</a></div>
 
-    <!-- ============ 문의 작성 (지자체 담당자) ============ -->
-    <div th:if="${mode == 'new'}">
-        <h3>문의 작성</h3>
-        <div class="board_write">
-            <table class="board_write_table" summary="내부문의 작성">
-                <colgroup><col style="width:220px;"><col></colgroup>
-                <tbody>
-                <tr>
-                    <td class="label">문의유형</td>
-                    <td>
-                        <select id="qnaGroup" name="qnaGroup" form="inquiryForm">
-                            <option th:each="e : ${qnaGroups}" th:value="${e.key}" th:text="${e.value}"></option>
-                        </select>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="label"><span class="required_mark">*</span>제목</td>
-                    <td><input type="text" id="subject" name="subject" required form="inquiryForm"></td>
-                </tr>
-                <tr>
-                    <td class="label"><span class="required_mark">*</span>질문</td>
-                    <td><textarea id="question" name="question" rows="10" required form="inquiryForm"></textarea></td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-        <form id="inquiryForm" th:action="@{/admin/internal-inquiry}" method="post"></form>
-        <div class="btn_all btn_center">
-            <button type="submit" form="inquiryForm" class="btn btn-dark-gray btn-small">등록</button>
-        </div>
-    </div>
+        <h3><span th:text="${msg.get('관리자 문의')}">관리자 문의</span></h3><!-- 관리자 문의 -->
 
-    <!-- ============ 문의 상세 + 답변 (본사) ============ -->
-    <div th:if="${mode == 'detail'}">
-        <h3>문의 상세</h3>
-        <div class="board_write">
-            <table class="board_write_table" summary="내부문의 상세">
-                <colgroup><col style="width:220px;"><col></colgroup>
-                <tbody>
-                <tr>
-                    <td class="label">문의유형</td>
-                    <td th:text="${qnaGroups.get(inquiry.qnaGroup)} ?: ${inquiry.qnaGroup}"></td>
-                </tr>
-                <tr>
-                    <td class="label">등록자</td>
-                    <td th:text="${inquiry.userName}"></td>
-                </tr>
-                <tr>
-                    <td class="label">등록일</td>
-                    <td th:text="${inquiry.createdDate != null ? #temporals.format(inquiry.createdDate, 'yyyy-MM-dd HH:mm') : ''}"></td>
-                </tr>
-                <tr>
-                    <td class="label">제목</td>
-                    <td th:text="${inquiry.subject}"></td>
-                </tr>
-                <tr>
-                    <td class="label">질문</td>
-                    <td style="white-space:pre-wrap;" th:text="${inquiry.question}"></td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
+		<form id="qnaAdminAnswer" th:action="@{/admin/internal-inquiry/edit/{id}(id=${qnaAdmin.qnaAdminId})}" method="post" enctype="multipart/form-data">
+			<input id="qnaAdminAnswerId" name="qnaAdminAnswerId" type="hidden" th:value="${answerId}" />
+	        <div class="btn_all btn_right mb15" th:if="${answerId <= 0}">
+	            <div class="flex_box gap-08">
+	            	<th:block th:unless="${upperAdmin}">
+						<button type="submit" class="btn btn-dark-gray btn-mini" onclick="javascript:checkInputData(event);">답변</button>
+						<button type="button" class="btn btn-dark-gray btn-mini" th:attr="onclick=|javascript:deleteLocgovQna('${qnaAdmin.qnaAdminId}');|">삭제</button>
+					</th:block>
+					<button type="button" class="btn btn-default btn-mini" onclick="javascript:document.location.href='/admin/internal-inquiry/list';" th:text="${msg.get('M00480')}">목록</button><!-- 목록 -->
+	            </div>
+	        </div>
+	        <div class="board_write">
+	            <table class="board_write_table" th:summary="${msg.get('M01424')}"><!-- 문의 -->
+	                <colgroup>
+	                    <col style="width:220px;">
+	                    <col>
+	                    <col style="width:220px;">
+	                    <col>
+	                </colgroup>
+	                <tbody>
+	                    <tr>
+	                        <td class="label" th:text="${msg.get('M01476')}">상태</td><!-- 상태 -->
+	                        <td colspan="3">
+	                            <div th:text="${answerId > 0 ? msg.get('M00463') : msg.get('M00464')}"></div><!-- 답변완료 --><!-- 답변대기 -->
+	                        </td>
+	                    </tr>
+	                    <tr>
+	                        <td class="label" th:text="${msg.get('M00460')}">문의유형</td><!-- 문의유형 -->
+	                        <td>
+	                            <div th:text="${qnaGroupName}"></div>
+	                        </td>
+	                        <td class="label" th:text="${msg.get('M00276')}">작성일</td><!-- 작성일 -->
+	                        <td>
+	                            <div th:text="${createdDateStr}"></div>
+	                        </td>
+	                    </tr>
+	                    <tr>
+	                        <td class="label"><span class="required_mark">*</span><th:block th:text="${msg.get('M00275')}">제목</th:block></td><!-- 제목 -->
+	                        <td colspan="3">
+	                            <div th:text="${qnaAdmin.subject}"></div>
+	                        </td>
+	                    </tr>
+	                    <tr>
+	                        <td class="label"><span class="required_mark">*</span><th:block th:text="${msg.get('M00006')}">내용</th:block></td><!-- 내용 -->
+	                        <td colspan="3">
+	                            <div th:utext="${questionHtml}"></div>
+	                        </td>
+	                    </tr>
+	                    <tr>
+	                        <td class="label" th:text="${msg.get('M01699')}">첨부파일</td><!-- 첨부파일 -->
+	                        <td colspan="3">
+	                        	<div>
+	                        		<div class="file_camera" th:if="${#lists.isEmpty(qnaAdminFiles)}" th:text="${msg.get('첨부파일이 없습니다.')}">
+										첨부파일이 없습니다.
+									</div> <!-- 첨부파일이 없습니다. -->
+									<div class="file_camera" th:each="file : ${qnaAdminFiles}">
+		                                <a th:href="@{/admin/internal-inquiry/downloadQnaAdminFile/{q}/{f}(q=${qnaAdmin.qnaAdminId}, f=${file.qnaAdminFileId})}" th:text="${file.orgFileName}"></a>
+		                            </div>
+	                        	</div>
+	                        </td>
+	                    </tr>
+	                </tbody>
+	            </table>
 
-        <h3 style="margin-top:24px;">답변</h3>
-        <!-- 본사 운영자만 답변 작성/수정, 지자체 담당자는 읽기전용 -->
-        <div th:if="${canAnswer}" class="board_write">
-            <table class="board_write_table" summary="내부문의 답변">
-                <colgroup><col style="width:220px;"><col></colgroup>
-                <tbody>
-                <tr>
-                    <td class="label">제목</td>
-                    <td><input type="text" name="title" th:value="${answer != null ? answer.title : inquiry.subject}" form="answerForm"></td>
-                </tr>
-                <tr>
-                    <td class="label"><span class="required_mark">*</span>답변내용</td>
-                    <td><textarea name="answer" rows="8" required form="answerForm" th:text="${answer != null ? answer.answer : ''}"></textarea></td>
-                </tr>
-                </tbody>
-            </table>
-            <form id="answerForm" th:action="@{'/admin/internal-inquiry/' + ${inquiry.qnaAdminId} + '/answer'}" method="post"></form>
-            <div class="btn_all btn_center">
-                <button type="submit" form="answerForm" class="btn btn-dark-gray btn-small" th:text="${answer != null ? '답변 수정' : '답변 등록'}"></button>
+          		<div class="board_write mt30">
+	            <table class="board_write_table" summary="">
+	                <colgroup>
+	                    <col style="width:220px;">
+	                    <col>
+	                    <col style="width:220px;">
+	                    <col>
+	                </colgroup>
+	                <tbody>
+	                    <tr th:if="${answerId > 0}">
+	                    	<td class="label" th:text="${msg.get('M00472')}">작성자</td><!-- 작성자 -->
+                            <td>
+                                <div th:text="${answerUserName}"></div>
+                            </td>
+	                        <td class="label" th:text="${msg.get('M00476')}">답변일</td><!-- 답변일 -->
+	                        <td>
+	                            <div th:text="${answerDateStr}"></div>
+	                        </td>
+	                    </tr>
+	                    <tr>
+	                        <td class="label"><span class="required_mark">*</span><th:block th:text="${msg.get('답변 제목')}">답변 제목</th:block></td><!-- 답변 제목 -->
+	                        <td colspan="3">
+	                            <div class="flex_box gap-08 item-center">
+	                                <input id="title" name="title" th:title="${msg.get('답변 제목')}" type="text" class="input_txt required _filter full" th:value="${answer != null ? answer.title : ''}" />
+	                            </div>
+	                        </td>
+                        </tr>
+	                    <tr>
+	                        <td class="label"><span class="required_mark">*</span><th:block th:text="${msg.get('M00477')}">답변내용</th:block></td><!-- 답변내용 -->
+	                        <td colspan="3">
+	                        	<div class="flex_box gap-08 item-center">
+                                       <span class="placeholder_wrap">
+                                           <span class="placeholder"></span>
+                                           <textarea id="answer" name="answer" th:title="${msg.get('M00477')}" maxlength="140" class="required required _filter" rows="10" cols="30" th:text="${answer != null ? answer.answer : ''}"></textarea>
+                                       </span>
+                                   </div>
+	                        </td>
+	                    </tr>
+	                    <tr>
+	                        <td class="label" th:text="${msg.get('M01699')}">첨부파일</td><!-- 첨부파일 -->
+	                        <td colspan="3" id="addFileTd">
+	                        	<th:block th:if="${#lists.isEmpty(qnaAdminAnswerFiles)}">
+									<div class="file_camera">
+										<input type="file" id="addFile" name="addFile" class="full input_file" th:title="${msg.get('M01699')}"
+                                       	    multiple="multiple"/>
+									</div>
+									<div class="file_camera" th:if="${answerId > 0}" th:text="${msg.get('첨부파일이 없습니다.')}">
+										첨부파일이 없습니다.
+									</div> <!-- 첨부파일이 없습니다. -->
+								</th:block>
+								<div id="displayAddFile" th:unless="${#lists.isEmpty(qnaAdminAnswerFiles)}">
+									<div class="file_camera" th:each="file : ${qnaAdminAnswerFiles}">
+	                                	<a th:href="@{/admin/internal-inquiry/downloadQnaAdminAnswerFile/{a}/{f}(a=${answerId}, f=${file.qnaAdminAnswerFileId})}" th:text="${file.orgFileName}"></a>
+	                                	<img th:unless="${upperAdmin}" src="/content/images/btn/file_close.gif" alt="close" style="margin-left:5px;padding:3px 0px;cursor:pointer;"
+												th:attr="onclick=|javascript:removeQnaAdminAnswerFile('${answerId}', '${file.qnaAdminAnswerFileId}');|">
+	                                </div>
+	                            </div>
+	                        </td>
+	                    </tr>
+	                </tbody>
+	            </table>
             </div>
-        </div>
-        <div th:unless="${canAnswer}">
-            <p th:if="${answer == null}" class="empty">아직 답변이 등록되지 않았습니다.</p>
-            <div th:if="${answer != null}" class="board_write">
-                <table class="board_write_table">
-                    <colgroup><col style="width:220px;"><col></colgroup>
-                    <tbody>
-                    <tr><td class="label">답변일</td><td th:text="${answer.answerDate != null ? #temporals.format(answer.answerDate, 'yyyy-MM-dd HH:mm') : ''}"></td></tr>
-                    <tr><td class="label">내용</td><td style="white-space:pre-wrap;" th:text="${answer.answer}"></td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+
+            <div class="btn_all btn_right" th:if="${answerId > 0}">
+				<div class="flex_box gap-08">
+					<th:block th:unless="${upperAdmin}">
+						<button type="submit" class="btn btn-dark-gray btn-mini" onclick="javascript:checkInputData(event);" th:text="${msg.get('답변 수정')}">답변 수정</button><!-- 답변 수정 -->
+						<button type="button" class="btn btn-dark-gray btn-mini" th:attr="onclick=|javascript:deleteAnswer('${answerId}');|" th:text="${msg.get('답변 삭제')}">답변 삭제</button><!-- 답변 삭제 -->
+					</th:block>
+					<button type="button" class="btn btn-default btn-mini" onclick="javascript:document.location.href='/admin/internal-inquiry/list';" th:text="${msg.get('M00480')}">목록</button><!-- 목록 -->
+				</div>
+			</div>
+	        </div>
+		</form>
+
+<!-- AS-IS JSP가 서버에서 정하던 값(답변 유무·권한·문구)을 JS로 넘긴다 -->
+<script type="text/javascript" th:inline="javascript">
+var HAS_ANSWER = /*[[${answerId > 0}]]*/ false;
+var UPPER_ADMIN = /*[[${upperAdmin}]]*/ false;
+var MSG_ATTACH = /*[[${msg.get('M01699')}]]*/ '첨부파일';
+var MSG_NO_ATTACH = /*[[${msg.get('첨부파일이 없습니다.')}]]*/ '첨부파일이 없습니다.';
+</script>
+
+<script type="text/javascript">
+	$(function() {
+		/* $('#delete_data').on('click', function() {
+			if (!confirm("삭제된 게시글을 복구할 수 없습니다. 정말로 삭제하시겠습니까?")) {
+				Common.loading.hide();
+				return false;
+			}
+		}); */
+	});
+
+
+	function checkInputData(event) {
+		if (!$("#title").val()) {
+			alert("답변 제목 항목은 필수 입력사항입니다.");
+			event.preventDefault();
+			$("#title").focus();
+			return;
+		}
+		if (!$("#answer").val()) {
+			alert("답변 내용 항목은 필수 입력사항입니다.");
+			event.preventDefault();
+			$("#answer").focus();
+			return;
+		}
+
+		if (HAS_ANSWER) {
+			if (!confirm(Message.get("정보를 수정 하시겠습니까?"))) {
+				event.preventDefault();
+				return;
+			}
+		} else {
+			if (!confirm(Message.get("정보를 등록 하시겠습니까?"))) {
+				event.preventDefault();
+				return;
+			}
+		}
+	}
+
+	// 첨부파일 개별 삭제
+	function removeQnaAdminAnswerFile(qnaAdminAnswerId, qnaAdminAnswerFileId) {
+		Common.loading.show();
+		$.post(
+    		url("/admin/internal-inquiry/deleteQnaAdminAnswerFile")
+    		, {'qnaAdminAnswerId' : qnaAdminAnswerId
+    			, 'qnaAdminAnswerFileId' : qnaAdminAnswerFileId}
+    		, function(response) {
+    			Common.responseHandler(response, function(resp){
+        			$("#displayAddFile").empty();
+
+    				let data = resp.data;
+    				if (data && data.length > 0) {
+	    	            for (let i = 0; i < data.length; i++) {
+	       	                let div = "";
+	    	                div += '<div class="file_camera">';
+	    	                div += '	<a href="/seller/qna-locgov/downloadQnaAdminFile/' + qnaAdminAnswerId + '/' + data[i].qnaAdminAnswerFileId + '">' + data[i].orgFileName + '</a>';
+
+	    	                if (!UPPER_ADMIN) {
+		    	                div += '	<img src="/content/images/btn/file_close.gif" alt="close" style="margin-left:5px;padding:3px 0px;cursor:pointer;"'
+		    							+ 'onclick="javascript:removeQnaAdminAnswerFile(\'' + qnaAdminAnswerId + '\', \'' + data[i].qnaAdminAnswerFileId + '\');">';
+	    					}
+
+	    	                div += '</div>';
+	    	                $('#displayAddFile').append(div);
+	    	            }
+    				} else {
+       	                let div = "";
+    					$('#addFileTd').empty(div);
+    					div += '<div>';
+    					div += 	'<input type="file" id="addFile" name="addFile" class="full input_file" title="';
+    					div +=		MSG_ATTACH;
+    					div += 		'" multiple="multiple"/>';
+   						div += '</div>';
+   						// AS-IS: 문자열 안에 JSP c:if를 넣어 두어 서버에서 답변 유무로 걸러진다(답변 화면이므로 항상 참)
+   						if (HAS_ANSWER) {
+							div += 	'<div>';
+							div += 		MSG_NO_ATTACH;
+							div += 	'</div>';
+						}
+    	                $('#addFileTd').append(div);
+    				}
+				});
+            }
+	    )
+	    .always(function () {
+	    	Common.loading.hide();
+	    });
+	}
+
+	function deleteAnswer(qnaAdminAnswerId) {
+		if (confirm(Message.get("삭제하시겠습니까?"))) {
+			location.href='/admin/internal-inquiry/deleteQnaAdminAnswer/' + qnaAdminAnswerId;
+		}
+	}
+
+	function deleteLocgovQna(qnaAdminId) {
+		if (confirm(Message.get("삭제하시겠습니까?"))) {
+			location.href='/admin/internal-inquiry/deleteQnaAdmin/' + qnaAdminId;
+		}
+	}
+
+</script>
     </div>
-    </div><!-- /.contents_inner -->
-    </div><!-- /.contents -->
-</div><!-- /#container -->
-</div><!-- /.admin_wrap -->
+    </div>
+</div>
+</div>
 <div th:replace="~{fragments/footer :: admin-footer}"></div>
 </body>
 </html>

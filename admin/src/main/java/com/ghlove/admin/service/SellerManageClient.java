@@ -36,6 +36,32 @@ public class SellerManageClient {
                           String mberDn, String mberFinDn, String mberCi) {
     }
 
+    /** 판매자 계정 한 명 - 번호·아이디·계정 지자체코드(OP_SELLER_USER.LOCGOV_CODE). */
+    public record UserBrief(Long userId, String loginId, String locgovCode) {
+    }
+
+    /** 판매자 계정 번호로 아이디·지자체코드 - 관리자 문의 목록의 작성자·지자체 칸. 없는 번호는 빠진다. */
+    public List<UserBrief> usersByIds(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+        List<UserBrief> rows = restClient.post().uri(BASE + "/users").contentType(MediaType.APPLICATION_JSON).body(userIds).retrieve()
+                .body(new ParameterizedTypeReference<List<UserBrief>>() {
+                });
+        return rows != null ? rows : List.of();
+    }
+
+    public record SellerOption(Long sellerId, String sellerName) {
+    }
+
+    /** 지자체 판매자(판매자 계정과 이어진 것) 등록일 최근순 - 상품검색 팝업(AS-IS item/find-item)의 판매자 select. */
+    public List<SellerOption> sellersByLocgov(String locgov) {
+        List<SellerOption> rows = restClient.get().uri(b -> b.path(BASE + "/by-locgov").queryParam("locgov", locgov).build()).retrieve()
+                .body(new ParameterizedTypeReference<List<SellerOption>>() {
+                });
+        return rows != null ? rows : List.of();
+    }
+
     public int count(Search s) {
         Map<String, Object> vars = new java.util.LinkedHashMap<>();
         Map<String, Integer> body = restClient.get().uri(b -> {

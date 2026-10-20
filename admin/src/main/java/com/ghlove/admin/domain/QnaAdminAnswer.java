@@ -7,7 +7,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-/** 내부문의 답변(본사 운영자). AS-IS G_QNA_ADMIN_ANSWER. 문의 1건에 답변 1건 관례. */
+/** 관리자 문의 답변(AS-IS G_QNA_ADMIN_ANSWER) - 지자체 담당자가 단다. 문의 1건에 정상('0') 답변 1건. 삭제는 '1'. */
 @Entity
 @Table(name = "G_QNA_ADMIN_ANSWER")
 @Getter

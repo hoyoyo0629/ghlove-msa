@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>이벤트 관리 - 고향사랑e음 (admin service)</title>
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/featured/form.jsp 이식 - 이벤트 등록/수정(메뉴 16601).
+     ★ AS-IS 그대로
+     - 저장 버튼([등록]/[수정]·[취소])과 이미지 X·[상품 추가]·[전체삭제]는 지자체 담당(ROLE_ADMIN_5~8)에게만 보인다. 시스템/행안부는 보기만.
+     - 리스트 형태(prodState 1 기본선택)·사용유무(featuredFlag Y)는 숨은 칸이다.
+     - 이미지 칸 이름: AS-IS 소스는 "목록 {M00752}"·"상단 {M00752}"인데 개발서버 실화면은 "목록 목록 이미지"·"상단 상단 이미지"로 나온다 - 실화면 그대로 둔다.
+     - [취소]의 class 속성이 JSP에 두 번 쓰여 있다(두 번째 class="btn btn-default;'") - 브라우저는 첫 번째만 쓰므로 첫 번째만 옮겼다.
+     - 저장 확인 문구는 "상품 정보를 저장하시겠습니까?"(M00001 + ' 정보를 저장하시겠습니까?'). -->
+
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<!-- <style>
+p.input_info {
+	display: inline;
+	padding-top: 3px;
+	color: #e84700;
+	font-size: 11px;
+	margin-left: 10px;
+}
+
+.groupDiv {
+	border-radius: 25px;
+	border: 2px solid #73AD21;
+	padding: 20px;
+	margin: 10px;
+}
+
+.delete_item {
+	position: absolute;
+	top: 5px;
+	right: 5px;
+}
+
+.groupPlaceHolder {
+	width: 100%;
+	height: 300px;
+	background: #d6eafd	url("/content/styles/ui-lightness/images/ui-bg_diagonals-thick_20_666666_40x40.png") 50% 50% repeat;
+	opacity: .5;
+}
+
+.text-info {
+	padding-top: 8px;
+}
+
+p.item_image_main a.delete_item_image {
+	right: 225px;
+}
+p.item_image_main a.delete_item_image.mobile {
+	right: 10px;
+}
+</style> -->
+
+	<div class="item_list">
+		<h3><span><!-- 이벤트 관리 --></span></h3>
+
+		<form id="featured" th:action="${mode == 'edit'} ? @{|/featured/edit/${featured.featuredId}|} : @{/featured/create}" method="post" enctype="multipart/form-data">
+			<input id="featuredId" name="featuredId" type="hidden" th:value="${featured.featuredId}">
+			<input id="featuredType" name="featuredType" type="hidden" th:value="${featured.featuredType}">
+			<input type="hidden" name="prodString" id="prodString" />
+			<input type="hidden" name="featuredCheck" value="1" />
+
+		    <div class="board_write">
+		        <table class="board_write_table" summary="">
+		            <colgroup>
+		                <col style="width:220px;">
+		                <col>
+		                <col style="width:220px;">
+		                <col>
+		            </colgroup>
+		            <tbody>
+		                <tr>
+		                    <td class="label"><span class="required_mark">*</span><th:block th:text="${msg.get('이벤트명')}">이벤트명</th:block></td><!-- 이벤트명 -->
+		                    <td>
+		                        <div class="flex_box gap-08">
+		                            <input id="featuredName" name="featuredName" th:title="${mainPart + msg.get('M01220')}" type="text" class="input_txt required _filter full" th:value="${featured.featuredName}"><!-- 명 -->
+		                        </div>
+		                    </td>
+		                </tr>
+		                <tr>
+		                    <td class="label"><span class="required_mark">*</span>진행 기간</td><!-- 진행 기간 -->
+		                    <td colspan="3">
+		                        <div>
+		                            <span class="datepicker">
+		                                <input id=startDate name="startDate" th:title="${msg.get('M00507') + '자'}" class="datepicker" type="text" th:value="${featured.startDate != '99999999' ? featured.startDate : ''}" maxlength="8" autocomplete="off"><!-- 시작일자 -->
+		                                <!-- <button type="button" class="ui-datepicker-trigger">
+		                                    <span class="icon_calendar">날짜 선택</span>
+		                                </button> -->
+		                            </span>
+		                            <select id="startTime" name="startTime" th:title="${msg.get('M00508')}"> <!-- 시간 선택 -->
+										<option th:each="code : ${hours}" th:value="${code}" th:text="${code}" th:selected="${code == featured.startTime}"></option>
+									</select>
+		                            <span class="wave">~</span>
+		                            <span class="datepicker">
+		                                <input id="endDate" name="endDate" th:title="${msg.get('M00509') + '자'}" class="datepicker" type="text" th:value="${featured.endDate != '99999999' ? featured.endDate : ''}" maxlength="8" autocomplete="off"><!-- 종료일자 -->
+		                                <!-- <button type="button" class="ui-datepicker-trigger">
+		                                    <span class="icon_calendar">날짜 선택</span>
+		                                </button> -->
+		                            </span>
+		                            <select id="endTime" name="endTime" th:title="${msg.get('M00508')}"> <!-- 시간 선택 -->
+										<option th:each="code : ${hours}" th:value="${code}" th:text="${code}" th:selected="${code == featured.endTime}"></option>
+									</select>
+		                        </div>
+		                    </td>
+		                </tr>
+		                <tr>
+		                    <td class="label" th:text="${msg.get('M00666')}">대표연락처</td><!-- 대표연락처 -->
+		                    <td colspan="3">
+		                        <div class="flex_box gap-08 item-center">
+		                            <select id="featuredPhoneNo1" name="featuredPhoneNo1" th:title="${msg.get('M00666')}" class="wd-150"><!-- 대표연락처 -->
+		                                <option value="">선택</option><!-- 선택 -->
+										<option th:each="data : ${phone}" th:value="${data}" th:text="${data}" th:attr="selected=${featured.featuredPhoneNo1 == data ? '' : null}"></option>
+		                            </select>
+		                            <span class="wave">-</span>
+		                            <input id="featuredPhoneNo2" name="featuredPhoneNo2" th:title="${msg.get('M00666') + '2'}" type="text" class="input_txt _filter wd-150" oninput="javascript:inputNumber(this);" th:value="${featured.featuredPhoneNo2}" maxlength="4"><!-- 대표연락처2 -->
+		                            <span class="wave">-</span>
+		                            <input id="featuredPhoneNo3" name="featuredPhoneNo3" th:title="${msg.get('M00666') + '3'}" type="text" class="input_txt _filter wd-150" oninput="javascript:inputNumber(this);" th:value="${featured.featuredPhoneNo3}" maxlength="4"><!-- 대표연락처3 -->
+		                        </div>
+		                    </td>
+		                </tr>
+		                <tr>
+		                    <td class="label">주최/주관</td><!-- 주최/주관 -->
+		                    <td colspan="3">
+		                        <div class="flex_box gap-08">
+		                            <input id="featuredHost" name="featuredHost" title="주최/주관" class="input_txt _filter full" th:value="${featured.featuredHost}" type="text"><!-- 주최/주관 -->
+		                        </div>
+		                    </td>
+		                </tr>
+		                <tr>
+		                    <td class="label"><th:block th:text="${msg.get('M00779')}">홈페이지</th:block> 주소</td><!-- 홈페이지 주소 -->
+		                    <td colspan="3">
+		                        <div class="flex_box gap-08">
+		                            <input id="link" name="link" th:title="${msg.get('M00779') + ' 주소'}" type="text" class="input_txt _filter full" th:value="${featured.link}" maxlength="100"><!-- 홈페이지 주소 -->
+		                        </div>
+		                    </td>
+		                </tr>
+		            </tbody>
+		        </table>
+		        <table class="board_write_table" summary="">
+		            <colgroup>
+		                <col style="width:220px;">
+		                <col style="width:180px;">
+		                <col>
+		            </colgroup>
+		            <tbody>
+		                <tr>
+		                    <td class="label">목록 목록 이미지</td><!-- 목록 이미지 -->
+		                    <td class="line-right tcenter">
+		                        <div>
+		                            <p class="mt10 point">권장 사이즈는<br>300px X 300px 입니다.</p>
+		                        </div>
+		                    </td>
+		                    <td colspan="2">
+		                        <div class="flex_box item-center">
+		                            <th:block th:if="${#strings.isEmpty(featured.featuredListImage)}">
+										<input name="featuredListFile" type="file" th:title="${msg.get('M00752')}" class="full input_file" accept="image/png, image/jpeg, image/gif" onchange="javascript:checkSize(this, 5);"/>
+									</th:block>
+									<th:block th:if="${!#strings.isEmpty(featured.featuredListImage)}">
+										<p class="item_image_main" style="width:100px;">
+											<input type="hidden" class="fileType" value="5"/>
+											<img th:src="${featured.featuredListImageSrc}" class="item_image size-100" alt=""/>
+											<a href="javascript:;" class="delete_item_image" th:if="${canSave}"><img src="/content/opmanager/images/icon/icon_x.gif" alt="" /></a>
+										</p>
+									</th:block>
+		                        </div>
+		                    </td>
+		                </tr>
+		                <tr>
+		                    <td class="label" rowspan="2">상단 상단 이미지</td><!-- 상단 이미지 -->
+		                    <td class="line-right tcenter">
+		                        <div>
+		                            <p>PC</p>
+		                            <p class="mt10 point">권장 사이즈는<br>1120px X 1120px 입니다.</p>
+		                        </div>
+		                    </td>
+		                    <td colspan="2">
+		                        <div class="flex_box item-center">
+		                            <th:block th:if="${#strings.isEmpty(featured.featuredImage)}">
+										<input name="featuredFile" type="file" class="full input_file" th:title="${msg.get('M00752')}" accept="image/png, image/jpeg, image/gif" onchange="javascript:checkSize(this, 20);"/><!-- 이미지 -->
+									</th:block>
+									<th:block th:if="${!#strings.isEmpty(featured.featuredImage)}">
+										<p class="item_image_main" style="width:100px;">
+											<input type="hidden" class="fileType" value="2"/>
+											<img th:src="${featured.featuredImageSrc}" class="item_image size-100" alt=""/>
+											<a href="javascript:;" class="delete_item_image" th:if="${canSave}"><img src="/content/opmanager/images/icon/icon_x.gif" alt="" /></a>
+										</p>
+									</th:block>
+		                        </div>
+		                        <!-- <div class="file_camera">
+		                            <div class="image-box">
+		                                <img src="../../content/images/common/item_223-2.jpg" class="item_image size-100 none" alt="상품이미지">
+		                                <a href=""><img src="../../content/images/btn/file_close.gif" alt="close"></a>
+		                            </div>
+		                        </div> -->
+		                    </td>
+		                </tr>
+		                <tr>
+		                    <td class="line-right tcenter">
+		                        <div>
+		                            <p>mobile</p><!-- mobile -->
+		                            <p class="mt10 point">권장사이즈는<br>350px X 350px 입니다.</p>
+		                        </div>
+		                    </td>
+		                    <td colspan="2">
+		                        <div class="flex_box item-center">
+		                            <th:block th:if="${#strings.isEmpty(featured.featuredImageMobile)}">
+										<input name="featuredFileMobile" type="file" class="full input_file" th:title="${msg.get('M00752')}" accept="image/png, image/jpeg, image/gif" onchange="javascript:checkSize(this, 20);"/><!-- 이미지 -->
+									</th:block>
+									<th:block th:if="${!#strings.isEmpty(featured.featuredImageMobile)}">
+										<p class="item_image_main" style="width:100px;">
+											<input type="hidden" class="fileType" value="3"/>
+											<img th:src="${featured.featuredImageMobileSrc}" class="item_image size-100" alt="" />
+											<a href="javascript:;" class="delete_item_image mobile" th:if="${canSave}"><img src="/content/opmanager/images/icon/icon_x.gif" alt="" /></a>
+										</p>
+									</th:block>
+		                        </div>
+		                      <!--   <div class="file_camera">
+		                            <div class="image-box">
+		                                <img src="../../content/images/common/item_223-2.jpg" class="item_image size-100 none" alt="상품이미지">
+		                                <a href=""><img src="../../content/images/btn/file_close.gif" alt="close"></a>
+		                            </div>
+		                        </div> -->
+		                    </td>
+		                </tr>
+		            </tbody>
+		        </table>
+		        <table class="board_write_table" summary="">
+		            <colgroup>
+		                <col style="width:220px;">
+		                <col>
+		            </colgroup>
+		            <tbody>
+		                <tr>
+		                    <td class="label"><span class="required_mark">*</span>상세내용</td><!-- 상세내용 -->
+		                    <td colspan="3">
+		                        <!-- smart_editor2-wrap -->
+		                        <!-- <div style="width: 100%; height:300px; background:#eee;">스마트 에디터 영역 입니다.</div> -->
+		                        <!-- 실 사용 소스 -->
+		                        <div class="smart_editor2-wrap">
+		                            <textarea id="featuredContent" name="featuredContent" title="message('M00006')" class="editor-content" rows="20" cols="30" th:text="${featured.featuredContent}"></textarea>
+		                        </div>
+		                        <!-- // 실 사용 소스 -->
+		                        <!-- smart_editor2-wrap -->
+		                    </td>
+		                </tr>
+		                <tr style="display: none;">
+		                    <td class="label"><th:block th:text="${msg.get('M00100')}">리스트</th:block> 형태</td><!-- 리스트 형태 -->
+		                    <td colspan="3">
+		                        <div class="flex_box gap-12">
+	                                <input id="prodState1" name="prodState" title="제품그룹 선택" checked="checked" type="radio" value="1"><label for="prodState1" th:text="${msg.get('M01580') + msg.get('M00431')}">기본선택</label><!-- 기본선택 --><!-- 제품그룹 선택 -->
+		                        </div>
+		                    </td>
+		                </tr>
+		                <tr id="prodTr1">
+		                    <td class="label"><th:block th:text="${msg.get('M00431')}">선택</th:block> <th:block th:text="${msg.get('M00006')}">내용</th:block></td><!-- 선택 상품 -->
+		                    <td colspan="3">
+		                        <div class="flex_box gap-12" id="activeArea">
+		                        	<th:block th:if="${canSave}">
+			                            <button type="button" class="btn btn-default btn-sm" id="button_add_relation_item" onclick="findItem('prod')" th:text="${msg.get('M00582')}">상품 추가</button><!-- 상품 추가 -->
+			                            <button type="button" class="btn btn-default btn-sm" onclick="if(confirm('모든 상품을 삭제하시겠습니까?')){Shop.deleteRelationItemAll('prod');}" th:text="${msg.get('M00411')}">전체삭제</button><!-- 모든 상품을 삭제하시겠습니까? --><!-- 전체삭제 -->
+		                            </th:block>
+		                        </div>
+		                        <div>
+			                        <ul id="prod" class="sortable_item_relation" onclick="javascript:onItemClick(event);">
+										<!-- <li style="display: none;"></li> -->
+										<th:block th:if="${featured.prodState == '2' or featured.prodState == '1'}">
+											<th:block th:each="item, i : ${list}">
+												<li th:id="|prod_item_${item.item.itemId}|">
+													<input type="hidden" name="prodItemIds" th:value="${item.item.itemId}" />
+													<p class="image"><img th:src="${item.imageSrc}" class="item_image size-100 none" th:alt="${msg.get('M00659')}" /></p><!-- 상품이미지 -->
+													<p class="title">[<th:block th:text="${item.item.itemUserCode}"></th:block>] <label style="color:red">[<th:block th:text="${item.item.salePrice == null ? '' : #numbers.formatInteger(item.item.salePrice, 1, 'COMMA')}"></th:block>]</label><br /><th:block th:text="${item.item.itemName}"></th:block></p>
+
+													<span class="ordering" th:text="${i.count}"></span>
+													<a href="javascript:javascript:deleteItem();" class="delete_item" style="position: absolute;top: 5px; right: 5px;" th:if="${canSave}"><img src="/content/opmanager/images/icon/icon_x.gif" alt="" /></a>
+												</li>
+											</th:block>
+										</th:block>
+									</ul>
+		                        </div>
+		                    </td>
+		                </tr>
+		                <tr>
+		                    <td class="label" th:text="${msg.get('M00191')}">공개유무</td><!-- 공개유무 -->
+		                    <td colspan="3">
+		                        <div class="flex_box gap-12">
+		                            <input id="displayListFlag1" name="displayListFlag" th:title="${msg.get('M00096')}" checked="checked" type="radio" value="Y"><label for="displayListFlag1" th:text="${msg.get('M00096')}">공개</label> <!-- 공개 -->
+									<input id="displayListFlag2" name="displayListFlag" th:title="${msg.get('M00097')}" type="radio" value="N" th:checked="${featured.displayListFlag == 'N'}"><label for="displayListFlag2" th:text="${msg.get('M00097')}">비공개</label>     <!-- 비공개 -->
+		                        </div>
+		                    </td>
+		                </tr>
+
+		                <!-- 사용유무 필수값, 화면에 없음 -->
+						<tr class="hidden">
+							<td class="label" th:text="${msg.get('M00669')}">사용유무</td><!-- 사용유무 -->
+							<td>
+								<div>
+									<input id="featuredFlag1" name="featuredFlag" th:title="${msg.get('M00669')}" checked="checked" class="requirement" type="radio" value="Y"><label for="featuredFlag1" th:text="${msg.get('M00083')}">사용</label><!-- 사용유무 -->
+									<input id="featuredFlag2" name="featuredFlag" th:title="${msg.get('M00669')}" class="requirement" type="radio" value="N" th:checked="${featured.featuredFlag == 'N'}"><label for="featuredFlag2" th:text="${msg.get('M00089')}">사용안함</label><!-- 사용유무 -->
+								</div>
+							</td>
+						</tr>
+		            </tbody>
+		        </table>
+		    </div>
+
+		    <div class="btn_all btn_center">
+		        <div class="flex_box gap-08">
+		        	<th:block th:if="${canSave}">
+			            <button type="submit" class="btn btn-dark-gray btn-small" th:if="${featured.featuredId > 0}" th:text="${msg.get('M00087')}">수정</button><!-- 수정 -->
+			            <button type="submit" class="btn btn-dark-gray btn-small" th:unless="${featured.featuredId > 0}" th:text="${msg.get('M00088')}">등록</button><!-- 등록 -->
+			            <button type="button" class="btn btn-default btn-small" onclick="document.location.href='/featured/list';" th:text="${msg.get('M00037')}">취소</button><!-- 취소 -->
+		            </th:block>
+		        </div>
+		    </div>
+		</form>
+	</div>
+
+    </div><!-- /.contents_inner -->
+    </div><!-- /.contents -->
+</div><!-- /#container -->
+</div><!-- /.admin_wrap -->
+
+<!-- AS-IS ViewUtils.view(message)/UserException - 저장 실패 안내 -->
+<input type="hidden" id="redirectMessage" th:value="${redirectMessage}" />
+
+<div th:replace="~{fragments/smarteditor :: init}"></div>
+<div th:replace="~{fragments/smarteditor :: editor('featuredContent')}"></div>
+
+<script type="text/javascript" th:inline="javascript">
+var FEATURED_FORM = {
+	featuredUrl: /*[[${featured.featuredUrl}]]*/ '',
+	mainPart: /*[[${mainPart}]]*/ '',
+	prodState: /*[[${featured.prodState}]]*/ '',
+	userGroupCount: /*[[${#lists.size(userGroupList)}]]*/ 0
+};
+</script>
+<script type="text/javascript">
+
+var patterns = /^[a-zA-Z0-9_-]+$/;
+var featuredUrl = FEATURED_FORM.featuredUrl == null ? '' : FEATURED_FORM.featuredUrl;
+var mainPart = FEATURED_FORM.mainPart == null ? '' : FEATURED_FORM.mainPart;
+
+
+	$(function(){
+		var redirectMessage = $("#redirectMessage").val();
+		if (redirectMessage) {
+			alert(redirectMessage);
+		}
+
+		// 기획전 상품 그룹 펼치기
+		showItemGroups();
+		// 기획전 상품 그룹 접기
+		hideItemGroups();
+
+		$('input[name=featuredClass]').on('click', function() {
+			if ($(this).val() == 1) {
+				$('.mainPart').text('기획전');/* 기획전 */
+				$('input[name=featuredName]').attr('title', Message.get("M01083"));/* 기획전명 */
+				mainPart = '기획전';/* 기획전 */
+				showAndHideImages();
+			} else {
+				$('.mainPart').text(Message.get("이벤트"));/* 이벤트 */
+				$('input[name=featuredName]').attr('title', '이벤트명');/* 이벤트명 */
+				mainPart = Message.get("이벤트");/* 이벤트 */
+				showAndHideImages();
+
+			}
+		});
+
+		$("#activeArea").sortable({
+			placeholder : "groupPlaceHolder"
+		});
+
+		$(".delete_item").click(function(){
+			if (confirm(Message.get("M00196"))) {/* 삭제하시겠습니까? */
+				$(this).parent().remove();
+			}
+		});
+
+		/* $("input[name='featuredCodeChecked']").on("click",function(){
+			if($(this).val() == 'all'){
+				if($(this).prop("checked")){
+					$("input[name='featuredCodeChecked']").prop("checked",false);
+					$("input[name='featuredCodeChecked']").attr("disabled", true);
+					$(this).attr("disabled", false);
+					$(this).prop("checked",true);
+				} else {
+					$("input[name='featuredCodeChecked']").attr("disabled", false);
+				}
+			}
+		}); */
+
+		$("input[name='displayListFlag']").on("change",function(){
+			if($(this).val()== "N") {
+				$(".requirement").removeClass("required");
+			}
+			else {
+				$(".requirement").addClass("required");
+			}
+		});
+
+		$("input[name='displayListFlag']").trigger("change");
+
+		$("#featured").validator(function() {
+			if($("input[name='displayListFlag']:checked").val()== "Y") {
+				var value = $("input[name='featuredUrl']").val();
+
+				if(!patterns.test(value)){
+					alert(Message.get("M01332")); // 영문, 숫자, 하이픈, 언더바 만 입력가능합니다.
+					$("#featuredUrl").focus();
+					return false;
+				}
+				// AS-IS <c:if test="${isEvent ne 'Y'}"> - isEvent를 넣는 곳이 없어 항상 검사한다.
+				var outSideLink = $("input[name='link']").val();
+				if ( !checkedOutSideLink(outSideLink) ){
+					alert("※ 외부 사이트 링크인 경우 반드시 http:// (또는 https://)로 시작하도록 작성하셔야 합니다.");/* ※ 외부 사이트 링크인 경우 반드시 http:// (또는 https://)로 시작하도록 작성하셔야 합니다. */
+					return false;
+				}
+
+
+				var $startDate = $('#startDate').val();
+				var $endDate = $('#endDate').val();
+
+
+
+				if (!$startDate || !$endDate) {
+					alert("진행 기간을 입력해주세요.");/* 진행 기간을 입력해주세요. */
+					if (!$startDate) {
+						$('#startDate').focus();
+					} else {
+						$('#endDate').focus();
+					}
+					return false;
+				}
+
+				if(($startDate != "" && $startDate != null) && ($endDate != "" && $endDate != null)) {
+					if ( checkedDate( $startDate, $('#startTime').val(), $endDate, $('#endTime').val() ) ) {
+						alert('사용기간의 종료기간이 시작기간보다 빠를 수 없습니다.');/* 사용기간의 종료기간이 시작기간보다 빠를 수 없습니다. */
+						$('#startDate').focus();
+						return false;
+					}
+				}
+
+				if(($startDate == "" || $startDate == null) && ($endDate != "" && $endDate != null)) {
+					alert('사용기간의 종료기간은 시작기간 선택없이 설정할 수 없습니다.');/* 사용기간의 종료기간은 시작기간 선택없이 설정할 수 없습니다. */
+					$('#startDate').focus();
+					return false;
+				}
+
+				/* if (!($('#featured input:checkbox[name=featuredCodeChecked]').is(":checked"))) {
+					alert("구분이 선택되지 않았습니다.");
+					$('#featured input:checkbox[name=featuredCodeChecked]').eq(0).focus();
+					return false;
+				} */
+
+
+
+				/* if ($('#featured #featuredContent').val() == '') {
+					alert("내용 작성해주세요.");
+					$('#featured #featuredContent').focus();
+					return false;
+				} */
+
+			}
+
+			Common.getEditorContent("featuredContent");
+
+			if ($("input[name='featuredCheck']").val() != '1'
+//					|| (featuredUrl != null && featuredUrl != '' && $("input[name='featuredUrl']").val() != featuredUrl)
+					) {
+
+				alert(Message.get("M01087"));/* URL의 중복 여부가 체크되지 않았습니다. */
+				$("#featuredUrl").focus();
+
+				return false;
+			}
+
+			//이상우 [2017-03-16 수정] 사용자그룹 정렬 방식 일때만 그룹명 체크
+			var prodState = $("input[name=prodState]:checked").val();
+			if (prodState == '3') {
+				var groupChk = 0;
+				$("input[name=userGroup]").each(function(){
+					if ($(this).val()=="") {
+						alert("그룹명을 입력해주세요.");/* 그룹명을 입력해주세요. */
+						groupChk = 1;
+						$(this).focus();
+						return false;
+					}
+				});
+
+				if (groupChk == 1) {
+					return false;
+				}
+			}
+			var stateFlag = $("input[name=featuredClass]:checked").val();
+			if (stateFlag == '1' && prodState == '3') {
+				if ($("#prodTr2").find(".groupDiv").length<1) {
+					alert("현재 기획전에 추가된 그룹명이 없습니다. 그룹을 추가해주세요.");/* 현재 기획전에 추가된 그룹명이 없습니다. 그룹을 추가해주세요. */
+					return false;
+				}
+
+				if ($("#prodTr2").find("li").length<1) {
+					alert("현재 기획전에 추가된 상품이 없습니다. 상품을 추가하시거나\n 제품그룹선택 항목의 '기본선택'을 선택해주세요.");/* 현재 기획전에 추가된 상품이 없습니다. 상품을 추가하시거나\n 제품그룹선택 항목의 '기본선택'을 선택해주세요. */
+					return false;
+				}
+
+				var itemChk = 0;
+				var groupName=[];
+				$(".groupDiv").each(function(index){
+					var groupEl = $(this).find(".userGroup");
+					groupEl.val($.trim(groupEl.val()));
+					groupName[index] = groupEl.val();
+					if ($(this).find("li").length == 0) {
+						alert("\""+groupEl.val()+"\"그룹에 등록된 제품이 없습니다.");/* 그룹에 등록된 제품이 없습니다. */
+						itemChk = 1;
+						groupEl.focus();
+						return false;
+					}
+					$(this).find("ul").attr("id","prod"+index);
+					$(this).find("ul li input").attr("name","prod"+index+"ItemIds");
+				});
+
+				if (itemChk == 0) {
+					for (var i=0; i<groupName.length; i++) {
+						for (var j=i; j<groupName.length; j++) {
+							if (i != j && groupName[i].toLowerCase() === groupName[j].toLowerCase()) {
+								alert("그룹명이 중복됩니다. 변경 해주세요.");/* 그룹명이 중복됩니다. 변경 해주세요. */
+								$(".userGroup").eq(j).focus();
+								itemChk = 1;
+								return false;
+							}
+						}
+						if (itemChk == 1) {return false;}
+					}
+				}
+
+
+				if (itemChk == 1) {
+					return false;
+				}
+			}
+			else {
+				/* if ($("#prodTr1").find("li").length<1 && $("input[name='displayListFlag']:checked").val()== "Y") {
+					alert("현재 기획전에 추가된 상품이 없습니다. 상품을 추가해주십시오.");
+					return false;
+				} */
+			}
+			makeProdString();
+
+			// if (!confirm(mainPart + ' 정보를 저장하시겠습니까?')) {/* 정보를 저장하시겠습니까? */
+			if (!confirm(Message.get("M00001") + ' 정보를 저장하시겠습니까?')) {/* 상품 정보를 저장하시겠습니까? */
+				return false;
+			}
+		});
+
+		$("#featuredUrlSearch").on("click",function(){
+
+			var value = $("input[name='featuredUrl']").val();
+
+			if(value == '') {
+				alert("URL을 입력하세요.")/* URL을 입력하세요. */
+				$("#featuredUrl").focus();
+				return false;
+			}
+
+			if(!patterns.test(value)){
+				alert(Message.get("M01332")); // 영문, 숫자, 하이픈, 언더바 만 입력가능합니다.
+				$("#featuredUrl").focus();
+				return false;
+			}
+
+			var originalValue = $("#originalFeaturedUrl").val();
+			if (value == originalValue) {
+				alert("사용 가능한 페이지명입니다.");	// 사용가능/* 사용 가능한 페이지명입니다. */
+				$("input[name='featuredCheck']").val("1");
+				return false;
+			}
+
+			var param = {
+				"featuredUrl" : $("input[name='featuredUrl']").val()
+				, "notFeaturedId" : $('#featuredId').val()
+			};
+
+			$.post("/featured/url-search",param,function(resp){
+				Common.responseHandler(resp, function(){
+					alert("사용 가능한 페이지명입니다.");	// 사용가능/* 사용 가능한 페이지명입니다. */
+					$("input[name='featuredCheck']").val("1");
+					featuredUrl = value;
+				},function(){
+					alert("해당 URL이 존재 합니다.");	// 사용불가/* 해당 URL이 존재 합니다. */
+					$("input[name='featuredCheck']").val("0");
+					featuredUrl = '';
+				});
+			});
+
+		});
+
+		$(".delete_item_image").on("click",function(){
+			var fileType=$(this).parent().find(".fileType").val();
+			var fileAdd = $(this).parent().parent();
+			var desc = "";
+			var label = "";
+			var message = Message.get("M00196");	// 삭제하시겠습니까?
+
+			if($('input[name="featuredClass"]:checked').val() == '1') {
+				label = "기획전";/* 기획전 */
+			} else {
+				label = Message.get("이벤트");/* 이벤트 */
+			}
+
+
+			Common.confirm(message, function(){
+				$.post("/featured/delete-image", "featuredId="+$("input[name='featuredId']").val()+"&fileType="+fileType , function(resp){
+					Common.responseHandler(resp, function(){
+						//$(".item_image_main").remove();
+						$(this).parent().remove();
+						 var message = "";
+						var nm = "";
+						message=Message.get("M00752");/* 이미지 */
+						if(fileType=="1") {
+							//message=Message.get("M01085"); // 섬네일이미지
+							nm="thumbnailFile";
+							//desc="<span class=\"f11\">※ <span class=\"mainPart\">" + label +" </span>목록 배너이미지로 권장크기는 1,100px * 150px 입니다.</span>";
+						}
+						else if(fileType=="2") {
+							//message=Message.get("M00982"); // 대표이미지
+							nm="featuredFile";
+							//desc="<span class=\"f11\">※  메인페이지에 노출되는 <span class=\"mainPart\">" + label + "</span>대표이미지로 권장크기는 258px * 220px 입니다.</span>";
+						}
+						else if(fileType=="3") {
+							//message="모바일 대표이미지"; // 모바일 대표이미지
+							nm="featuredFileMobile";
+							//desc="<span class=\"f11\">※ 모바일 메인페이지 <span class=\"mainPart\">" + label +"</span>대표이미지로 기기에 따라 자동 조정됩니다. 권장크기는 480px * 250px 입니다.</span>";
+						}
+						else if(fileType=="4") {
+							//message="모바일 대표이미지"; // 모바일 섬네일이미지
+							nm="thumbnailFileMobile";
+							//desc="<span class=\"f11\">※ 모바일 <span class=\"mainPart\">" + label +"</span> 목록 기기에 따라 자동 조정됩니다. 권장크기는 400px * 85px 입니다.</span>";
+						}
+						else if(fileType=="5") {
+							nm="featuredListFile";// 목록용 이미지
+						}
+						else if(fileType=="6") {
+							nm="thumbnailListFile";		// 목록용 썸네일 이미지
+						}
+						fileAdd.html('<input name="'+ nm +'" type="file" title="' + message + '" accept="image/png, image/jpeg, image/gif" />'+desc);
+					});
+				});
+			});
+		});
+
+		// 관련상품 드레그
+	    $(".sortable_item_relation").sortable({
+	        placeholder: "sortable_item_relation_placeholder"
+	    });
+
+		$("input[name=prodState]").change(function(){
+			var stateFlag = $("input[name=prodState]:checked").val();
+			if(stateFlag == '1' || stateFlag == "2") {
+				$("#prodTr1").show();
+				$("#prodTr2").hide();
+			}
+			else {
+				$("#prodTr2").show();
+				$("#prodTr1").hide();
+			}
+		});
+
+		$("input[name=prodState]").trigger("change");
+
+		showAndHideImages();
+	});
+
+	function checkedOutSideLink (link){
+
+		var pattern1 = new RegExp("http://");
+		var pattern2 = new RegExp("https://");
+
+		if (link == "") {
+			return true;
+		}
+
+		if( (pattern1.test(link)) ){
+			return  true;
+		}
+
+		if( (pattern2.test(link)) ){
+			return  true;
+		}
+
+		return false;
+
+	}
+
+	function findItem(dest) {
+
+		var conditionType = "";
+		/*if (featuredType == '8' || featuredType == '9') {
+			conditionType = "FIND_ITEM_POPUP_FOR_PLANNER";
+		}*/
+
+		Shop.findItem(dest, conditionType);
+	}
+
+	function prodDrag()	{
+		$(".sortable_item_relation").sortable({
+			placeholder : "sortable_item_relation_placeholder"
+		});
+		$("#activeArea").sortable({
+			placeholder : "groupPlaceHolder"
+		});
+
+	}
+
+	var itemNo;
+	if (FEATURED_FORM.prodState=="2") {
+		itemNo = 0;
+	}
+	else {
+		itemNo = String(FEATURED_FORM.userGroupCount);
+	}
+
+	function addItem() {
+		$("#activeArea")
+				.prepend(
+						'<div class="groupDiv"><p class="mb10"><input type="text" class="userGroup" name="userGroup" class="full required requirement" title="사용자 그룹명" />&nbsp;<button type="button" id="button_add_relation_item" class="table_btn" onclick="findItem(\'prod'
+								+ itemNo
+								+ '\')"><span>상품 추가</span></button>&nbsp;<button type="button" class="table_btn" onclick="Shop.deleteRelationItemAll(\'prod'
+								+ itemNo
+								+ '\')"><span>전체삭제</span></button></p><ul id="prod'+itemNo+'" class="sortable_item_relation"></li></ul></div>');
+		itemNo++;
+		prodDrag();
+	}
+
+	function makeProdString() {
+		var stateFlag = $("input[name=prodState]:checked").val();
+		if (stateFlag == '1' || stateFlag == '2') {
+			$("#prodTr2").remove();
+		}
+		else {
+			$("#prodTr1").remove();
+		}
+
+		var prod=[""];
+		if (stateFlag == '1' || stateFlag == '2') {
+			prod[0]="";
+			// AS-IS name=prod${fn:escapeXml(dest)}ItemIds - dest를 넣는 곳이 없어 prodItemIds가 된다.
+			$("input[name=prodItemIds]").each(function(index) {
+				if(index!=0){prod[0]+="~";}
+				//alert($(this).val());
+				prod[0]=prod[0]+$(this).val();
+			});
+		}
+		else {
+			var j = 0;
+			for(var i=0; i<itemNo; i++)	{
+				prod[j]="";
+				if ($("input[name=prod"+i+"ItemIds]").length>0) {
+					$("input[name=prod"+i+"ItemIds]").each(function(index) {
+						if(index!=0){prod[j]+="~";}
+						prod[j]+=$(this).val();
+					});
+					j++;
+				}
+			}
+		}
+
+		$("#prodString").val(prod);
+		return false;
+	}
+
+	function  checkedDate(startDate,startTime, endDate, endTime){
+
+		return (startDate+startTime+'00') > (endDate+endTime+'59' );
+
+	}
+
+	/* function unfoldItemGroup() {
+		$('.add-group-item-area').removeClass('fold');
+		$('.add-group-item-area .groupDiv').removeClass('fold');
+	}
+	function foldItemGroup() {
+		$('.add-group-item-area').addClass('fold');
+		$('.add-group-item-area .groupDiv').addClass('fold');
+	} */
+
+	function showAndHideImages() {
+		/*
+	    if($("input[name=featuredClass]:checked").val() == '1') {
+			$('.imageArea-1').show();
+			$('.imageArea-3').show();
+// 			$('.select-category').show();
+		} else {
+			$('.imageArea-1').hide();
+			$('.imageArea-3').hide();
+// 			$('.select-category').hide();
+		}
+		*/
+	}
+
+	function showItemGroups() {
+		$('.fold-item-groups').on('click', function() {
+			$('.groupDiv').find('ul').hide();
+		});
+	}
+
+	function hideItemGroups() {
+		$('.show-item-groups').on('click', function() {
+			$('.groupDiv').find('ul').show();
+		});
+	}
+
+	function fnReplyManagement() {
+	    Common.popup('/featured/manage-event-reply?featuredId=' + $('#featuredId').val(), 'create', 1024, 800, 1);
+	}
+
+	function updateEventCode() {
+		var id = $('#featuredId').val();
+		$.post('/featured/update-event-code/'+id, {}, function(resp){
+			Common.responseHandler(resp, function(){
+				location.reload();
+			});
+		});
+	}
+
+	// 숫자만 입력
+	function inputNumber(inputElement) {
+		let beforePosition = inputElement.selectionStart - 1;		// 키 입력 후 위치 - 1 => 입력 전 위치
+		let beforeLength = inputElement.value.length;			// 입력 후 길이
+		inputElement.value = inputElement.value.replace(/[^0-9.]/g, '');
+		let afterLength = inputElement.value.length;			// 입력 전 길이
+		if (beforeLength > afterLength) {		// 다르면 숫자 입력 값이 아님
+			inputElement.setSelectionRange(beforePosition, beforePosition);		// 기존 위치로 커서 이동
+		}
+	}
+
+	// 선택상품 삭제시 번호 다시 매기기
+	function onItemClick(e){
+		/* try {
+			if ((e.path[1].getAttribute("class") == "delete_item"
+						|| e.path[1].getAttribute("class") == "delete_item_image")
+					&& e.path[2].getAttribute("id").includes("prod_item_")) {
+				let id = e.path[2].getAttribute("id");
+
+				let number = 1;
+
+				let itemList = $("#prod").children();
+				let length = itemList.length;
+				for (let i = 0 ; i < length ; i++) {
+					let itemId = itemList[i].id;
+
+					if (itemId != id) {
+						itemList[i].children[3].innerHTML = number;
+						number++;
+					}
+				}
+			}
+		} catch (e) {
+			console.log(e);
+		} */
+	}
+
+	// 첨부파일 용량 체크
+	function checkSize(input, maxSize) {
+		try {
+		    if (input.files && input.files[0].size > (maxSize * 1024 * 1024)) {
+		        alert("파일 사이즈가 " + maxSize + "mb 를 넘습니다.");
+		        input.value = null;
+		    }
+		} catch (e) {
+			console.log(e);
+	        alert("문제가 발생했습니다.");
+	        input.value = null;
+		}
+	}
+
+</script>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

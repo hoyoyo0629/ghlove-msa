@@ -100,6 +100,20 @@ public class PrivacyAccessLogService {
     }
 
     /**
+     * AS-IS {@code ExceldownloadLogServiceImpl.existExcelAccessLog} - 이 관리자가 <b>방금(1분 안에)</b> 이 다운로드 URL의 사유 모달을 거쳐 접근로그를 남겼는지.
+     * 모달을 거치지 않고 다운로드 주소로 바로 들어오는 걸 막는다(컨트롤러가 없으면 "엑셀 다운로드 사유 정보가 없습니다."로 되돌린다).
+     */
+    @Transactional(readOnly = true)
+    public boolean existsRecentExcelAccessLog(String url, Manager manager, HttpServletRequest request) {
+        if (manager == null) {
+            return false;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        return privacyAccessLogRepository.existsByIpAndLoginTypeAndUserIdAndUrlAndCreatedAtBetween(
+                clientIp(request), LOGIN_TYPE_MANAGER, manager.getUserId(), url, now.minusMinutes(1), now);
+    }
+
+    /**
      * AS-IS {@code CommonController.privacyAccessLogUpdate} - 변경이력을 남기고 본 행의 사유를 갱신한다.
      * AS-IS는 <b>사유를 등록한 본인만</b> 수정할 수 있다.
      */

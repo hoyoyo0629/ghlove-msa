@@ -155,6 +155,30 @@ public class AdminMemberService {
                 .collect(Collectors.toMap(User::getUserId, User::getLoginId, (a, b) -> a));
     }
 
+    /** 전체주문관리 목록이 주문 줄에 붙이는 주문자 정보 - 이름·아이디·휴대폰·생년월일. 회원 상태는 보지 않는다(AS-IS도 OP_USER를 그대로 읽는다). */
+    public record OrderInfo(Long userId, String loginId, String userName, String phoneNumber, String birthday, String email) {
+    }
+
+    public List<OrderInfo> orderInfos(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, UserDetail> details = userDetailRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(UserDetail::getUserId, d -> d, (a, b) -> a));
+        return userRepository.findAllById(userIds).stream().map(u -> {
+            UserDetail d = details.get(u.getUserId());
+            return new OrderInfo(u.getUserId(), u.getLoginId(), u.getUserName(), d == null ? null : d.getPhoneNumber(), d == null ? null : d.getBirthday(), u.getEmail());
+        }).toList();
+    }
+
+    /** 이름이 정확히 같은 회원ID - 전체주문관리의 검색구분 '주문자명'용(AS-IS는 일치 비교). */
+    public List<Long> userIdsByName(String name) {
+        if (name == null || name.isBlank()) {
+            return List.of();
+        }
+        return userRepository.findByUserName(name.trim()).stream().map(User::getUserId).toList();
+    }
+
     /**
      * 로그인ID 부분일치로 회원ID를 찾는다 - admin Q&A 관리의 <b>검색구분 '아이디'</b>용이다.
      * AS-IS는 {@code U.LOGIN_ID LIKE '%검색어%'}를 목록 SQL 안에서 걸지만, TO-BE는 회원이

@@ -91,6 +91,70 @@ public class OrderAdminClient {
         return (s == null || s.isBlank()) ? null : s;
     }
 
+    /** 전체주문관리 검색 조건 - order의 OrderLineListService.Search와 같은 모양(지자체 범위·주문자명/상호명은 admin이 코드·번호로 풀어 보낸다). */
+    public record LineSearch(List<String> locgovCodes, String where, String query, List<Long> sellerIds, List<Long> userIds,
+                             String startDate, String startTime, String endDate, String endTime, List<String> statuses) {
+    }
+
+    /** 주문 품목 한 줄 - 상태는 AS-IS 숫자코드(0·10·30·35·40·50~75)로 도출돼 온다. */
+    public record LineRow(String orderId, int orderSequence, String createdDate, Long userId, String receiverName, String receiverPhone,
+                          String zipcode, String address, String addressDetail, String requestNote, String adminMemo,
+                          String locgovCode, Long sellerId, Long itemId, String itemName, String optionName, Integer optionPrice,
+                          String textOption, Integer quantity, Integer unitPrice, String statusCode, String carrierName,
+                          String invoiceNo, String shippedDate) {
+    }
+
+    public record LinePage(int total, List<LineRow> rows) {
+    }
+
+    private record LineSearchRequest(LineSearch search, int offset, int limit) {
+    }
+
+    /** AS-IS OrderMapper.getAllOrderListByParamForManager - 조회 실패는 삼키지 않는다(0건으로 보이면 원인을 못 찾는다). */
+    public LinePage searchLines(LineSearch search, int offset, int limit) {
+        LinePage page = restClient.post().uri("/api/admin/orders/lines/search")
+                .headers(h -> applyHeaders(h, null))
+                .body(new LineSearchRequest(search, offset, limit))
+                .retrieve().body(LinePage.class);
+        return page != null ? page : new LinePage(0, List.of());
+    }
+
+    /** 주문 상세 한 줄(품목) - 판매가는 (단가+옵션가)×수량, 결제포인트는 할인 뒤 실결제 포인트, 상태는 AS-IS 숫자코드. */
+    public record DetailLine(long lineId, Long itemId, Long sellerId, String itemName, String optionName, Integer optionPrice, String textOption,
+                             int quantity, int unitPrice, long pointAmount, String statusCode, String carrierName, String invoiceNo, String shippedDate,
+                             String carrierUrl) {
+    }
+
+    /** 클레임 한 건 - claimType CANCEL/RETURN/EXCHANGE, status REQUESTED/APPROVED/COMPLETED/REJECTED. lineId=0이면 단일품목 주문 전체. */
+    public record DetailClaim(long claimId, String claimType, String status, String reason, String createdDate, long lineId) {
+    }
+
+    public record DetailView(String orderId, int orderSequence, String createdDate, Long userId, String locgovCode,
+                             String receiverName, String receiverPhone, String zipcode, String address, String addressDetail, String requestNote,
+                             boolean paid, List<DetailLine> lines, List<DetailClaim> claims) {
+    }
+
+    /**
+     * AS-IS OrderService.getOrderByParam(+ 클레임 신청 조회) - 담당 지자체 주문이 아니거나 없으면 null("주문 내역이 없습니다."로 목록 이동).
+     * 조회 실패는 삼키지 않는다.
+     */
+    public DetailView detailView(String orderId, int orderSequence, String locgovCode) {
+        try {
+            return restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/api/admin/orders/{orderId}/detail-view")
+                            .queryParam("orderSequence", orderSequence)
+                            .queryParamIfPresent("locgovCode", java.util.Optional.ofNullable(blankToNull(locgovCode)))
+                            .build(orderId))
+                    .headers(h -> applyHeaders(h, null))
+                    .retrieve().body(DetailView.class);
+        } catch (RestClientResponseException e) {
+            if (e.getStatusCode().value() == 404) {
+                return null;
+            }
+            throw e;
+        }
+    }
+
     /**
      * 일자/월/년 매출 통계 - AS-IS opmanager/shop-statistics/sales/{day,month,year}.
      * 조회 실패는 빈 목록으로 삼킨다(화면이 비는 쪽이 500보다 낫다).

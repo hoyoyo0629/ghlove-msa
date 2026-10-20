@@ -35,6 +35,8 @@ public class OrderAdminApiController {
     private final OrderAdminService orderAdminService;
     private final com.ghlove.order.service.OrderDateStatsService orderDateStatsService;
     private final com.ghlove.order.service.OrderLocgovStatsService orderLocgovStatsService;
+    private final com.ghlove.order.service.OrderLineListService orderLineListService;
+    private final com.ghlove.order.service.OrderDetailService orderDetailService;
 
     /**
      * 일자/월/년 매출 통계 - AS-IS opmanager/shop-statistics/sales/{day,month,year}.
@@ -80,6 +82,29 @@ public class OrderAdminApiController {
             @RequestParam String startYearMonth,
             @RequestParam String endYearMonth) {
         return orderLocgovStatsService.nhItemSaleStats(startYearMonth, endYearMonth);
+    }
+
+    public record LineSearchRequest(com.ghlove.order.service.OrderLineListService.Search search, int offset, int limit) {
+    }
+
+    /**
+     * 전체주문관리(AS-IS opmanager/order/list) - 주문 품목 한 줄 단위 목록. 지자체 범위·이름 조건(주문자명·상호명)은 admin이 코드/번호로 풀어 보낸다.
+     * 주문상태는 AS-IS 숫자코드로 도출해 돌려준다(OrderLineListService 참고).
+     */
+    @PostMapping("/lines/search")
+    public com.ghlove.order.service.OrderLineListService.LinePage searchLines(@RequestBody LineSearchRequest request) {
+        return orderLineListService.search(request.search(), request.offset(), request.limit());
+    }
+
+    /**
+     * 주문 상세정보(AS-IS opmanager/order/all/order-detail/{출고번호}/{주문번호}) - 그 출고의 품목·배송지·클레임. 담당 지자체 주문이 아니거나 없으면 404.
+     */
+    @GetMapping("/{orderId}/detail-view")
+    public ResponseEntity<?> detailView(@PathVariable String orderId, @RequestParam(defaultValue = "1") int orderSequence,
+                                         @RequestParam(required = false) String locgovCode) {
+        return orderDetailService.detail(orderId, orderSequence, locgovCode)
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "주문 내역이 없습니다.")));
     }
 
     @GetMapping

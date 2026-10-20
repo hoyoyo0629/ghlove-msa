@@ -1020,16 +1020,17 @@ SPA)/gift 소관. onepass/payment/simpleauth/magicline 자산 디렉터리는 �
 | 답례품제공자 관리 | seller/list | /seller | ✅ |
 | 대표배너관리 | representative-banner/list | /admin/main-banners | 🟡 재확인 |
 | 답례품관리 | item/list | /admin/gift-items | ✅ |
-| 답례품승인관리 | item/seller/list | /admin/gift-items | 🟡 승인필터 재확인 |
-| 전체주문관리/신규주문/배송준비중/배송중/배송완료/구매확정/오프라인주문 (7) | order/* | /admin/orders | 🟡 상태필터 통합 |
+| 답례품승인관리 | item/seller/list | /item/seller/list | ✅ 2026-10-19 이식(§22 admin-item-approval-port) |
+| 전체주문관리 | order/list | /order/list | ✅ 2026-10-19 이식, 상세는 읽기만(§22 admin-order-list-all-port) |
+| 신규주문/배송준비중/배송중/배송완료/구매확정/오프라인주문 (6) | order/* | /admin/orders | 🟡 상태필터 통합 |
 | 신규주문(모바일)/발송준비중(모바일) (2) | order/*-mobile | — | ❌ 모바일 전용(보류) |
 | 주문취소/반품/교환/환불 관리 (4) | order/{cancel,return,exchange,refund}/list | /admin/claims | 🟡 클레임큐 통합 |
 | 정산예정/확정/마감 내역 (3) | remittance/* | /settlements(/pending) | 🟡 통합 |
 | 답례품후기 관리 | item/review/list | /admin/gift-reviews | ✅ |
 | 답례품 Q&A | qna-item/list | — | 🟡/❌ (gift 판매자Q&A?) |
 | 이벤트 관리 | featured/list | /admin/featured | ✅ |
-| 관리자 문의 | qna-admin/list | /qna-admin | ✅ |
-| 제철식품관 관리 | seasonal-food/list | — | 🟡/❌ (gift측 구현, admin 없음) |
+| 관리자 문의 | qna-admin/list | /admin/internal-inquiry | ✅ 2026-10-20 재이식(§22 admin-qna-admin-port) |
+| 제철식품관 관리 | seasonal-food/list | /seasonal-food/list | ✅ 2026-10-19 이식(§22 admin-seasonal-food-port) |
 | 특산물관 관리 | speciality-item/list | — | 🟡/❌ |
 | 미완료 주문/정산 목록 (2) | temp-process/* | — | ❌ 갭 |
 
@@ -5787,7 +5788,7 @@ admin 재기동 필요. 관련 [[admin-port-progress]](원장: docs/as-is-parity
 
 
 2026-10-16 이식·2026-10-19 실화면 검증. AS-IS `opmanager/item/list`(메뉴 16301). 구성: admin `ItemManageController`(`/item`) + `ItemManageClient` +
-`templates/item/list|log-popup.html`, gift `ItemManageApiController`(`/api/admin/item-manage/*`) + `ItemManageService`. 메뉴 URL `/item`, 16351(답례품승인관리)은 옛 `/admin/gift-items` 그대로.
+`templates/item/list|log-popup.html`, gift `ItemManageApiController`(`/api/admin/item-manage/*`) + `ItemManageService`. 메뉴 URL `/item`, 16351(답례품승인관리)은 2026-10-19 `/item/seller/list`로 이식(아래 admin-item-approval-port).
 
 **검증한 것(2026-10-19, 스페어 포트 + Playwright)**: 시스템 관리자 목록 23건·지자체 컬럼("시도 시군구")·페이징, 지자체 담당자(pwtest_loc 11230)는 자기 지자체 8건 + 대표 답례품(≤4)/오프라인 대표(≤2) 영역,
 일괄 공개/비공개/품절/품절해제(품절만 처리 직전 상태를 `op_item_log`에 남김 - AS-IS 동일), 삭제=삭제신청(상태 40+로그), 변경사항 팝업, 대표 답례품 저장·전체삭제,
@@ -5805,54 +5806,201 @@ gift/order/storefront/admin 코드가 같이 바뀌었으므로 이 서비스들
 **함정**: 검증 중 `item_id=1028`은 목록에 안 나온다 - `item_data_type=2`(추가구성 자식)라서 `item_data_type='1'` 조건에 걸리는 게 맞다. 테스트 변경은 SQL로 원복하되 Kafka 이벤트가 안 나가므로 `update-display`를 한 번 더 쳐서 현재 상태를 재발행한 뒤 `updated_*`만 되돌렸다.
 관련 [[admin-port-progress]](원장: docs/as-is-parity.md 22절 admin-categories-port), [[admin-port-progress]](원장: docs/as-is-parity.md 22절 admin-seller-manage-port), [[admin-port-progress]](원장: docs/as-is-parity.md 22절 admin-representative-banner-port), [[domain-code-facts]], [[tooling-and-local-env]].
 
+### admin-item-approval-port
+
+> 답례품관리>답례품승인관리(16351) AS-IS 이식 - 목록/승인처리/등록보류(+국민비서 문자)/미리보기 팝업, 16301과 같은 컨트롤러·서비스를 확장, 상품 상세·수정 폼은 미이식(옛 TO-BE 폼으로 연결)
+
+
+2026-10-19 이식·검증. AS-IS `opmanager/item/seller/list`(메뉴 16351, JSP list.jsp 723줄 + 미리보기 preview.jsp 858줄). **새 파일을 늘리지 않고 16301(`ItemManageController`/`ItemManageService`)을 확장**했다 -
+AS-IS도 두 화면이 `ItemManagerController` 한 곳이다. 메뉴 URL `/item/seller/list`(`migration-admin-menu-16351-item-seller.sql`, 개발DB 적용함).
+
+**구성**: admin `/item/seller/list`(GET 전용, 수정일 기본 오늘)·`POST /item/list/update`(processType approval/reject)·`/item/seller/preview`·`/item/seller/edit/{코드}`(→ 기존 TO-BE 폼 리다이렉트) +
+`templates/item/seller-list|seller-preview.html`(JSP verbatim), `ItemApprovalSmsService`(승인/보류 국민비서 문자, 기존 `GiftClient.sellerSmsReceiver`·`SmsIpsService` 재사용).
+gift `Search.listType="pending"`+`dataStatusCode`(승인 대기 6종 20/21/30/31/40/41, **수정일(updated_date)** 기준), `ItemRow.dataStatusMessage`, `/api/admin/item-manage/approval|reject|preview`.
+
+**AS-IS 동작(그대로)**: 상태 라디오는 20 등록대기·30 재등록신청·21 등록보류·40 삭제대기, 목록 상태 칸은 20·31·41을 모두 "등록대기"로(숨은 input 값은 20). 승인처리 = 삭제대기(40)면 **삭제 승인**(item_user_code에 `_시각` 붙이고 99, 로그·문자 없음), 그 밖은 1로+승인 로그(`created_seller_id`=상품 판매자번호).
+등록보류 = 사유 필수, 21로+`reject` 로그(seller 0), 40이 하나라도 있으면 JS가 막음(서버는 상태 검사 안 함). 상태 메시지는 `[등록반려 시각] 사유\n`로 **쌓인다**(상태 라벨은 "등록보류"인데 메시지 말머리는 AS-IS ShopUtils대로 "등록반려"/"정상"/"삭제").
+"등록보류" 칸은 링크 → 메시지 이력을 최근순으로 레이어 표시. 문자: 승인은 휴대폰에서 '-' 뗀 값, 보류는 원래 값으로 비었는지 보고, 둘 다 CI 있고 수신동의 "0"일 때만(개발 판매자는 CI·휴대폰이 없어 안 나감, 실패는 ERROR 로그만).
+미리보기는 **DOCTYPE 없는 쿼크스 모드**로 AS-IS가 그려진다 - 같은 모양을 위해 TO-BE 템플릿도 DOCTYPE을 안 둔다. `window.opener.Common.numberFormat`을 써서 목록 창에서 열어야 한다.
+
+**검증(스페어 포트+Playwright, 1920폭)**: 빈 상태 화면은 AS-IS와 픽셀 불일치 0.075%(헤더 접속자명뿐), 미리보기는 46개 요소 중 값이 다른 7개가 전부 내용 유무 차이(글꼴·색·여백 동일),
+버튼·경고문구·이력 레이어·상태/검색구분 필터·지자체 시도→시군구·출력수·날짜버튼·초기화·승인/보류 end-to-end(DB·로그·목록 재조회)·S/S3 옵션 선택·필수추가정보·수량 증감 확인.
+
+**미이식/알려진 것**: ①상품 상세·수정 폼(`item/seller/edit/{코드}` = item/form.jsp를 pendingApproval=1로 include, 16301 등록/수정과 같은 덩어리) - 지금은 옛 `/admin/gift-items/{id}/edit`로 리다이렉트 ②날짜 "전체" 버튼은 ROLE_ADMIN_CALL 전용인데 TO-BE에 그 권한이 없어 마크업만(항상 숨김)
+③AS-IS 개발서버엔 승인 대기 건이 0건이라 행 렌더링은 AS-IS와 직접 대조 못 함(16301 행·JSP로 갈음) ④AS-IS 미리보기는 대표번호·소재지가 복호화 안 된 채 나온다(개발 환경) - TO-BE는 평문.
+테스트 데이터 원복은 16301과 같은 방식(SQL 원복 뒤 `update-display`로 현재 상태 재발행, `updated_*`만 되돌림).
+
+### admin-order-list-all-port
+
+> 답례품관리>주문관리>전체주문관리(16401) AS-IS 이식 - 주문 품목 한 줄 목록(GET 빈 화면/POST 검색)+엑셀(사유 모달·암호화)+주문 상세 읽기 화면(일반·클레임 탭). TO-BE 상태→AS-IS 숫자코드 도출, 마스킹 규칙. 클레임 처리·이력·나머지 주문 메뉴 6개는 미이식
+
+
+2026-10-19 이식·검증. AS-IS `opmanager/order/list`(JSP `order/list/all.jsp` 548줄, 컨트롤러 `OrderManagerController.list/searchList/allListExcelDownload`, 슬레이브 매퍼 `getAllOrderListByParamForManager`, 서비스 `streamAllOrderData`). 메뉴 URL `/order/list`
+(`migration-admin-menu-16401-order-list.sql` - 개발DB 적용함; 16402~16406·16409는 여전히 옛 `/admin/orders`).
+
+**구성**: admin `OrderListController`(`/order/list` GET=빈 목록·POST=검색, `/order/list/order-excel-download`, `/order/all/order-detail/{seq}/{code}`) + `templates/order/list-all.html`(JSP verbatim) +
+`web/support/DataMasking`(AS-IS DefaultDataMasking verbatim + email, 단위테스트 있음) + `PrivacyAccessLogService.existsRecentExcelAccessLog`(AS-IS existExcelAccessLog: 같은 IP·사용자·URL로 **1분 안**에 모달 로그가 있어야 다운로드, 없으면 "엑셀 다운로드 사유 정보가 없습니다.").
+order `OrderLineListService`+`POST /api/admin/orders/lines/search`, member `GET /api/admin/members/order-infos`(이름·아이디·휴대폰·생년월일·이메일, 상태 무관)·`ids-by-name`(이름 **정확일치**).
+
+**AS-IS 동작(그대로)**: GET은 조회 안 함(총 0건)·POST만 조회, 주문일 기본 오늘+시간 00~23시(둘 다 골라야 시간 조건, 아니면 종일), 처리구분 체크박스 14개(입금대기 0은 체크박스 없음 - 켠 채 검색하면 입금대기 제외, **전부 해제하고 검색하면 상태 조건 없이 전부**),
+소속 지자체가 있는 관리자는 롤과 무관하게 그 지자체로 강제(시도 선택 시 시군구가 첫 항목으로 자동 선택돼 시도만으로는 검색 안 됨 - AS-IS도 같음). 주문자명 검색은 일치 비교.
+**마스킹**: ROLE_ADMIN_5/6(·ISMS)만 원문, 나머지(1~4)는 이름3종·상세주소·생년월일을 가림. ★AS-IS 오타: 마스킹 땐 "핸드폰번호"가 **수취인** 휴대폰을 가린 값, 마스킹 없을 땐 주문자 휴대폰. 엑셀은 항상 원문.
+★배송정보 칸: 송장번호가 없으면 택배사명이 있어도 항상 "택배사 정보 없음"(AS-IS EL 불린 코어션 결함, 그대로). 엑셀: ROLE_ADMIN_1~4는 21컬럼(지자체 포함), 그 밖은 20컬럼, 시트 ALL_ORDER_LIST·제목 "전체주문 목록"·No는 전체건수에서 역순·파일 비밀번호=운영자 로그인ID.
+
+**★상태 도출(TO-BE 주문 모델이 AS-IS와 다르다)**: 목록은 품목 줄 단위 - 신 모델 `od_order_item⋈od_shipment⋈od_order` + 출고 없는 기존 단일품목 주문(헤더 1줄)을 UNION. 규칙은 [[domain-code-facts]] order-status-derivation-for-asis-codes.
+**배송준비중(20)·교환배송중(55)에 해당하는 TO-BE 상태가 없어 절대 안 나온다**(체크박스는 있으나 0건).
+기타 차이: 판매가=(단가+옵션가)×수량, 상품코드는 `G2`+9자리, 비회원 구매자명은 TO-BE에 없어 빈칸("[비회원]"만), 주문자 휴대폰·생년월일은 회원의 **현재** 값(AS-IS는 주문 시점), 판매자 상호/연락처는 gift 판매자(개발 판매자는 연락처 빈값),
+옵션은 `옵션명 (+N원)`(AS-IS 인코딩 문자열 아님), 사은품·세트상품·모바일상품권은 TO-BE에 없어 생략.
+
+**검증(스페어 포트+Playwright 1920폭)**: 초기 화면 AS-IS와 픽셀 불일치 0.077%(헤더 접속자명뿐). 검색 55건(기본)/59건(상태 전부 해제=입금대기 4 포함), 처리구분 체크 연동·검색구분 5종·주문자명 정확일치·시도/시군구·시간 조건·페이징·날짜 검증 alert·초기화, 지자체 담당자(11230 16건, 원문, 지자체 행 숨김),
+엑셀(모달→로그→복호화한 xlsx 시트/컬럼/값, 직접 URL 접근 시 되돌림 alert, 0건 시 "조회된 내역이 없습니다.") 확인. AS-IS `testadmin`은 지자체 28155에 묶여 주문이 0건이라 목록 행은 AS-IS와 직접 대조 못 함.
+
+**미이식**: 신규주문·배송준비중·배송중·배송완료·구매확정·오프라인 주문관리(16402~16406·16409), 주문 상세의 클레임 처리·이력(아래 단계 C·D), OrderManagerController의 나머지 70여 엔드포인트.
+
+#### 주문 상세(AS-IS `opmanager/order/{pageType}/order-detail/{출고번호}/{주문번호}`) - 분석과 단계 A+B 구현
+
+(2026-10-19 작성한 `docs/order-detail-port-analysis.md`를 2026-10-20 이 절로 옮김.) 전체주문관리 목록의 주문번호 링크가 여는 화면이다. 처음엔 옛 TO-BE 상세(`/admin/orders/{주문번호}`)로 넘겼다가, AS-IS 소스 전수 대조 뒤 사용자 승인 범위(A+B 읽기 화면)만 이식했다.
+
+##### 1. AS-IS 구성 (JSP 약 8,000줄 + 컨트롤러 메서드 20여 개)
+
+| 영역 | AS-IS 파일 | 줄 수 | 내용 |
+|---|---|---|---|
+| 페이지 틀 | `detail/order-detail.jsp` | 935 | 상단 "주문 상세정보"(주문번호·일시·회원·발송인·구매자 휴대폰/이메일), 하단 [목록], 클레임 폼 검증 스크립트 전부 |
+| 본문 | `include/item-detail.jsp` | 273 | "취소/반품/교환 신청"(관리자 접수 폼) + 탭 5개(일반·취소·반품·교환·이력) |
+| 일반 탭 | `order-default-info.jsp` + `order-shipping-info.jsp` | 208+313 | 결제정보(판매가·결제포인트·결제상태·결제일), 출고(ORDER_SEQUENCE)별 배송정보(수취인·연락처·주소·요청사항)+품목표(이미지·상품·판매자·대표번호·수량·판매가·결제포인트·상태·송장/배송추적) |
+| 취소 탭 | `order-item-cancel.jsp` | 407 | 취소 내역(완료·환불대기) + 취소 처리(신청사유·처리구분 98 거절+발송/배송 처리, 99 승인) |
+| 반품 탭 | `order-item-return.jsp` | 497 | 반품 내역 + 반품 처리(회수 주소·수거비 부담·상태 10 회수중/11 회수완료 …) |
+| 교환 탭 | `order-item-exchange.jsp` | 517 | 교환 내역 + 교환 처리(10 회수중·11 회수완료·03 교환답례품 발송·99 거절) |
+| 이력 탭 | `order-log.jsp` | 65 | 주문 상태 변경 이력(주문상품·상태 변경 A > B·처리자·변경일). **이력이 없으면 표 자체가 안 나온다** |
+| 팝업 | `popup/*.jsp` | 약 1,900 | 반품·교환 신청 상세, 이력(return-log/exchange-log), 결제변경(change-pay), 송장 변경(change-shipping-number) |
+| 그 밖 | `detail/refund.jsp`(412) 등 | | 환불 처리 화면(주문클레임관리 > 환불관리) |
+
+AS-IS에서 **숨겨진 채 마크업만 있는 것**(parity 원칙대로 그대로 둔다): 고객상담 내역·상담메모·관리자 메모 3블록(`hidden`), 결제내역 표(`hidden`),
+결제정보 제목의 [결제정보변경] 링크(주석 처리), 할인금액·배송비 컬럼(주석).
+
+##### 2. 컨트롤러 엔드포인트 (OrderManagerController)
+
+화면 로딩: `GET {pageType}/order-detail/{seq}/{code}`(+`order-detail-popup`), `POST {pageType}/item-detail/{seq}/{code}`(클레임 처리 뒤 본문 갱신).
+쓰기: `claim/cancel/process`·`claim/return/process`·`claim/exchange/process`(상위 관리자 ROLE_ADMIN_1~4는 **"권한이 없습니다."** - 지자체 담당자만 처리),
+`admin-claim-apply`(관리자 접수), `claim/return/view`·`save`(반품 상세), `re-shipping-amount`, `order-info/change`·`reload`(배송지 수정), `admin-memo/change`,
+`claim-memo/create|list|update`(숨김 블록용), `claim/cancel|return|exchange/list`(탭 갱신), `/claim/return-log|exchange-log`(이력 팝업), `change-pay`, `change-shipping-number`.
+조회 범위: 지자체 담당자는 자기 지자체 주문만(`getOrderByParam`에 locgov), 없으면 `주문 내역이 없습니다.`로 목록 리다이렉트.
+
+##### 3. TO-BE 갭
+
+TO-BE order 서비스는 주문을 `od_order`(헤더)·`od_shipment`(출고)·`od_order_item`(품목)·`od_claim`(클레임 한 표)로 갖는다. AS-IS와 같은 이름의 표
+(`op_order_log`·`op_order_payment`·`op_order_shipping_info`·`op_order_cancel_apply`·`op_order_return_apply`·`op_order_exchange_apply`·`op_order_refund` 등)가 `ord` 스키마에 **빈 DDL로만** 있고 코드가 안 쓴다(전부 0행).
+
+| 화면 요소 | AS-IS 데이터 | TO-BE |
+|---|---|---|
+| 상단 주문 상세정보 | OP_ORDER + OP_USER | 헤더+회원(member) 조합으로 가능. 발송인(BUYER_NAME)·구매자 이메일은 TO-BE에 없음(회원 값으로 대체) |
+| 일반 탭 결제정보 | OP_ORDER_PAYMENT | 포인트 결제 한 건(`point_amount`)뿐 - 결제방식/결제일/취소 구분 없음. "결제상태/결제일"은 주문 확정·취소로 유도 가능 |
+| 일반 탭 배송정보 | OP_ORDER_SHIPPING_INFO(출고별 수취인·주소·요청사항) | 수취인·주소는 **헤더 한 벌**(출고별 아님). 품목표는 `od_order_item` 가능 |
+| 이력 탭 | OP_ORDER_LOG(1,164만 건) | **TO-BE에 상태변경 이력 표·기록 지점이 없다** |
+| 취소/반품/교환 탭 | CANCEL/RETURN/EXCHANGE_APPLY(신청 코드·수량·금액·사유 2종·거절사유·처리 상태 01·02·03·10·11·98·99) | `od_claim`(유형 3·상태 REQUESTED/APPROVED/COMPLETED/REJECTED·사유 한 칸). 수량·금액·수거 주소·수거비·환불 구분 없음 |
+| 환불/결제변경/송장변경 | OP_ORDER_REFUND 등 | 환불은 point 서비스 보상으로 대체(별도 환불 화면 없음) |
+
+##### 4. 단계별 계획
+
+1. **단계 A - 보는 화면(완료)**: 새 경로 `/order/all/order-detail/{seq}/{code}`에 AS-IS 마크업 그대로. 상단 상세정보 + 일반 탭(결제정보·배송정보·품목표) + 5개 탭 틀 + [목록].
+   기존 `/admin/orders/{id}`는 다른 주문 메뉴(16402~16409)가 쓰므로 그대로 둔다(퇴행 없음).
+2. **단계 B - 클레임 탭 읽기(완료)**: `od_claim`에서 취소/반품/교환 신청·내역을 AS-IS 표 모양으로. 수량·금액은 품목에서 유도, AS-IS 상태코드는 TO-BE 상태에서 매핑. 없는 칸은 "-"/빈칸.
+3. **단계 C - 이력 탭(미착수)**: 상태 전이마다 `od_order_log`(신설)에 적재하는 기록 지점을 order 서비스에 추가해야 한다(SAGA·배송·클레임 전이 전부). **과거 데이터는 이력이 없다.**
+4. **단계 D - 클레임 처리/관리자 접수(미착수)**: AS-IS 처리 흐름(취소 승인/거절+배송, 회수중→회수완료→교환답례품 발송, 환불 구분)을 TO-BE ClaimService(승인/거절/완료)에 어떻게 대응시킬지 설계가 먼저다 -
+   수거 주소·수거비·부분수량 같은 AS-IS 요소를 신설 컬럼으로 얹을지, 현행 모델에 맞춰 일부만 둘지는 **사용자 결정 사항**(RFP SFR-006·ISP 이벤트스토밍과 충돌 여부 확인 필요).
+
+##### 5. 단계 A+B 구현 (2026-10-19)
+
+| 영역 | 위치 |
+|---|---|
+| 화면 | admin `order/detail-all.html`, `OrderListController.orderDetail`(`GET /order/all/order-detail/{출고번호}/{주문번호}`) |
+| 조회 API | order `OrderDetailService` + `GET /api/admin/orders/{id}/detail-view?orderSequence=&locgovCode=` (주문 품목 한 줄 쿼리 `OrderLineListService.LINES` 재사용) |
+| 보조 | gift `POST /api/admin/item-manage/thumbnails`(품목 이미지), member `OrderInfo`에 email 추가, admin `DataMasking.email`, `MenuService.URI_ALIASES`(`/order/all/` → 전체주문관리 메뉴로 취급해 LNB·경로·권한 적용 - [[admin-screen-pitfalls]] menu-uri-alias-for-non-prefix-url) |
+
+결정/규칙
+- 출고번호는 TO-BE에서 같은 주문 안 출고 ID 순서의 1부터(AS-IS는 0부터). 상세는 그 출고의 품목만 보인다(AS-IS 동일).
+- 결제정보 판매가·결제포인트는 둘 다 품목 판매가 합계(AS-IS 표현식 그대로). 결제상태는 포인트 차감이 실패해 취소된 주문만 "결제취소", 나머지는 "결제완료"(AS-IS 실화면에서 취소완료·입금대기 주문도 결제완료). 결제일=주문 생성 시각. 판정 근거 값은 [[domain-code-facts]] order-status-derivation-for-asis-codes.
+- 클레임 상태 매핑: REQUESTED→01 신청, APPROVED→03(취소 환불대기·반품 환불승인 대기)/교환은 10 회수중, COMPLETED→04(취소 완료·반품 환불 완료)/교환은 03 교환상품 발송, REJECTED→99 거절. 처리 대기 = 취소·반품은 신청, 교환은 신청·회수중.
+- 마스킹은 목록과 같은 기준(지자체 담당자 ROLE_ADMIN_5/6가 아니면): 회원/발송인 이름, 구매자 휴대폰, 이메일(앞 2글자+@ 뒤만), 수취인 이름·휴대폰·상세주소. 발송인·구매자 연락처는 TO-BE에 주문 시점 값이 없어 회원 정보로 채운다.
+- 담당 지자체가 있는 관리자는 그 지자체 품목만, 없으면 "주문 내역이 없습니다."와 함께 목록으로 돌아간다(AS-IS 동일).
+- 배송추적 링크: 택배사명으로 `op_delivery_company.delivery_company_url`을 찾아 `%INVOICE%`를 송장번호로 치환(AS-IS는 이후 URL의 '-'를 전부 지운다 - 그대로).
+- 처리 대기 영역은 AS-IS 처리 폼 대신 표 + 신청사유(+처리구분)를 글자로만 보여준다(버튼·라디오 없음).
+- "배송/발송준비중 단계부터 배송정보가 노출됩니다" 분기(existsNewOrderItem)와 모바일 상품권 주소 숨김은 AS-IS 실화면 10건 어디에도 나타나지 않고 소스에서 플래그 출처도 찾지 못해 옮기지 않았다.
+
+**검증**: AS-IS 실화면은 `testadmin`이 지자체 28155에 묶여 주문 0건이라, 사용자 승인으로 `OP_MANAGER.LOCGOV_CODE`를 잠깐 NULL로 풀고 10건 캡처 뒤 복구했다([[tooling-and-local-env]] asis-opmanager-playwright-access). 클레임 탭은 TO-BE 클레임 3건을 REQUESTED 등으로 임시 변경해 렌더를 보고 원복(1 RETURN/APPROVED, 2 RETURN/APPROVED, 3 CANCEL/COMPLETED).
+
+**아직 옮기지 않은 것(단계 C·D, 설계 결정 대기)**: "취소/반품/교환 신청"(관리자 접수) 폼, 클레임 처리 폼(승인·거절·회수 라디오·[주문 처리]·회수 송장/반송지), 반품·교환 내역 [상세] 팝업, 이력 탭(상태 변경 이력 기록 자체가 TO-BE에 없다), 환불/결제변경/송장변경, 다른 주문 메뉴 6개(16402~16406·16409).
+
+### admin-seasonal-food-port
+
+> 답례품관리>제철식품관 관리(16751 /seasonal-food/list) AS-IS 이식 - 월별 키워드 목록+수정/등록 팝업, G_SEASON_FOOD AS-IS 284행 적재, 대민 키워드 쉼표 합치기
+
+
+2026-10-19 이식·검증. AS-IS `/opmanager/seasonal-food/list`(메뉴 16750>16751, 권한 ROLE_ADMIN_1~4, `SeasonalFoodManagerController` 94줄+JSP 3개). 사용자가 처음엔 주문 상세 URL을 붙여 줘서(복사 실수) 메뉴 URL로 진짜 화면을 확인했다.
+구성: gift `SeasonFoodAdminService`+`SeasonFoodAdminApiController`(`/api/admin/seasonal-food` GET, `POST /save`), admin `SeasonalFoodClient`+`SeasonalFoodController`(`/seasonal-food/list`·`popup-month`·`popup-keyword`·`POST saveSeasonalFood`) + `templates/seasonal-food/list|popup-month|popup-keyword.html`.
+메뉴 URL `migration-admin-menu-16751-seasonal-food.sql`, 데이터 `migration-gift-season-food-asis-data.sql`(둘 다 개발DB 적용함, 데이터 SQL은 재실행하면 AS-IS 값으로 원복).
+
+**AS-IS 동작(그대로)**: 저장 구조는 **키워드마다 한 행**(G_SEASON_FOOD: 월+reg_seq). 목록은 GROUP_CONCAT처럼 쉼표로 이은 한 칸, 저장은 달마다 delete 후 쉼표로 쪼개 1번부터 insert. 컨트롤러가 허용 문자(한글·영문·숫자·쉼표) 말고는 지운다.
+수정/등록 팝업(700x310)은 부모 창 postMessage로 저장을 맡기고 부모가 ajax(`/seasonal-food/saveSeasonalFood`, {isSuccess,data})로 저장 뒤 표를 다시 그림. 팝업 JSP의 `id="month"` 중복도 AS-IS 그대로. 지자체 담당자(ROLE_ADMIN_5/6)는 메뉴 권한이 없어 access-denied(AS-IS 동일).
+이 화면 JS 안 `${op:message(..)}`는 `th:inline="javascript"`의 `/*[[${msg.get(..)}]]*/` 변수로 넘김.
+
+**데이터·연동**: 기존 12행은 TO-BE가 지어낸 문구 한 줄이라 AS-IS 개발DB 284행(월당 14~35개)으로 교체. G_SEASON_FOOD_ITEM은 안 건드림. 대민 `/api/season-food`(GiftService.seasonFoodKeywords)가 월의 첫 행만 보여주고 있어 월별로 쉼표로 이어 AS-IS getFrontSeasonFood와 같게 고침. gift 단위테스트 `SeasonFoodAdminServiceTest` 3건.
+
+**검증**: AS-IS 픽셀 대조 팝업 2개 0%·목록 내용영역 0.018%(LNB 높이 차이는 다른 메뉴 때문). pwtest_sys로 수정/등록 저장 실제 실행 뒤 데이터 SQL로 원복.
+
+### admin-qna-admin-port
+
+> 답례품관리>관리자 문의(16651) AS-IS 이식 - "판매자→지자체 문의"를 지자체 담당자가 답하는 화면. 옛 TO-BE(지자체→본사로 오해한 발명 화면) 교체, 경로는 /admin/internal-inquiry 유지
+
+
+2026-10-20 이식·검증. AS-IS `/opmanager/qna-admin`(QnaAdminManagerController, list.jsp·form.jsp, qna-admin-mapper)을 admin `QnaAdminManagerController`+`QnaAdminManagerService`+`templates/internal-inquiry/list|form.html`로 이식(엔티티 `QnaAdmin`·`QnaAdminAnswer`·`QnaAdminFile`·`QnaAdminAnswerFile`).
+**경로는 `/admin/internal-inquiry` 유지** - TO-BE `/qna-admin`은 이미 Q&A(5112) 화면이 쓰고 있어서. 하위 경로는 AS-IS 그대로(`list`·`edit/{id}`·`deleteQnaAdmin/{id}`·`qnaAdmin/delete`·`deleteQnaAdminAnswer/{id}`·`deleteQnaAdminAnswerFile`·`download*`).
+옛 발명 화면(`InternalInquiryAdminController`/`InternalInquiryService`)은 삭제. G_QNA_ADMIN의 업무 의미는 [[domain-code-facts]] g-qna-admin-is-seller-to-locgov.
+
+**구성 보충**: 목록 작성자 아이디·지자체 칸은 AS-IS가 OP_SELLER_USER를 조인 → TO-BE는 gift `POST /api/admin/seller-manage/users`(신설, `SellerManageService.usersByIds`)로 받는다. 지자체 칸은 **판매자 계정의 지자체코드**(문의 지자체가 아님).
+그 과정에서 gift OP_SELLER_USER.LOCGOV_CODE가 18건 중 15건 'selle'(10-15 보강 migration이 SUBSTR(login_id,1,5)로 채움)인 걸 발견 → `migration-gift-seller-user-locgov-fix.sql`로 판매자 지자체코드로 교정(적용함, 마을기업 3건은 판매자 지자체가 비어 그대로).
+시군구 select가 부르는 AS-IS `/common/getLocgovCode`({isSuccess,data})를 admin에 신설(`CommonLocgovController`) - 다른 AS-IS 화면이 같은 경로를 부르면 그대로 쓰면 된다.
+
+**AS-IS 결함·특이점(그대로)**: 처리 오류는 "실패했습니다."(문의 삭제는 "실패했습니다..")로만, 목록 일괄삭제만 원인 문구(권한/답변 존재)를 보여줌, 일괄삭제는 건마다 따로 반영(TransactionTemplate), 검색구분=문의유형이면 화면이 select를 항상 "1"로 되돌림, 답변 첨부 X 뒤 다시 그리는 링크가 /seller/qna-locgov/...(오류 그대로). 시스템·행안부(1~4)는 보기만, 답변·삭제는 지자체 담당자.
+
+**첨부**: 업로드 루트(admin.upload.dir) 아래 `qnaadmin/{문의번호}/`·`qnaadminanswer/{문의번호}/`, 저장명 yyyyMMddHHmmssSSSS.확장자. **판매자 쪽 작성 화면(`/seller/qna-locgov`)이 TO-BE에 없어** 문의 첨부를 올리는 곳도 아직 없다 - 판매자 포털 이식 때 같은 위치를 공유해야 함.
+
+**데이터**: AS-IS 477건은 이름·이메일 암호화+판매자 계정 미이관이라 안 옮김. 발명 화면이 만든 1건은 `migration-admin-qna-admin-asis-port.sql`로 삭제(적용함). **검증용 [테스트] 문의 4건(2~5번)+문의 첨부 1개(`admin/uploads/admin/qnaadmin/2/`)를 남겨 둠**(판매자 9001/9002/9004 명의).
+
+**검증**: 빈 목록 화면 픽셀 0%, 검색영역 0.015%(건수 글자만), 시스템 관리자(지자체 칸·마스킹·일괄삭제 권한없음)·지자체 담당자(자기 지자체만·답변 등록/수정/첨부X/답변삭제/문의삭제/타지자체 차단) end-to-end.
+
 ### admin-featured-event-port-progress
 
-> 이벤트 관리(featured, 메뉴 16601 /admin/featured) AS-IS 이식 진척 - OP_FEATURED=지자체별 이벤트(class0/type1). 목록 완료, 등록/수정 폼 잔여
+> 답례품관리>이벤트 관리(16601 /featured/list) AS-IS 이식 완료(2026-10-20) - 목록/등록/수정/선택삭제/이미지삭제 + "상품 추가"가 여는 상품검색 팝업(item/find-item). OP_FEATURED=지자체별 이벤트(class0/type1). AS-IS 데이터 1,063건 미적재, 대민 화면은 별개 표(admin.op_event)를 읽는다
 
 
-**featured = 지자체별 이벤트 관리**(AS-IS 메뉴 "이벤트 관리" MENU_12000, opmanager/featured). 처음엔
-"기획전/미사용"으로 오판했으나 사용자가 AS-IS OP_FEATURED 1,063건(전부 `FEATURED_CLASS=0,
-FEATURED_TYPE=1`, 이름 "이벤트-NNNN", 지자체별, 기간 있음)을 확인해줌. 실사용 기능. featured-unused-skip(보관: docs/archive/memory-fix-log-2026-10.md)
-데이터 export: `C:\Users\ghlove008\Desktop\고향사랑e음\1.AS-IS\1. DB\OP_FEATURED_202610061741.sql`.
+**featured = 지자체별 이벤트 관리**(AS-IS 메뉴 "이벤트 관리" 16600>16601, `FeaturedManagerController` /opmanager/featured, list.jsp·form.jsp, featured-mapper, FeaturedServiceImpl). 처음엔 "기획전/미사용"으로 오판했으나
+AS-IS OP_FEATURED 1,063건(전부 `FEATURED_CLASS=0, FEATURED_TYPE=1`, 지자체별, 기간 있음)으로 실사용 확인(2026-10-06). 범위(사용자 승인 2026-10-06): 관리화면, PC(type 1) 기준, 스토어프론트 노출은 보류.
 
-**범위(사용자 승인 2026-10-06): 관리화면(목록+등록/수정+삭제), PC·이벤트(type=1) 기준.** 스토어프론트
-노출은 보류.
+**2026-10-20 재이식(완료)** - 2026-10-06의 목록 반쯤 이식(admin 메모리 필터·`/admin/featured`)과 발명형 "기획전" 간이폼을 걷어내고 AS-IS 4축 그대로 다시 짰다.
+- 구성: admin `FeaturedManagerController`(`/featured/list` GET 빈 목록·POST 검색, `/create`·`/edit/{번호}` GET/POST, `/checked-delete`, `/delete-image` ajax) + `FeaturedAdminClient` + `templates/featured/list|form.html`,
+  gift `FeaturedManageService`(매퍼 SQL 그대로: PROGRESSION CASE·지자체/시도 필터·CREATED_DATE DESC·insert/update/이미지칸 비우기/선택삭제) + `FeaturedAdminApiController`(`/api/admin/featured/count|list|{id}|delete|{id}/delete-image`, 등록·수정 multipart).
+  옛 `FeaturedAdminController`·`templates/featured-admin/*` 삭제. 메뉴 URL `migration-admin-menu-16601-featured.sql`(개발DB 적용함), 등록·수정 경로는 `MenuService.URI_ALIASES`("/featured/" → "/featured/list")로 메뉴에 묶음.
+- 상품검색 팝업: AS-IS `ItemManagerController.findItem`(find-item.jsp)을 `ItemManageController` `/item/find-item` GET/POST + `templates/item/find-item.html`로 이식(gift `ItemManageService` Search.listType `find` = 정상(1)·공개(Y)·사용 판매자·ITEM_DATA_TYPE 조건 없음, 판매자 select는 gift `/api/admin/seller-manage/by-locgov`).
+  `op.shop.js`의 `Shop.findItem` 주소만 `/opmanager/item/find-item` → `/item/find-item`으로 바꿈(TO-BE에 /opmanager 접두 없음). 숨은 옵션 칸(item_options)은 AS-IS 목록 쿼리가 옵션 컬럼을 고르지 않아(주석 블록) 빈 틀.
 
-**★정정: OP_FEATURED 테이블은 미배포가 아니다.** 처음 `ghlove_core.gift.op_featured`로 조회해
-"미배포"로 오판했는데, **gift는 별도 DB**(`jdbc:postgresql://localhost:15432/gift`)다. gift DB의
-`op_featured`는 `service-gift.sql`에 **AS-IS 46컬럼 전부** 정의돼 있고 실재한다(0행). `op_featured_item`도
-있다. 따라서 **DDL 작업 불필요**(사용자가 덤프 DDL 주기로 했으나 안 줘도 됨 - AS-IS DDL은
-`...db-dump\테이블dump(ddl만...)\op_featured.sql`에도 있음). gift DB 조회는
-`docker exec -i ghlove-postgres psql -U postgres -d gift`.
+**AS-IS 동작(그대로)**: 시스템/행안부(1~4)는 전체+시도/시군구 필터·지자체 칸, 지자체(5~8)는 소속 지자체만(없으면 "00000"). 체크박스·[등록]·[삭제]는 5/6만, 저장은 5~8만(그 밖은 "등록/수정 불가능 합니다."로 `/featured/list` - AS-IS도 /opmanager 없는 경로로 보낸다),
+수정 화면 열기는 권한·지자체 검사 없음, 선택삭제·이미지삭제는 관리자 누구나. 진행상태 라디오에 "미진행" 없음(주석), 상시 게시(99999999) 표기. 등록 = 기존 전부 ORDERING+1 후 1, FEATURED_URL=번호, FEATURED_CODE "", CLASS 0, 링크 새창/nofollow N, SEO NULL.
+수정 = 지자체·등록일·정렬순서·형태는 안 바꾸고 이미지 3칸은 새로 올렸을 때만. 선택 상품은 지우고 다시(표시순서 0부터, 그룹 ""). 선택삭제는 OP_FEATURED만(OP_FEATURED_ITEM은 남는다).
+첨부: 확장자 jpg/jpeg/gif/png(대소문자 무시 indexOf - 확장자 없는 파일도 통과하는 AS-IS 결함 그대로), `{gift 업로드}/featured/{번호}/yyyyMMddHHmmssSSSS(+_mobile/_list).확장자`, 크기 5MB/20MB 제한은 화면 JS만.
+★이미지 X는 **칸만 비우고 파일은 남긴다** - AS-IS 삭제 경로에 "featured/"가 한 번 더 붙어(`/featured/{번호}/featured/{파일}`) 실제로 아무것도 안 지워진다.
+수정 화면의 편성 상품은 AS-IS처럼 판매중·대민노출·사용 판매자 상품만 보여서, 그 밖의 상품은 다음 저장 때 빠진다(AS-IS 동일). TO-BE 답례품 ITEM_TYPE이 전부 NULL이라 AS-IS `ITEM_TYPE IN ('1','3')`은 NULL=1로 읽는다.
 
-**AS-IS 4축 요지(FeaturedManagerController + featured/list.jsp + featured-mapper):**
-- `/opmanager/featured`(PC type1) · `/opmanager/featured-mobile`(type2, 데이터 없음). GET=빈 목록, POST=검색.
-- 지자체 스코핑: ROLE_ADMIN_5~8 자기 지자체만, 1~4(시스템/행안부) 전체 + 시도/시군구 필터. 그 외 "00000".
-- 검색: 이벤트명(FEATURED_NAME LIKE)·진행상태(1미진행/2진행중/3진행완료, START/END_DATE+TIME vs NOW yyyyMMddHH)·공개유무(DISPLAY_LIST_FLAG Y/N).
-- 목록 컬럼: (5/6만)체크박스·No·(1~4만)지자체(locgovName)·이벤트명(수정링크)·진행상태·공개여부·진행기간(99999999 센티넬→상시게시/개방형)·등록일.
-- 등록/삭제 버튼 ROLE_ADMIN_5/6만. 선택삭제=checked-delete. 등록/수정은 ROLE_ADMIN_5~8.
-- 채번: insertFeatured. 상세 featured/form.jsp(이벤트 내용 에디터·이미지·기간/상시·아이템).
+**개발서버 실화면 ≠ AS-IS 소스(문구 2곳)**: 소스 JSP는 건수 "총 {N}{M00272}"·이미지 라벨 "목록 {M00752}"/"상단 {M00752}"인데, 개발서버(192.168.ghlove.test:8080)는 "총 1063총 n,nnn,nnn건"·"목록 목록 이미지"·"상단 상단 이미지"로 그린다
+(같은 서버의 16301 화면은 M00272="건"·M00752="이미지"로 나와 문구사전 차이가 아니라 배포된 JSP 판이 다른 것으로 보임). **실화면 기준으로 맞췄다**(템플릿 주석에 기록).
 
-**TO-BE 진척:**
-- **목록 완료(2026-10-06)**: `FeaturedAdminController.list`를 GET(빈)/POST(검색)으로, 지자체 스코핑·
-  진행상태·공개유무·이벤트명 검색·지자체명·페이징·시도필터·선택삭제 구현. **gift 변경 없이** admin이
-  `client.list("1",null)` 전체를 받아 메모리에서 필터(1406·배송업체 패턴). 진행상태는 날짜정밀(gift
-  FeaturedDto에 START/END_TIME 없음 - AS-IS는 시정밀, 표시상 차이 미미). locgovName·시도·시군구는
-  LocgovClient(donation)로 해소, 시군구는 `GET /admin/featured/locgov-children` ajax(AS-IS
-  /common/getLocgovCode 대응). 진행기간은 `@opDate.ymd`+99999999 로직([[admin-screen-pitfalls]]).
-  **URL 충돌 해소**: 검색 POST가 `/admin/featured`라 기존 create(POST 베이스)와 충돌 → create를
-  `POST /admin/featured/create`로 이동(form.html action도 수정).
-- **폼 진행 중(2026-10-06)**: AS-IS `featured/form.jsp`(907줄) 활성 필드 = 이벤트명·진행기간(시작/종료
-  날짜+시각 select hours)·대표연락처(phone1/2/3)·주최주관(host)·홈페이지(link)·목록이미지(type5,
-  5MB,300x300)·상단PC이미지(type2,20MB,1120)·상단모바일이미지(type3,20MB,350)·상세내용(스마트에디터)·
-  상품편성(prodString→OP_FEATURED_ITEM). 저장은 ROLE_ADMIN_5~8, 이미지 삭제 ajax.
-  - **[완료] gift Featured 엔티티 확장**: startTime/endTime/featuredHost/featuredPhoneNo1~3/
-    featuredImageMobile/featuredListImage/thumbnailImageMobile/thumbnailListImage/prodState 매핑 추가.
-    gift 빌드·기동 확인(컬럼은 테이블에 이미 있음).
-  - **[잔여] gift create/update API**: 위 필드 수신 + 이미지 3슬롯(목록/PC/모바일) 업로드·삭제 + 아이템.
-  - **[잔여] admin form.html 전면 재작성**(현재 발명형 "기획전" 간이폼) + FeaturedAdminController/Client 확장.
-  - 그 다음 스토어프론트(보류).
-- 미검증: 런타임 클릭(세션 필요). 빌드·기동·가드테스트 통과.
+**검증(스페어 포트+Playwright 1920폭)**: 빈 목록 내용영역 픽셀 0%(헤더 접속자명·LNB 다른 메뉴만 다름), 수정 화면 요소 36개 비교 중 차이 6개는 전부 내용 차이(모바일 이미지·편성 상품 유무), 시도/시군구·진행상태·공개유무·이벤트명 검색,
+pwtest_loc 등록(필수 검증·링크 http 검증·상품검색 팝업 실클릭 추가·이미지 3개)→목록→수정(이미지 X·확장자 오류 안내·상품 제거·비공개)→선택삭제(미선택 안내 포함), pwtest_sys 등록 차단·팝업 404·버튼 숨김. DB 값·파일명 규칙 대조.
+검증용 **[테스트] 이벤트 1건(번호 5, 11230, 비공개)**과 그 이미지(gift/uploads/gift/featured/5/)를 남겨 둠.
+
+**남은 것/알려진 것**: ①AS-IS 데이터 1,063건 미적재 - 본문(FEATURED_CONTENT) 합계 41MB(최대 3.2MB, 본문 안 이미지로 보임)라 저장소 마이그레이션으로 안 옮김, 이미지 파일도 AS-IS 서버에 있음. TO-BE 시퀀스는 5부터라 나중에 AS-IS 번호(8~3834)로 적재하면 겹칠 수 있다.
+②★대민 이벤트 화면(storefront `/events` → admin `/api/events`)은 OP_FEATURED가 아니라 admin.op_event(80행, 발명 표)를 읽는다 - 관리화면에서 등록한 이벤트가 대민에 안 나온다(스토어프론트 노출은 범위 밖으로 보류된 상태). gift의 옛 Thymeleaf `/events`만 OP_FEATURED를 읽는다.
+③대표연락처 지역번호(TEL) 순서: AS-IS 개발서버는 ORDERING이 전부 NULL인 행을 저장 순서대로(0507, 010, 080 …) 보여주고 TO-BE는 공통 규칙(NULL 먼저 → 코드순)이라 순서가 다르다 - 다른 화면도 같은 상태. ④AS-IS featured-mobile(type 2) 경로·댓글 관리·이벤트 코드 생성은 AS-IS에서도 메뉴에 없거나 주석이라 옮기지 않음.
 
 ### admin-main-dashboard-asis-port
 

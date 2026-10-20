@@ -43,9 +43,9 @@ import java.util.Map;
  * {@code /qna}와 겹치지 않게 했다.
  *
  * <p><b>★ 이름 충돌 주의</b>: 여기 {@code /qna-admin}은 <b>공개 Q&A(5112)</b> 관리화면이고,
- * AS-IS {@code /opmanager/qna-admin}({@code QnaAdminManagerController})은 <b>내부문의(5120,
- * {@code G_QNA_ADMIN})</b>다 - 서로 다른 화면이다. TO-BE 내부문의는
- * {@link InternalInquiryAdminController}({@code /admin/internal-inquiry})에 있다.
+ * AS-IS {@code /opmanager/qna-admin}({@code QnaAdminManagerController})은 <b>관리자 문의(16651,
+ * {@code G_QNA_ADMIN} - 답례품 제공자가 지자체에 남긴 문의)</b>다 - 서로 다른 화면이다. TO-BE 관리자 문의는
+ * {@link QnaAdminManagerController}({@code /admin/internal-inquiry})에 있다.
  *
  * <p><b>AS-IS 동작 그대로</b>: 목록 <b>진입(GET)은 조회하지 않고 빈 목록</b>이고 검색(POST)에서만
  * 조회한다. 정렬은 화면에서 못 바꾸고 컨트롤러가 고정한다.

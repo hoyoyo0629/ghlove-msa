@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ko" class="opmanager" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>답례품승인관리 - 고향사랑e음 (admin service)</title>
+    <!-- 공통 head(AS-IS inc_head verbatim: CSS 6 + JS 12) - csrf meta/폰트/op.* 전부 여기서 로드 -->
+    <th:block th:replace="~{fragments/opmanager-head :: headContent}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/admin-nav :: header()}"></div>
+
+<!-- AS-IS opmanager/i18n/item/seller/list.jsp 이식 - 답례품승인관리(메뉴 16351).
+     ★ AS-IS 특징(그대로)
+     - GET 전용 검색(수정일 기본값 오늘). 대상은 승인 대기 계열(20·21·30·31·40·41)이고, 상태 라디오는 20 등록대기·30 재등록신청·21 등록보류·40 삭제대기.
+       목록 상태 칸은 20·31·41을 모두 "등록대기"로 보여준다. 지자체 칸·시도/시군구 검색은 시스템/행안부(SYS)에게만.
+     - [승인처리]는 삭제대기(40)면 삭제 승인(99), 그 밖은 정상(1). [등록보류]는 사유를 받아 21로, 40 상태가 하나라도 있으면 막는다.
+       처리 뒤 답례품 제공자에게 국민비서 문자를 보낸다.
+     - 상태가 "등록보류"인 칸은 링크 - 눌러 상태 메시지 이력(최근순)을 레이어로 본다.
+     - 날짜 빠른선택 "전체" 버튼은 ROLE_ADMIN_CALL에게만 보이는데 TO-BE 관리자에는 이 권한이 없다(마크업은 그대로 둠). -->
+<style>
+	.layer_wrap{
+		position: relative;
+	}
+	.reject-message {
+		position: absolute;
+		bottom: 0;
+		right: 0;
+		width:500px;
+		border: 3px solid #434755;
+		display: none;
+		background: #fff;
+	}
+	.reject-message h1 {
+		border-top: 0;
+	}
+	.reject-message p {
+		padding-bottom: 10px;
+	}
+	.reject-message .popup_contents {
+		padding: 30px 20px !important;
+	}
+
+
+
+	#reject-message-wrap {
+		border: 1px solid #ccc;
+		overflow-y: auto;
+		height: 100px;
+
+	}
+	.reject-message-layer {
+		position: fixed;
+		width: 420px;
+		margin-left: -210px;
+		margin-top: -150px;
+		left: 50%;
+		top: 50%;
+		border: 3px solid #434755;
+		display: none;
+		background: #fff;
+	}
+	.reject-message-layer h1 {
+		border-top: 0;
+	}
+	.reject-message-layer p {
+		padding-bottom: 10px;
+	}
+	.reject-message-layer .popup_contents {
+		padding: 30px 20px !important;
+	}
+	.data-status-message {
+		display: none;
+	}
+	.show-reject-message {
+		text-decoration: underline;
+	}
+	.show-reject-message:hover {
+		color: #067aac;
+	}
+</style>
+
+<div class="admin_wrap">
+<div id="container">
+    <div th:replace="~{fragments/admin-nav :: lnb()}"></div>
+    <div class="contents">
+    <div class="contents_inner">
+        <div th:replace="~{fragments/admin-nav :: breadcrumb()}"></div>
+
+<div class="item_list">
+	<h3><span>상품리스트</span></h3>
+
+	<form id="itemParam" method="get">
+		<input type="hidden" id="categoryId" name="categoryId" th:value="${itemParam.categoryId}" />
+
+		<div class="board_write">
+			<table class="board_write_table" summary="상품리스트">
+				<caption>상품리스트</caption>
+				<colgroup>
+					<col style="width: 150px" />
+					<col style="" />
+					<col style="width: 150px" />
+					<col style="width: 400px" />
+
+				</colgroup>
+				<tbody>
+				<tr th:if="${adminRole == 'SYS'}">
+                    <td class="label">지자체</td>
+                    <td colspan="3">
+                        <div class="flex_box gap-08">
+                            <select id="shWdr" name="shWdr" onchange="wdrChange(this.value)" class="wd-150">
+			                    <option value="" th:selected="${itemParam.shWdr == null or itemParam.shWdr == ''}">-<th:block th:text="${msg.get('M00039')}">전체</th:block>-</option>
+			                    <option th:each="w : ${wdr}" th:value="${w.id}" th:text="${w.label}" th:selected="${w.id == itemParam.shWdr}"></option>
+			                </select>
+                            <select id="shLocgovCode" name="shLocgovCode" class="wd-150">
+			                    <option value="">-시,군,구-</option>
+			                </select>
+                        </div>
+                    </td>
+                </tr>
+				<tr>
+					<td class="label" th:text="${msg.get('M00011')}">검색구분</td>    <!-- 검색구분 -->
+					<td colspan="3">
+						<div>
+							<select id="where" name="where" title="상세검색 선택" class="wd-150">
+								<option value="" th:selected="${itemParam.where == null or itemParam.where == ''}"><th:block th:text="${msg.get('M00039')}">전체</th:block> <!-- 전체 --></option>
+								<option value="ITEM_NAME" th:selected="${itemParam.where == 'ITEM_NAME'}"><th:block th:text="${msg.get('M00018')}">상품명</th:block> <!-- 상품명 --></option>
+								<option value="ITEM_USER_CODE" th:selected="${itemParam.where == 'ITEM_USER_CODE'}"><th:block th:text="${msg.get('M00783')}">상품코드</th:block> <!-- 상품코드 --></option>
+								<option value="COMPANY_NAME" th:selected="${itemParam.where == 'COMPANY_NAME'}"><th:block th:text="${msg.get('M00104')}">상호명</th:block> <!-- 상호명 --> </option>
+								<!-- <option value="ITEM_SELLER_CODE" label="고유코드" /> -->
+							</select>
+							<input type="text" id="query" name="query" class="wd-500" title="상세검색 입력" th:value="${itemParam.query}" />
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">수정일</td>
+					<td colspan="3">
+						<div>
+							<span class="datepicker"><input type="text" id="searchStartDate" name="searchStartDate" maxlength="8" class="datepicker" th:title="${msg.get('M00024')}" th:value="${itemParam.searchStartDate}" /><!-- 주문일자 시작일 --></span>
+							<span class="wave">~</span>
+							<span class="datepicker"><input type="text" id="searchEndDate" name="searchEndDate" maxlength="8" class="datepicker" th:title="${msg.get('M00025')}" th:value="${itemParam.searchEndDate}" /><!-- 주문일자 종료일 --></span>
+							<span class="day_btns">
+												<!-- <a href="javascript:;" class="btn_date clear">전체</a> -->
+												<a href="javascript:;" class="btn_date today" th:text="${msg.get('M00026')}">오늘</a><!-- 오늘 -->
+												<a href="javascript:;" class="btn_date week-1" th:text="${msg.get('M00027')}">1주일</a><!-- 1주일 -->
+												<a href="javascript:;" class="btn_date month-1" th:text="${msg.get('M00029')}">한달</a><!-- 한달 -->
+												<a href="javascript:;" class="btn_date month-3" th:text="${msg.get('M00030')}">3개월</a><!-- 3개월 -->
+												<a href="javascript:;" class="btn_date year-1" th:text="${msg.get('M00031')}">1년</a><!-- 1년 -->
+                                                <a th:if="${callRole}" href="javascript:;" class="btn_date all-1"><th:block th:text="${msg.get('M00039')}">전체</th:block></a><!-- 전체 -->
+											</span>
+						</div>
+					</td>
+				</tr>
+				<tr>
+					<td class="label">상태</td>
+					<td>
+						<div class="flex_box gap-12">
+							<div class="input-form">
+								<input type="radio" id="dataStatusCode1" name="dataStatusCode" value="" checked="checked" /><label for="dataStatusCode1" th:text="${msg.get('M00039')}">전체</label> <!-- 전체 -->
+							</div>
+							<div class="input-form">
+								<input type="radio" id="dataStatusCode2" name="dataStatusCode" value="20" th:checked="${itemParam.dataStatusCode == '20'}" /><label for="dataStatusCode2">등록대기</label>
+							</div>
+							<div class="input-form">
+								<input type="radio" id="dataStatusCode3" name="dataStatusCode" value="30" th:checked="${itemParam.dataStatusCode == '30'}" /><label for="dataStatusCode3">재등록신청</label>
+							</div>
+							<div class="input-form">
+								<input type="radio" id="dataStatusCode4" name="dataStatusCode" value="21" th:checked="${itemParam.dataStatusCode == '21'}" /><label for="dataStatusCode4">등록보류</label>
+							</div>
+							<div class="input-form">
+								<input type="radio" id="dataStatusCode5" name="dataStatusCode" value="40" th:checked="${itemParam.dataStatusCode == '40'}" /><label for="dataStatusCode5">삭제대기</label>
+							</div>
+						</div>
+					</td>
+				</tr>
+				</tbody>
+			</table>
+
+		</div> <!-- // board_write -->
+		<div class="btn_all btn_left">
+				<ul class="list-bullet point">
+			        <li>
+			            검색 버튼을 클릭하면 조건에 맞는 검색결과를 확인할 수 있습니다.
+			        </li>
+		        </ul>
+		  	</div>
+		<div class="btn_all btn_right">
+			<div class="flex_box gap-08">
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="location.href='/item/seller/list';"> <th:block th:text="${msg.get('M00047')}">초기화</th:block></button> <!-- 초기화 -->
+				<!-- <button type="submit" class="btn btn-dark-gray btn-mini"> 검색</button> -->
+				<button type="button" class="btn btn-dark-gray btn-mini" onclick="search();">검색</button>
+			</div>
+		</div>
+
+		<div class="count_title mt-40">
+			<h5>
+					<th:block th:text="${msg.get('M00045')}">전체</th:block> <th:block th:text="${#numbers.formatInteger(totalCount, 1, 'COMMA')}">0</th:block> <th:block th:text="${msg.get('M00272')}">건 조회</th:block>
+			</h5>	 <!-- 전체 -->   <!-- 건 조회 -->
+			<span>
+
+							<select id="itemsPerPage" name="itemsPerPage" title="출력수 선택">
+								<option value="10" th:selected="${itemParam.itemsPerPage == 10}">10개 출력</option>
+								<option value="20" th:selected="${itemParam.itemsPerPage == 20}">20개 출력</option>
+								<option value="30" th:selected="${itemParam.itemsPerPage == 30}">30개 출력</option>
+								<option value="50" th:selected="${itemParam.itemsPerPage == 50}">50개 출력</option>
+								<option value="100" th:selected="${itemParam.itemsPerPage == 100}">100개 출력</option>
+								<option value="500" th:selected="${itemParam.itemsPerPage == 500}">500개 출력</option>
+								<option value="1000" th:selected="${itemParam.itemsPerPage == 1000}">1000개 출력</option>
+							</select>
+
+
+						</span>
+		</div>
+	</form>
+
+	<div class="board_list">
+		<form id="listForm">
+			<input type="hidden" id="processType" name="processType" />
+			<input type="hidden" id="approvalMessage" name="approvalMessage" />
+			<table class="board_list_table" summary="전체상품리스트">
+				<caption>전체상품리스트</caption>
+				<colgroup>
+                    <col style="width:50px;">
+                    <col style="width:50px;">
+                    <col th:if="${adminRole == 'SYS'}" style="width:200px;">
+                    <col style="width:150px;">
+                    <col style="width:100px;">
+                    <col style="width:500px;">
+                    <col style="width:200px;">
+                    <col style="width:100px;">
+                    <col style="width:100px;">
+                    <col style="width:100px;">
+                    <col style="width:200px;">
+                    <col style="width:100px;">
+				</colgroup>
+				<thead>
+				<tr>
+					<th><input type="checkbox" id="check_all" title="체크박스" /></th>
+					<th>No</th> <!-- 순번 -->
+					<th th:if="${adminRole == 'SYS'}">지자체</th>
+					<th>상태</th>
+					<th th:text="${msg.get('M00752')}">이미지</th> <!-- 이미지 -->
+					<th>상품</th>
+					<th><th:block th:text="${msg.get('M00786')}">판매가격</th:block> <!-- 판매가격 --></th>
+					<th>옵션</th>
+					<th><th:block th:text="${msg.get('M01462')}">재고수</th:block> <!-- 재고수 --></th>
+					<th><th:block th:text="${msg.get('M00191')}">공개유무</th:block> <!-- 공개유무 --></th>
+					<th>
+						<th:block th:if="${itemParam.orderBy == 'HITS'}"><th:block th:text="${msg.get('M01635')}">상호</th:block>/<th:block th:text="${msg.get('M00685')}">조회수</th:block> <!-- 상호/조회수 --></th:block>
+						<th:block th:unless="${itemParam.orderBy == 'HITS'}"><th:block th:text="${msg.get('M01635')}">상호</th:block>/<th:block th:text="${msg.get('M00202')}">등록일</th:block> <!-- 상호/등록일 --></th:block>
+					</th>
+					<th>미리보기</th>
+					<th>변경사항</th>
+				</tr>
+				</thead>
+				<tbody class="sortable">
+
+				<tr th:each="row, i : ${list}" th:with="item=${row.item}">
+					<td><input type="checkbox" name="id" th:value="${item.itemId}" th:class="${item.itemUserCode}" title="" /></td>
+					<td>
+						<th:block th:if="${itemParam.orderBy == 'ORDERING' and itemParam.sort == 'ASC'}" th:text="${pagination.startRow + i.count}">1</th:block>
+						<th:block th:unless="${itemParam.orderBy == 'ORDERING' and itemParam.sort == 'ASC'}" th:text="${pagination.itemNumber - i.count}">1</th:block>
+					</td>
+					<td th:if="${adminRole == 'SYS'}" th:text="${row.locgovNm}"></td>
+					<td>
+						<th:block th:switch="${item.dataStatusCode}">
+							<th:block th:case="'20'">등록대기<input type="hidden" th:id="|itemSaleStatusText_${item.itemUserCode}|" value="20" /></th:block>
+							<th:block th:case="'31'">등록대기<input type="hidden" th:id="|itemSaleStatusText_${item.itemUserCode}|" value="20" /></th:block>
+							<th:block th:case="'41'">등록대기<input type="hidden" th:id="|itemSaleStatusText_${item.itemUserCode}|" value="20" /></th:block>
+							<th:block th:case="'21'"><a href="#" class="show-reject-message txt_line">등록보류</a><input type="hidden" th:id="|itemSaleStatusText_${item.itemUserCode}|" value="21" /></th:block>
+							<th:block th:case="'30'">재등록신청<input type="hidden" th:id="|itemSaleStatusText_${item.itemUserCode}|" value="30" /></th:block>
+							<th:block th:case="'40'">삭제대기<input type="hidden" th:id="|itemSaleStatusText_${item.itemUserCode}|" value="40" /></th:block>
+							<th:block th:case="'90'">판매종료<input type="hidden" th:id="|itemSaleStatusText_${item.itemUserCode}|" value="90" /></th:block>
+							<th:block th:case="*" th:text="${msg.get('M00694')}">판매중</th:block> <!-- 판매중 -->
+						</th:block>
+						<div class="data-status-message" th:utext="${row.statusMessageHtml}">
+						</div>
+					</td>
+					<td>
+						<div>
+							<a th:href="|javascript:Link.view('/item/seller/edit/${item.itemUserCode}')|"><img th:src="${row.imageSrc}" class="item_image" alt="상품이미지" /></a>
+						</div>
+					</td>
+					<td class="left break-word">
+
+						<a th:href="|javascript:Link.view('/item/seller/edit/${item.itemUserCode}')|" class="break-word">
+							<th:block th:text="|[${item.itemUserCode}]|">[G2000000000]</th:block><br/>
+							<th:block th:if="${item.itemSellerCode != null and item.itemSellerCode != ''}"><th:block th:text="|(${item.itemSellerCode})|"></th:block><br></th:block>
+							<th:block th:text="${item.itemName}">상품명</th:block></a>
+						<a th:href="|javascript:Link.view('/item/seller/edit/${item.itemUserCode}', 1)|" class="break-word" style="color:#517BAB">[새탭]</a>
+					</td>
+
+					<td class="text-center">
+						<th:block th:text="${item.salePrice != null} ? ${#numbers.formatInteger(item.salePrice, 1, 'COMMA')} : ''"></th:block>P
+					</td>
+					<td th:text="${item.itemOptionFlag}"></td>
+					<td>
+						<th:block th:if="${item.stockFlag == 'Y'}">
+							<th:block th:if="${item.stockQuantity != null and item.stockQuantity == -1}" th:text="${msg.get('M01497')}">무제한</th:block> <!-- 무제한 -->
+							<th:block th:unless="${item.stockQuantity != null and item.stockQuantity == -1}"><th:block th:text="${item.stockQuantity != null} ? ${#numbers.formatInteger(item.stockQuantity, 1, 'COMMA')} : ''"></th:block>개</th:block>
+						</th:block>
+						<th:block th:unless="${item.stockFlag == 'Y'}" th:text="${msg.get('M01497')}">무제한</th:block> <!-- 무제한 -->
+					</td>
+
+					<td>
+						<th:block th:if="${item.displayFlag != 'N'}" th:text="${msg.get('M00096')}">공개</th:block> <!-- 공개 -->
+						<span th:if="${item.displayFlag == 'N'}" style="color:#e84700" th:text="${msg.get('M00097')}">비공개</span> <!-- 비공개 -->
+					</td>
+
+					<td>
+						<a th:href="@{/seller/edit/{id}(id=${item.sellerId})}" style="padding-top: 5px;font-size: 11px; color: #000" target="_blank"><span class="glyphicon glyphicon-user"></span><th:block th:text="${item.companyName}"></th:block></a>
+
+						<th:block th:if="${itemParam.orderBy == 'HITS'}"><br /><th:block th:text="${item.hits != null} ? ${#numbers.formatInteger(item.hits, 1, 'COMMA')} : ''"></th:block></th:block>
+						<th:block th:unless="${itemParam.orderBy == 'HITS'}"><br /><th:block th:text="${@opDate.ymd(item.createdDate)}"></th:block></th:block>
+
+					</td>
+
+					<td>
+						<div class="flex_box juc-center">
+							<button type="button" class="btn btn-default btn-sm" th:attr="onclick=|javascript:openPreview('${item.itemUserCode}')|">미리보기</button>
+						</div>
+					</td>
+
+					<td>
+						<div class="flex_box juc-center">
+							<button type="button" class="btn btn-default btn-sm" th:attr="onclick=|javascript:Manager.itemLog('${item.itemId}')|">보기</button>
+						</div>
+					</td>
+
+				</tr>
+
+				</tbody>
+			</table>
+		</form>
+
+		<div class="no_content" th:if="${#lists.isEmpty(list)}">
+				<th:block th:text="${msg.get('M00473')}">데이터가 없습니다.</th:block> <!-- 데이터가 없습니다. -->
+		</div>
+
+		<div class="layer_wrap">
+			<div class="btn_all btn_right">
+				<div class="flex_box gap-08">
+					<button type="button" id="update_list_data_reject" class="btn btn-default btn-mini">등록보류</button>
+					<button type="button" id="update_list_data" class="btn btn-dark-gray btn-mini">승인처리</button>
+				</div>
+			</div>
+			<div class="reject-message popup_wrap">
+				<div id="pop_header">
+					<h1 class="popup_title">등록보류 처리</h1>
+					<a href="javascript:self.close();" class="btn_close cancel-reject"><img src="/content/opmanager/images/btn/btn_close.png" alt="닫기"></a>
+				</div>
+
+				<div class="popup_contents">
+	                <table class="board_write_table" summary="등록보류 처리">
+	                    <caption>등록보류 처리</caption>
+	                    <colgroup>
+	                        <col style="width: 150px" />
+	                        <col />
+	                    </colgroup>
+	                    <tbody>
+	                        <tr>
+	                            <td class="label">사유</td>
+	                            <td>
+	                                <div>
+	                                    <span class="placeholder_wrap">
+	                                        <textarea id="rejectMessage" name="rejectMessage"></textarea>
+	                                    </span>
+	                                </div>
+	                            </td>
+	                        </tr>
+	                    </tbody>
+	                </table>
+					<div class="btn_all btn_center">
+						<div class="flex_box gap-08">
+							<button type="button" id="update_list_data_reject_process" class="btn btn-active">등록보류처리</button>
+							<button type="button" class="cancel-reject btn btn-default">취소</button>
+						</div>
+					</div>
+				</div>
+
+			</div>
+		</div>
+
+
+		<div class="pagination-wrap">
+			<div th:replace="~{fragments/pagination :: manager(${pagination})}"></div>
+		</div>
+
+	</div> <!-- // board_list -->
+
+	<div class="reject-message-layer popup_wrap">
+		<div id="pop_header">
+			<h1 class="popup_title">등록보류</h1>
+			<a href="javascript:self.close();" class="btn_close cancel-reject"><img src="/content/opmanager/images/btn/btn_close.png" alt="닫기"></a>
+		</div>
+
+		<div class="popup_contents">
+			<div class="text_box">
+				<div id="reject-message-wrap"></div>
+			</div>
+
+			<div class="btn_all btn_center">
+				<div class="flex_box gap-08">
+					<button type="button" class="close-reject-message btn btn-active">확인</button>
+				</div>
+			</div>
+		</div>
+		<a href="#" class="popup_close close-reject-message">창 닫기</a>
+	</div>
+</div>
+
+<style>
+	td {background: #fff;}
+	.sortable-placeholder td{height: 100px; background: #d6eafd url("/content/styles/ui-lightness/images/ui-bg_diagonals-thick_20_666666_40x40.png") 50% 50% repeat;
+		opacity: .5;}
+
+
+
+</style>
+<!-- AS-IS가 JSP에서 JS 문자열에 직접 박던 서버 값 -->
+<script type="text/javascript" th:inline="javascript">
+	var ITEM_PAGE = {
+		shLocgovCode: /*[[${itemParam.shLocgovCode}]]*/ ''
+	};
+</script>
+<script type="text/javascript" th:inline="none">
+    $(function() {
+        $('.show-reject-message').on('click', function(e) {
+            e.preventDefault();
+            var rejectMessage = $(this).closest('tr').find('.data-status-message').html().trim();
+            var sortRejectMessage = "";
+
+			let substrings = rejectMessage.split('<br>');
+
+			for(var i=substrings.length-2; i>=0; i--) {
+				sortRejectMessage = sortRejectMessage + substrings[i] + '<br>';
+
+			}
+
+            $('#reject-message-wrap').html(sortRejectMessage);
+            $('.reject-message-layer').show();
+            $('.reject-message').hide();
+        });
+
+        $('.close-reject-message').on('click', function() {
+            $('#reject-message-wrap').empty();
+            $('.reject-message-layer').hide();
+        });
+
+
+        $('#orderBy, #sort, #itemsPerPage').on("change", function(){
+            $('#sort option').eq(0).prop("disabled", false);
+            if ($(this).val() == 'ORDERING') {
+                $('#sort').val("ASC").find('option').eq(0).prop("disabled", true);
+            }
+
+            $('#itemParam').submit();
+        });
+
+        // 상품삭제
+        $('.delete_item').on('click', function(e) {
+            e.preventDefault();
+            $('#processType').val('');
+
+            $('#check_all').prop("checked", false);
+            $(this).closest("table").find('input[name=id]:enabled').prop("checked", false);
+            $(this).closest("tr").find('input[name=id]').prop("checked", true);
+
+            Common.updateListData("/item/list/delete", Message.get("M00306"), function(response) {
+            	console.log(response);
+            });	// 선택된 데이터를 삭제하시겠습니까?
+        });
+
+
+        // 목록데이터 - 승인처리
+        $('#update_list_data').on('click', function() {
+
+            var $form = $('#listForm');
+            if ($form.find('input[name=id]:checked').size() == 0) {
+                alert(Message.get("M00308"));	// 처리할 항목을 선택해 주세요.
+                return;
+            }
+
+            $('#processType').val('approval');
+            Common.updateListData("/item/list/update", "판매자가 등록(수정)한 상품 정보를 정확히 확인된 경우에만 승인처리를 하시기 바랍니다.\n\n선택한 상품을 승인처리 하시겠습니까?");
+
+        });
+
+        // 목록데이터 - 등록보류
+        $('#update_list_data_reject').on('click', function() {
+
+            var $form = $('#listForm');
+            let checkedList = $form.find('input[name=id]:checked');
+            if (checkedList.size() == 0) {
+                alert(Message.get("M00308"));	// 처리할 항목을 선택해 주세요.
+                return;
+            }
+
+            let length = checkedList.length;
+            for(let i = 0 ; i < length ; i++) {
+            	var itemUserCode = checkedList[i].getAttribute("class");
+            	var itemSaleStatusText = $('#itemSaleStatusText_'+itemUserCode).val();
+            	 if(itemSaleStatusText == "40") {
+                     alert('선택한 답례품의 상태가 등록대기 혹은 재등록신청 상태가 아닙니다.');
+                     return;
+                 }
+            }
+
+            $('.reject-message').show();
+            $('.reject-message-layer').hide();
+            $('#approvalMessage').val("");
+            $('#rejectMessage').val("");
+            $('#processType').val('reject');
+
+        });
+
+        // 목록데이터 - 등록보류 전송
+        $('#update_list_data_reject_process').on('click', function() {
+
+            var $form = $('#listForm');
+            if ($form.find('input[name=id]:checked').size() == 0) {
+                alert(Message.get("M00308"));	// 처리할 항목을 선택해 주세요.
+                return;
+            }
+
+            if ($.trim($('#rejectMessage').val()) == '') {
+                alert("등록보류 사유를 입력해 주세요.");
+                $('#rejectMessage').focus();
+                return;
+            }
+
+            $('#processType').val('reject');
+            $('#approvalMessage').val($('#rejectMessage').val());
+            Common.updateListData("/item/list/update", "선택한 상품을 등록보류로 처리하시겠습니까?");
+            $('.reject-message').hide();
+        });
+
+
+        $('.cancel-reject').on('click', function() {
+            $('#approvalMessage').val("");
+            $('#rejectMessage').val("");
+            $('#processType').val('');
+            $('.reject-message').hide();
+        });
+
+
+
+
+
+        // 팀/그룹 ~ 4차 카테고리 이벤트
+        //ShopEventHandler.categorySelectboxChagneEvent();
+        //Shop.activeCategoryClass('${fn:escapeXml(itemParam.categoryGroupId)}', '${fn:escapeXml(itemParam.categoryClass1)}', '${fn:escapeXml(itemParam.categoryClass2)}', '${fn:escapeXml(itemParam.categoryClass3)}', '${fn:escapeXml(itemParam.categoryClass4)}');
+
+        Common.DateButtonEvent.set('.day_btns > a[class^=btn_date]', '', 'input[name="searchStartDate"]' , 'input[name="searchEndDate"]');
+		EventHandler.calendarStartDateAndEndDateVaild();
+
+
+    });
+    function sellerSeller(sellerId) {
+        $('#sellerId').val(sellerId);
+    }
+    function findMd(targetId) {
+        Common.popup('/seller/find-md?targetId=' + targetId, 'find_md', 720, 800, 1);
+    }
+
+    function clearMd(targetId) {
+        var $target = $('#' + targetId);
+        $target.val('');
+        $target.closest('td').find('#mdName').val('');
+    }
+
+    //MD 검색 콜백
+    function handleFindMdCallback(response) {
+        var $target = $('#' + response.targetId);
+        $target.val(response.userId);
+        $target.closest('td').find('#mdName').val(response.userName);
+
+    }
+
+	$(function() {
+	    wdrChange($("#shWdr").val());
+	});
+
+	var changeYn = "N";
+
+	// 지차체 변경여부 체크
+	$("select[name='shWdr']").on('focus', function () {
+
+	}).change(function() {
+		changeYn = "Y";
+	});
+
+	// 지자체 변경
+	function wdrChange(value) {
+		Common.loading.hide();
+		$("#shLocgovCode option").remove();
+		if ($("#shWdr").val() != "") {
+			$.post(url("/item/options-by-locgovCode"), {'code' : value}, function(response) {
+
+				for (var i = 0; i < response.length; i++) {
+		            var options = '<option value="' + response[i].LOCGOV_CODE + '">' + response[i].LOCGOV_NM + '</option>';
+		            $('#shLocgovCode').append(options);
+		        }
+
+				// 조회 된 값 유지
+				if (ITEM_PAGE.shLocgovCode != "" && changeYn == 'N') {
+				    $("#shLocgovCode").val(ITEM_PAGE.shLocgovCode).prop("selected", true);
+				} else {
+					// 지차체 변경후 시,군,구 index 제일 처음으로 설정
+					$("#shLocgovCode option:eq(0)").attr("selected", "selected");
+				}
+
+		    });
+		} else {
+	        $('#shLocgovCode').append('<option value="">-시,군,구-</option>');
+		}
+	}
+
+	/**
+	 *	함 수 명 : search
+	 *	기	능  : 검색
+	 */
+	function search() {
+		var strStartDate = $("#searchStartDate").val();
+		var strEndDate = $("#searchEndDate").val();
+
+		if(strStartDate && strStartDate.length == 8 && strEndDate && strEndDate.length == 8) {
+			var startDate = new Date(strStartDate.substr(0, 4), strStartDate.substr(4, 2), strStartDate.substr(6, 2));
+			var endDate = new Date(strEndDate.substr(0, 4), strEndDate.substr(4, 2), strEndDate.substr(6, 2));
+
+			if(startDate > endDate) {
+				alert("종료일이 시작일보다 빠릅니다.");
+				$("#searchEndDate").focus();
+				return false;
+			}
+			var searchChk = Common.searchDateMonth(startDate, endDate);
+			if(!searchChk) return false;
+		}
+
+		$("#itemParam").submit();
+	}
+
+	function openPreview(itemUserCode){
+		Common.popup('/item/seller/preview?itemUserCode='+itemUserCode, "preview", 1600, 800, 0, 0, 0)
+	}
+
+</script>
+    </div>
+    </div>
+</div>
+</div>
+<div th:replace="~{fragments/footer :: admin-footer}"></div>
+</body>
+</html>

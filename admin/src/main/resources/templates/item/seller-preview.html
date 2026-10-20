@@ -1,0 +1,825 @@
+<html xmlns:th="http://www.thymeleaf.org">
+  <!-- AS-IS opmanager/i18n/item/seller/preview.jsp 이식(layout=blank) - 답례품승인관리 "미리보기" 팝업. 대민 답례품 상세 화면과 같은 모양의 읽기 전용 미리보기.
+       ★ AS-IS는 DOCTYPE이 없어 쿼크스 모드로 그려지고 CSS가 그에 맞춰져 있다 - 같은 모양을 위해 DOCTYPE을 두지 않는다.
+       ★ 수량 증감 스크립트가 window.opener.Common.numberFormat을 쓰므로(AS-IS 그대로) 목록 창에서 열린 팝업이어야 한다. -->
+  <head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta name="mobile-web-app-capable" content="yes" />
+	<meta name="description" content="" />
+	<meta name="author" content="" />
+	<meta name="format-detection" content="telephone=no" />
+	<link rel="icon" href="/content/images/common/favicon.ico" />
+	<title>답례품 상세 | 고향사랑e음</title>
+	<link rel="stylesheet" href="/content/modules/front/bootstrap/bootstrap.css" />
+	<link rel="stylesheet" href="/content/opmanager/css/swiper.min.css" />
+	<link rel="stylesheet" href="/content/opmanager/css/front/common.css" />
+	<link rel="stylesheet" href="/content/opmanager/css/front/default_ali.css" />
+	<link rel="stylesheet" href="/content/opmanager/css/front/item.css" />
+  </head>
+
+  <body>
+	<div id="saleson" class="items_detail_wrap">
+		<!-- 아이템 브레드크럼 -->
+		<section class="page-title-box mall center">
+			<span class="ali_breadcrumb">
+				<a href="/" v-if="!exportMode"><img class="icon-img" src="/content/opmanager/images/items/cli-icon_home.png" alt="홈으로" /></a>
+				<span class="txt-arrow"></span>
+				<a href="#" th:text="${itemInfo.teamName}"></a>
+				<span class="txt-arrow"></span>
+				<a href="#" th:text="${itemInfo.groupName}"></a>
+				<span class="txt-arrow"></span>
+				<a href="#" th:text="${itemInfo.categoryName}"></a>
+			</span>
+		</section>
+		<!-- //아이템 브레드크럼 -->
+
+
+		<section class="center" id="contents">
+			<div class="goods_view_top">
+				<div class="goods_img">
+					<!-- 상품 이미지 -->
+					<div class="target_img">
+						<div class="swiper-container" id="mainSwiper">
+							<div class="swiper-wrapper">
+								<div class="swiper-slide" th:each="src : ${imageSrcs}"><img th:src="${src}"/></div>
+							</div>
+							<div class="swiper-button-prev pc main-button-prev"><span class="screen_out">이전 답례품 이미지 보기</span></div>
+							<div class="swiper-button-next pc main-button-next"><span class="screen_out">다음 답례품 이미지 보기</span></div>
+							<div class="swiper-pagination"></div>
+						</div>
+					</div>
+					<!-- //상품 이미지 -->
+
+					<!-- 상품 이미지 썸네일 -->
+					<div class="thumb_box">
+						<button type="button" class="swiper-button-prev thumb-button-prev">
+							<img src="/content/opmanager/images/items/thumb_arrow-prev.png" alt="이전 답례품 이미지 보기" />
+						</button>
+						<div class="swiper-container thumb_area d-lg-block" id="mainThumbSwiper">
+							<div class="swiper-wrapper">
+								<div class="swiper-slide" th:each="src : ${imageSrcs}">
+									<button type="button" class="cursor swiper_img"><img th:src="${src}"/></button>
+								</div>
+							</div>
+						</div>
+						<button type="button" class="swiper-button-next thumb-button-next">
+							<img src="/content/opmanager/images/items/thumb_arrow-next.png" alt="다음 답례품 이미지 보기" />
+						</button>
+					</div>
+					<!-- //상품 이미지 썸네일 -->
+				</div>
+
+
+				<!-- 아이템 정보 -->
+				<div class="goods_info">
+					<!-- 답례품 지역, 신규 여부 -->
+					<div class="info_row">
+						<div class="brand_mall d_area"><img src="/content/opmanager/images/items/d-area.png" alt="" /><th:block th:text="${locgovNm}"></th:block></div>
+						<div class="badge-wrap" style="padding-bottom: 15px">
+							<span class="flag-icon bgBlue">신규</span>
+						</div>
+					</div><!-- //답례품 지역, 신규 여부 -->
+
+					<div>
+						<!-- 답례품명, 설명, 판매금액 -->
+						<div class="info_box">
+							<div class="info_title">
+								<h2 th:text="${itemInfo.itemName}"></h2>
+								<p class="s-txt"><span th:text="${itemInfo.itemSummary}"></span></p>
+							</div>
+							<div class="info_title" style="font-size: x-large; color: #5a5a5a">원산지 : <th:block th:text="${itemInfo.originCountry}"></th:block></div>
+							<div class="present_price"><strong th:text="${itemInfo.salePrice != null} ? ${#numbers.formatInteger(itemInfo.salePrice, 1, 'COMMA')} : ''"></strong> P</div>
+						</div>
+
+							<!-- 답례품명, 설명, 판매금액 -->
+						<div class="info_row rev_donation_wrap">
+							<div class="item_grade">
+								<div class="grade">
+									<div class="rating_star">
+										<span class="on"></span>
+										<span></span>
+										<span></span>
+										<span></span>
+										<span></span>
+									</div>
+									<p class="num"><b>0</b></p>
+								</div>
+								<div class="item_grade txt">
+									<a href="#nav-review">
+										<span>후기 0개 보기</span>
+										<img src="/content/opmanager/images/items/btn_do-arrow.png" alt="" />
+									</a>
+								</div>
+							</div>
+
+							<button class="formBtn donation" type="button" @click="donationInit" id="donationBtn" v-if="!exportMode">
+								<img src="/content/opmanager/images/items/cli-icon_btn-donation2.png" alt="" />
+								<span class=""> 기부하기 </span>
+							</button>
+						</div>
+
+						<div class="line"></div>
+
+						<div class="info_row etc">
+							<div class="shop_info">
+								<div class="title_col">
+								<p>판매자</p>
+								</div>
+								<div class="para_col">
+								<p class="txt" th:text="${sellerInfo.companyName}"></p>
+								</div>
+							</div>
+							<div class="shop_info">
+								<div class="title_col">
+									<p>배송</p>
+								</div>
+								<div class="para_col">
+									<p class="txt">
+										배송방법 :
+										<span style="display: none"> 모바일</span>
+										<span>택배 (<th:block th:text="${itemInfo.deliveryCompanyName}"></th:block>)</span>
+									</p>
+									<p class="txt">배송비 : 무료</p>
+								</div>
+							</div>
+						</div>
+
+					<!-- 옵션 선택 & 선택옵션 확인 -->
+						<!-- 옵션이 없을때 -->
+						<th:block th:if="${sellerInfo.companyName != null and sellerInfo.companyName != '' and itemInfo.itemOptionFlag != 'Y'}">
+							<div class="info_row opt_box pt_t0">
+								<!-- 아이템 옵션 목록 -->
+								<div class="option_list">
+									<ul class="list_in">
+										<li class="optSelect">
+											<div class="op_tit">
+												<span th:text="${itemInfo.itemName}"></span>
+											</div>
+											<div class="option_wrap">
+												<div class="amt_box">
+													<button type="button" class="btn_minus" id="minusInput1">
+														<img src="/content/opmanager/images/items/amt_btn_minus.png" th:attr="onclick=|calculateInput(-1, ${itemInfo.salePrice != null ? itemInfo.salePrice : 0}, 'quantityInput1', 'totalPrice1')|" alt="수량 감소 버튼" />
+													</button>
+													<input type="text" title="수량 직접 입력" class="number" value="1" id="quantityInput1" />
+													<button type="button" class="btn_plus" th:attr="onclick=|calculateInput(1, ${itemInfo.salePrice != null ? itemInfo.salePrice : 0}, 'quantityInput1', 'totalPrice1')|" id="plusInput1">
+														<img src="/content/opmanager/images/items/amt_btn_add.png" alt="수량 증가 버튼" />
+													</button>
+												</div>
+												<div class="op_price"><strong th:text="${itemInfo.salePrice != null} ? ${#numbers.formatInteger(itemInfo.salePrice, 1, 'COMMA')} : ''"></strong> P</div>
+											</div>
+											<div class="max_order">
+												<span class="s-txt">최대 주문 수량 : <th:block th:text="${#numbers.formatInteger(itemInfo.orderMaxQuantity != null and itemInfo.orderMaxQuantity == -1 ? 999 : itemInfo.orderMaxQuantity, 1, 'COMMA')}"></th:block></span>
+											</div>
+										</li>
+									</ul>
+								</div><!-- //아이템 옵션 목록 -->
+								<!-- 20260325 필수 추가정보 추가 -->
+								<th:block th:if="${itemInfo.itemTextOptionFlag == 'Y'}">
+									<div class="info_row etc">
+										<div class="shop_info">
+											<ul>
+												<li><p>필수 추가정보 입력</p></li>
+												<li th:if="${itemInfo.itemTextOptionTitle1 != null and itemInfo.itemTextOptionTitle1 != ''}">
+													<input type="text" name="itemTextOptionTitle1" id="itemTextOptionTitle1" th:placeholder="${itemInfo.itemTextOptionTitle1}"/>
+												</li>
+												<li th:if="${itemInfo.itemTextOptionTitle2 != null and itemInfo.itemTextOptionTitle2 != ''}">
+													<input type="text" name="itemTextOptionTitle2" id="itemTextOptionTitle2" th:placeholder="${itemInfo.itemTextOptionTitle2}"/>
+												</li>
+												<li th:if="${itemInfo.itemTextOptionTitle3 != null and itemInfo.itemTextOptionTitle3 != ''}">
+													<input type="text" name="itemTextOptionTitle3" id="itemTextOptionTitle3" th:placeholder="${itemInfo.itemTextOptionTitle3}"/>
+												</li>
+											</ul>
+										</div>
+									</div>
+								</th:block>
+
+								<!-- 판매가, 구매 여부 확인 -->
+								<div class="info_row sell_con">
+									<div class="purchase_ck">
+										<span class="purchase_ck-y">
+											<img src="/content/opmanager/images/items/btn_buy-y.png" alt="" />
+											<span class="btn_title pointblue">주문가능</span>
+										</span>
+										<span class="purchase_ck-n" style="display: none">
+											<img src="/content/opmanager/images/items/btn_buy-n.png" alt="" />
+											<span class="btn_title pointRed">포인트 부족</span>
+										</span>
+									</div>
+									<!-- <p  v-if="item.salePrice > item.presentPrice"> -->
+									<div class="total_price">
+										<p class="txt">총 답례품 포인트</p>
+										<span class="price" id="totalPrice1">
+											<strong th:text="${itemInfo.salePrice != null} ? ${#numbers.formatInteger(itemInfo.salePrice, 1, 'COMMA')} : ''"></strong>
+										</span>
+									</div>
+								</div>
+								<!-- //판매가, 구매 여부 확인 -->
+							</div>
+						</th:block>
+						<!-- 옵션이 없을때 -->
+
+
+						<!-- 옵션이 있을 때 -->
+						<!-- 선택형 / 조합형 -->
+						<th:block th:if="${itemInfo.itemOptionFlag == 'Y'}">
+							<div id="optionSection">
+								<div class="info_row opt_box">
+									<div class="opt_select_area">
+										<!-- 옵션타입 S: 옵션 1개 -->
+										<th:block th:if="${itemInfo.itemOptionType == 'S'}">
+											<div class="dropdown dropdown_box">
+												<button type="button" class="c-select box dropdown-toggle" data-toggle="dropdown">
+													<span th:text="${#lists.isEmpty(itemInfo.options)} ? '' : ${itemInfo.options[0].optionName1}"></span>
+												</button>
+												<div class="dropdown-menu option_wrap" id="sel1">
+													<button type="button" name="selectOption1" class="c-select" th:each="option : ${itemInfo.options}" th:attr="onclick=|onSellChange1('${option.optionName2}')|">
+														<span class="txt" th:text="${option.optionName2}"></span>
+														<th:block th:if="${option.optionStockFlag == 'Y'}"><span class="txt" th:text="'| 재고 ' + ${option.optionStockQuantity} + '개'"></span></th:block>
+													</button>
+												</div>
+											</div>
+										</th:block>
+										<th:block th:if="${itemInfo.itemOptionType == 'S3'}">
+											<div class="dropdown dropdown_box">
+												<button type="button" class="c-select box dropdown-toggle" data-toggle="dropdown">
+													<span id="dropdown_box1" th:text="${itemInfo.itemOptionTitle1}"></span>
+												</button>
+												<div class="dropdown-menu option_wrap" id="sel1">
+													<button type="button" name="selectOption1" class="c-select" th:each="name1 : ${level1Names}" th:attr="onclick=|onSellChange1('${name1}')|">
+														<span class="txt" th:text="${name1}"></span>
+													</button>
+												</div>
+											</div>
+											<div class="dropdown dropdown_box">
+												<button type="button" class="c-select box dropdown-toggle" data-toggle="dropdown" >
+													<span id="dropdown_box2" th:text="${itemInfo.itemOptionTitle2}"></span>
+												</button>
+												<div id="sel2" class="dropdown-menu option_wrap"></div>
+											</div>
+											<div class="dropdown dropdown_box">
+												<button type="button" class="c-select box dropdown-toggle" data-toggle="dropdown">
+													<span id="dropdown_box3" th:text="${itemInfo.itemOptionTitle3}"></span>
+												</button>
+												<div id="sel3" class="dropdown-menu option_wrap"></div>
+											</div>
+										</th:block>
+									</div>
+									<input type="hidden" id="selectedOptionId" value=""/>
+
+									<!-- 20260325 필수 추가정보 추가 -->
+									<th:block th:if="${itemInfo.itemTextOptionFlag == 'Y'}">
+										<div class="info_row etc">
+											<div class="shop_info">
+												<ul>
+													<li><p>필수 추가정보 입력</p></li>
+													<li th:if="${itemInfo.itemTextOptionTitle1 != null and itemInfo.itemTextOptionTitle1 != ''}">
+														<input type="text" name="itemTextOptionTitle1" id="itemTextOptionTitle1" th:placeholder="${itemInfo.itemTextOptionTitle1}"/>
+													</li>
+													<li th:if="${itemInfo.itemTextOptionTitle2 != null and itemInfo.itemTextOptionTitle2 != ''}">
+														<input type="text" name="itemTextOptionTitle2" id="itemTextOptionTitle2" th:placeholder="${itemInfo.itemTextOptionTitle2}"/>
+													</li>
+													<li th:if="${itemInfo.itemTextOptionTitle3 != null and itemInfo.itemTextOptionTitle3 != ''}">
+														<input type="text" name="itemTextOptionTitle3" id="itemTextOptionTitle3" th:placeholder="${itemInfo.itemTextOptionTitle3}"/>
+													</li>
+												</ul>
+											</div>
+										</div>
+									</th:block>
+								<!-- 옵션 선택 결과 리스트 -->
+								<div class="option_list">
+									<ul class="list_in" id="selectedArea"></ul>
+								</div>
+								<!-- //옵션 선택 결과 리스트 -->
+								<!-- 판매가, 구매 여부 확인 -->
+								<div class="info_row sell_con">
+									<div class="purchase_ck">
+										<span class="purchase_ck-y">
+											<img src="/content/opmanager/images/items/btn_buy-y.png" alt="" />
+											<span class="btn_title pointblue">주문가능</span>
+										</span>
+										<span class="purchase_ck-n selectOpt" style="display: none">
+											<img src="/content/opmanager/images/items/donation-warning.png" alt="" />
+											<span class="btn_title deepGray">옵션을 선택하세요</span>
+										</span>
+										<span class="purchase_ck-n" style="display: none">
+											<img src="/content/opmanager/images/items/btn_buy-n.png" alt="" />
+											<span class="btn_title pointRed">포인트부족</span>
+										</span>
+									</div>
+									<!-- <p  v-if="item.salePrice > item.presentPrice"> -->
+									<div class="total_price">
+										<p class="txt">총 답례품 포인트</p>
+										<span id="totalPrice1" class="price">
+											<strong>0 P</strong>
+										</span>
+									</div>
+								</div>
+								<!-- //판매가, 구매 여부 확인 -->
+								</div>	<!-- End info_row opt_box -->
+							</div>
+						</th:block>
+						<th:block th:if="${itemInfo.itemReturnFlag != 'Y'}">
+							<div class="info_row warning">
+							<img class="icon-img" src="/content/opmanager/images/items/donation-warning.png" alt="주의" />
+							<span class="s-txt">해당 답례품은 반품/교환이 불가능합니다.</span>
+							</div>
+						</th:block>
+					</div>
+					<!-- 장바구니,구매버튼,찜 -->
+					<div class="buyBtn_box detop">
+						<div class="btn_wrap">
+							<button class="buyBtn addToCart" type="button" id="addToCartBtn1">장바구니</button>
+							<button class="buyBtn buyOrder" type="button" id="buyOrderBtn1">바로선택</button>
+							<button class="wishBtn addToWishList hidden_txt" id="addToWishBtn1" aria-label="관심 답례품 등록하기">관심답례품</button>
+						</div>
+					</div>
+					<!-- //장바구니,구매버튼,찜 -->
+					<!--// 아이템 정보 -->
+				</div>
+			</div>
+		</section>
+
+		<!-- 답례품정보, 답례품후기, 답례품Q&A, 배송/반품/교환, 답례품고시 탭 -->
+		<section>
+		<!-- 탭 -->
+			<div class="item_tab" id="item_tab_wrap">
+				<ul class="nav nav-tabs nav-justified center">
+					<li class="nav-item">
+						<a href="#nav-detail" class="nav-link active">
+						<span class="txt">답례품정보</span>
+						</a>
+					</li>
+					<li class="nav-item">
+						<a href="#nav-review" class="nav-link">
+						<span class="txt">답례품후기</span>
+						</a>
+					</li>
+					<li class="nav-item">
+						<a href="#nav-qna" class="nav-link">
+						<span class="txt">답례품Q&amp;A</span>
+						</a>
+					</li>
+					<li class="nav-item">
+						<a href="#nav-buyer" class="nav-link">
+						<span class="txt">배송/반품/교환</span>
+						</a>
+					</li>
+					<li class="nav-item">
+						<a href="#nav-notice" class="nav-link">
+						<span class="txt">상품고시</span>
+						</a>
+					</li>
+				</ul>
+			</div>
+			<!-- //탭 -->
+			<div class="center tab_container">
+				<div class="tab-content item_view">
+					<!-- 답례품정보(관리자->답례품상세설명) -->
+					<div id="nav-detail" class="tab-pane show active">
+						<div class="item_detail">
+						<!-- 답례품정보 내용 -->
+							<th:block th:utext="${itemInfo.detailContent}"></th:block>
+						<!-- //답례품정보 내용 -->
+						</div>
+						<!--// 답례품정보 item_detail E-->
+					</div>
+					<div id="nav-review" class="tab-pane">
+						<div class="item_review">
+							<div class="total_top">
+								<p class="total">답례품후기<span class="pointblue">0</span></p>
+							</div>
+							<div class="list_wrap review_list">
+								<ul></ul>
+							</div>
+						</div>
+					</div>
+					<div id="nav-qna" class="tab-pane">
+						<div class="item_qna">
+						<div class="total_top">
+							<p class="total">답례품 Q&A<span class="pointblue">0</span></p>
+							<!-- <button type="button" class="formBtn only" id="qnaWriteBtn">Q&A 작성</button> -->
+						</div>
+						<div class="list_wrap">
+							<ul></ul>
+						</div>
+						</div>
+					</div>
+					<div id="nav-buyer" class="tab-pane">
+						<div class="buyer_wrap">
+							<div class="total_top">
+								<p class="total">배송/반품/교환</p>
+							</div>
+							<div class="buyer_area">
+								<div class="info_row m_col">
+									<span class="ta_title">답례품 제공자 정보</span>
+									<span class="ta_data">
+										<ul>
+											<li><span class="data_title">상호 : </span> <span class="data_con"> <th:block th:text="${sellerInfo.companyName}"></th:block> </span></li>
+											<li v-show="seller.telephoneNumber">
+												<span class="data_title">대표번호 : </span>
+												<span class="data_con"> <th:block th:text="${sellerInfo.telephoneNumber}"></th:block></span>
+											</li>
+											<!--
+											<li v-show="!seller.telephoneNumber">
+												<span class="data_title">대표번호 : </span>
+												<span class="data_con">  ${sellerInfo.phoneNumber}</span>
+											</li>
+												-->
+											<li><span class="data_title">사업자 등록번호 : </span> <span class="data_con" th:text="${sellerInfo.businessNumber}"></span></li>
+											<li>
+												<span class="data_title">사업장 소재지 : </span>
+												<span class="data_con"><th:block th:text="${sellerInfo.businessLocation}"></th:block><th:block th:text="${sellerInfo.addressDetail}"></th:block></span>
+											</li>
+										</ul>
+									</span>
+								</div>
+
+								<div class="info_row m_col">
+									<span class="ta_title">배송안내</span>
+									<span class="ta_data">
+										<ul>
+											<li><span class="data_title">배송비용 : </span> <span class="data_con">무료배송</span></li>
+											<li><span class="data_title">배송기간 : </span> <span class="data_con">2~7일 예상(식품의 경우 지연 발생 시 1주~2주 소요)</span></li>
+											<li>모든 상품은 답례품 제공업체에서 배송됩니다.</li>
+										</ul>
+									</span>
+								</div>
+
+								<div class="info_row m_col">
+									<span class="ta_title">교환/반품/취소 시 유의 사항</span>
+									<span class="ta_data">
+										<ul class="warn">
+											<li>
+												<span
+												>주문 결제후 마이페이지 주문내역에서 교환/반품/취소가 가능합니다.<br />
+												결제 완료/배송준비중 상태의경우 취소 신청이 가능합니다. <br />
+												배송중/배송완료 상태에서만 교환/반품 신청이 가능합니다.
+												</span>
+											</li>
+											<li>
+												<span class="point">■ </span>
+												<span>
+												교환 및 반품이 불가능한 경우<br />
+												- 고객님의 책임있는 사유로 제품이 훼손된 경우<br />
+												- 포장 개방으로 포장이 훼손되어 제품의 가치가 상실된 경우 (단 제품의 내용확인을 위해 제품을 개봉한 경우는 제외)<br />
+												- 고객님의 사용 또는 일부 소비로 인하여 제품의 가치가 현저히 감소한 경우<br />
+												- 시간의 경과로 인하여 재판매가 곤란한 정도로 제품의 가치가 현저히 감소한 경우<br />
+												</span>
+											</li>
+											<li>수령 7일 이후 전화문의 또는 사이트 신청 없이 반품한 경우 고객님께 다시 반송됨을 양해바라며, 환불/교환은 불가합니다.<br />사용 중 발생한 하자의 교환/환불/수리 등은 ‘공정거래위원회 소비자분쟁해결기준’에 준하여 처리됩니다.</li>
+										</ul>
+									</span>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div id="nav-notice" class="tab-pane">
+						<div class="notice_wrap">
+							<div class="total_top">
+								<p class="total">상품고시</p>
+							</div>
+							<div class="buyer_area">
+								<div class="info_row m_col" th:each="itemInfos : ${itemInfo.infos}">
+									<span class="ta_title" th:text="${itemInfos.title}"></span>
+									<span class="ta_data" th:text="${itemInfos.description}"></span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+	</div>
+
+	<!-- JavaScript -->
+	<script src="/content/modules/jquery/jquery-3.4.1.min.js"></script>
+	<script src="/content/modules/swiper.min.js"></script>
+	<script src="/content/modules/front/bootstrap/vendor/popper.min.js"></script>
+	<script src="/content/modules/front/bootstrap/bootstrap.min.js"></script>
+
+
+	<!-- AS-IS가 JSP에서 JS 상수에 직접 박던 서버 값 -->
+	<script th:inline="javascript">
+	const ITEMPRICE = /*[[${itemInfo.salePrice != null ? '' + itemInfo.salePrice : ''}]]*/ "";
+	const ORDER_MAX_QUANTITY = /*[[${itemInfo.orderMaxQuantity != null ? itemInfo.orderMaxQuantity : -1}]]*/ -1;
+	const ORDER_MIN_QUANTITY = /*[[${itemInfo.orderMinQuantity != null ? itemInfo.orderMinQuantity : -1}]]*/ 1;
+
+	const OPTIONS = /*[[${optionsJs}]]*/ [];
+	const OPTIONTITLE1 = /*[[${itemInfo.itemOptionTitle1 ?: ''}]]*/ "";
+	const OPTIONTITLE2 = /*[[${itemInfo.itemOptionTitle2 ?: ''}]]*/ "";
+	const OPTIONTITLE3 = /*[[${itemInfo.itemOptionTitle3 ?: ''}]]*/ "";
+	const OPTIONTYPE = /*[[${itemInfo.itemOptionType ?: ''}]]*/ "";
+	var companyName = /*[[${sellerInfo.companyName ?: ''}]]*/ "";
+	</script>
+	<script th:inline="none">
+
+	const OPTIONTITLE = {tit1:OPTIONTITLE1, tit2:OPTIONTITLE2, tit3:OPTIONTITLE3};
+	let selVal = {n1:null, n2:null, n3:null};
+	const selectedList = [];
+
+   	const sel1 = document.getElementById('sel1');
+   	const sel2 = document.getElementById('sel2');
+   	const sel3 = document.getElementById('sel3');
+   	const selectedArea = document.getElementById('selectedArea');
+   	const totalPriceArea = document.getElementById('totalPrice1');
+
+
+	function onSellChange1(value){
+		if(!value){sel2.disabled = true; return;}
+
+		selVal = {n1:value, n2:null, n3:null};
+		if(OPTIONTYPE == 'S'){
+			selectOption();
+			return;
+		}
+
+		if(OPTIONTYPE == 'S3'){
+			resetOption(sel2);
+			resetOption(sel3);
+
+			document.getElementById('dropdown_box1').textContent = OPTIONTITLE1+'-'+value;
+			document.getElementById('dropdown_box2').textContent = OPTIONTITLE2;
+			document.getElementById('dropdown_box3').textContent = OPTIONTITLE3;
+
+
+			const seen = new Set();
+			OPTIONS.filter(o=> o.n1 === selVal.n1).forEach(o=> {
+					if(!seen.has(o.n2)){
+						seen.add(o.n2);
+						sel2.appendChild(makeOption(o.n2, onSellChange2));
+					}
+				});
+			sel2.disabled = false;
+		}
+
+	}
+
+	function onSellChange2(value){
+		selVal.n2 = value;
+		selVal.n3 = null;
+		resetOption(sel3);
+
+		if(!value){sel3.disabled = true; return;}
+
+		document.getElementById('dropdown_box2').textContent = OPTIONTITLE2+'-'+value;
+		const seen = new Set();
+		OPTIONS
+			.filter(o=> o.n1 === selVal.n1 && o.n2 === selVal.n2)
+			.forEach(o=> {
+				if(!seen.has(o.n3)){
+					seen.add(o.n3);
+					sel3.appendChild(makeOption(o.n3, onSellChange3,o));
+				}
+			});
+		sel3.disabled = false;
+	}
+
+	function onSellChange3(value){
+		if(!value)return;
+		selVal.n3 = value;
+		selectOption();
+	}
+
+	// 옵션 선택처리
+	function selectOption(){
+		var matched = null;
+		if(OPTIONTYPE == 'S'){
+			matched = OPTIONS.find(o => o.n2 === selVal.n1);
+		}else if(OPTIONTYPE == 'S3'){
+			matched = OPTIONS.find(o => o.n1 === selVal.n1 && o.n2 === selVal.n2 &&o.n3 === selVal.n3 );
+		}
+
+		if(matched){
+			if(matched.optionSoldOutFlag == 'Y'){return;}
+			clearOption();
+			addOrUpdateCard(matched);		// 선택된 옵션으로 카드 만들기~
+		}
+	}
+
+	// 옵션 초기화
+	function clearOption(){
+		selVal = {n1:null, n2:null, n3:null};
+		if(OPTIONTYPE == 'S3'){
+			resetOption(sel2);
+			resetOption(sel3);
+			document.getElementById('dropdown_box1').textContent = OPTIONTITLE1;
+			document.getElementById('dropdown_box2').textContent = OPTIONTITLE2;
+			document.getElementById('dropdown_box3').textContent = OPTIONTITLE3;
+		}
+	}
+
+	// 옵션 button 만들기~
+	function makeOption(value, onClickEvent, opt){
+		const btn = document.createElement('button');
+		btn.type = 'button';
+		btn.className = 'c-select';
+
+		const spn = document.createElement('span');
+		spn.className = 'txt';
+		spn.textContent = value;
+		btn.appendChild(spn);
+
+		if(opt){
+			if(opt.price != '0'){
+				const subSpn = document.createElement('span');
+				subSpn.className = 'txt';
+				subSpn.textContent = '(+' + opt.price + '원)';
+				btn.appendChild(subSpn);
+			}
+			if(opt.soldOutYN == 'Y'){
+				const subSpn = document.createElement('span');
+				subSpn.className = 'txt';
+				subSpn.textContent = '[품절]';
+				btn.appendChild(subSpn);
+				btn.disabled = 'disabled';
+			}
+			if(opt.soldOutYN != 'Y'&& opt.stockCnt != '-1'){
+				const subSpn = document.createElement('span');
+				subSpn.className = 'txt';
+				subSpn.textContent = '| 재고 '+opt.stockCnt + '개';
+				btn.appendChild(subSpn);
+			}
+		}
+
+		btn.onclick = (e) => {onClickEvent(value);};
+		return btn;
+		//<button type="button" name="selectOption1" class="c-select" onclick="onSellChange1()">
+	}
+
+	// 옵션 button 비우기~
+	function resetOption(sel){
+		sel.innerHTML = '';
+	}
+
+	// 갯수제한 등을 체크하는것.
+	function checkForItem(resultCnt, item){
+		if(!item){
+			var maxCnt = (ORDER_MAX_QUANTITY == -1)? 999 :  ORDER_MAX_QUANTITY;			// 구매가능 최대 숫자 - 설정 없으면 -1
+			var minCnt = ORDER_MIN_QUANTITY;														// 구매가능 최소 숫자
+
+			if(resultCnt < 1) return;
+			if(resultCnt > maxCnt) return;
+			if(resultCnt < minCnt) return;
+		}
+
+		if(item){
+			if(resultCnt < 1) return;
+			if (resultCnt > item.opt.stockCnt) return;
+		}
+
+		return true;
+	}
+
+	// 기존 선택상품 알림 혹은 카드 추가
+	function addOrUpdateCard(opt){
+		const existing = selectedList.find(function(item){return item.opt.id === opt.id;});
+		if(existing){
+			alert("이미 선택하신 옵션입니다.");														// 대민화면은 모달 알림창 나옴. 모달까지 만들지는 않고 대신 alert 처리함.
+			//if (existing.qty < opt.stockCnt) {existing.qty++; rederAllCards();}			// 갯수 추가 해줄까?
+			return;
+		}
+		selectedList.push({opt:opt, qty:1});
+		rederAllCards();
+	}
+
+	function rederAllCards(){
+		selectedArea.innerHTML = '';
+		//if(selectedList.length === 0 ){totalRow.style.dieplay = 'none'; return;}
+		selectedList.forEach(function(item,index){selectedArea.appendChild(buildItemCard(item,index));});
+
+		const total = selectedList.reduce(function(sum,item){return sum + ((Number(ITEMPRICE) + Number(item.opt.price)) * item.qty);}, 0);
+		totalPriceArea.textContent = total.toLocaleString() +'원';
+		//totalRow.style.display = 'block';
+
+	}
+
+	//
+	function buildItemCard(item,index){
+		const opt = item.opt;				// 선택된 옵션
+		// const maxCount = opt.stockCnt;		// 옵션 재고
+
+		const li = document.createElement('li');
+		li.className = 'optSelect';
+
+		var opTitSpanText = "";
+		if(OPTIONTYPE == 'S'){
+			opTitSpanText = opt.n1 + ": " + opt.n2;
+		}else if(OPTIONTYPE == 'S3'){
+			opTitSpanText = OPTIONTITLE1 + ": " + opt.n1;
+			if(OPTIONTITLE2){opTitSpanText += " | " + OPTIONTITLE2 + ": " + opt.n2;}
+			if(OPTIONTITLE3){opTitSpanText += " | " + OPTIONTITLE3 + ": " + opt.n3;}
+		}
+
+		if(opt.price != '0'){opTitSpanText +='(+' + opt.price + '원)';}
+
+		var cnt = item.qty;
+		var salPrice = window.opener.Common.numberFormat((Number(ITEMPRICE) + Number(opt.price)) * cnt);			// 옵션 판매가격
+		var stockCnt = window.opener.Common.numberFormat(opt.stockCnt);												// 옵션 최대주문 수량
+		var orderMaxCnt = window.opener.Common.numberFormat(opt.orderMaxCnt);										// 상품 최대주문가능 수량
+
+
+		li.innerHTML =
+			'<div class="op_tit">' +
+				'<span>'+ opTitSpanText +'</span>' +
+			'</div>' +
+			'<div class="option_wrap">' +
+				'<div class="amt_box">' +
+				'<button type="button" class="btn_minus" id="minusInput'+(index+1)+'">' +
+					'<img src="/content/opmanager/images/items/amt_btn_minus.png" onclick="calculateInputToOption(-1, '+opt.id+')" alt="수량 감소 버튼" />' +
+				'</button>' +
+				'<input type="text" title="수량 직접 입력" class="number" value="'+cnt+'" id="quantityInput'+(index+1)+'" />' +
+				'<button type="button" class="btn_plus" onclick="calculateInputToOption(1, '+opt.id+')" id="plusInput'+(index+1)+'">' +
+					'<img src="/content/opmanager/images/items/amt_btn_add.png" alt="수량 증가 버튼" />' +
+				'</button>' +
+				'</div>' +
+				'<div class="op_price"><strong>'+salPrice+'</strong> P</div>' +
+			'</div>' +
+			'<div class="max_order">' +
+				'<span class="s-txt">최대 주문 수량 : '+orderMaxCnt+'</span>' +
+			'</div>';
+		return li;
+	}
+
+		//썸네일 Swiper
+
+		var galleryThumbs = new Swiper("#mainThumbSwiper", {
+			spaceBetween: 8,
+			slidesPerView: 5.5,
+			touchRatio: 0.2,
+			slidToClickedSlide: true,
+			navigation: {
+				nextEl: ".thumb-button-next",
+				prevEl: ".thumb-button-prev",
+			},
+		});
+		//메인 이미지 Swiper
+		var galleryTop = new Swiper("#mainSwiper", {
+			spaceBetween: 15,
+			slidToClickedSlide: true,
+			navigation: {
+				nextEl: ".main-button-next",
+				prevEl: ".main-button-prev",
+			},
+			pagination: {
+				el: ".swiper-pagination",
+				clickable: true,
+			},
+			thumbs: {
+				swiper: galleryThumbs,
+			},
+		});
+
+		//탭
+		window.onscroll = function () {
+			myFunction();
+		};
+		var itemTab = document.getElementById("item_tab_wrap");
+		var sticky = itemTab.offsetTop - 30;
+		function myFunction() {
+			if (window.pageYOffset >= sticky) {
+				itemTab.classList.add("sticky");
+			} else {
+				itemTab.classList.remove("sticky");
+			}
+		}
+		$(".nav-item a").click(function () {
+			$(this).addClass("active").parent().siblings().children("a").removeClass("active");
+		});
+
+
+		// 노옵션 수량 증감 및 금액계산
+		function calculateInput(count, price, inputid, totalPriceid){
+			// return;
+			//수량증감
+			var result = parseInt($("#"+inputid).val()) + count;
+			if(!checkForItem(result)) return;
+
+			$("#"+inputid).val(result);
+
+			//금액계산.children
+			var totalPrice = window.opener.Common.numberFormat($("#"+inputid).val() * price);
+			$("#"+totalPriceid).text(totalPrice);
+			($(".op_price").children('strong')).text(totalPrice);
+
+		}
+
+
+		// 옵션이 있는 경우 수량 증감 및 금액계산
+		function calculateInputToOption(count, optId){
+			const existing = selectedList.find(function(item){return item.opt.id == optId;});
+			if(existing){
+				var tempQty = existing.qty + count;
+				if(!checkForItem(tempQty,existing))return;
+
+				existing.qty = existing.qty + count;
+				rederAllCards();
+				return;
+			}
+		}
+
+
+	</script>
+  </body>
+</html>

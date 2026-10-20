@@ -4,9 +4,11 @@ import com.ghlove.admin.domain.Manager;
 import com.ghlove.admin.repository.ManagerRepository;
 import com.ghlove.admin.service.CategoryTeamAdminClient;
 import com.ghlove.admin.service.CommonCodeService;
+import com.ghlove.admin.service.ItemApprovalSmsService;
 import com.ghlove.admin.service.ItemManageClient;
 import com.ghlove.admin.service.LocgovClient;
 import com.ghlove.admin.service.OffgiveClient;
+import com.ghlove.admin.service.SellerManageClient;
 import com.ghlove.admin.web.support.AdminRole;
 import com.ghlove.admin.web.support.Pagination;
 import jakarta.servlet.http.HttpServletRequest;
@@ -46,7 +48,10 @@ import java.util.stream.Collectors;
  * 오늘로 채운다. 지자체 담당자(소속 지자체가 있는 관리자)는 자기 지자체 판매자의 답례품만 본다. 대표 답례품 영역은 지자체 정·부담당자
  * (ROLE_ADMIN_5/6)이거나, 그 밖의 관리자가 시/군/구를 골랐을 때만 나오고 저장은 5/6만 한다(서버도 같은 검사를 한다).
  *
- * <p>이 화면이 여는 다른 화면 - 등록(item/create)·수정(item/edit/{코드})은 아직 AS-IS로 옮기지 않아 기존 TO-BE 폼으로 넘긴다.
+ * <p>같은 컨트롤러가 답례품승인관리(AS-IS opmanager/item/seller/list, 메뉴 16351)도 맡는다 - 목록(/seller/list)·승인처리/등록보류(/list/update)·
+ * 미리보기 팝업(/seller/preview). AS-IS도 두 화면이 ItemManagerController 한 곳이다.
+ *
+ * <p>이 화면이 여는 다른 화면 - 등록(item/create)·수정(item/edit/{코드}, item/seller/edit/{코드})은 아직 AS-IS로 옮기지 않아 기존 TO-BE 폼으로 넘긴다.
  */
 @Controller
 @RequestMapping("/item")
@@ -63,6 +68,8 @@ public class ItemManageController {
     private final LocgovClient locgovClient;
     private final OffgiveClient offgiveClient;
     private final ManagerRepository managerRepository;
+    private final ItemApprovalSmsService approvalSmsService;
+    private final SellerManageClient sellerManageClient;
 
     /** gift 서비스 주소 - 상품 이미지(/uploads/..)가 거기서 서빙된다. */
     @Value("${ghlove.gift-service.base-url}")
@@ -141,6 +148,149 @@ public class ItemManageController {
     @ResponseBody
     public List<Map<String, Object>> optionsByLocgovCode(@RequestParam(name = "code", defaultValue = "0") String code) {
         return offgiveClient.locgovOptions(code);
+    }
+
+    // ---- 답례품승인관리 (AS-IS opmanager/item/seller/list, 메뉴 16351) ----
+
+    /**
+     * AS-IS listPending - GET 전용(검색 폼이 GET). 수정일 기본값은 오늘이고, 대상은 승인 대기 계열(20 등록대기·30 재등록신청·21 등록보류·
+     * 40 삭제대기, 31·41은 목록에서 등록대기로 보인다)이며 지자체 담당자는 자기 지자체 판매자만 본다. 지자체 칸·검색은 시스템/행안부(SYS)에게만.
+     */
+    @GetMapping("/seller/list")
+    public String sellerList(@ModelAttribute("itemParam") ItemParam param, HttpServletRequest request, HttpSession session, Model model) {
+        Manager manager = manager(session);
+        param.applyDefaults();
+
+        String locgov = has(manager.getLocgovCode()) ? manager.getLocgovCode() : null;
+        ItemManageClient.Search search = param.toSearch(locgov, ItemManageClient.PENDING_LIST);
+
+        int count = client.count(search);
+        Pagination pagination = Pagination.of(count, param.getPage(), param.getItemsPerPage()).withLinkFrom(request);
+        List<ItemManageClient.ItemRow> rows = client.list(search, pagination.getStartRow(), pagination.getItemsPerPage());
+
+        Map<String, String> locgovNames = locgovNames();
+        List<ItemView> views = new ArrayList<>();
+        for (ItemManageClient.ItemRow r : rows) {
+            views.add(new ItemView(r, locgovNames.get(r.sellerLocgovCode()), imageSrc(r.thumbnail())));
+        }
+        model.addAttribute("list", views);
+        model.addAttribute("pagination", pagination);
+        model.addAttribute("totalCount", count);
+        model.addAttribute("adminRole", AdminRole.of(manager));
+        model.addAttribute("wdr", wdrOptions());
+        // AS-IS 날짜 빠른선택 "전체"는 ROLE_ADMIN_CALL(콜센터 겸임 권한)에게만 - TO-BE 관리자에는 이 권한이 없어 보이는 사람이 없다.
+        model.addAttribute("callRole", false);
+        return "item/seller-list";
+    }
+
+    /**
+     * AS-IS list/update - 승인처리(approval)·등록보류(reject). Common.updateListData가 #listForm(id, processType, approvalMessage)을 보낸다.
+     * 처리 뒤 국민비서 알림을 보낸다(승인: 삭제신청 승인 제외, 보류: 사유 포함). 이 화면이 보내지 않는 구분(단가 수정·간편관리)은 사용하지 않는다.
+     */
+    @PostMapping("/list/update")
+    @ResponseBody
+    public Map<String, Object> updateList(@RequestParam(value = "id", required = false) List<Long> id,
+                                          @RequestParam(value = "processType", defaultValue = "") String processType,
+                                          @RequestParam(value = "approvalMessage", required = false) String approvalMessage,
+                                          HttpSession session) {
+        if (id != null && !id.isEmpty()) {
+            long managerId = manager(session).getUserId();
+            switch (processType) {
+                case "approval" -> approvalSmsService.approved(client.approve(id, managerId));
+                case "reject" -> approvalSmsService.rejected(client.reject(id, approvalMessage, managerId), approvalMessage);
+                default -> {
+                }
+            }
+        }
+        return success();
+    }
+
+    // ---- 상품검색 팝업 (AS-IS opmanager/item/find-item - Shop.findItem이 연다. 이벤트 관리 "상품 추가"가 쓴다) ----
+
+    /**
+     * AS-IS findItem(GET/POST, layout=base) - 소속 지자체가 없는 관리자는 404(PageNotFoundException). 조건은 setFindItemModel 그대로:
+     * 정상(1)·공개(Y) 상품, 사용(2) 판매자, 그 지자체 판매자 상품만. 판매자 select는 그 지자체 판매자 전부(상태 무관).
+     */
+    @GetMapping("/find-item")
+    public String findItem(@ModelAttribute("itemParam") FindItemParam param, HttpServletRequest request, HttpSession session, Model model) {
+        Manager manager = manager(session);
+        if (!has(manager.getLocgovCode())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        param.setConditionType("FIND_ITEM_POPUP");
+        ItemManageClient.Search search = new ItemManageClient.Search(manager.getLocgovCode(), null, param.getWhere(), param.getQuery(), null,
+                null, null, param.getCategoryGroupId(), param.categoryClass(), null, null, "Y", param.getSellerId(), null, null,
+                ItemManageClient.FIND_LIST, "1");
+        int count = client.count(search);
+        Pagination pagination = Pagination.of(count, param.getPage(), param.getItemsPerPage()).withLinkFrom(request);
+        List<ItemView> views = new ArrayList<>();
+        for (ItemManageClient.ItemRow r : client.list(search, pagination.getStartRow(), pagination.getItemsPerPage())) {
+            views.add(new ItemView(r, null, imageSrc(r.thumbnail())));
+        }
+        model.addAttribute("list", views);
+        model.addAttribute("pagination", pagination);
+        model.addAttribute("categoryTeamGroupList", teamClient.list());
+        model.addAttribute("sellerList", sellerManageClient.sellersByLocgov(manager.getLocgovCode()));
+        return "item/find-item";
+    }
+
+    /** AS-IS findItemPost - GET과 같다(검색 폼이 POST). */
+    @PostMapping("/find-item")
+    public String findItemPost(@ModelAttribute("itemParam") FindItemParam param, HttpServletRequest request, HttpSession session, Model model) {
+        return findItem(param, request, session, model);
+    }
+
+    /** AS-IS item/seller/preview(layout=blank) - 답례품 상세 미리보기 팝업. 지자체명은 AS-IS CASE(시도=시군구면 시도만). */
+    @GetMapping("/seller/preview")
+    public String sellerPreview(@RequestParam("itemUserCode") String itemUserCode, Model model) {
+        ItemManageClient.Preview preview = client.preview(itemUserCode);
+        if (preview == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "답례품정보가 없습니다.");
+        }
+        String locgovNm = "";
+        for (LocgovClient.LocgovInfo l : locgovClient.allLocgovs()) {
+            if (l.locgovCode().equals(preview.locgovCode())) {
+                locgovNm = l.locgovCode().equals(l.upperLocgovCode()) ? l.upperLocgovNm() : l.upperLocgovNm() + " " + l.locgovNm();
+                break;
+            }
+        }
+        List<String> imageSrcs = new ArrayList<>();
+        for (ItemManageClient.PreviewImage image : preview.images()) {
+            imageSrcs.add(has(image.imageName()) ? giftBaseUrl + "/uploads/" + image.imageName() : "");
+        }
+        // 3조합(S3) 첫 드롭다운 - AS-IS는 c:set prev1로 "직전에 담은 이름과 다르고 숨김(N)인" 1단계 옵션명만 담는다(연속 중복만 제거).
+        List<String> level1Names = new ArrayList<>();
+        String prev1 = "";
+        for (ItemManageClient.PreviewOption opt : preview.options()) {
+            String name1 = opt.optionName1() == null ? "" : opt.optionName1();
+            if (!name1.equals(prev1) && "N".equals(opt.optionHideFlag())) {
+                prev1 = name1;
+                level1Names.add(name1);
+            }
+        }
+        // AS-IS 스크립트의 OPTIONS - 숨김 N·공개 Y인 옵션을 문자열 값으로(최대주문수량은 AS-IS 조건식이 깨져 항상 999, 재고는 재고연동 Y일 때만 수량).
+        List<Map<String, String>> optionsJs = new ArrayList<>();
+        for (ItemManageClient.PreviewOption opt : preview.options()) {
+            if ("N".equals(opt.optionHideFlag()) && "Y".equals(opt.optionDisplayFlag())) {
+                Map<String, String> o = new LinkedHashMap<>();
+                o.put("id", String.valueOf(opt.itemOptionId()));
+                o.put("n1", opt.optionName1() == null ? "" : opt.optionName1());
+                o.put("n2", opt.optionName2() == null ? "" : opt.optionName2());
+                o.put("n3", opt.optionName3() == null ? "" : opt.optionName3());
+                o.put("price", opt.optionPrice() == null ? "" : String.valueOf(opt.optionPrice()));
+                o.put("soldOutYN", opt.optionSoldOutFlag() == null ? "" : opt.optionSoldOutFlag());
+                o.put("stockCnt", "Y".equals(opt.optionStockFlag()) ? String.valueOf(opt.optionStockQuantity()) : "999");
+                o.put("orderMaxCnt", "999");
+                optionsJs.add(o);
+            }
+        }
+        model.addAttribute("itemInfo", preview);
+        model.addAttribute("sellerInfo", preview.seller());
+        model.addAttribute("locgovNm", locgovNm);
+        model.addAttribute("imageSrcs", imageSrcs);
+        model.addAttribute("level1Names", level1Names);
+        model.addAttribute("optionsJs", optionsJs);
+        return "item/seller-preview";
     }
 
     // ---- 일괄 처리 / 삭제 (Common.updateListData가 #listForm을 serialize해서 id=..&id=.. 로 보낸다) ----
@@ -272,7 +422,7 @@ public class ItemManageController {
     }
 
     /** AS-IS item/edit/{상품코드} (수정 폼) - 상품코드(G2+9자리)에서 번호를 뽑아 기존 TO-BE 수정 폼으로 넘긴다. */
-    @GetMapping("/edit/{itemUserCode}")
+    @GetMapping({"/edit/{itemUserCode}", "/seller/edit/{itemUserCode}"})
     public String edit(@PathVariable String itemUserCode) {
         String digits = itemUserCode.startsWith("G2") ? itemUserCode.substring(2) : itemUserCode;
         if (!digits.matches("\\d{1,18}")) {
@@ -371,6 +521,10 @@ public class ItemManageController {
     // ---- 화면용 보조 타입 ----
 
     public record ItemView(ItemManageClient.ItemRow item, String locgovNm, String imageSrc) {
+        /** AS-IS op:nl2br(item.dataStatusMessage) - 평문이라 이스케이프한 뒤 줄바꿈만 <br/>로(승인관리 "등록보류" 레이어가 읽는다). */
+        public String statusMessageHtml() {
+            return com.ghlove.admin.service.QnaOpenAdminService.escapeNl2br(item.dataStatusMessage());
+        }
     }
 
     public record RprsView(ItemManageClient.RprsRow item, String imageSrc) {
@@ -380,6 +534,34 @@ public class ItemManageController {
     }
 
     public record LogView(ItemManageClient.LogRow log, String managerLoginId, String userName) {
+    }
+
+    /** AS-IS ItemParam 중 상품검색 팝업(find-item.jsp)이 쓰는 것. targetId는 연 화면의 담을 목록 id(예: 이벤트 관리 "prod"). */
+    @Getter
+    @Setter
+    public static class FindItemParam {
+        private String targetId;
+        private String conditionType;
+        private int categoryGroupId;
+        private String categoryClass1 = "";
+        private String categoryClass2 = "";
+        private String categoryClass3 = "";
+        private String categoryClass4 = "";
+        private String where = "";
+        private String query = "";
+        private long sellerId;
+        private int itemsPerPage = 10;
+        private int page = 1;
+
+        /** AS-IS ItemParam.getCategoryClass - 선택한 가장 깊은 차수. */
+        String categoryClass() {
+            for (String c : new String[]{categoryClass4, categoryClass3, categoryClass2, categoryClass1}) {
+                if (c != null && !c.isBlank()) {
+                    return c;
+                }
+            }
+            return "";
+        }
     }
 
     /** AS-IS ItemParam 중 목록 검색 폼이 보내는 것. */
@@ -400,6 +582,7 @@ public class ItemManageController {
         private String categoryClass3 = "";
         private String categoryClass4 = "";
         private String saleStatus = "";
+        private String dataStatusCode = "";
         private String displayFlag = "";
         private long sellerId;
         private String orderBy = "";
@@ -433,6 +616,11 @@ public class ItemManageController {
         }
 
         ItemManageClient.Search toSearch(String locgov) {
+            return toSearch(locgov, null);
+        }
+
+        /** listType = 답례품승인관리면 ItemManageClient.PENDING_LIST(AS-IS conditionType ITEM_LIST_PENDING_APPROVAL), 아니면 null. */
+        ItemManageClient.Search toSearch(String locgov, String listType) {
             Integer categoryIdNumber = null;
             try {
                 categoryIdNumber = categoryId == null || categoryId.isBlank() ? null : Integer.valueOf(categoryId.trim());
@@ -440,7 +628,8 @@ public class ItemManageController {
                 // 숫자가 아니면 정렬 조건에서만 쓰이므로 없는 것으로 본다
             }
             return new ItemManageClient.Search(locgov, shLocgovCode, where, query, srchDateType, searchStartDate, searchEndDate,
-                    categoryGroupId, categoryClass(), categoryIdNumber, saleStatus, displayFlag, sellerId, orderBy, sort);
+                    categoryGroupId, categoryClass(), categoryIdNumber, saleStatus, displayFlag, sellerId, orderBy, sort,
+                    listType, dataStatusCode);
         }
     }
 }

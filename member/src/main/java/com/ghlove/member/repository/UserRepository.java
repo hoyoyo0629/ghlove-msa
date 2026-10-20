@@ -13,6 +13,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
      *  TO-BE는 회원이 다른 서비스라 회원ID를 먼저 받아 걸러야 한다. */
     java.util.List<User> findByLoginIdContainingAndStatusCode(String loginId, String statusCode);
 
+    /** admin 전체주문관리의 검색구분 '주문자명' - AS-IS는 암호화한 이름과의 <b>일치</b>(USER_NAME_ENC = #{query})라 부분일치가 아니다. */
+    List<User> findByUserName(String userName);
+
     Optional<User> findByUserNameAndEmail(String userName, String email);
 
     Optional<User> findByLoginIdAndUserNameAndEmail(String loginId, String userName, String email);
